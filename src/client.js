@@ -272,7 +272,7 @@
     const isMyGame=involved.some(o=>o.manager_id===me?.id);
     return '<article class="scoreboard-match '+(g.status==='live'?'is-live':g.status==='final'?'is-final':g.status==='scheduled'?'is-scheduled':'is-other')+(involved.length?' is-league-game':'')+(isMyGame?' is-my-game':'')+'">'
       +'<div class="scoreboard-match-head"><span class="scoreboard-match-status '+(g.status==='live'?'live':'')+'">'+(g.status==='live'?'<i class="live-score-dot" aria-hidden="true"></i>':'')+escapeHTML(gameStatus)+'</span>'
-      +'<span class="scoreboard-match-tags">'+(isMyGame?'<span class="scoreboard-roster-tag is-personal">MY PROGRAM</span>':involved.length?'<span class="scoreboard-roster-tag">LEAGUE</span>':'')+'<span class="scoreboard-match-venue">'+(g.neutral_site?'NEUTRAL SITE':g.conference_game?'CONFERENCE':'NCAA MEN’S BASKETBALL')+'</span></span></div>'
+      +'<span class="scoreboard-match-tags">'+(isMyGame?'<span class="scoreboard-roster-tag is-personal">MINE</span>':involved.length?'<span class="scoreboard-roster-tag">LEAGUE</span>':'')+(g.neutral_site?'<span class="scoreboard-match-venue">NEUTRAL</span>':'')+'</span></div>'
       +'<div class="scoreboard-match-teams">'
       +teamRow(g.away_id,g.away_name||'Away',awayScore,winner&&g.away_score>g.home_score)
       +teamRow(g.home_id,g.home_name||'Home',homeScore,winner&&g.home_score>g.away_score)
@@ -283,8 +283,9 @@
   function resultsPage(){
     const day=resultsSelectedDay||resultsToday(),pollRank=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
     const all=resultsGames;
-    const conferenceOptions=Object.entries(conferenceNames).sort((a,b)=>a[1].localeCompare(b[1]))
-      .map(([id,label])=>'<option value="'+escapeHTML(id)+'" '+(resultsConference===id?'selected':'')+'>'+escapeHTML(label)+'</option>').join('');
+    const conferencePill=(id,label)=>'<button type="button" data-act="results-conference" data-id="'+escapeHTML(id)+'" class="'+(resultsConference===id?'active':'')+'" aria-pressed="'+(resultsConference===id)+'">'+escapeHTML(label)+'</button>';
+    const conferenceOptions=conferencePill('all','All conferences')+conferencePill('league','League conferences')
+      +[...new Set([...activeConfs(),...Object.keys(conferenceNames)])].map(id=>conferencePill(id,conf(id))).join('');
     let list=all.filter(g=>{
       if(resultsConference==='league'&&!activeConfs().some(id=>g.home_conference_id===id||g.away_conference_id===id))return false;
       if(resultsConference!=='all'&&resultsConference!=='league'&&g.home_conference_id!==resultsConference&&g.away_conference_id!==resultsConference)return false;
@@ -322,9 +323,9 @@
       +'<div class="scoreboard-days">'+activeDatePills+'</div>'
       +'<button class="scoreboard-calendar-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
       +'<div class="scoreboard-filterbar"><div class="scoreboard-scopes" role="group" aria-label="Show games">'+scopeButton('all','All games')+scopeButton('league','My league')+scopeButton('top25','AP Top 25')+'</div>'
-      +'<div class="scoreboard-filter-tools"><label class="scoreboard-conference-label" for="scoreboard-conference">Conference</label><select class="field" id="scoreboard-conference"><option value="all">All conferences</option><option value="league" '+(resultsConference==='league'?'selected':'')+'>League conferences</option>'+conferenceOptions+'</select>'
-      +'<input type="date" id="scoreboard-date" class="field scoreboard-date-input" aria-label="Select game date" value="'+escapeHTML(day)+'"/>'
+      +'<div class="scoreboard-filter-tools"><input type="date" id="scoreboard-date" class="field scoreboard-date-input" aria-label="Select game date" value="'+escapeHTML(day)+'"/>'
       +'<button class="scoreboard-today" data-act="results-today" type="button">Today</button></div></div>'
+      +'<div class="scoreboard-conference-strip" role="group" aria-label="Filter scores by conference">'+conferenceOptions+'</div>'
       +'<div class="scoreboard-day-heading"><div><span>'+formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</span><h2>'+list.length+' '+(list.length===1?'matchup':'matchups')+'</h2></div>'
       +'<small>'+(resultsScope==='top25'?(hasPoll?'AP poll as of '+escapeHTML(resultsAPAsOf||''):'AP rankings not available'):'Eastern Time (ET)')+'</small></div>'
       +(resultsError?'<div class="notice scoreboard-alert">'+escapeHTML(resultsError)+'</div>':'')
@@ -981,6 +982,7 @@
     if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));loadResults();return;}
     if(act==='results-today'){resultsSelectedDay=resultsToday();loadResults();return;}
     if(act==='results-scope'){resultsScope=button.dataset.scope;render();return;}
+    if(act==='results-conference'){resultsConference=id;render();return;}
 
     if(act==='draft-round-change'){draftRoundView=id;render();return;}
     if(act==='move-draft'){

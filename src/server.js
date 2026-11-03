@@ -149,7 +149,7 @@ export default (function makeWorker(){
       }
       if(path==='data/rankings'){
         const poll=await DATA_PIPELINE.apPoll(env,season);
-        return response({season,source:'ESPN AP Top 25',as_of:poll[0]?.snapshot_date||null,
+        return response({season,source:poll[0]?.source||'Associated Press Top 25',as_of:poll[0]?.snapshot_date||null,
           teams:poll.map(p=>({program_id:p.program_id,rank:p.ap_rank}))});
       }
       if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});

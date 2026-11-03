@@ -1,0 +1,10 @@
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+const read = path => readFileSync(new URL('../'+path, import.meta.url), 'utf8');
+const page = read('src/index.html');
+const client = read('src/client.js');
+const css = read('src/style.css');
+const server = read('src/server.js');
+const bundled = 'const PAGE='+JSON.stringify(page)+';\nconst CLIENT='+JSON.stringify(client)+';\nconst CSS='+JSON.stringify(css)+';\n'+server+'\n';
+mkdirSync(new URL('../dist/',import.meta.url),{recursive:true});
+writeFileSync(new URL('../dist/worker.js',import.meta.url),bundled);
+console.log('Generated dist/worker.js ('+bundled.length+' characters)');

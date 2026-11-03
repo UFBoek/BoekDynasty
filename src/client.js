@@ -541,7 +541,7 @@
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League settings'],['draft','Draft','Order and controls'],['programs','Programs','Eligible schools'],['members','Members','Managers and invites'],['scoring','Scoring','Points and best ball'],['trades','Trades','Trade permissions'],['waivers','Waivers','Claims and review'],['seasons','Seasons','History and rollover']];
+    const sections=[['general','General','League settings'],['draft','Draft','Order and controls'],['programs','Programs','Eligible schools'],['data','Data','Scores and rankings'],['members','Members','Managers and invites'],['scoring','Scoring','Points and best ball'],['trades','Trades','Trade permissions'],['waivers','Waivers','Claims and review'],['seasons','Seasons','History and rollover']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -587,6 +587,37 @@
         +input('Program name','name','text','School name')+input('Abbreviation','abbr','text','e.g. UF')
         +'<div class="form-row"><label for="conference_id">Conference</label><select class="field" id="conference_id" name="conference_id">'+activeConfs().map(id=>'<option value="'+id+'">'+escapeHTML(conf(id))+'</option>').join('')+'</select></div>'
         +'<button class="btn secondary" type="submit" '+(locked?'disabled':'')+'>Add school</button></form></section>';
+    }else if(adminSection==='data'){
+      const runs=resultsStatus?.recent_runs||[];
+      const latest=runs.find(x=>x.status==='ok');
+      const failure=runs.find(x=>x.status==='error');
+      const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
+      const progOptions=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name))
+        .map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+      const awardOptions=[['conference_regular_champion','Conference regular-season champion'],['conference_tournament_champion','Conference tournament champion'],['ncaa_seed','NCAA Tournament seed'],['ncaa_wins','NCAA Tournament wins'],['national_champion','National champion'],['kenpom_final_rank','Final KenPom rank']];
+      body='<section class="panel setting-panel">'+panelHeading('Results pipeline','ESPN scoreboards · current season')
+        +'<div class="data-kpis"><div><span>GAMES</span><strong>'+Number(resultsStatus?.game_count||0)+'</strong></div><div><span>FINAL</span><strong>'+Number(resultsStatus?.final_games||0)+'</strong></div><div><span>LAST SUCCESS</span><strong>'+(latest?escapeHTML(latest.target_date):'None')+'</strong></div></div>'
+        +(resultsError?'<p class="notice section-gap">'+escapeHTML(resultsError)+'</p>':'')
+        +(failure?'<p class="data-error section-gap">Latest error: '+escapeHTML(failure.error_text)+'</p>':'')
+        +'<label class="settings-toggle section-gap" for="data-auto"><div><strong>Automatic results collection</strong><span>Every 15 minutes during game hours, plus daily reconciliation.</span></div><input id="data-auto" type="checkbox" '+(resultsStatus?.auto_enabled!==false?'checked':'')+'/></label>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-auto-save">Save automation setting</button></div>'
+        +'<div class="form-row section-gap"><label for="data-date">Check specific game date</label><input class="field" id="data-date" type="date" value="'+escapeHTML(today)+'"/></div>'
+        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
+        +'<p class="hint section-gap">Game scores do not activate fantasy scoring. Import errors are kept in the audit log.</p></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
+        +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A full list of at least 250 teams is required.</p>'
+        +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
+        +'<div class="form-row"><label for="data-net-csv">NET ranking rows (ESPN ID, rank)</label><textarea class="field data-csv" id="data-net-csv" rows="5" placeholder="57,4&#10;150,1"></textarea></div>'
+        +'<button class="btn secondary" data-act="data-net-import">Import verified rankings</button></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Verified season achievements')
+        +'<details class="data-award"><summary>Add a confirmed conference or postseason result</summary>'
+        +'<div class="form-row section-gap"><label for="data-award-school">Program</label><select class="field" id="data-award-school">'+progOptions+'</select></div>'
+        +'<div class="form-row"><label for="data-award-type">Achievement</label><select class="field" id="data-award-type">'+awardOptions.map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('')+'</select></div>'
+        +'<div class="form-row"><label for="data-award-value">Value (1 for titles, seed/rank for rankings)</label><input class="field" type="number" id="data-award-value" min="0" max="400" value="1"/></div>'
+        +'<div class="form-row"><label for="data-award-source">Source or official reference</label><input class="field" id="data-award-source" placeholder="Official conference / NCAA bracket URL"/></div>'
+        +'<button class="btn" data-act="data-award-save">Save verified achievement</button></details></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Import log')
+        +(runs.length?runs.map(run=>'<div class="data-run"><span class="'+(run.status==='error'?'failed':'')+'">'+escapeHTML(run.status.toUpperCase())+'</span><div><strong>'+escapeHTML(run.target_date||'—')+'</strong><small>'+escapeHTML(run.job)+' · '+Number(run.matched||0)+' games, '+Number(run.changed||0)+' changed</small>'+(run.error_text?'<small class="data-error">'+escapeHTML(run.error_text)+'</small>':'')+'</div></div>').join(''):empty('No imports yet'))+'</section>';
     }else if(adminSection==='members'){
       body='<section class="panel setting-panel">'+panelHeading('Managers',members().length+' / '+cap+' registered')
         +members().map(u=>'<div class="manager-card">'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div><span class="status '+(u.role==='commissioner'?'wait':'')+'">'+(u.role==='commissioner'?'COMMISSIONER':'MANAGER')+'</span></div>').join('')
@@ -641,7 +672,7 @@
       managerBackPage=current==='manager-detail'?managerBackPage:current;
       selectedManagerId=id;current='manager-detail';render();window.scrollTo({top:0});return;
     }
-    if(act==='commish-section'){adminSection=id;render();return;}
+    if(act==='commish-section'){adminSection=id;render();if(id==='data')loadResults();return;}
     if(act==='load-programs'){programShown+=24;filterPrograms();return;}
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
     if(act==='draft-round-change'){draftRoundView=id;render();return;}
@@ -664,7 +695,28 @@
     if(busy)return;
     busy=true;
     try{
-      if(act==='refresh-results'){await loadResults();return;}
+      if(act==='data-sync'){
+        const data=await api('admin/data/sync',{date:v('#data-date')});
+        notice('Imported '+data.matched+' games · '+data.changed+' updated.');
+        await loadResults();
+      }else if(act==='data-backfill'){
+        const result=await api('admin/data/backfill',{days:7});
+        const failed=(result.days||[]).filter(x=>!x.ok);
+        notice('Checked '+(result.days||[]).length+' dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-health-refresh'){await loadResults();notice('Data status refreshed.');
+      }else if(act==='data-auto-save'){
+        await api('admin/data/auto',{enabled:!!document.querySelector('#data-auto')?.checked});
+        notice('Automatic collection setting saved.');await loadResults();
+      }else if(act==='data-net-import'){
+        const csv=v('#data-net-csv').trim();
+        if(csv.split(/\r?\n/).filter(Boolean).length<250)throw new Error('Provide a complete NET ranking list (250 or more teams).');
+        const outcome=await api('admin/data/net',{date:v('#data-net-date'),csv});
+        notice('Saved '+outcome.count+' NET rankings.');await loadResults();
+      }else if(act==='data-award-save'){
+        await api('admin/data/award',{program_id:v('#data-award-school'),award_type:v('#data-award-type'),value:Number(v('#data-award-value')),source_note:v('#data-award-source')});
+        notice('Verified achievement saved.');
+      }else if(act==='refresh-results'){await loadResults();return;}
       if(act==='save-clock'){
         await api('admin/clock',{seconds:Number(v('#clock-duration'))});
         notice('Draft clock saved.');

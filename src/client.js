@@ -163,8 +163,11 @@
   function input(label,name,type,placeholder,value=''){
     return '<div class="form-row"><label for="'+name+'">'+label+'</label><input class="field" id="'+name+'" name="'+name+'" type="'+type+'" placeholder="'+escapeHTML(placeholder)+'" value="'+escapeHTML(value)+'" required autocomplete="'+(name==='password'?'current-password':'on')+'"/></div>';
   }
+  const liveResultsCount=()=>resultsGames.filter(g=>g.status==='live').length;
+  const draftIsLive=()=>league?.settings?.draft_status==='live';
   function navButton(id){
-    return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(current===id?'active':'')+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>';
+    const live=id==='draft'&&draftIsLive()||id==='results'&&liveResultsCount()>0;
+    return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(current===id?'active':'')+(live?' has-live':'')+'">'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>';
   }
   function sidebar(){
     return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">NAVIGATION</div><nav class="nav">'+['home','team','programs','draft','trades','league','results','scoring',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
@@ -176,7 +179,10 @@
     const tabs=['home','team','programs','draft','league','results','more'];
     const mobileLabels={home:'League',team:'My Team',programs:'Schools',draft:'Draft',league:'Standings',results:'Results',more:'More'};
     const activeMobile=(['trades','commissioner','waivers','history','scoring'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span></button>').join('')+'</nav>';
+    const liveGames=liveResultsCount(),liveDraft=draftIsLive();
+    const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
+      liveGames?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="results"><span class="topbar-event-dot" aria-hidden="true"></span><span>'+liveGames+' live game'+(liveGames===1?'':'s')+'</span></button>':'';
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
   }
 
   const resultsToday=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
@@ -260,8 +266,8 @@
       +scoreboardLogo(id)+scoreboardRank(id,ranks)+'<span class="scoreboard-team-name">'+escapeHTML(name)+'</span>'
       +'<strong class="scoreboard-team-score">'+escapeHTML(score)+'</strong></div>';
     const winner=canScore&&g.status==='final'&&g.home_score!==null&&g.away_score!==null;
-    return '<article class="scoreboard-match '+(g.status==='live'?'is-live':'')+'">'
-      +'<div class="scoreboard-match-head"><span class="scoreboard-match-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameStatus)+'</span>'
+    return '<article class="scoreboard-match '+(g.status==='live'?'is-live':g.status==='final'?'is-final':g.status==='scheduled'?'is-scheduled':'is-other')+'">'
+      +'<div class="scoreboard-match-head"><span class="scoreboard-match-status '+(g.status==='live'?'live':'')+'">'+(g.status==='live'?'<i class="live-score-dot" aria-hidden="true"></i>':'')+escapeHTML(gameStatus)+'</span>'
       +'<span class="scoreboard-match-venue">'+(g.neutral_site?'NEUTRAL SITE':g.conference_game?'CONFERENCE':'NCAA MEN’S BASKETBALL')+'</span></div>'
       +'<div class="scoreboard-match-teams">'
       +teamRow(g.away_id,g.away_name||'Away',awayScore,winner&&g.away_score>g.home_score)
@@ -366,8 +372,8 @@
     const teamCards=users.map(u=>{
       const owned=owners().filter(o=>o.manager_id===u.id)
         .map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
-      return '<button class="league-team-tile" type="button" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
-        +'<span class="league-tile-top">'+avatar(u)+'<span class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':u.role==='commissioner'?'Commissioner':'League manager')+'</small></span><span class="league-tile-arrow">›</span></span>'
+      return '<button class="league-team-tile'+(u.id===me.id?' is-mine':'')+'" type="button" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
+        +'<span class="league-tile-top">'+avatar(u)+'<span class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(owned.length?owned.length+' rostered program'+(owned.length===1?'':'s'):u.id===me.id?'Your team':u.role==='commissioner'?'Commissioner':'League manager')+'</small></span><span class="league-tile-arrow">›</span></span>'
         +(owned.length?'<span class="league-logo-strip">'+owned.map(p=>'<span class="league-logo-holder" title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+'</span>'
           :'<span class="league-tile-pending">No programs drafted yet</span>')
         +'</button>';

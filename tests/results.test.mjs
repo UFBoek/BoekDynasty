@@ -148,13 +148,14 @@ test('historical points stack seeds, conference titles, NCAA wins and First Four
   const games=[
     {season,game_date:'2025-01-15',home_id:'57',away_id:'150',home_score:75,away_score:70,status:'final',season_type:2,tournament_tag:null,neutral_site:0},
     {season,game_date:'2025-02-15',home_id:'248',away_id:'57',home_score:75,away_score:78,status:'final',season_type:2,tournament_tag:null,neutral_site:0},
-    {season,game_date:'2025-02-27',home_id:'57',away_id:'150',home_score:78,away_score:70,status:'final',season_type:2,tournament_tag:null,neutral_site:1},
+    {season,game_date:'2025-02-27',home_id:'57',away_id:'130',home_score:78,away_score:70,status:'final',season_type:2,tournament_tag:null,neutral_site:1},
     {season,game_date:'2025-03-20',home_id:'57',away_id:'150',home_score:81,away_score:68,status:'final',season_type:3,tournament_tag:'ncaa',neutral_site:1}
   ];
   const awards=['conference_regular_champion','conference_tournament_champion','national_champion'].map(award_type=>({season,award_type,value:1})).concat([{season,award_type:'ncaa_seed',value:11}]);
   const net=Array.from({length:350},(_,i)=>({season,program_id:String(1000+i),net_rank:i+1}));
   net[0].program_id='150';net[0].net_rank=20;
   net[1].program_id='248';net[1].net_rank=40;
+  net[2].program_id='130';net[2].net_rank=30;
   const env={DB:{prepare(sql){return {bind(){return {all:async()=>({results:
     sql.includes('FROM cbb_games WHERE')?games:
     sql.includes('FROM cbb_ncaa_results WHERE')?[{season,opening_round:1},{season,opening_round:0},{season,opening_round:0}]:

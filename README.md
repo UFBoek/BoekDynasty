@@ -73,6 +73,18 @@ The authenticated app has a dedicated responsive phone layout:
 
 Mobile markup and JavaScript were smoke-tested across multiple pages and manager roles. Visual testing on physical devices remains recommended.
 
+## Permanent dynasty features
+
+**Profiles:** Each program opens an owner/conference/original-draft record, roster movement history and archived-season owners. Each manager opens a roster, number of recorded championships and archived-season participation. Game records and fantasy totals stay explicitly pending until a trusted results/scoring feed is configured.
+
+**Draft room:** Shows a complete round-by-round snake board including empty upcoming slots, commissioner-readiness checks, the live picking manager, recent selections and an optional 1/2/3/5/10/15/30-minute countdown. The timer is informational; expiry does not cause automatic picks. Commissioner can change the clock when the draft is pending or paused. The real pick order is unchanged.
+
+**Permanent seasons:** The commissioner can archive a completed season and advance the current-season label. This copies the current roster ownership into `season_rosters` and creates per-manager season records. It does **not** clear `picks` or `program_owners`, restart the initial draft, or alter trades. Prior champions can be recorded against archived seasons by the commissioner. Until scoring is available, fantasy points and final standings remain null; do not claim historical ranks or winners.
+
+**Waivers:** Disabled by default. When enabled by the commissioner after the inaugural draft, managers can submit a claim on any eligible unrostered program, optionally naming a school to drop to make room, cancel a claim, or directly drop a school. Claims enter a visible queue and require commissioner approval/denial. Approval checks availability/ownership/capacity again and transfers the program atomically. All accepted claims and drops are logged in `roster_transactions`. This is a commissioner-reviewed waiver process, **not automated priority processing**.
+
+Apply `migrations/003_dynasty_seasons_waivers_clock.sql` to existing production D1 before deploying this version. The migration only creates new tables and settings. No existing schools, managers, picks, accepted trades or ownership records are modified.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:
@@ -87,6 +99,7 @@ npx wrangler deploy
 ```sh
 npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/001_program_ownership_trades.sql
 npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/002_commissioner_controls.sql
+npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/003_dynasty_seasons_waivers_clock.sql
 node scripts/build.mjs
 npx wrangler deploy
 ```

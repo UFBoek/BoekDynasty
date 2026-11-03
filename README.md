@@ -13,7 +13,7 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 - **Up to 10 managers**, including the commissioner; a database trigger enforces the cap.
 - One-time commissioner setup code, then single-use invitation links valid for 7 days.
 - Each manager creates a team with a username, team name, and password.
-- Passwords hashed with PBKDF2-SHA256; 90-day HttpOnly, Secure, SameSite cookies renew on use.
+- Passwords hashed with PBKDF2-SHA256 using Cloudflare-compatible 100,000 iterations; 90-day HttpOnly, Secure, SameSite cookies renew on use.
 - Commissioner chooses Division I conferences and draft rounds (1–20).
 - College basketball conference membership imported from ESPN's 2026–27 data; manual program entry if a school is missing.
 - Initial snake-format draft, with exclusive ownership, turn checks, pause/resume and pre-completion commissioner reset.

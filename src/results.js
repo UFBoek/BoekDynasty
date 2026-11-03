@@ -278,6 +278,114 @@ const DATA_PIPELINE=(()=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? ORDER BY game_date DESC,start_utc DESC LIMIT ?",season,Math.min(100,Math.max(1,limit))).all();
     return rows.results||[];
   };
+  // Historical dynasty score PREVIEW: earned points from recorded wins and verified
+  // commissioner achievement inputs. Never equate an unimported season with zero.
+  async function programHistory(env,id,scoring,currentSeason){
+    const latestYear=Number(currentSeason.slice(0,4)),startYear=2021;
+    const games=(await q(env,`SELECT season,game_date,home_id,away_id,home_score,away_score,
+      status,season_type,tournament_tag,neutral_site
+      FROM cbb_games WHERE (home_id=? OR away_id=?) AND season>=? AND season<=?
+      ORDER BY season DESC,game_date DESC`,id,id,'2021-22',currentSeason).all()).results||[];
+    const awards=(await q(env,`SELECT season,award_type,value FROM cbb_awards WHERE program_id=?
+      AND season>=? AND season<=?`,id,'2021-22',currentSeason).all()).results||[];
+    const net=(await q(env,`SELECT r.season,r.program_id,r.net_rank
+      FROM cbb_net_rankings r JOIN cbb_net_snapshots s
+      ON r.season=s.season AND r.snapshot_date=s.snapshot_date
+      WHERE s.status='complete' AND r.season>=? AND r.season<=?
+        AND s.snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_snapshots
+          WHERE season=r.season AND status='complete')`,'2021-22',currentSeason).all()).results||[];
+    const netBySeason=new Map();
+    for(const r of net){
+      if(!netBySeason.has(r.season))netBySeason.set(r.season,new Map());
+      netBySeason.get(r.season).set(String(r.program_id),Number(r.net_rank));
+    }
+    const periods=[];
+    const weight=(key)=>Number(scoring?.[key]||0);
+    for(let y=latestYear;y>=startYear;y--){
+      const label=y+'-'+String((y+1)%100).padStart(2,'0');
+      const seasonGames=games.filter(g=>g.season===label);
+      const completed=seasonGames.filter(g=>g.status==='final'&&
+        g.home_score!==null&&g.away_score!==null);
+      const wins=completed.filter(g=>{
+        const home=String(g.home_id)===String(id);
+        return home?g.home_score>g.away_score:g.away_score>g.home_score;
+      });
+      const losses=completed.length-wins.length;
+      const regularWins=wins.filter(g=>Number(g.season_type)===2&&!g.tournament_tag);
+      const honors=awards.filter(a=>a.season===label);
+      const ranks=netBySeason.get(label);
+      let earned=regularWins.length*weight('regular_win');
+      let q1=0,q1a=0,q2=0;
+      if(ranks?.size>=350){
+        for(const g of wins){
+          if(Number(g.season_type)!==2||g.tournament_tag)continue;
+          const home=String(g.home_id)===String(id);
+          const opponent=String(home?g.away_id:g.home_id);
+          const rank=ranks.get(opponent);
+          if(!rank)continue;
+          const venue=g.neutral_site?'neutral':home?'home':'away';
+          const quad=quadrant(rank,venue);
+          if(quad===1){q1++;earned+=weight('quad_1_win');if(isQ1A(rank,venue)){q1a++;earned+=weight('quad_1a_extra');}}
+          if(quad===2){q2++;earned+=weight('quad_2_win');}
+        }
+      }
+      const awardValue=(kind)=>honors.filter(a=>a.award_type===kind)
+        .reduce((total,a)=>total+Number(a.value||0),0);
+      if(awardValue('conference_regular_champion'))earned+=weight('conference_regular_title');
+      if(awardValue('conference_tournament_champion'))earned+=weight('conference_tournament_title');
+      const seed=awardValue('ncaa_seed');
+      if(seed>0){
+        earned+=seed<=4?weight('ncaa_seed_1_4'):seed<=8?weight('ncaa_seed_5_8'):
+          seed<=12?weight('ncaa_seed_9_12'):weight('ncaa_seed_13_16');
+      }
+      const ncaaWins=awardValue('ncaa_wins');
+      if(ncaaWins>0)earned+=ncaaWins*weight('ncaa_tournament_win');
+      if(awardValue('national_champion'))earned+=weight('national_championship');
+      const have=completed.length>0||honors.length>0;
+      periods.push({season:label,points:have?Math.round(earned*100)/100:null,
+        status:have?'partial':'unavailable',games:completed.length,wins:wins.length,
+        losses,regular_wins:regularWins.length,q1,q1a,q2,
+        net_verified:!!(ranks&&ranks.size>=350),
+        awards_verified:honors.length,
+        note:have?'Verified components only; not a final fantasy total.':'Historical game and award data not yet imported.'});
+    }
+    return {program_id:String(id),current_season:currentSeason,seasons:periods,
+      source:'ESPN game results, dated NET snapshots, commissioner-verified awards',
+      complete:false};
+  }
+  // Import a small batch of missing historical dates each scheduled run.
+  // Keep existing live scoreboard collection the priority.
+  async function backfillHistory(env,limit=3){
+    const seasonYears=[2025,2024,2023,2022,2021];
+    const covered=(await q(env,`SELECT season,game_date,source_group FROM cbb_game_coverage
+      WHERE season>='2021-22' AND season<='2025-26'`).all()).results||[];
+    const checked=new Set(covered.map(row=>row.season+'|'+row.game_date+'|'+row.source_group));
+    const recentErrors=(await q(env,`SELECT season,target_date,COUNT(*) AS tries,MAX(started_at) AS last_try
+      FROM cbb_sync_runs WHERE job='historical' AND status='error'
+      GROUP BY season,target_date`).all()).results||[];
+    const attempts=new Map(recentErrors.map(row=>[row.season+'|'+row.target_date,row]));
+    const targets=[],today=Math.floor(Date.now()/1000);
+    // Newest first, but prioritize unfinished groups for a given date.
+    for(const y of seasonYears){
+      const season=y+'-'+String((y+1)%100).padStart(2,'0');
+      const last=(y+1)+'-04-15';
+      for(let day=y+'-11-01';day<=last;day=shiftDay(day,1)){
+        if(targets.length>=limit)break;
+        const groups=groupsForDay(day);
+        if(groups.every(g=>checked.has(season+'|'+day+'|'+g)))continue;
+        const failure=attempts.get(season+'|'+day);
+        if(failure&&failure.tries>=3&&today-Number(failure.last_try)<86400)continue;
+        targets.push({season,day});
+      }
+      if(targets.length>=limit)break;
+    }
+    const imported=[];
+    for(const target of targets){
+      try{imported.push({ok:true,season:target.season,...await importDay(env,target.season,target.day,{job:'historical'})});}
+      catch(e){imported.push({ok:false,season:target.season,date:target.day,error:err(e)});}
+    }
+    return {requested:targets.length,results:imported};
+  }
   const programGames=async(env,season,id)=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND (home_id=? OR away_id=?) ORDER BY game_date DESC,start_utc DESC LIMIT 70",season,id,id).all();
     return rows.results||[];
@@ -430,7 +538,9 @@ const DATA_PIPELINE=(()=>{
     if(cron==='*/15 * * * *'){
       // Keep the feed active overnight: late games and corrections can post
       // after midnight, and never rely on a "quiet hours" assumption.
-      return importDay(env,season,day,{job:'live'});
+      const live=await importDay(env,season,day,{job:'live'});
+      const historical=await backfillHistory(env,3).catch(e=>({error:err(e)}));
+      return {live,historical};
     }
     if(cron==='15 10 * * *'){
       const reconciled=await backfill(env,season,7);
@@ -465,5 +575,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,backfillHistory,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

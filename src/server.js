@@ -249,6 +249,41 @@ export default (function makeWorker(){
       if(!result.meta?.changes)return failure('Only the sender can cancel a pending offer.',409);
       return response({ok:true});
     }
+
+    if(path==='waiver/claim'){
+      const settings=await getSettings(env);
+      if(settings.draft_status!=='finished'||!settings.waivers_enabled)return failure('Waiver claims are closed.',409);
+      const programId=String(data.program_id||''),dropId=String(data.drop_program_id||'');
+      if(!programId||programId.length>120||dropId.length>120||programId===dropId)return failure('Choose a valid unrostered school.',400);
+      const school=await q(env,'SELECT id,conference_id FROM programs WHERE id=?',programId).first();
+      if(!school||!settings.conferences.includes(school.conference_id))return failure('This school is not eligible for waivers.',400);
+      if(await q(env,'SELECT 1 FROM program_owners WHERE program_id=?',programId).first())return failure('This school is already rostered.',409);
+      if(dropId&&!await q(env,'SELECT 1 FROM program_owners WHERE program_id=? AND manager_id=?',dropId,user.id).first())return failure('You do not own the school selected to drop.',409);
+      const owned=(await q(env,'SELECT count(*) AS n FROM program_owners WHERE manager_id=?',user.id).first()).n;
+      if(!dropId&&owned>=settings.rounds)return failure('Your roster is full. Select a school to drop.',409);
+      if(await q(env,"SELECT 1 FROM waiver_claims WHERE manager_id=? AND program_id=? AND status='pending'",user.id,programId).first())return failure('You already have a pending claim for this school.',409);
+      const id=crypto.randomUUID();
+      await q(env,"INSERT INTO waiver_claims(id,season,manager_id,program_id,drop_program_id) VALUES(?,?,?,?,?)",id,settings.current_season,user.id,programId,dropId||null).run();
+      return response({ok:true,id});
+    }
+    if(path==='waiver/cancel'){
+      const claimId=String(data.claim_id||'');
+      const result=await q(env,"UPDATE waiver_claims SET status='cancelled',resolved_at=unixepoch() WHERE id=? AND manager_id=? AND status='pending'",claimId,user.id).run();
+      if(result.meta?.changes!==1)return failure('This waiver claim can no longer be cancelled.',409);
+      return response({ok:true});
+    }
+    if(path==='waiver/drop'){
+      const settings=await getSettings(env);
+      if(settings.draft_status!=='finished'||!settings.waivers_enabled)return failure('Roster moves are closed.',409);
+      const programId=String(data.program_id||'');
+      const id=crypto.randomUUID();
+      const moves=await env.DB.batch([
+        q(env,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) SELECT ?,?,?,program_id,'drop' FROM program_owners WHERE program_id=? AND manager_id=?",id,settings.current_season,user.id,programId,programId,user.id),
+        q(env,'DELETE FROM program_owners WHERE program_id=? AND manager_id=?',programId,user.id)
+      ]);
+      if(moves[1].meta?.changes!==1)return failure('You do not own this school.',409);
+      return response({ok:true});
+    }
     if(user.role!=='commissioner')return failure('Commissioner access required.',403);
     if(path==='admin/invite'){
       const num=await q(env,'SELECT count(*) AS total FROM users').first();
@@ -361,6 +396,37 @@ export default (function makeWorker(){
       if(!archived)return failure('Season has not been archived.',409);
       if(champion&&!await q(env,'SELECT 1 AS x FROM season_manager_records WHERE season=? AND manager_id=?',season,champion).first())return failure('Select a manager who participated in that season.',400);
       await q(env,'UPDATE season_archives SET champion_manager_id=? WHERE season=?',champion||null,season).run();
+      return response({ok:true});
+    }
+
+    if(path==='admin/waiver/review'){
+      const id=String(data.claim_id||''),mode=String(data.mode||'');
+      if(!['approve','deny'].includes(mode))return failure('Invalid waiver review decision.',400);
+      if(mode==='deny'){
+        const denied=await q(env,"UPDATE waiver_claims SET status='denied',resolved_at=unixepoch() WHERE id=? AND status='pending'",id).run();
+        if(denied.meta?.changes!==1)return failure('This waiver claim is no longer pending.',409);
+        return response({ok:true});
+      }
+      const settings=await getSettings(env);
+      if(!settings.waivers_enabled||settings.draft_status!=='finished')return failure('Waivers are disabled.',409);
+      const claim=await q(env,"SELECT * FROM waiver_claims WHERE id=? AND status='pending'",id).first();
+      if(!claim||claim.season!==settings.current_season)return failure('This waiver claim is no longer available.',409);
+      const statements=[
+        q(env,`UPDATE waiver_claims SET status='approved',resolved_at=unixepoch()
+          WHERE id=? AND status='pending'
+          AND NOT EXISTS(SELECT 1 FROM program_owners po WHERE po.program_id=waiver_claims.program_id)
+          AND (drop_program_id IS NULL OR EXISTS(
+            SELECT 1 FROM program_owners po WHERE po.program_id=waiver_claims.drop_program_id AND po.manager_id=waiver_claims.manager_id))
+          AND (drop_program_id IS NOT NULL OR
+            (SELECT count(*) FROM program_owners po WHERE po.manager_id=waiver_claims.manager_id)<?)`,id,settings.rounds),
+        q(env,"INSERT INTO program_owners(program_id,manager_id) SELECT program_id,manager_id FROM waiver_claims WHERE id=? AND status='approved'",id),
+        q(env,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) SELECT ?,season,manager_id,program_id,'claim' FROM waiver_claims WHERE id=? AND status='approved'",crypto.randomUUID(),id),
+        q(env,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) SELECT ?,season,manager_id,drop_program_id,'drop' FROM waiver_claims WHERE id=? AND status='approved' AND drop_program_id IS NOT NULL",crypto.randomUUID(),id),
+        q(env,"DELETE FROM program_owners WHERE program_id=(SELECT drop_program_id FROM waiver_claims WHERE id=? AND status='approved') AND manager_id=(SELECT manager_id FROM waiver_claims WHERE id=?)",id,id)
+      ];
+      const results=await env.DB.batch(statements);
+      if(results[0].meta?.changes!==1)return failure('Claim is stale or the requested school is not available.',409);
+      if(results[1].meta?.changes!==1)return failure('Waiver claim transfer failed; inspect the claim before retrying.',500);
       return response({ok:true});
     }
     if(path==='admin/clock'){

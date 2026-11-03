@@ -603,7 +603,7 @@
         +'<label class="settings-toggle section-gap" for="data-auto"><div><strong>Automatic results collection</strong><span>Every 15 minutes during game hours, plus daily reconciliation.</span></div><input id="data-auto" type="checkbox" '+(resultsStatus?.auto_enabled!==false?'checked':'')+'/></label>'
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-auto-save">Save automation setting</button></div>'
         +'<div class="form-row section-gap"><label for="data-date">Check specific game date</label><input class="field" id="data-date" type="date" value="'+escapeHTML(today)+'"/></div>'
-        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
+        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
         +'<p class="hint section-gap">Game scores do not activate fantasy scoring. Import errors are kept in the audit log.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A full list of at least 250 teams is required.</p>'
@@ -704,6 +704,11 @@
         const result=await api('admin/data/backfill',{days:7});
         const failed=(result.days||[]).filter(x=>!x.ok);
         notice('Checked '+(result.days||[]).length+' dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-upcoming'){
+        const result=await api('admin/data/upcoming',{});
+        const failed=(result.days||[]).filter(x=>!x.ok);
+        notice('Checked '+(result.days||[]).length+' upcoming dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
         await loadResults();
       }else if(act==='data-health-refresh'){await loadResults();notice('Data status refreshed.');
       }else if(act==='data-auto-save'){

@@ -1708,3 +1708,218 @@ input[type="checkbox"],input[type="radio"]{flex-shrink:0}
 .draft-board-manager.vacant small{color:#9aaabb}
 .draft-board-cell.vacant{background:repeating-linear-gradient(135deg,#fafbfd 0px,#fafbfd 11px,#f5f8fc 11px,#f5f8fc 22px)}
 .draft-board-cell.vacant .draft-cell-placeholder{color:#a2afbe}
+
+
+/* November refinements: game-day mobile nav, scannable school directory, season-led school profiles. */
+:root{--surface-welcome:#edf5fd}
+.page-heading .eyebrow{letter-spacing:.095em}
+.program-directory-shell{min-width:0}
+.directory-welcome{
+ display:flex;align-items:center;justify-content:space-between;gap:16px;
+ background:linear-gradient(108deg,#173a60 0%,#205282 100%);
+ color:#fff;border-radius:14px;padding:15px 21px;margin:0 0 13px;
+ box-shadow:0 7px 23px rgba(25,62,100,.11);
+}
+.directory-welcome>div{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;min-width:0}
+.directory-welcome>div>span{font-size:10px;color:#aac6e3;font-weight:800;letter-spacing:.07em}
+.directory-welcome strong{font-family:var(--bd-font-display);font-size:20px;letter-spacing:-.04em;font-weight:800;color:#fff}
+.directory-welcome small{font-size:11px;color:#d1e1f2}
+.directory-welcome-hint{font-size:10.5px;color:#d2e3f4;text-align:right;max-width:175px}
+.directory-welcome>.btn{background:#fff;color:#17528b;border:1px solid #fff}
+.directory-welcome>.btn:hover{background:#e9f3fc;color:#125084}
+.directory-filters{padding:12px 14px;background:#fff;border:1px solid #dfe8f1;border-radius:13px;margin-bottom:12px}
+.directory-search-row{display:flex;align-items:center;gap:8px;min-width:0}
+.directory-search{display:flex;align-items:center;min-width:0;flex:1;position:relative}
+.directory-search>span{position:absolute;left:13px;top:50%;transform:translateY(-52%);font-size:25px;color:#6686a6;pointer-events:none;line-height:1}
+.directory-search .field{width:100%;min-height:42px;padding-left:36px;border-radius:9px;font-size:12px;background:#f9fbfe}
+.directory-conference-select{width:170px;min-height:42px;font-size:11.5px}
+.directory-sort{width:145px;min-height:42px;font-size:11.5px}
+.directory-conference-strip{
+ display:flex;align-items:center;gap:5px;overflow-x:auto;
+ scrollbar-width:thin;scrollbar-color:#d3dfea transparent;
+ scroll-snap-type:x proximity;padding:10px 1px 11px;white-space:nowrap;
+}
+.directory-conference-strip button{flex:0 0 auto;border:1px solid #e3eaf2;background:#f7f9fc;color:#52718e;border-radius:99px;padding:7px 11px;min-height:31px;font-size:10.5px;font-weight:700;scroll-snap-align:start;transition:background .15s,border-color .15s,color .15s}
+.directory-conference-strip button:hover{background:#ebf3fc}
+.directory-conference-strip button.active{background:#e5f0ff;color:#185b9f;border-color:#b7d3f1}
+.directory-filter-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0 10px;border-top:1px solid #eef2f7}
+.directory-status-tabs{display:flex;gap:3px;flex-wrap:wrap;padding:4px;background:#f1f5fa;border-radius:9px}
+.directory-status-tabs button{font-size:10.5px;font-weight:750;color:#647b94;border:0;border-radius:7px;background:transparent;min-height:32px;padding:8px 11px;white-space:nowrap}
+.directory-status-tabs button.active{color:#195a9b;background:#fff;box-shadow:0 1px 5px #203f621a}
+.directory-status-tabs button:hover:not(.active){background:#e5effa}
+.directory-current-count{font-size:10.5px;color:#5d7894;white-space:nowrap;font-weight:750}
+.directory-letter-strip{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none;padding:2px 0 1px}
+.directory-letter-strip::-webkit-scrollbar{display:none}
+.directory-letter-strip button{
+ flex:1;min-width:25px;min-height:30px;padding:5px 3px;border:0;background:transparent;border-radius:6px;
+ color:#68829e;font-size:10px;font-weight:750;transition:background .15s,color .15s;
+}
+.directory-letter-strip button.active{background:#e9f2fc;color:#175aa3}
+.directory-letter-strip button:hover:not(.active){background:#f0f5fa}
+.program-directory-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.program-directory-card{
+ min-width:0;min-height:76px;padding:11px 12px;gap:8px;
+ background:#fff;border-radius:12px;border:1px solid #e0e8f1;
+ box-shadow:0 1px 6px #213b5708;
+}
+.program-directory-card:hover{box-shadow:0 6px 17px #25436a13;border-color:#a9c7e4}
+.program-directory-card .program-card-main{gap:9px;min-width:0;flex:1;text-align:left}
+.program-directory-card .program-card-main .program-logo{width:35px;height:35px;flex:0 0 35px;border-radius:8px;background:#fff;padding:3px;object-fit:contain}
+.program-directory-card .program-card-main strong{font-size:11.75px;font-weight:750;line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.program-directory-card .program-card-main small{font-size:10px;line-height:1.35;color:#697c91;margin-top:4px}
+.program-directory-chevron{font-size:19px;color:#8ca2b9;margin-left:auto}
+.program-dir-status{flex:0 0 auto;max-width:104px}
+.program-dir-owner{display:block;max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9.5px;background:#edf3fa;border:1px solid #dce6f1;border-radius:6px;color:#4e6580;padding:5px 7px}
+.program-dir-open{display:block;font-size:9.5px;color:#237349;background:#eaf6ef;border:1px solid #d2eada;border-radius:6px;padding:5px 7px;font-weight:700}
+.program-dir-pick{font-size:10px;min-height:30px;padding:6px 9px}
+.program-directory-grid .program-card[hidden]{display:none!important}
+.directory-load{display:flex;flex-direction:column;align-items:center;gap:7px;padding:22px 0}
+.directory-load[hidden]{display:none!important}
+.directory-load span{font-size:11px;color:#6e859b}
+.directory-empty[hidden]{display:none!important}
+/* School profile: compact six-season history and progressively disclosed detail. */
+.program-profile-header{
+ display:flex;align-items:center;gap:17px;min-width:0;padding:17px 19px;
+ border:1px solid #dce6f0;border-radius:15px;background:#fff;margin:0 0 11px;
+ box-shadow:0 2px 14px #1234560a;
+}
+.program-profile-header>.program-logo{width:79px;height:79px;flex:0 0 79px;object-fit:contain;border:1px solid #ecf1f6;padding:7px;border-radius:13px;background:#fff}
+.program-profile-header .grow{flex:1;min-width:0}
+.program-profile-header .eyebrow{font-size:9.5px;margin-bottom:5px}
+.program-profile-header h1{font-family:var(--bd-font-display);font-size:clamp(20px,2.2vw,27px);font-weight:800;letter-spacing:-.045em;color:#173755;line-height:1.17;overflow-wrap:anywhere}
+.program-profile-header p{font-size:11px;color:#667d93;margin-top:7px;line-height:1.5}
+.program-profile-status{flex:none;color:#20754d;background:#e9f6ef;border:1px solid #cbe6d6;font-size:10px;font-weight:750;border-radius:99px;padding:7px 11px}
+.program-profile-status.rostered{color:#2f5b83;background:#eaf2fa;border-color:#d6e5f4}
+.program-profile-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:13px}
+.program-profile-summary>div{
+ display:flex;flex-direction:column;justify-content:center;min-width:0;
+ background:#fff;border:1px solid #e1e8f1;border-radius:11px;padding:13px 14px;
+}
+.program-profile-summary>div>span{font-size:9.3px;font-weight:800;letter-spacing:.05em;color:#6a8198;margin-bottom:5px}
+.program-profile-summary strong{font-family:var(--bd-font-display);font-size:19px;font-weight:800;color:#173753;line-height:1.22;letter-spacing:-.04em}
+.program-profile-summary strong:has(.program-profile-owner-link){font-size:12px;letter-spacing:0}
+.program-profile-summary small{font-size:10px;color:#6c8196;margin-top:4px}
+.program-profile-owner-link{background:transparent;border:0;color:#1760a9;font-size:11.75px;font-weight:750;padding:0;text-align:left}
+.program-profile-owner-link:hover{text-decoration:underline}
+.program-history-panel{padding:17px 18px}
+.program-history-panel .panel-head{margin-bottom:13px}
+.program-season-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;align-items:stretch}
+.program-season-card{
+ display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:81px;min-width:0;
+ border:1px solid #e2eaf3;border-radius:9px;background:#f9fbfe;color:#657c92;padding:11px 11px;text-align:left;
+ transition:background .15s,border-color .15s,transform .15s;
+}
+.program-season-card:hover:not(.active){background:#f0f6fd;border-color:#bdd3e9;transform:translateY(-1px)}
+.program-season-card.active{background:#e8f2ff;border-color:#8bb8e6;box-shadow:inset 0 2px 0 #4a91d1}
+.program-season-card span{font-size:10px;font-weight:750;color:#607994}
+.program-season-card strong{font-family:var(--bd-font-display);font-size:18px;font-weight:800;color:#1c446e;letter-spacing:-.04em;line-height:1.2}
+.program-season-card small{font-size:9.2px;color:#66819e;line-height:1.3}
+.program-season-expanded{padding:14px 2px 1px}
+.program-season-detail-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 0 12px}
+.program-season-detail-heading>div strong{display:block;font-size:12.5px;color:#213e5e}
+.program-season-detail-heading>div small{display:block;color:#6e839b;font-size:10.5px;margin-top:3px}
+.program-season-bigscore{font-family:var(--bd-font-display);font-size:24px;font-weight:800;letter-spacing:-.045em;color:#175a9e}
+.program-season-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.program-season-facts>div{border:1px solid #e5ebf3;background:#fafbfd;border-radius:8px;padding:10px}
+.program-season-facts>div span{display:block;font-size:10px;color:#6a8198;margin-bottom:4px}
+.program-season-facts>div strong{display:block;font-size:12px;color:#20415f;font-weight:800}
+.program-season-expanded .hint{margin:11px 0 0;font-size:10.25px;line-height:1.55}
+.program-profile-bottom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:12px;margin-top:12px}
+.program-profile-bottom>.panel{min-width:0;padding:17px}
+.compact-profile-facts>div{padding:9px 0}
+.compact-profile-facts strong,.compact-profile-facts span{font-size:11px}
+.program-detail-disclosure{border:1px solid #e4ebf3;border-radius:9px;overflow:hidden;background:#f9fbfe}
+.program-detail-disclosure summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:12px 13px;font-weight:750;font-size:11.5px;color:#245d93;min-height:44px;list-style:none}
+.program-detail-disclosure summary::-webkit-details-marker{display:none}
+.program-detail-disclosure summary span{font-size:18px;transition:transform .15s}
+.program-detail-disclosure[open] summary span{transform:rotate(90deg)}
+.program-detail-disclosure[open] summary{background:#eaf3fc;border-bottom:1px solid #dae7f4}
+.program-detail-entries{max-height:390px;overflow:auto;padding:0 13px}
+.program-detail-entries .result-game-row{padding:11px 0}
+.program-ownership-disclosure{padding:0 17px!important}
+.program-ownership-disclosure summary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:49px;cursor:pointer;color:#214669;font-size:12px;font-weight:750}
+.program-ownership-disclosure summary span{color:#71869c;font-weight:600;font-size:10.5px}
+/* My Team: warmer entry state without giant blank panels */
+.team-hero-fresh{gap:12px;padding:17px 19px}
+.team-hero-fresh .avatar{width:47px;height:47px;flex:0 0 47px;border-radius:12px;font-size:13px}
+.team-hero-fresh h2{font-family:var(--bd-font-display);font-size:20px;letter-spacing:-.04em}
+.team-hero-schools{display:flex;align-items:center;justify-content:flex-end;gap:4px;max-width:300px;flex-wrap:wrap}
+.team-hero-schools>span:not(.team-draft-prompt){display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e0e8f1;border-radius:8px;width:31px;height:31px}
+.team-hero-schools .program-logo{width:28px;height:28px;border:0;background:transparent;padding:2px;object-fit:contain}
+.team-draft-prompt{font-size:10.5px;color:#526d89;background:#eff5fb;border:1px dashed #c7d9eb;padding:8px 10px;border-radius:8px;text-align:right}
+.team-stats-refined{gap:9px}
+.team-stats-refined .team-stat{padding:13px 16px;min-height:90px}
+.team-stats-refined .team-stat strong{font-family:var(--bd-font-display);font-size:23px;letter-spacing:-.04em}
+.team-stats-refined .team-stat>small{display:block;font-size:10px;color:#71869b;margin-top:4px}
+.team-roster-progress{height:4px;background:#e4edf6;border-radius:99px;overflow:hidden;margin-top:9px}
+.team-roster-progress i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3a83c4,#ed813c)}
+.team-layout .empty{min-height:95px;padding:17px}
+/* Mobile seven-tab nav, legible at 320px */
+@media(max-width:850px){
+ .bottom{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;padding:6px 3px max(8px,env(safe-area-inset-bottom));}
+ .bottom button{min-width:0;flex:auto;padding:5px 1px;min-height:50px;gap:3px;border-radius:9px}
+ .bottom button svg{width:19px;height:19px}
+ .bottom button span{font-size:9.3px;font-weight:700;line-height:1.15;white-space:nowrap;letter-spacing:-.02em}
+ .bottom button.active{background:#e9f2fc;color:#14599d}
+ .bottom button.active span{font-weight:800}
+ .program-directory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .directory-letter-strip button{min-width:27px;flex:0 0 27px}
+ .program-profile-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .program-season-strip{display:flex;overflow-x:auto;scrollbar-width:thin;scroll-snap-type:x mandatory;padding-bottom:4px}
+ .program-season-card{flex:0 0 108px;scroll-snap-align:start}
+ .program-profile-bottom{grid-template-columns:1fr}
+ .team-layout .team-aside{order:0}
+}
+@media(max-width:650px){
+ .content{padding-bottom:110px}
+ .directory-welcome{padding:12px 14px;gap:9px}
+ .directory-welcome strong{font-size:18px}
+ .directory-welcome-hint{display:none}
+ .directory-filters{padding:10px}
+ .directory-search-row{flex-wrap:wrap;gap:7px}
+ .directory-search{flex:0 0 100%}
+ .directory-conference-select{flex:1;width:auto}
+ .directory-sort{flex:0 0 118px;width:118px}
+ .directory-search .field{font-size:16px}
+ .directory-conference-strip{padding:8px 0}
+ .directory-filter-row{align-items:flex-start;flex-direction:column;gap:6px}
+ .directory-status-tabs{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
+ .directory-status-tabs button{font-size:9.5px;min-height:35px;padding:6px 2px}
+ .directory-current-count{margin:0 0 2px 5px}
+ .program-directory-grid{grid-template-columns:1fr;gap:7px}
+ .program-directory-card{min-height:66px;padding:10px 12px}
+ .program-directory-card .program-card-main strong{font-size:12.5px}
+ .program-directory-card .program-card-main .program-logo{width:38px;height:38px;flex-basis:38px}
+ .program-directory-chevron{display:none}
+ .program-profile-header{padding:14px 13px;gap:10px}
+ .program-profile-header>.program-logo{width:59px;height:59px;flex:0 0 59px;padding:5px}
+ .program-profile-header h1{font-size:19px}
+ .program-profile-header p{font-size:10px;margin-top:4px}
+ .program-profile-status{padding:5px 7px;font-size:9px}
+ .program-profile-summary{gap:7px}
+ .program-profile-summary>div{padding:11px}
+ .program-profile-summary strong{font-size:17px}
+ .program-history-panel{padding:15px 12px}
+ .program-season-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .program-season-expanded .hint{font-size:10px}
+ .team-hero-fresh{flex-wrap:wrap;padding:13px}
+ .team-hero-fresh h2{font-size:18px}
+ .team-hero-schools{width:100%;max-width:none;justify-content:flex-start}
+ .team-draft-prompt{text-align:left}
+ .team-stats-refined .team-stat{padding:11px 9px;min-height:83px}
+ .team-stats-refined .team-stat strong{font-size:19px}
+ .team-stats-refined .team-stat>small{font-size:9px}
+ .bottom button span{font-size:8.8px!important}
+}
+@media(max-width:380px){
+ .bottom{padding-left:1px;padding-right:1px;gap:0}
+ .bottom button{padding:4px 0}
+ .bottom button svg{width:18px;height:18px}
+ .bottom button span{font-size:8.1px!important}
+ .directory-status-tabs button{font-size:8.7px}
+ .program-dir-owner{max-width:87px}
+ .program-directory-card .program-card-main strong{font-size:11.5px}
+}
+@media(prefers-reduced-motion:reduce){
+ .program-season-card,.program-directory-card,.directory-conference-strip button,.directory-status-tabs button{transition:none!important}
+}

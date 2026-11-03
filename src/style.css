@@ -845,3 +845,417 @@ input[type=checkbox],input[type=radio]{accent-color:#1558a6}
 @media(prefers-reduced-motion:reduce){
  .program-card,.nav button,.btn,.commissioner-menu button{transition:none!important}
 }
+
+
+/* Product polish pass · typography, rhythm, readability and interaction. 
+   Deliberately retains the existing off-white/navy/blue/orange palette. */
+:root{
+  --bd-font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --bd-font-display:"Plus Jakarta Sans","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --bd-radius:14px;
+  --bd-radius-sm:9px;
+  --bd-spacing:16px;
+  --bd-text:#172b45;
+  --bd-text-muted:#61738a;
+  --bd-line:#e4eaf2;
+  --bd-focus:#1558a6;
+}
+html{font-size:14px;text-size-adjust:100%;-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
+body{
+  font-family:var(--bd-font-body);
+  font-size:14px;
+  line-height:1.55;
+  font-weight:400;
+  letter-spacing:-.008em;
+  font-feature-settings:"kern" 1;
+}
+button,input,select,textarea{font-family:inherit;letter-spacing:inherit}
+button{line-height:1.35}
+h1,h2,h3,.headline,.brand-title,.profile-hero h1,.auth-section h1,.team-hero h2,.scoring-lead h2{
+  font-family:var(--bd-font-display);
+  font-optical-sizing:auto;
+  text-wrap:balance;
+}
+h1,h2,h3{font-weight:750}
+p{line-height:1.65}
+strong{font-weight:700}
+small{line-height:1.45}
+button,select,input,textarea{-webkit-tap-highlight-color:transparent}
+button:disabled,select:disabled,input:disabled{cursor:not-allowed}
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--bd-focus);
+  outline-offset:3px;
+}
+:where(.metric,.team-stat,.directory-stats,.standings-summary,.data-kpis,.draft-clock-box) strong{
+  font-variant-numeric:tabular-nums;
+}
+:where(.panel,.metric,.program-card,.team-program,.trade-offer,.board-slot){
+  border-radius:var(--bd-radius);
+}
+/* Page titles and visual structure */
+.headline{
+  font-family:var(--bd-font-display);
+  font-size:clamp(26px,2.5vw,32px);
+  font-weight:800;
+  line-height:1.22;
+  letter-spacing:-.042em;
+}
+.page-heading{margin-bottom:22px}
+.eyebrow,.page-heading .eyebrow{
+  display:block;
+  font-family:var(--bd-font-body);
+  font-size:10px;
+  line-height:1.35;
+  font-weight:800;
+  letter-spacing:.105em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.intro-text{font-size:13px;line-height:1.65;max-width:700px}
+.content{max-width:1280px}
+.panel,.metric{box-shadow:0 3px 18px rgba(19,52,88,.038),0 1px 2px rgba(19,52,88,.025)}
+.panel{padding:23px}
+.panel-head{gap:14px;align-items:center;margin-bottom:18px}
+.panel-head h2{
+  font-family:var(--bd-font-display);
+  font-size:15.5px;
+  line-height:1.42;
+  font-weight:750;
+  letter-spacing:-.028em;
+}
+.panel-head p{font-size:11.5px;line-height:1.55;letter-spacing:0}
+.subhead,.team-subhead{
+  font-size:10.5px;
+  font-weight:800;
+  letter-spacing:.075em;
+  text-transform:uppercase;
+  line-height:1.4;
+}
+.section-gap{margin-top:18px}
+.grid2,.team-layout,.profile-panels,.scoring-grid{gap:17px}
+.empty{border-style:dashed;border-width:1px;padding:24px;gap:8px}
+.empty strong{font-size:13px}
+.empty,.hint,.notice{line-height:1.65}
+.hint{font-size:12px}
+/* Elegant numbers and consistent KPI hierarchy */
+.metrics{gap:13px;margin:18px 0 20px}
+.metric{padding:22px 20px}
+.metric:before{top:22px;bottom:22px;width:3px;background:#c8dcec}
+.metric .m-label,.team-stat span,.directory-stats span,.standings-summary span,.profile-stats>div>span,.data-kpis span{
+  font-family:var(--bd-font-body);
+  font-size:10px;
+  font-weight:750;
+  letter-spacing:.035em;
+  line-height:1.5;
+}
+.metric strong,.directory-stats strong,.standings-summary strong,.team-stat strong,.data-kpis strong{
+  font-family:var(--bd-font-display);
+  font-weight:800;
+  letter-spacing:-.048em;
+  line-height:1.14;
+}
+.metric strong{font-size:30px;margin:12px 0 6px}
+.metric .m-foot{font-size:11px;line-height:1.45}
+.directory-stats>div{padding:17px 18px;align-items:center}
+.directory-stats strong{font-size:25px}
+.standings-summary>div{gap:9px;padding:17px 18px}
+.standings-summary strong{font-size:23px}
+.team-stat strong{font-size:25px}
+.data-kpis strong{font-size:20px}
+/* Navigation, account and league identity */
+.brand{gap:11px}
+.brand-title{
+  font-family:var(--bd-font-display);
+  font-weight:800;
+  font-size:15.5px;
+  letter-spacing:-.055em;
+  line-height:1.2;
+}
+.brand-sub{font-size:9px;letter-spacing:.11em;font-weight:700;line-height:1.45}
+.nav-label{font-size:9.5px;letter-spacing:.125em;font-weight:750}
+.sidebar .nav button{
+  min-height:44px;
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:-.007em;
+  border-radius:10px;
+  padding:11px 12px;
+  gap:12px;
+}
+.sidebar .nav button.active{font-weight:750}
+.sidebar .nav button svg{width:19px;height:19px}
+.sidebar .side-foot{padding:13px;border-radius:12px}
+.sidebar .side-foot .account-mini{font-size:12px}
+.sidebar .side-foot .season-pill{font-size:10px}
+.topbar .title{font-size:12.5px;font-weight:750;letter-spacing:-.018em}
+.topbar .chip{font-size:10px;font-weight:700;letter-spacing:.015em}
+.avatar{font-family:var(--bd-font-display);font-weight:800;letter-spacing:-.035em}
+/* Buttons and form controls */
+.btn{
+  min-height:41px;
+  font-family:var(--bd-font-body);
+  font-size:12.5px;
+  font-weight:700;
+  line-height:1.3;
+  letter-spacing:-.005em;
+  border-radius:9px;
+  padding:10px 16px;
+  transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease;
+}
+.btn.small{min-height:34px;font-size:11px;padding:7px 12px;border-radius:8px}
+.btn:not(:disabled):active{transform:translateY(1px)}
+.btn:not(:disabled):focus-visible{box-shadow:0 0 0 3px rgba(21,88,166,.15)}
+.link-button{font-size:12px;line-height:1.45;font-weight:700}
+.form-row{gap:8px;margin-bottom:16px}
+.form-row label{font-size:11.5px;font-weight:700;line-height:1.4}
+.field{
+  min-height:43px;
+  padding:11px 13px;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.4;
+  border-radius:9px;
+  transition:background-color .15s,border-color .15s,box-shadow .15s;
+}
+.field:disabled{background:#f2f5f9;color:#8998aa}
+.field:focus{outline:none}
+textarea.field{line-height:1.65;min-height:105px;resize:vertical}
+input[type="search"]::-webkit-search-cancel-button{cursor:pointer}
+input[type="checkbox"],input[type="radio"]{flex-shrink:0}
+.conf-item{border-radius:9px;line-height:1.45;min-height:49px;font-size:12px}
+.conf-item span{line-height:1.4}
+.settings-toggle{border-radius:11px}
+.settings-toggle strong{font-size:13px;line-height:1.45}
+.settings-toggle span{font-size:11.5px}
+/* Tables: quiet structure and clear, aligned values */
+.table,.standings-table{font-variant-numeric:tabular-nums}
+.table th,.standings-table th{
+  font-family:var(--bd-font-body);
+  font-size:10px;
+  font-weight:750;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  line-height:1.4;
+}
+.table td,.standings-table td{font-size:12.5px;line-height:1.55;vertical-align:middle}
+.table td,.table th{padding-top:13px;padding-bottom:13px}
+.standings-table td,.standings-table th{padding:14px 15px}
+.standings-manager strong{font-size:12.5px;font-weight:700;line-height:1.4}
+.standings-manager small{font-size:10.5px}
+.standings-table .numerical{font-weight:750}
+.standings-table tbody tr{transition:background-color .15s}
+.standings-panel{padding:22px}
+.standings-notice{font-size:11.5px}
+.table-user{font-size:inherit;line-height:1.45;font-weight:700}
+.table-user:focus-visible{border-radius:3px}
+/* Program directory */
+.directory-toolbar{gap:11px;padding:13px;border-radius:12px}
+.directory-toolbar .field{min-height:43px}
+.directory-result{font-size:11.5px;margin-bottom:12px}
+.directory-stats{gap:12px}
+.program-card{padding:15px;min-height:86px}
+.program-card-main{gap:12px}
+.program-card strong,.program-card-main strong,.team-program-link strong{
+  font-size:12.75px;
+  font-weight:700;
+  line-height:1.38;
+  letter-spacing:-.008em;
+}
+.program-card small,.team-program-link small{font-size:10.8px;line-height:1.42}
+.owner-chip,.available-chip{font-size:10px;font-weight:700;letter-spacing:.005em}
+.program-logo{border-radius:10px}
+.rowline{gap:12px;padding:13px 0}
+.rowline strong{font-size:12.5px;line-height:1.45}
+.rowline small{font-size:10.5px;line-height:1.45}
+.manager-card{padding:13px 0;gap:12px}
+.manager-card strong{font-size:12.5px}
+.manager-card small{font-size:10.5px}
+/* Draft, trades and personalized team */
+.draft-info{border-radius:14px;padding:20px 21px;margin:18px 0}
+.draft-info strong{
+  font-family:var(--bd-font-display);
+  font-size:17px;
+  font-weight:750;
+  line-height:1.35;
+}
+.draft-info p{font-size:11.5px}
+.draft-action strong{font-family:var(--bd-font-display);font-size:14px;font-weight:750}
+.draft-action small{font-size:11.5px;line-height:1.5}
+.board-slot{min-height:66px;padding:12px}
+.board-number{font-size:10px;font-weight:800}
+.board-manager{font-size:11.5px;font-weight:600}
+.board-team strong{font-size:11px;font-weight:700}
+.board-open{font-size:10px}
+.board-select label{font-size:11px}
+.draft-order-row{min-height:56px}
+.trade-offer{padding:17px}
+.trade-offer-head strong,.team-offer-head strong{font-size:12.5px;line-height:1.5}
+.trade-offer p{font-size:12px;line-height:1.7}
+.trade-program-list{padding:5px}
+.trade-choice{min-height:48px;font-size:12px;line-height:1.4}
+.trade-choice span:last-child{min-width:0}
+.team-hero h2{font-weight:750;font-size:23px;letter-spacing:-.04em}
+.team-hero p{font-size:11.5px;line-height:1.5}
+.team-program{border-radius:11px}
+.team-program-link{min-height:64px}
+.team-program-link strong{font-size:12.25px}
+.team-program-link small{font-size:10.75px}
+.team-offer-detail strong{font-size:12px}
+/* Profiles, results and history */
+.profile-hero{border-radius:15px;padding:23px}
+.profile-hero h1{
+  font-size:clamp(24px,2.7vw,31px);
+  font-weight:800;
+  letter-spacing:-.045em;
+  line-height:1.2;
+}
+.profile-subline{font-size:11.5px;line-height:1.55}
+.profile-stats>div{border-radius:12px;padding:16px}
+.profile-stats strong{font-size:15px;font-weight:750}
+.profile-facts>div{padding:12px 0}
+.profile-facts>div span,.profile-facts>div strong{font-size:11.5px;line-height:1.5}
+.profile-roster-row{padding:12px 2px}
+.profile-roster-row strong{font-size:12px}
+.profile-roster-row small{font-size:10.5px}
+.history-row strong{font-size:11.75px}
+.history-row span{font-size:11.25px}
+.history-team strong{font-size:12px}
+.history-team span{font-size:11px}
+.more-menu{padding:8px}
+.more-menu-item{
+  min-height:66px;
+  padding:14px;
+  gap:13px;
+  border-radius:10px;
+  transition:background-color .15s;
+}
+.more-menu-item strong{font-size:12.75px;font-weight:700}
+.more-menu-item small{font-size:11px;line-height:1.45}
+.more-menu-icon{border-radius:10px}
+.result-game-row{padding:13px 2px}
+.result-game-row strong{font-size:12.5px;font-weight:700}
+.result-game-status{letter-spacing:.025em;font-weight:750}
+.game-day{font-size:10.5px}
+.score-row{min-height:42px}
+.score-row span{font-size:11.75px;line-height:1.45}
+.score-row strong{font-family:var(--bd-font-display);font-weight:800;font-variant-numeric:tabular-nums}
+.scoring-lead h2{font-weight:800;letter-spacing:-.035em}
+.scoring-lead p,.scoring-panel p{line-height:1.7}
+.data-run strong{font-size:12px}
+.data-run small{line-height:1.5}
+/* Commissioner settings: organized, consistent controls */
+.commissioner-layout{gap:18px}
+.commissioner-menu{padding:8px;gap:5px;border-radius:12px}
+.commissioner-menu button{padding:12px 13px;min-height:54px;border-radius:9px}
+.commissioner-menu button strong{font-size:12px;font-weight:700}
+.commissioner-menu button span{font-size:10.5px;line-height:1.35}
+.setting-panel{padding:24px}
+.setting-panel .panel-head{margin-bottom:20px}
+.settings-grid{gap:15px}
+.settings-hint{line-height:1.6}
+.data-csv{font-size:12px}
+.data-kpis>div{padding:14px;border-radius:10px}
+.data-run{gap:14px}
+.invite-result>span{font-size:11.5px;line-height:1.5}
+/* Sign-in has same type hierarchy as the main app */
+.auth-card{border-radius:17px;padding:34px}
+.auth-logo .brand-title{font-size:22px;font-weight:800}
+.auth-section h1{font-weight:800;font-size:24px;letter-spacing:-.035em}
+.auth-desc{font-size:12.5px;line-height:1.7}
+.auth-top button{font-size:12px;font-weight:700}
+.auth-top button.active{font-weight:750}
+.auth-card .form-row label{font-size:12px}
+.auth-card .field{font-size:14px}
+.auth-card .btn{font-size:13px}
+/* Touch and smaller widths */
+@media(max-width:850px){
+  .content{padding-top:23px}
+  .topbar .title{font-size:12.5px}
+  .bottom button{
+    font-family:var(--bd-font-body);
+    font-size:10px;
+    font-weight:650;
+    line-height:1.2;
+    letter-spacing:0;
+  }
+  .bottom button svg{width:21px;height:21px}
+  .bottom button span{font-size:10px;line-height:1.2;font-weight:650}
+  .bottom button.active{font-weight:750}
+  .bottom button.active span{font-weight:750}
+  .bottom button:focus-visible{outline-offset:-3px}
+  .panel{padding:19px}
+  .commissioner-menu button{min-height:45px}
+  .setting-panel{padding:19px}
+}
+@media(max-width:650px){
+  .content{padding-top:21px}
+  .headline{font-size:27px;letter-spacing:-.042em}
+  .page-heading{margin-bottom:17px}
+  .panel{padding:18px}
+  .panel-head{margin-bottom:15px}
+  .panel-head h2{font-size:15px}
+  .metric{padding:16px 14px}
+  .metric strong{font-size:24px}
+  .metric .m-label,.metric .m-foot{font-size:10px}
+  .standings-summary>div,.team-stat{padding:14px}
+  .standings-summary strong{font-size:20px}
+  .directory-stats>div{padding:12px 10px}
+  .directory-stats strong{font-size:21px}
+  .program-card{padding:12px;min-height:82px}
+  .program-card-main strong{font-size:12.5px}
+  .program-card small{font-size:10.5px}
+  .directory-toolbar{padding:10px}
+  .directory-toolbar .field,.field{font-size:16px}
+  .draft-info{padding:16px}
+  .draft-info strong{font-size:15px}
+  .draft-action strong{font-size:13px}
+  .profile-hero{padding:18px}
+  .profile-hero h1{font-size:23px}
+  .team-hero h2{font-size:19px}
+  .team-stat strong{font-size:21px}
+  .team-program-link strong{font-size:12px}
+  .scoring-lead h2{font-size:20px}
+  .board-manager{font-size:11px}
+  .board-team strong{font-size:10.5px}
+  .trade-choice{font-size:12px}
+  .auth-card{padding:26px 22px}
+  .auth-section h1{font-size:23px}
+  .commissioner-layout{gap:11px}
+  .commissioner-menu{
+    display:flex;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    gap:5px;
+    padding:7px;
+  }
+  .commissioner-menu::-webkit-scrollbar{display:none}
+  .commissioner-menu button{
+    flex:0 0 auto;
+    min-width:96px;
+    padding:11px 12px;
+    min-height:42px;
+    text-align:center;
+    scroll-snap-align:start;
+  }
+  .commissioner-menu button strong{font-size:11.5px}
+  .commissioner-menu button span{display:none}
+  .setting-panel{padding:17px}
+  .bottom button span{font-size:10px}
+}
+@media(max-width:380px){
+  .headline{font-size:25px}
+  .bottom button span{font-size:9.5px}
+  .metric .m-label{font-size:9.5px}
+  .topbar .title{font-size:11.5px}
+}
+@media(hover:none),(pointer:coarse){
+  .program-card:hover{transform:none;box-shadow:0 3px 11px rgba(26,52,81,.045)}
+  .btn:not(:disabled):active{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .btn,.program-card,.standings-table tbody tr,.more-menu-item,
+  .field,.sidebar .nav button{transition:none!important}
+}

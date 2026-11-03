@@ -11,3 +11,12 @@ CREATE TABLE IF NOT EXISTS cbb_game_coverage (
   PRIMARY KEY(season, game_date, source_group)
 );
 CREATE INDEX IF NOT EXISTS cbb_game_coverage_updated ON cbb_game_coverage(season, fetched_at DESC);
+CREATE TABLE IF NOT EXISTS cbb_net_details (
+  season TEXT NOT NULL,
+  snapshot_date TEXT NOT NULL,
+  program_id TEXT NOT NULL,
+  raw_json TEXT NOT NULL,
+  source TEXT NOT NULL,
+  PRIMARY KEY(season,snapshot_date,program_id)
+);
+CREATE INDEX IF NOT EXISTS cbb_net_details_date ON cbb_net_details(season,snapshot_date DESC);

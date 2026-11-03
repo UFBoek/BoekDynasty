@@ -267,9 +267,11 @@
       +scoreboardLogo(id)+scoreboardRank(id,ranks)+'<span class="scoreboard-team-name">'+escapeHTML(name)+'</span>'
       +'<strong class="scoreboard-team-score">'+escapeHTML(score)+'</strong></div>';
     const winner=canScore&&g.status==='final'&&g.home_score!==null&&g.away_score!==null;
-    return '<article class="scoreboard-match '+(g.status==='live'?'is-live':g.status==='final'?'is-final':g.status==='scheduled'?'is-scheduled':'is-other')+'">'
+    const involved=owners().filter(o=>String(o.program_id)===String(g.home_id)||String(o.program_id)===String(g.away_id));
+    const isMyGame=involved.some(o=>o.manager_id===me?.id);
+    return '<article class="scoreboard-match '+(g.status==='live'?'is-live':g.status==='final'?'is-final':g.status==='scheduled'?'is-scheduled':'is-other')+(involved.length?' is-league-game':'')+(isMyGame?' is-my-game':'')+'">'
       +'<div class="scoreboard-match-head"><span class="scoreboard-match-status '+(g.status==='live'?'live':'')+'">'+(g.status==='live'?'<i class="live-score-dot" aria-hidden="true"></i>':'')+escapeHTML(gameStatus)+'</span>'
-      +'<span class="scoreboard-match-venue">'+(g.neutral_site?'NEUTRAL SITE':g.conference_game?'CONFERENCE':'NCAA MEN’S BASKETBALL')+'</span></div>'
+      +'<span class="scoreboard-match-tags">'+(isMyGame?'<span class="scoreboard-roster-tag is-personal">MY PROGRAM</span>':involved.length?'<span class="scoreboard-roster-tag">LEAGUE</span>':'')+'<span class="scoreboard-match-venue">'+(g.neutral_site?'NEUTRAL SITE':g.conference_game?'CONFERENCE':'NCAA MEN’S BASKETBALL')+'</span></span></div>'
       +'<div class="scoreboard-match-teams">'
       +teamRow(g.away_id,g.away_name||'Away',awayScore,winner&&g.away_score>g.home_score)
       +teamRow(g.home_id,g.home_name||'Home',homeScore,winner&&g.home_score>g.away_score)
@@ -671,11 +673,13 @@
     const tradeHistory=(league.trade_items||[]).filter(x=>x.program_id===p.id).filter(item=>(league.trades||[]).some(t=>t.id===item.trade_id&&t.status==='accepted'));
     const ownedYears=(league.archived_rosters||[]).filter(x=>x.program_id===p.id);
     const pointText=x=>x?.points===null||x?.points===undefined?'—':Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
+    const maxKnownPoints=Math.max(1,...history.filter(item=>item.points!==null&&item.points!==undefined&&Number.isFinite(Number(item.points))).map(item=>Math.max(0,Number(item.points))));
     const seasonRows=Array.from({length:Math.max(0,Number(season().slice(0,4))-2021+1)},(_,i)=>{
       const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');
       const row=history.find(item=>item.season===label);
       return '<button class="program-season-card '+(selected===label?'active':'')+'" type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" aria-pressed="'+(selected===label)+'">'
-        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Partial points':row?.status==='complete'?'Final points':'Awaiting data')+'</small></button>';
+        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Partial points':row?.status==='complete'?'Final points':'Awaiting data')+'</small>'
+        +'<span class="program-season-meter" aria-hidden="true"><i style="width:'+(row?.points!==null&&row?.points!==undefined&&Number.isFinite(Number(row.points))?Math.min(100,Math.max(0,100*Number(row.points)/maxKnownPoints)):0)+'%"></i></span></button>';
     }).join('');
     const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='partial'?'Verified points so far, not the final season total':'Awaiting a verified historical import')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
       +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'

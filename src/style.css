@@ -157,3 +157,7 @@
 @media(max-width:1150px){.commissioner-layout{grid-template-columns:180px minmax(0,1fr)}.setting-panel .conf-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:800px){.commissioner-layout{grid-template-columns:1fr}.commissioner-menu{position:static;display:flex;overflow-x:auto;gap:5px;padding:7px}.commissioner-menu button{flex:0 0 auto;min-width:122px;padding:10px}.commissioner-menu button span{font-size:10px}.setting-panel{padding:19px}}
 @media(max-width:550px){.settings-grid{grid-template-columns:1fr;gap:2px}.setting-panel .conf-grid{grid-template-columns:1fr}.setting-panel{padding:16px}.commissioner-menu button{min-width:108px}.invite-result{flex-direction:column;align-items:stretch}.draft-order-row{gap:7px}.draft-order-row .avatar{height:30px;width:30px;font-size:11px}}
+
+
+.topbar .title{min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:570px){.topbar .title{flex:1}.topbar .top-right{flex-shrink:0}}

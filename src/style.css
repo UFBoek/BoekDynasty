@@ -307,3 +307,13 @@
   .draft-action{flex-direction:column;align-items:stretch}
   .draft-action .btn{width:100%}
 }
+
+/* Permanent program dynasty scoring */
+.scoring-lead{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:21px;margin-bottom:17px}
+.scoring-lead h2{font-size:23px;margin:5px 0 7px}.scoring-lead p{margin:0;line-height:1.5;max-width:640px;color:#95a4b8}
+.scoring-lead>strong{font-size:50px;line-height:1;opacity:.8}
+.scoring-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.scoring-panel{padding:18px 20px}.score-row{display:flex;justify-content:space-between;gap:18px;align-items:center;padding:11px 0;border-top:1px solid rgba(140,165,194,.14)}
+.score-row span{line-height:1.35}.score-row strong{font-variant-numeric:tabular-nums}
+.scoring-panel p{margin:12px 0 0;line-height:1.55;color:#95a4b8}
+@media(max-width:690px){.scoring-grid{grid-template-columns:1fr}.scoring-lead h2{font-size:20px}.scoring-lead>strong{font-size:40px}}

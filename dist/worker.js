@@ -832,13 +832,12 @@ const DATA_PIPELINE=(()=>{
     const settings=Object.fromEntries(pairs.map(x=>[x.key,x.value]));
     if(settings.results_auto_sync==='0')return {skipped:'disabled'};
     const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
-    // Archival repair is independent of the current basketball calendar.
-    if(cron==='*/30 * * * *'){
-      // Limit historical writes on Cloudflare D1 free tier. Import only the
-      // missing awards first, then progress eight ordinary and eight March dates.
+    // Pace archive imports so live scoring and manager signups retain D1 write capacity.
+    if(cron==='30 * * * *'){
+      // Process six archived dates hourly rather than sixteen every 30 minutes.
       const conference=await backfillHistoricalConferences(env).catch(e=>({error:err(e)}));
-      const historical=await backfillHistory(env,8).catch(e=>({error:err(e)}));
-      const postseason=await priorityPostseason(env,8).catch(e=>({error:err(e)}));
+      const historical=await backfillHistory(env,4).catch(e=>({error:err(e)}));
+      const postseason=await priorityPostseason(env,2).catch(e=>({error:err(e)}));
       const ncaa=await reconcileNCAA2026(env).catch(e=>({error:err(e)}));
       const archiveNet=await backfillArchivedNet(env).catch(e=>({error:err(e)}));
       return {conference,historical,postseason,ncaa,archiveNet};
@@ -1578,6 +1577,9 @@ export default (function makeWorker(){
       }catch(e){
         const msg=e?.message||'Unexpected server error.';
         if(url.pathname.startsWith('/api/')){
+          console.error('Boek Dynasty API error',url.pathname,e?.name||'Error',msg);
+          if(/daily row write limit|exceeded.*D1.*write/i.test(msg))
+            return failure('Cloudflare database write limit reached for today. Registration and other updates will resume after the midnight UTC reset. Please try again then.',503);
           if(/UNIQUE constraint failed/i.test(msg))return failure('This username or program has already been taken. Please try another.',409);
           if(/League is full/i.test(msg))return failure('The league is full. Ask the commissioner to increase the manager limit.',409);
           return failure(msg.startsWith('Username')||msg.startsWith('Team name')||msg.startsWith('Password')?msg:'Server could not complete the request.',500);

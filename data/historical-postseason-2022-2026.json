@@ -3477,6 +3477,34 @@
       "type": "conference_tournament_champion",
       "value": 1,
       "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "152",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "NCAA 2026 bracket First Four https://www.ncaa.com/brackets/basketball-men/d1/2026"
+    },
+    {
+      "season": "2025-26",
+      "id": "47",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "NCAA 2026 bracket First Four https://www.ncaa.com/brackets/basketball-men/d1/2026"
+    },
+    {
+      "season": "2025-26",
+      "id": "2567",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "NCAA 2026 bracket First Four https://www.ncaa.com/brackets/basketball-men/d1/2026"
+    },
+    {
+      "season": "2025-26",
+      "id": "2329",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "NCAA 2026 bracket First Four https://www.ncaa.com/brackets/basketball-men/d1/2026"
     }
   ],
   "tournament_games": [

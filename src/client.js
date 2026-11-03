@@ -1,7 +1,7 @@
 (function startApp(){
   const root=document.querySelector('#app');
-  const ICONS={home:'⌂',programs:'▦',draft:'▤',trades:'⇄',league:'♙',commissioner:'⚙'};
-  const names={home:'Overview',programs:'Programs',draft:'Draft Room',trades:'Trades',league:'League',commissioner:'Commissioner'};
+  const ICONS={home:'⌂',programs:'▦',draft:'▤',trades:'⇄',league:'▥',commissioner:'⚙'};
+  const names={home:'Overview',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',commissioner:'Commissioner'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -15,7 +15,8 @@
     {name:'OTHER DIVISION I',ids:['1','5','6','12','13','16','19','20','22','24','25','26','27','28','30','46']}
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
-  let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='';
+  let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
+  let programQuery='',programConference='all',programOwnership='all';
   let appError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
@@ -47,7 +48,7 @@
   const avatar=(u)=>'<span class="avatar">'+escapeHTML(initials(u.display_name))+'</span>';
   const heading=(eyebrow,title,desc='')=>'<header class="page-heading">'+(eyebrow?'<div class="eyebrow">'+eyebrow+'</div>':'')+'<h1 class="headline">'+title+'</h1>'+(desc?'<p class="intro-text">'+desc+'</p>':'')+'</header>';
   const panelHeading=(title,subtitle='',action='')=>'<div class="panel-head"><div><h2>'+title+'</h2>'+(subtitle?'<p>'+subtitle+'</p>':'')+'</div>'+action+'</div>';
-  const empty=(title,desc)=>'<div class="empty"><strong>'+title+'</strong><span>'+desc+'</span></div>';
+  const empty=(title,desc='')=>'<div class="empty"><strong>'+title+'</strong>'+(desc?'<span>'+desc+'</span>':'')+'</div>';
   function notice(text,bad=false){
     document.querySelector('.toast')?.remove();
     const el=document.createElement('div');el.className='toast'+(bad?' error':'');el.textContent=text;document.body.appendChild(el);
@@ -67,6 +68,7 @@
       const next=await api('state');
       me=next.user;league=next;appError='';
       if(!silent)current='home';render();
+      if(current==='programs')filterPrograms();
       if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
     }catch(e){
       if(String(e.message).includes('Sign in required')){me=null;league=null;if(!silent)await loadPublic();renderAuth();}
@@ -82,8 +84,37 @@
     try{
       const next=await api('state'); me=next.user;league=next;render();
       refreshId=setInterval(()=>{if(me&&!busy&&!syncActive)refresh(true);},12000);
+      if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
     if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
+
+  async function autoImportPrograms(){
+    if(autoImportAttempted||syncActive||!me||me.role!=='commissioner'||!league||league.settings.draft_status!=='pending'||picks().length)return;
+    const missing=activeConfs().filter(id=>!programs().some(p=>p.conference_id===id));
+    if(!missing.length)return;
+    autoImportAttempted=true;
+    syncActive=true;
+    render();
+    try{
+      let count=0;
+      const errors=[];
+      for(let i=0;i<missing.length;i+=3){
+        const results=await Promise.all(missing.slice(i,i+3).map(async id=>{
+          try{return {id,added:(await api('admin/sync',{conference_id:id})).added||0};}
+          catch(e){return {id,error:e.message};}
+        }));
+        for(const result of results){
+          if(result.error)errors.push(conf(result.id)+': '+result.error);
+          else count+=result.added;
+        }
+        await refresh(true);
+      }
+      importError=errors.join(' | ');
+      if(count)notice('Loaded '+count+' college basketball programs.');
+      if(errors.length)notice('Some conferences could not be imported. Retry in Commissioner settings.',true);
+    }catch(e){importError=e.message;notice('Program import failed. Retry in Commissioner settings.',true);}
+    finally{syncActive=false;render();}
   }
   function renderAuth(){
     const mode=status.needs_setup?'setup':authMode;
@@ -116,23 +147,36 @@
     return heading('', 'Overview')
       +'<div class="league-status"><div><span class="eyebrow">DRAFT STATUS</span><strong>'+(league.settings.draft_status==='live'?'Draft in progress':league.settings.draft_status==='finished'?'Draft complete':league.settings.draft_status==='paused'?'Draft paused':'Draft not started')+'</strong>'+(league.settings.draft_status==='live'&&nextManager()?'<span class="league-status-detail">On the clock: '+escapeHTML(nextManager().display_name)+'</span>':'')+'</div><button class="btn secondary small" data-act="tab" data-id="draft">View draft</button></div>'
       +'<div class="metrics"><div class="metric"><span class="m-label">YOUR PROGRAMS</span><strong>'+owned.length+'</strong><span class="m-foot">Owned schools</span></div><div class="metric"><span class="m-label">LEAGUE MANAGERS</span><strong>'+members().length+' <span style="font-size:14px;color:#9babc0">/ 10</span></strong><span class="m-foot">Registered managers</span></div><div class="metric"><span class="m-label">ELIGIBLE PROGRAMS</span><strong>'+fmt(selectedCount)+'</strong><span class="m-foot">'+activeConfs().length+' conferences selected</span></div><div class="metric"><span class="m-label">SCORING SYSTEM</span><strong style="font-size:24px">Pending</strong><span class="m-foot">Not configured</span></div></div>'
-      +'<div class="grid2"><section class="panel">'+panelHeading('Your programs')+(owned.length?owned.map(p=>'<div class="rowline">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div><span class="status draft">ROSTERED</span></div>').join(''):empty('No programs owned','Your roster will appear here after the draft.'))+'</section><section class="panel">'+panelHeading('League rosters')+leaderboard()+'</section></div>';
+      +'<div class="grid2"><section class="panel">'+panelHeading('Your roster')+(owned.length?owned.map(p=>'<div class="rowline">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div><span class="status draft">ROSTERED</span></div>').join(''):empty('No programs owned','Your roster will appear here after the draft.'))+'</section><section class="panel">'+panelHeading('League rosters')+leaderboard()+'</section></div>';
   }
   function leaderboard(){
     return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><strong>'+escapeHTML(u.display_name)+'</strong>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';
   }
   function programCard(p,canPick){
-    const owned=programOwned(p.id);
-    const owner=members().find(u=>u.id===owned?.manager_id);
-    return '<div class="program-card" data-search="'+escapeHTML((p.name+' '+conf(p.conference_id)).toLowerCase())+'">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div>'+(owned?'<span class="status draft">'+escapeHTML(owner?.display_name||'Drafted')+'</span>':'<button class="btn small secondary" data-act="pick" data-id="'+escapeHTML(p.id)+'" '+(!canPick?'disabled title="Draft available on your turn"':'')+'>Draft</button>')+'</div>';
+    const owned=programOwned(p.id),owner=members().find(u=>u.id===owned?.manager_id);
+    const status=owned?'<span class="owner-chip"><span class="owner-indicator"></span>'+escapeHTML(owner?.display_name||'Rostered')+'</span>':canPick?'<button class="btn small" data-act="pick" data-id="'+escapeHTML(p.id)+'">Draft</button>':'<span class="available-chip">Available</span>';
+    return '<div class="program-card" data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(owned?'owned':'available')+'" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></div>'+status+'</div>';
   }
   function programsPage(){
     const eligible=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name));
     const available=eligible.filter(p=>!programOwned(p.id)).length;
+    const opts=activeConfs().map(id=>'<option value="'+id+'" '+(programConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     return heading('', 'Programs')
-      +'<div class="controls"><div><h2>'+eligible.length+' eligible programs</h2><p class="hint">'+available+' currently undrafted</p></div><input class="field search" type="search" id="program-search" placeholder="Search programs or conferences..." aria-label="Search programs"/></div>'
-      +(eligible.length?'<div class="program-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div>':empty('No programs imported','Import programs in Commissioner settings.'))
-      +'';
+      +'<div class="directory-stats"><div><strong>'+eligible.length+'</strong><span>Eligible schools</span></div><div><strong>'+available+'</strong><span>Available</span></div><div><strong>'+(eligible.length-available)+'</strong><span>Rostered</span></div></div>'
+      +'<div class="directory-toolbar"><label class="search-wrap"><span>⌕</span><input class="field" type="search" id="program-search" value="'+escapeHTML(programQuery)+'" placeholder="Search schools..." aria-label="Search schools"/></label><select class="field" id="program-conference" aria-label="Conference"><option value="all">All conferences</option>'+opts+'</select><select class="field" id="program-ownership" aria-label="Program ownership"><option value="all" '+(programOwnership==='all'?'selected':'')+'>All schools</option><option value="available" '+(programOwnership==='available'?'selected':'')+'>Available</option><option value="owned" '+(programOwnership==='owned'?'selected':'')+'>Rostered</option></select></div>'
+      +'<div class="directory-result"><span id="program-results">'+eligible.length+' programs</span><span>'+(league.settings.draft_status==='live'&&isMyTurn()?'Your pick is live':'2026–27 program pool')+'</span></div>'
+      +(eligible.length?'<div class="program-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div>':empty('No programs loaded',me?.role==='commissioner'?(syncActive?'Importing selected conferences...':'Use the import button in Commissioner settings.'): 'The commissioner has not imported schools yet.'));
+  }
+  function filterPrograms(){
+    const query=programQuery.trim().toLowerCase();
+    let found=0;
+    document.querySelectorAll('.program-card[data-search]').forEach(card=>{
+      const match=card.dataset.search.includes(query)&&(programConference==='all'||card.dataset.conference===programConference)&&(programOwnership==='all'||card.dataset.owner===programOwnership);
+      card.hidden=!match;
+      if(match)found++;
+    });
+    const count=document.querySelector('#program-results');
+    if(count)count.textContent=found+' programs';
   }
   function draftPage(){
     const statusText=league.settings.draft_status;
@@ -168,9 +212,18 @@
       +'<section class="panel section-gap">'+panelHeading('Trade history')+(offers.length?offers.map(card).join(''):empty('No trades yet',''))+'</section>';
   }
   function leaguePage(){
-    return heading('', 'League')
-      +'<div class="metrics"><div class="metric"><span class="m-label">MANAGERS</span><strong>'+members().length+' / 10</strong><span class="m-foot">Registered team owners</span></div><div class="metric"><span class="m-label">CONFERENCES</span><strong>'+activeConfs().length+'</strong><span class="m-foot">Eligible for draft</span></div><div class="metric"><span class="m-label">DRAFT FORMAT</span><strong style="font-size:22px">Snake</strong><span class="m-foot">'+league.settings.rounds+' rounds</span></div><div class="metric"><span class="m-label">COMPETITION</span><strong style="font-size:22px">Season-long</strong><span class="m-foot">No head-to-head matchups</span></div></div>'
-      +'<div class="grid2"><section class="panel">'+panelHeading('League members',members().length+' registered · '+(10-members().length)+' slots open')+members().map(u=>'<div class="manager-card">'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div>'+(u.role==='commissioner'?'<span class="status wait">COMMISH</span>':'')+'</div>').join('')+'</section><section class="panel">'+panelHeading('Eligible conferences')+(activeConfs().length?activeConfs().map(id=>'<div class="rowline"><span class="grow"><strong>'+escapeHTML(conf(id))+'</strong></span><span class="right">'+programs().filter(p=>p.conference_id===id).length+' teams</span></div>').join(''):empty('No conferences selected','The commissioner will configure the eligible draft pool.'))+'</section></div>';
+    const users=members(),tracked=owners();
+    const rows=users.map(u=>{
+      const roster=tracked.filter(o=>o.manager_id===u.id);
+      const schoolNames=roster.map(o=>programs().find(p=>p.id===o.program_id)?.name).filter(Boolean);
+      return '<tr class="standing-row"><td><div class="standings-manager">'+avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':u.role==='commissioner'?'Commissioner':'Manager')+'</small></div></div></td><td class="numerical">'+roster.length+'</td><td class="numerical"><span class="pending-score">—</span></td><td class="standing-roster">'+(schoolNames.length?escapeHTML(schoolNames.slice(0,3).join(' · '))+(schoolNames.length>3?' +'+(schoolNames.length-3):''):'No programs yet')+'</td></tr>';
+    }).join('');
+    return heading('', 'Standings')
+      +'<div class="standings-summary"><div><span>SEASON</span><strong>'+escapeHTML(season())+'</strong></div><div><span>MANAGERS</span><strong>'+users.length+'</strong></div><div><span>ROSTERED SCHOOLS</span><strong>'+tracked.length+'</strong></div><div><span>DRAFT PICKS</span><strong>'+picks().length+'</strong></div></div>'
+      +'<section class="panel standings-panel">'+panelHeading('League standings','Season-long points')
+      +'<div class="standings-notice">Scoring is not configured yet. Rankings and points will appear when the scoring system is enabled.</div>'
+      +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>TEAM</th><th class="numerical">SCHOOLS</th><th class="numerical">POINTS</th><th>ROSTER PREVIEW</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'</section>';
   }
   function commissionerPage(){
     if(me.role!=='commissioner')return '';
@@ -262,17 +315,20 @@
         if(location.search)history.replaceState({},'',location.pathname);
         me=res.user;await refresh();
         if(!refreshId)refreshId=setInterval(()=>{if(me&&!busy&&!syncActive)refresh(true);},12000);
-        notice('Signed in. Your device will remember this account.');
+        notice('Signed in.');
+        if(me?.role==='commissioner')autoImportPrograms();
       }
     }catch(err){notice(err.message,true);}finally{busy=false;}
   });
   root.addEventListener('change',e=>{
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
+    if(e.target?.id==='program-conference'){programConference=e.target.value;filterPrograms();}
+    if(e.target?.id==='program-ownership'){programOwnership=e.target.value;filterPrograms();}
   });
   root.addEventListener('input',e=>{
     if(e.target?.id!=='program-search')return;
-    const query=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('.program-card[data-search]').forEach(item=>{item.style.display=item.dataset.search.includes(query)?'':'none';});
+    programQuery=e.target.value;
+    filterPrograms();
   });
   boot();
 })();

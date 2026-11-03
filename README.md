@@ -161,6 +161,22 @@ npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/006_ap_top25.
 - Historic program scores display verified partial totals, including regular wins, NET-dependent Q1/Q1A/Q2 wins, recorded NCAA tournament wins and source-backed achievements. Until full schedules, seeds and all conference/postseason achievements are verified, no program-year total should be described as final.
 - Official NCAA national champions have been backfilled for each of the five completed seasons (Kansas 2022, Connecticut 2023 and 2024, Florida 2025, Michigan 2026), with source https://www.ncaa.com/history/basketball-men/d1. These are production data rows; they are not recalculated from incomplete game imports.
 
+## November 3, 2026: historical fantasy scoring and Schools/Results navigation
+
+**The scoring data is now imported or staged as follows:**
+- NCAA seeds for 2022–2026: all 68 teams per season, including four verified 2026 First Four seeds.
+- Conference tournament champions: 32, 32, 32, 31 and 31 records by season (2022–2026).
+- National champions: one verified winner per completed season.
+- NCAA Tournament results: 67 verified matchups and four First Four wins per year for 2022–2025; 2026 results are reconstructed from verified ESPN final matchups between NCAA-seeded teams as the March backfill completes.
+- Conference regular-season championships: 185 verified champion/co-champion records for 2022–2026 stored in `data/historical-conference-2022-2026.json`. Both `programHistory` and `historicalLeaders` count these records **immediately**, even if the database write quota blocks D1 archival. A later quota-safe import writes only missing rows.
+- Source snapshot: `data/historical-postseason-2022-2026.json` provides NCAA seeds, game results and conference tournament winners; `migrations/007_ncaa_tournament_results.sql` creates the independently verified NCAA game table.
+
+**Quad venue thresholds:** Q1 is opponent NET rank 1–30 at home, 1–50 neutral and 1–75 away. Q2 is ranks 31–75 at home, 51–100 neutral and 76–135 away. Q1A is ranks 1–15 home, 1–25 neutral and 1–40 away. Q1A stacks on Q1. The score parser stores ESPN's home/away competitor identities and separate `neutral_site` flag; scoring uses the winning team's own venue, never blindly assumes that an ESPN-designated home team at a neutral site is playing at home. Postseason games are excluded from the regular-season quad calculation. Each historical season uses that season's verified *final* NET.
+
+**Interface updates:** Schools has accessible pill-based conference and sort filters plus a dedicated **Historical Leaders** tab with all 365 known Division I schools, a searchable all-season scoring table, year buttons and school profile links. Results uses a dense multi-column grid of compact game cards and a horizontally scrollable conference button strip, without the previous select dropdowns. All previous authenticated league and dynasty ownership rules remain intact.
+
+**Cloudflare capacity:** On November 3, 2026 the free D1 database reached its daily write quota while ingesting hundreds of historical dates. The Worker now runs 8 ordinary and 8 priority-postseason dates every **30 minutes**, rather than every minute; this keeps the continuous backfill at a sustainable pace after quota renewal. Live games still update every 15 minutes. Incomplete historical seasons remain labeled *partial*; do not describe unfinished game coverage as a final season score. Tests include regression cases for home/neutral/away Q1 and Q1A scoring, stacked First Four/NCAA wins, archived championship fallback and the Schools/Results controls.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:

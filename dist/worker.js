@@ -296,6 +296,14 @@ const DATA_PIPELINE=(()=>{
     const ncaaResults=(await q(env,`SELECT season,opening_round FROM cbb_ncaa_results WHERE winner_id=? AND season BETWEEN '2021-22' AND ?`,id,currentSeason).all()).results||[];
     const awards=(await q(env,`SELECT season,award_type,value FROM cbb_awards WHERE program_id=?
       AND season>=? AND season<=?`,id,'2021-22',currentSeason).all()).results||[];
+    // Read source-verified conference titles directly when D1's daily write
+    // allowance prevents their archival rows from being persisted yet.
+    const presentTitles=new Set(awards.filter(x=>x.award_type==='conference_regular_champion').map(x=>x.season));
+    for(const entry of HISTORICAL_CONFERENCE_CHAMPIONS.seasons){
+      if(entry.season>currentSeason||presentTitles.has(entry.season))continue;
+      if(entry.winners.some(x=>String(x.id)===String(id)))
+        awards.push({season:entry.season,award_type:'conference_regular_champion',value:1});
+    }
     const net=(await q(env,`SELECT r.season,r.program_id,r.net_rank
       FROM cbb_net_rankings r JOIN cbb_net_snapshots s
       ON r.season=s.season AND r.snapshot_date=s.snapshot_date
@@ -779,6 +787,19 @@ const DATA_PIPELINE=(()=>{
       q(env,"SELECT season,winner_id AS program_id,SUM(CASE WHEN opening_round=1 THEN 1 ELSE 0 END) opening_wins,SUM(CASE WHEN opening_round=0 THEN 1 ELSE 0 END) main_wins FROM cbb_ncaa_results WHERE season BETWEEN '2021-22' AND ? GROUP BY season,winner_id",currentSeason).all(),
       q(env,"SELECT season,stored_count FROM cbb_net_snapshots WHERE status='complete' AND season BETWEEN '2021-22' AND ?",currentSeason).all()
     ])).map(r=>r.results||[]);
+    const knownTitles=new Set(awards.filter(x=>x.award_type==='conference_regular_champion')
+      .map(x=>x.season+'|'+x.program_id));
+    for(const entry of HISTORICAL_CONFERENCE_CHAMPIONS.seasons){
+      if(entry.season>currentSeason)continue;
+      for(const winner of entry.winners){
+        const key=entry.season+'|'+winner.id;
+        if(!knownTitles.has(key)){
+          awards.push({season:entry.season,program_id:String(winner.id),
+            award_type:'conference_regular_champion',value:1});
+          knownTitles.add(key);
+        }
+      }
+    }
     const table=new Map(),find=(season,id)=>{
       const key=season+'|'+id;
       if(!table.has(key))table.set(key,{season,program_id:String(id),regular_wins:0,q1:0,q1a:0,q2:0,opening_wins:0,ncaa_wins:0,awards:{}});

@@ -427,3 +427,18 @@
  .season-champion-select{max-width:none;width:100%}
  .season-archive-item .btn{width:100%}
 }
+
+
+/* Profile links preserve the original card grid on touch devices. */
+.program-card-main{display:flex;align-items:center;gap:12px;flex:1;min-width:0;border:0;background:transparent;color:inherit;text-align:left;padding:0;cursor:pointer}
+.program-card-main .grow{flex:1;min-width:0}
+.program-card-main:hover strong{color:#f0c88c}
+.program-card-main:focus-visible,.profile-row:focus-visible,.table-user:focus-visible{outline:2px solid #eab66d;outline-offset:3px}
+@media(max-width:650px){
+ .program-card{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:5px;min-height:82px}
+ .program-card-main{display:flex;flex-direction:row;align-items:center;width:100%;min-height:45px;gap:11px}
+ .program-card-main .program-logo{width:42px;height:42px;flex:0 0 42px}
+ .program-card-main .grow{align-self:center}
+ .program-card>.owner-chip,.program-card>.available-chip,.program-card>.btn{display:inline-flex;align-self:flex-start;margin:0 0 0 53px;max-width:calc(100% - 53px)}
+ .board-slot .board-team .program-logo{width:28px;height:28px}
+}

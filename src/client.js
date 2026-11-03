@@ -13,7 +13,7 @@
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
   };
-  const names={home:'Overview',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',commissioner:'Commissioner',more:'More'};
+  const names={home:'Overview',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',commissioner:'Commissioner',more:'More',waivers:'Waivers',history:'Dynasty history','program-detail':'Program','manager-detail':'Manager'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -228,26 +228,52 @@
     const emptyMessage=document.querySelector('#no-program-results');
     if(emptyMessage)emptyMessage.hidden=found!==0;
   }
+  function updateDraftClock(){
+    const el=document.querySelector('#draft-clock');
+    if(!el)return;
+    const deadline=Number(league?.settings?.draft_deadline||0);
+    if(!deadline||league.settings.draft_status!=='live'){el.textContent='OFF';return;}
+    const left=Math.max(0,deadline-Math.floor(Date.now()/1000));
+    if(!left){el.textContent='TIME UP';el.classList.add('expired');return;}
+    el.classList.remove('expired');
+    el.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
+  }
   function draftPage(){
-    const statusText=league.settings.draft_status;
+    const settings=league.settings;
+    const total=draftTotal(),completed=picks().length;
+    const count=members().length,available=programs().filter(p=>activeConfs().includes(p.conference_id)).length;
+    const currentRound=Math.min(settings.rounds,Math.floor(completed/Math.max(1,count))+1);
+    const canStart=count>=2&&available>=total;
+    const status=settings.draft_status;
     const next=nextManager();
-    const total=draftTotal();
-    const round=Math.min(Number(league.settings.rounds),Math.floor(picks().length/Math.max(1,members().length))+1);
+    const rounds=Number(settings.rounds);
+    const selectedRound=draftRoundView==='current'?currentRound:draftRoundView==='all'?'all':Number(draftRoundView);
+    const options='<option value="current" '+(draftRoundView==='current'?'selected':'')+'>Current round ('+currentRound+')</option><option value="all" '+(draftRoundView==='all'?'selected':'')+'>All rounds</option>'+Array.from({length:rounds},(_,i)=>'<option value="'+(i+1)+'" '+(selectedRound===i+1&&draftRoundView!=='current'?'selected':'')+'>Round '+(i+1)+'</option>').join('');
+    const slots=[];
+    for(let round=1;round<=rounds;round++){
+      if(selectedRound!=='all'&&selectedRound!==round)continue;
+      const sequence=round%2===1?order():order().slice().reverse();
+      for(let i=0;i<sequence.length;i++){
+        const overall=(round-1)*count+i+1,pick=picks().find(p=>p.overall===overall),manager=members().find(m=>m.id===sequence[i]);
+        const team=programs().find(p=>p.id===pick?.program_id);
+        slots.push('<div class="board-slot '+(overall===completed+1&&status==='live'?'on-clock':'')+'"><span class="board-number">#'+overall+'</span><span class="board-manager">'+escapeHTML(manager?.display_name||'Manager')+'</span>'+(team?'<button data-act="open-program" data-id="'+escapeHTML(team.id)+'" class="board-team">'+img(team)+'<strong>'+escapeHTML(team.name)+'</strong></button>':'<span class="board-open">'+(overall===completed+1&&status==='live'?'On the clock':'Upcoming')+'</span>')+'</div>');
+      }
+    }
     const recent=[...picks()].reverse();
-    const visible=showAllDraft?recent:recent.slice(0,12);
+    const shown=showAllDraft?recent:recent.slice(0,10);
     return heading('', 'Draft')
-      +'<div class="draft-info"><div class="draft-info-main"><span class="eyebrow">'+(statusText==='live'?'DRAFT LIVE':statusText==='finished'?'DRAFT COMPLETE':statusText==='paused'?'DRAFT PAUSED':'NOT STARTED')+'</span>'
-      +'<strong>'+(statusText==='live'?'On the clock: '+escapeHTML(next?.display_name||''):(statusText==='finished'?'Draft complete':statusText==='paused'?'Draft paused':'Awaiting draft start'))+'</strong>'
-      +'<p>'+picks().length+' of '+total+' picks'+(statusText==='live'?' · Round '+round+' of '+league.settings.rounds:'')+'</p>'
-      +'<div class="draft-progress"><div style="width:'+((picks().length/Math.max(1,total))*100)+'%"></div></div></div>'
-      +'<span class="status '+(statusText==='live'?'':'wait')+'">'+(statusText==='live'?'LIVE':statusText.toUpperCase())+'</span></div>'
-      +(statusText==='live'?'<div class="draft-action"><div><strong>'+(isMyTurn()?'Your pick is up':'Draft in progress')+'</strong><small>'+(isMyTurn()?'Choose an available school.':'Browse schools while the draft continues.')+'</small></div><button class="btn" data-act="tab" data-id="programs">'+(isMyTurn()?'Make pick':'View programs')+'</button></div>':'')
-      +'<div class="grid2 draft-layout"><section class="panel draft-picks-panel">'+panelHeading('Draft board')
-      +(visible.length?visible.map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow"><strong>'+escapeHTML(t?.name||'Program')+'</strong><small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No picks yet'))
-      +(recent.length>12?'<button type="button" class="draft-history-toggle" data-act="draft-history-toggle">'+(showAllDraft?'Show recent picks':'View all '+recent.length+' picks')+'</button>':'')
-      +'</section><section class="panel draft-order-panel">'+panelHeading('Draft order','Snake draft')
-      +order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<div class="manager-card"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</div>':''}).join('')
-      +'</section></div>';
+      +'<div class="draft-info"><div class="draft-info-main"><span class="eyebrow">'+(status==='live'?'DRAFT LIVE':status==='finished'?'DRAFT COMPLETE':status==='paused'?'DRAFT PAUSED':'NOT STARTED')+'</span>'
+      +'<strong>'+(status==='live'?'On the clock: '+escapeHTML(next?.display_name||''):(status==='finished'?'Inaugural draft complete':status==='paused'?'Draft paused':'Awaiting draft start'))+'</strong>'
+      +'<p>'+completed+' / '+total+' picks · '+count+' managers · '+rounds+' rounds</p>'
+      +'<div class="draft-progress"><div style="width:'+((completed/Math.max(1,total))*100)+'%"></div></div></div>'
+      +(settings.draft_clock_seconds>0?'<div class="draft-clock-box"><span>DRAFT CLOCK</span><strong id="draft-clock" aria-live="off">--:--</strong><small>No automatic picks</small></div>':'<span class="status '+(status==='live'?'':'wait')+'">'+(status==='live'?'LIVE':status.toUpperCase())+'</span>')+'</div>'
+      +(status==='pending'?'<div class="readiness-panel"><strong>Draft readiness</strong><span>'+(count>=2?'✓ '+count+' managers registered':'• At least 2 managers required')+'</span><span>'+(available>=total?'✓ '+available+' eligible schools for '+total+' picks':'• Need '+Math.max(0,total-available)+' additional eligible schools')+'</span><span class="'+(canStart?'ready-label':'not-ready-label')+'">'+(canStart?'Ready to start':'Not ready')+'</span></div>':'')
+      +(status==='live'?'<div class="draft-action"><div><strong>'+(isMyTurn()?'Your pick is up':'Draft in progress')+'</strong><small>'+(isMyTurn()?'Choose an eligible program.':'Browse schools while you wait for your pick.')+'</small></div><button class="btn" data-act="tab" data-id="programs">'+(isMyTurn()?'Make pick':'Programs')+'</button></div>':'')
+      +'<section class="panel section-gap"><div class="board-head">'+panelHeading('Full draft board')+'<div class="board-select"><label for="draft-round">Show</label><select class="field" id="draft-round">'+options+'</select></div></div><div class="board-slots">'+(slots.join('')||empty('No managers'))+'</div></section>'
+      +'<div class="grid2 draft-layout section-gap"><section class="panel draft-picks-panel">'+panelHeading('Recent selections')
+      +(shown.length?shown.map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow">'+(t?'<button class="table-user" data-act="open-program" data-id="'+escapeHTML(t.id)+'">'+escapeHTML(t.name)+'</button>':'<strong>Program</strong>')+'<small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No picks yet'))
+      +(recent.length>10?'<button type="button" class="draft-history-toggle" data-act="draft-history-toggle">'+(showAllDraft?'Show recent selections':'View all '+recent.length+' picks')+'</button>':'')+'</section>'
+      +'<section class="panel draft-order-panel">'+panelHeading('Draft order','Snake format')+order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<button class="manager-card manager-profile-link" data-act="open-manager" data-id="'+escapeHTML(u.id)+'"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</button>':''}).join('')+'</section></div>';
   }
 
   function updateTradeSelections(){
@@ -547,5 +573,6 @@
     programShown=24;
     filterPrograms();
   });
+  setInterval(updateDraftClock,1000);
   boot();
 })();

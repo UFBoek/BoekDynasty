@@ -32,7 +32,7 @@
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=24,showAllDraft=false,lastAutoPoll=0;
-  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',draftRoundView='current';
+  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -370,41 +370,69 @@
     el.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
   }
   function draftPage(){
-    const settings=league.settings;
+    const settings=league.settings,fullOrder=order(),count=fullOrder.length;
     const total=draftTotal(),completed=picks().length;
-    const count=members().length,available=programs().filter(p=>activeConfs().includes(p.conference_id)).length;
-    const currentRound=Math.min(settings.rounds,Math.floor(completed/Math.max(1,count))+1);
+    const status=settings.draft_status,rounds=Number(settings.rounds||0);
+    const roundNumber=Math.min(rounds,Math.floor(completed/Math.max(1,count))+1);
+    const next=nextManager(),available=programs().filter(p=>activeConfs().includes(p.conference_id)).length;
     const canStart=count>=2&&available>=total;
-    const status=settings.draft_status;
-    const next=nextManager();
-    const rounds=Number(settings.rounds);
-    const selectedRound=draftRoundView==='current'?currentRound:draftRoundView==='all'?'all':Number(draftRoundView);
-    const options='<option value="current" '+(draftRoundView==='current'?'selected':'')+'>Current round ('+currentRound+')</option><option value="all" '+(draftRoundView==='all'?'selected':'')+'>All rounds</option>'+Array.from({length:rounds},(_,i)=>'<option value="'+(i+1)+'" '+(selectedRound===i+1&&draftRoundView!=='current'?'selected':'')+'>Round '+(i+1)+'</option>').join('');
-    const slots=[];
-    for(let round=1;round<=rounds;round++){
-      if(selectedRound!=='all'&&selectedRound!==round)continue;
-      const sequence=round%2===1?order():order().slice().reverse();
-      for(let i=0;i<sequence.length;i++){
-        const overall=(round-1)*count+i+1,pick=picks().find(p=>p.overall===overall),manager=members().find(m=>m.id===sequence[i]);
-        const team=programs().find(p=>p.id===pick?.program_id);
-        slots.push('<div class="board-slot '+(overall===completed+1&&status==='live'?'on-clock':'')+'"><span class="board-number">#'+overall+'</span><span class="board-manager">'+escapeHTML(manager?.display_name||'Manager')+'</span>'+(team?'<button data-act="open-program" data-id="'+escapeHTML(team.id)+'" class="board-team">'+img(team)+'<strong>'+escapeHTML(team.name)+'</strong></button>':'<span class="board-open">'+(overall===completed+1&&status==='live'?'On the clock':'Upcoming')+'</span>')+'</div>');
-      }
-    }
-    const recent=[...picks()].reverse();
-    const shown=showAllDraft?recent:recent.slice(0,10);
-    return heading('', 'Draft')
-      +'<div class="draft-info"><div class="draft-info-main"><span class="eyebrow">'+(status==='live'?'DRAFT LIVE':status==='finished'?'DRAFT COMPLETE':status==='paused'?'DRAFT PAUSED':'NOT STARTED')+'</span>'
-      +'<strong>'+(status==='live'?'On the clock: '+escapeHTML(next?.display_name||''):(status==='finished'?'Inaugural draft complete':status==='paused'?'Draft paused':'Awaiting draft start'))+'</strong>'
-      +'<p>'+completed+' / '+total+' picks · '+count+' managers · '+rounds+' rounds</p>'
-      +'<div class="draft-progress"><div style="width:'+((completed/Math.max(1,total))*100)+'%"></div></div></div>'
-      +(settings.draft_clock_seconds>0?'<div class="draft-clock-box"><span>DRAFT CLOCK</span><strong id="draft-clock" aria-live="off">--:--</strong><small>No automatic picks</small></div>':'<span class="status '+(status==='live'?'':'wait')+'">'+(status==='live'?'LIVE':status.toUpperCase())+'</span>')+'</div>'
-      +(status==='pending'?'<div class="readiness-panel"><strong>Draft readiness</strong><span>'+(count>=2?'✓ '+count+' managers registered':'• At least 2 managers required')+'</span><span>'+(available>=total?'✓ '+available+' eligible schools for '+total+' picks':'• Need '+Math.max(0,total-available)+' additional eligible schools')+'</span><span class="'+(canStart?'ready-label':'not-ready-label')+'">'+(canStart?'Ready to start':'Not ready')+'</span></div>':'')
-      +(status==='live'?'<div class="draft-action"><div><strong>'+(isMyTurn()?'Your pick is up':'Draft in progress')+'</strong><small>'+(isMyTurn()?'Choose an eligible program.':'Browse schools while you wait for your pick.')+'</small></div><button class="btn" data-act="tab" data-id="programs">'+(isMyTurn()?'Make pick':'Programs')+'</button></div>':'')
-      +'<section class="panel section-gap"><div class="board-head">'+panelHeading('Full draft board')+'<div class="board-select"><label for="draft-round">Show</label><select class="field" id="draft-round">'+options+'</select></div></div><div class="board-slots">'+(slots.join('')||empty('No managers'))+'</div></section>'
-      +'<div class="grid2 draft-layout section-gap"><section class="panel draft-picks-panel">'+panelHeading('Recent selections')
-      +(shown.length?shown.map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow">'+(t?'<button class="table-user" data-act="open-program" data-id="'+escapeHTML(t.id)+'">'+escapeHTML(t.name)+'</button>':'<strong>Program</strong>')+'<small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No picks yet'))
-      +(recent.length>10?'<button type="button" class="draft-history-toggle" data-act="draft-history-toggle">'+(showAllDraft?'Show recent selections':'View all '+recent.length+' picks')+'</button>':'')+'</section>'
-      +'<section class="panel draft-order-panel">'+panelHeading('Draft order','Snake format')+order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<button class="manager-card manager-profile-link" data-act="open-manager" data-id="'+escapeHTML(u.id)+'"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</button>':''}).join('')+'</section></div>';
+    const mode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
+    const columns=mode==='mine'?fullOrder.filter(id=>id===me.id):fullOrder;
+    const rows=mode==='current'?[roundNumber]:Array.from({length:rounds},(_,i)=>i+1);
+    const draftPicks=new Map(picks().map(p=>[Number(p.overall),p]));
+    const programIndex=new Map(programs().map(p=>[String(p.id),p]));
+    const memberIndex=new Map(members().map(m=>[String(m.id),m]));
+    const boardWidth='grid-template-columns:75px repeat('+Math.max(columns.length,1)+',minmax(154px,1fr));min-width:'+(75+columns.length*154)+'px';
+    const headers=columns.map(id=>{
+      const manager=memberIndex.get(id);
+      return '<div class="draft-board-manager '+(id===me.id?'mine':'')+'"><span class="draft-board-avatar">'+avatar(manager||{display_name:'?'})+'</span><div><strong>'+escapeHTML(manager?.display_name||'Manager')+'</strong><small>'+(id===me.id?'YOUR TEAM':'PICK POSITION '+(fullOrder.indexOf(id)+1))+'</small></div></div>';
+    }).join('');
+    const cells=rows.map(round=>{
+      const slots=columns.map(id=>{
+        const columnIndex=fullOrder.indexOf(id);
+        const overall=(round-1)*count+(round%2===1?columnIndex+1:count-columnIndex);
+        const pick=draftPicks.get(overall),program=programIndex.get(String(pick?.program_id||''));
+        const onClock=status==='live'&&overall===completed+1;
+        const mine=id===me.id;
+        const state=program?'selected':onClock?'on-clock':'empty';
+        const label='Pick '+overall;
+        return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'" data-pick="'+overall+'">'
+          +'<div class="draft-cell-meta"><span>#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON CLOCK</strong>':program?'<span class="draft-cell-done">PICKED</span>':'')+'</div>'
+          +(program?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(program.id)+'">'+img(program)+'<span title="'+escapeHTML(program.name)+'">'+escapeHTML(program.name)+'</span></button>'
+            :onClock?'<div class="draft-cell-open"><strong>'+escapeHTML(memberIndex.get(id)?.display_name||'Manager')+'</strong><small>Making selection</small></div>'
+            :'<div class="draft-cell-placeholder">Open pick</div>')
+          +'</div>';
+      }).join('');
+      return '<div class="draft-board-round">ROUND '+round+'<span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
+    }).join('');
+    const recent=[...picks()].reverse().slice(0,8);
+    const nextSlots=Array.from({length:Math.min(6,Math.max(0,total-completed))},(_,i)=>{
+      const overall=completed+i+1,r=Math.floor((overall-1)/Math.max(1,count)),local=(overall-1)%Math.max(1,count);
+      const id=r%2===0?fullOrder[local]:fullOrder[count-1-local];
+      return {overall,manager:memberIndex.get(id)};
+    });
+    const modeButton=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(mode===id?'active':'')+'">'+label+'</button>';
+    return heading('INAUGURAL PROGRAM DRAFT','Draft Room','Every pick, every manager, one permanent roster.')
+      +'<section class="draft-command">'
+      +'<div class="draft-command-state"><span class="draft-state-tag '+(status==='live'?'live':'')+'"><i></i>'+escapeHTML(status==='live'?'LIVE DRAFT':status==='finished'?'DRAFT COMPLETE':status==='paused'?'PAUSED':'PRE-DRAFT')+'</span>'
+      +'<h2>'+(status==='live'?'On the clock: '+escapeHTML(next?.display_name||'Manager'):status==='finished'?'The draft is complete':status==='paused'?'The draft is paused':'Ready to build your dynasty')+'</h2>'
+      +'<p>'+completed+' of '+total+' picks complete <span>·</span> '+count+' managers <span>·</span> '+rounds+' rounds</p>'
+      +'<div class="draft-command-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,total))+'%"></span></div></div>'
+      +'<div class="draft-command-right">'+(settings.draft_clock_seconds>0?'<div class="draft-clock-box"><span>DRAFT CLOCK</span><strong id="draft-clock">--:--</strong><small>Manual selections only</small></div>':'<div class="draft-command-count"><strong>'+Math.max(0,total-completed)+'</strong><small>PICKS REMAINING</small></div>')+'</div>'
+      +'<button class="btn draft-command-cta" data-act="tab" data-id="programs">'+(isMyTurn()?'Make your pick':'Browse programs')+' <span>→</span></button></section>'
+      +(status==='pending'?'<div class="draft-readiness"><span class="'+(count>=2?'good':'')+'">'+(count>=2?'✓':'○')+' '+count+' managers</span><span class="'+(available>=total?'good':'')+'">'+(available>=total?'✓':'○')+' '+available+' eligible schools for '+total+' picks</span><strong>'+(canStart?'Draft pool ready':'Waiting for draft readiness')+'</strong></div>':'')
+      +'<section class="panel draft-board-panel">'
+      +'<div class="draft-board-toolbar"><div><h2>Draft board</h2><p>Snake format · Rounds '+rounds+' · Live selection tracker</p></div><div class="draft-board-switch" role="group" aria-label="Draft board view">'+modeButton('all','Full board')+modeButton('current','Current round')+modeButton('mine','My picks')+'</div></div>'
+      +'<div class="draft-board-key"><span><i class="selected"></i> Selected</span><span><i class="on-clock"></i> On the clock</span><span><i class="mine"></i> Your column</span><small>Scroll horizontally to view every manager</small></div>'
+      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable draft board"><div class="draft-board-grid" style="'+boardWidth+'"><div class="draft-board-corner">ROUND</div>'+headers+cells+'</div></div>'
+      +'</section>'
+      +'<div class="draft-recap-grid section-gap"><section class="panel">'+panelHeading('Recent picks','Latest selections')
+      +(recent.length?recent.map(p=>{
+        const team=programIndex.get(String(p.program_id)),manager=memberIndex.get(String(p.manager_id));
+        return '<div class="draft-recap-item"><span class="draft-recap-position">'+p.overall+'</span>'+(team?img(team):'')+'<span class="grow"><strong>'+escapeHTML(team?.name||'School')+'</strong><small>'+escapeHTML(manager?.display_name||'Manager')+' · Round '+p.round+'</small></span></div>';
+      }).join(''):empty('No picks yet','The first selection will appear here.'))+'</section>'
+      +'<section class="panel">'+panelHeading('Upcoming picks','Next managers to select')
+      +(nextSlots.length?nextSlots.map(item=>'<div class="draft-next-item"><span class="draft-recap-position">'+item.overall+'</span>'+avatar(item.manager||{display_name:'?'})+'<div class="grow"><strong>'+escapeHTML(item.manager?.display_name||'Manager')+'</strong><small>'+(item.overall===completed+1&&status==='live'?'On the clock':'Upcoming selection')+'</small></div></div>').join(''):empty('Draft complete'))+'</section></div>';
   }
 
   function updateTradeSelections(){
@@ -682,6 +710,7 @@
     if(act==='commish-section'){adminSection=id;render();if(id==='data')loadResults();return;}
     if(act==='load-programs'){programShown+=24;filterPrograms();return;}
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
+    if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();return;}
     if(act==='draft-round-change'){draftRoundView=id;render();return;}
     if(act==='move-draft'){
       const i=Number(button.dataset.index),j=i+Number(button.dataset.dir);

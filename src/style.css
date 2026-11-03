@@ -2183,3 +2183,205 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline-color:#286
   .sidebar .nav button,.program-directory-card,.league-team-tile,.scoreboard-match,.bottom button svg,.scoreboard-day,.btn{transition:none!important}
   .sidebar .nav button:hover:not(.active),.program-directory-card:hover,.league-team-tile:hover,.scoreboard-match:hover{transform:none!important}
 }
+
+
+/* 2026-11-03 | Courtside motion and live-league character.
+   Motion is tied to genuine activity, or to an intentional user interaction. */
+:root{
+  --alive-cobalt:#245dc2;
+  --alive-orange:#ff791a;
+  --alive-mint:#22a76e;
+  --alive-shadow:0 10px 25px rgba(15,45,95,.075);
+  --alive-ease:cubic-bezier(.2,.75,.25,1);
+}
+@keyframes alive-beacon{0%,100%{box-shadow:0 0 0 3px rgba(36,176,111,.13),0 0 0 0 rgba(36,176,111,.14)}55%{box-shadow:0 0 0 3px rgba(36,176,111,.12),0 0 0 8px rgba(36,176,111,0)}}
+@keyframes alive-draft-wash{0%,100%{background-color:#fff2e8}50%{background-color:#ffe7d1}}
+@keyframes alive-slide{0%{transform:translateX(-120%)}100%{transform:translateX(290%)}}
+@keyframes alive-score-highlight{0%,100%{opacity:.85}50%{opacity:1}}
+@keyframes alive-rotate{to{transform:rotate(360deg)}}
+@keyframes alive-appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* This small accent adds energy without turning the page into a landing page. */
+.page-heading:before{width:38px;height:4px;background:linear-gradient(90deg,#ff7715 0 45%,#2152a8 45% 100%);box-shadow:0 1px 6px rgba(248,117,27,.16)}
+.page-heading .eyebrow{font-weight:830}
+.panel-head h2{position:relative}
+.panel-head h2:after{content:"";display:block;width:22px;height:2px;background:#ff831e;border-radius:99px;opacity:.65;margin-top:5px}
+.panel-head p{margin-top:6px}
+.content>.page-heading{animation:alive-appear .3s var(--alive-ease) both}
+/* Use affordances across every major clickable surface. */
+:where(.btn,.program-card-main,.more-menu-item,.team-program-link,.league-team-tile,.program-directory-card,.draft-cell-program,.scoreboard-day,.scoreboard-calendar-arrow,.program-season-card,.topbar-event){-webkit-tap-highlight-color:transparent}
+:where(.league-team-tile,.program-directory-card,.program-season-card,.scoreboard-match,.team-program,.draft-recap-item,.trade-offer){
+  transition:transform .22s var(--alive-ease),background-color .18s ease,border-color .18s ease,box-shadow .22s ease;
+}
+:where(.league-team-tile,.program-directory-card,.scoreboard-match,.team-program,.trade-offer):hover{box-shadow:var(--alive-shadow)}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.secondary:active:not(:disabled){box-shadow:inset 0 1px 3px rgba(23,60,120,.10)}
+.link-button:hover,.program-profile-owner-link:hover{text-decoration:underline;text-decoration-color:#ff791a;text-underline-offset:3px}
+.field:focus,.search-wrap:focus-within .field{border-color:#3473ce}
+.field::placeholder{transition:opacity .18s}
+.field:focus::placeholder{opacity:.65}
+/* A real event indicator, never displayed unless a live draft/game is known. */
+.topbar-event{
+  appearance:none;border:1px solid #b9d8ca;display:inline-flex;align-items:center;gap:8px;min-height:30px;
+  padding:6px 11px;border-radius:100px;background:#e9f8f0;color:#176443;
+  font-size:10.5px;font-weight:800;letter-spacing:.012em;white-space:nowrap;
+  cursor:pointer;transition:background .18s,border-color .18s,transform .18s;
+}
+.topbar-event:hover{background:#def4e8;border-color:#8ccaac;transform:translateY(-1px)}
+.topbar-event-dot{width:7px;height:7px;border-radius:50%;background:#21a66c;flex:0 0 7px;animation:alive-beacon 2.7s ease-in-out infinite}
+.nav button{position:relative}
+.sidebar .nav button{transition:color .18s ease,transform .18s var(--alive-ease),background-color .18s ease}
+.sidebar .nav button.active{box-shadow:inset 0 0 0 1px rgba(169,201,247,.10),0 3px 15px rgba(2,11,37,.13)}
+.sidebar .nav button.has-live .nav-live-indicator{margin-left:auto;margin-right:1px}
+.nav-live-indicator{
+  width:7px;height:7px;display:inline-block;flex:0 0 7px;border-radius:50%;background:#25b47b;
+  box-shadow:0 0 0 3px rgba(37,180,123,.15);animation:alive-beacon 2.7s ease-in-out infinite;
+}
+.sidebar .nav button.has-live .nav-live-indicator{background:#43d39d}
+.sidebar .brand-icon.brand-image{filter:drop-shadow(0 4px 12px rgba(0,0,0,.2))}
+.sidebar:after{content:"";position:absolute;pointer-events:none;left:0;bottom:80px;width:100%;height:230px;background:radial-gradient(ellipse at 0% 100%,rgba(41,95,174,.17),transparent 65%)}
+.sidebar .side-foot{position:relative;z-index:1}
+.topbar-logo{filter:drop-shadow(0 2px 4px rgba(19,65,123,.10))}
+.brand-icon.brand-image img{transition:transform .3s var(--alive-ease)}
+.brand:hover .brand-icon.brand-image img{transform:rotate(-5deg) scale(1.05)}
+/* Dashboard feels like actual manager rosters instead of a static directory. */
+.overview-status{position:relative;overflow:hidden;border-left:3px solid #ff821c}
+.overview-status:hover{border-color:#a8c5e7;border-left-color:#ff821c}
+.overview-status-dot.live{animation:alive-beacon 2.7s ease-in-out infinite}
+.overview-status>.btn{white-space:nowrap}
+.overview-metric{transition:transform .2s var(--alive-ease),box-shadow .2s,border-color .2s}
+.overview-metric:hover{transform:translateY(-2px);border-color:#bad0ed;box-shadow:0 8px 17px rgba(23,58,105,.07)}
+.overview-metric>strong{font-variant-numeric:tabular-nums}
+.overview-metrics .overview-metric:nth-child(2){background:linear-gradient(145deg,#fff 62%,#f4f8ff)}
+.overview-metrics .overview-metric:nth-child(3){background:linear-gradient(145deg,#fff 62%,#fff8f2)}
+.league-team-tile{position:relative;overflow:hidden;isolation:isolate}
+.league-team-tile:after{
+ content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background .17s ease;
+}
+.league-team-tile:hover:after{background:linear-gradient(180deg,#1e57ae,#ff7d21)}
+.league-team-tile.is-mine{background:linear-gradient(112deg,#eef5ff,#fff 68%);border-color:#bcd5f3}
+.league-team-tile.is-mine:after{background:#ff7e22}
+.league-team-tile.is-mine .league-tile-top strong{color:#164b94}
+.league-tile-arrow{transition:transform .2s var(--alive-ease),color .2s}
+.league-team-tile:hover .league-tile-arrow{transform:translateX(3px);color:#1b5db2}
+.league-logo-holder{transition:transform .24s var(--alive-ease),box-shadow .24s,border-color .24s}
+.league-team-tile:hover .league-logo-holder{box-shadow:0 3px 9px rgba(20,52,99,.10)}
+.league-logo-holder:hover{transform:translateY(-3px) scale(1.1);z-index:1}
+.overview-activity-item{position:relative;transition:background .18s,padding-left .18s}
+.overview-activity-item:hover{background:#f8fbff;padding-left:8px}
+.overview-activity-marker{box-shadow:0 0 0 3px #fff1e4}
+/* The draft room should have energy precisely where action is taking place. */
+.draft-command{background:linear-gradient(112deg,#07183e 0%,#193a78 73%,#285ca5 100%)}
+.draft-command:after{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;
+ background:radial-gradient(ellipse 280px 150px at 93% 0%,rgba(255,151,70,.11),transparent 75%);
+}
+.draft-state-tag.live i,.draft-board-cell.on-clock .draft-cell-live:before{animation:alive-beacon 2.6s ease-in-out infinite}
+.draft-command-progress{position:relative}
+.draft-command-progress span{position:relative;overflow:hidden}
+.draft-command-progress span:after{
+ content:"";position:absolute;left:-55%;top:0;bottom:0;width:42%;
+ background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+ animation:alive-slide 5.2s ease-in-out infinite;
+}
+.draft-board-manager.mine{background:linear-gradient(180deg,#e8f2ff,#eef6ff)}
+.draft-board-cell{transition:background-color .18s,box-shadow .18s}
+.draft-board-cell.on-clock{animation:alive-draft-wash 4s ease-in-out infinite}
+.draft-board-cell.on-clock .draft-cell-live{display:inline-flex;align-items:center;gap:6px;color:#a34a0d}
+.draft-board-cell.on-clock .draft-cell-live:before{content:"";width:6px;height:6px;border-radius:50%;background:#e87225}
+.draft-board-cell.selected:hover{background:#f6f9ff}
+.draft-cell-program .program-logo{transition:transform .2s var(--alive-ease)}
+.draft-cell-program:hover .program-logo{transform:scale(1.08)}
+.draft-recap-item:hover,.draft-next-item:hover{background:#f6f9fe}
+.draft-board-scroll:focus-visible{outline-offset:-4px}
+.draft-clock-box strong{font-variant-numeric:tabular-nums}
+.draft-clock-box strong.expired{color:#bc382e}
+/* Programs are collectible assets: logo lift, compact selection, bright details. */
+.program-directory-card{position:relative;isolation:isolate}
+.program-directory-card:before{content:"";position:absolute;left:0;bottom:0;top:0;width:3px;background:linear-gradient(#194f9e,#ff7618);border-radius:10px 0 0 10px;opacity:0;transition:opacity .18s ease}
+.program-directory-card:hover:before,.program-directory-card:focus-within:before{opacity:1}
+.program-directory-card .program-card-main .program-logo{transition:transform .24s var(--alive-ease),box-shadow .24s}
+.program-directory-card:hover .program-logo{transform:scale(1.08);box-shadow:0 5px 12px rgba(16,53,104,.09)}
+.program-directory-chevron{transition:transform .2s,color .2s}
+.program-directory-card:hover .program-directory-chevron{transform:translateX(3px);color:#1d5eaf}
+.directory-conference-strip button,.directory-status-tabs button,.directory-letter-strip button{transition:background .18s,color .18s,border-color .18s,transform .18s var(--alive-ease)}
+.directory-conference-strip button.active{box-shadow:inset 0 -2px 0 #ff751a,0 2px 7px rgba(25,77,160,.07)}
+.directory-letter-strip button.active{box-shadow:inset 0 -2px 0 #ff8121}
+.directory-welcome:after{opacity:.9}
+.program-profile-header{background:linear-gradient(114deg,#eaf3ff,#fff 70%)}
+.program-profile-header>.program-logo{transition:transform .25s var(--alive-ease)}
+.program-profile-header:hover>.program-logo{transform:scale(1.04)}
+.program-season-card.active{border-color:#89b5ec;background:linear-gradient(155deg,#ebf3ff,#f8fbff)}
+.program-season-card:hover:not(.active){transform:translateY(-2px)}
+/* Live and final results have unmistakable, source-backed states. */
+.scoreboard-match{position:relative;isolation:isolate}
+.scoreboard-match.is-live{border-color:#78cfa3;box-shadow:inset 3px 0 0 #1ca86b,0 4px 18px rgba(17,116,74,.08)}
+.scoreboard-match.is-live:before{
+ content:"";position:absolute;top:0;left:0;right:0;height:2px;
+ background:linear-gradient(90deg,#20af76,#8ce1b6,#20af76);
+ animation:alive-score-highlight 3s ease-in-out infinite;
+}
+.scoreboard-match-status.live{display:inline-flex;align-items:center;gap:7px;color:#167947}
+.live-score-dot{display:inline-block;width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#22ae70;animation:alive-beacon 2.7s ease-in-out infinite}
+.scoreboard-match.is-final .scoreboard-match-status{color:#3d5776}
+.scoreboard-match.is-final .scoreboard-team-score{color:#1a3559}
+.scoreboard-match.is-scheduled .scoreboard-team-score{color:#a0afc0}
+.scoreboard-match-head{padding-top:12px}
+.scoreboard-match-teams{padding-top:5px}
+.scoreboard-team-line.winner .scoreboard-team-score{font-weight:900}
+.scoreboard-team-line.winner .scoreboard-team-name{font-weight:800}
+.scoreboard-game-link span{transition:transform .18s}
+.scoreboard-game-link:hover span{transform:translate(2px,-2px)}
+.scoreboard-day{transition:background .2s,border-color .2s,transform .2s var(--alive-ease)}
+.scoreboard-day:hover:not(.active){transform:translateY(-1px)}
+.scoreboard-day.active{border-color:#b7cfee;box-shadow:inset 0 -3px 0 #ff7619,0 2px 9px rgba(30,80,160,.08)}
+.scoreboard-live-dot.active{animation:alive-beacon 2.7s ease-in-out infinite}
+.scoreboard-utility{background:linear-gradient(95deg,#fff,#f7faff)}
+.scoreboard-scopes button.active{box-shadow:0 2px 8px rgba(15,62,139,.10)}
+.scoreboard-calendar-arrow:hover{background:#eaf2ff;border-color:#b6d0ed}
+.scoreboard-updating{color:#285b9d}
+/* Team and trade workspaces also benefit from subtle state feedback. */
+.team-hero-fresh{background:linear-gradient(110deg,#eaf3ff,#fff 70%)}
+.team-hero-schools>span:not(.team-draft-prompt){transition:transform .2s var(--alive-ease),box-shadow .2s}
+.team-hero-schools>span:not(.team-draft-prompt):hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(22,64,120,.12)}
+.team-roster-progress i{box-shadow:0 0 7px rgba(245,117,25,.13)}
+.trade-choice{transition:background-color .18s ease,color .18s ease}
+.trade-choice:hover{background:#f6f9fe}
+.trade-choice:has(input:checked){box-shadow:inset 3px 0 0 #fd812a}
+.commissioner-menu button{transition:background .18s,color .18s,border-color .18s}
+.commissioner-menu button.active{box-shadow:inset 3px 0 0 #ff7a20}
+.toast{border-left:3px solid #ff812c}
+/* Keep motion useful and accessible on smaller devices. */
+@media(max-width:850px){
+  .bottom button.has-live{position:relative}
+  .bottom button.has-live .nav-live-indicator{
+    width:6px;height:6px;position:absolute;right:17%;top:2px;margin:0;
+    box-shadow:0 0 0 2px #fff;
+  }
+  .bottom button.active:before{background:#ff821c}
+  .topbar-event{min-height:27px;padding:5px 9px;font-size:9.5px}
+  .league-logo-holder:hover{transform:none}
+}
+@media(max-width:650px){
+  .topbar-event{display:none}
+  .content>.page-heading{animation-duration:.22s}
+  .panel-head h2:after{width:18px}
+  .league-team-tile:hover,.program-directory-card:hover,.scoreboard-match:hover{transform:none}
+  .overview-metric:hover,.program-season-card:hover:not(.active){transform:none}
+  .draft-board-cell.on-clock{animation-duration:5s}
+  .scoreboard-match-head{padding-top:10px}
+  .scoreboard-day:hover:not(.active){transform:none}
+}
+@media(hover:none),(pointer:coarse){
+  .btn:hover:not(:disabled),.overview-metric:hover,.program-directory-card:hover,.program-season-card:hover:not(.active){transform:none}
+  .league-logo-holder:hover,.team-hero-schools>span:not(.team-draft-prompt):hover{transform:none}
+  .directory-conference-strip button:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .content>.page-heading,.topbar-event-dot,.nav-live-indicator,.overview-status-dot.live,.draft-state-tag.live i,
+  .draft-board-cell.on-clock,.draft-board-cell.on-clock .draft-cell-live:before,.draft-command-progress span:after,
+  .scoreboard-match.is-live:before,.live-score-dot,.scoreboard-live-dot.active{animation:none!important}
+  :where(.btn,.program-directory-card,.program-season-card,.league-team-tile,.league-logo-holder,.league-tile-arrow,
+    .scoreboard-match,.scoreboard-day,.scoreboard-game-link span,.topbar-event,.team-program,.trade-offer,
+    .overview-metric,.sidebar .nav button,.brand-icon.brand-image img){transition:none!important}
+}

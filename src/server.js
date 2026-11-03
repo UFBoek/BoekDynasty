@@ -63,7 +63,9 @@ export default (function makeWorker(){
     const map=Object.fromEntries(result.map(x=>[x.key,x.value]));
     return {conferences:JSON.parse(map.conferences||'[]'),rounds:Number(map.rounds||8),draft_status:map.draft_status||'pending',current_season:map.current_season||'2026-27',
       league_name:map.league_name||'Boek Dynasty',max_managers:Number(map.max_managers||10),
-      trading_enabled:map.trading_enabled!=='0',draft_order:JSON.parse(map.draft_order||'[]')};
+      trading_enabled:map.trading_enabled!=='0',draft_order:JSON.parse(map.draft_order||'[]'),
+      draft_clock_seconds:Number(map.draft_clock_seconds||0),draft_deadline:Number(map.draft_deadline||0),
+      waivers_enabled:map.waivers_enabled==='1'};
   }
   async function setSetting(env,key,value){
     await q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',key,String(value)).run();
@@ -74,18 +76,23 @@ export default (function makeWorker(){
     return [...new Set([...saved.filter(id=>ids.includes(id)),...ids])];
   };
   async function getState(env,user){
-    const [users,teams,picks,ownership,trades,tradeItems,settings]=await Promise.all([
+    const [users,teams,picks,ownership,trades,tradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves]=await Promise.all([
       q(env,"SELECT id,username,display_name,role,created_at FROM users ORDER BY created_at,rowid").all(),
       q(env,'SELECT id,name,abbr,conference_id,logo FROM programs ORDER BY name').all(),
       q(env,'SELECT overall,round,manager_id,program_id,picked_at FROM picks ORDER BY overall').all(),
       q(env,'SELECT program_id,manager_id,acquired_at FROM program_owners').all(),
       q(env,'SELECT id,from_manager_id,to_manager_id,status,offered_at,resolved_at FROM trades ORDER BY offered_at DESC LIMIT 100').all(),
       q(env,'SELECT trade_id,program_id,from_manager_id,to_manager_id FROM trade_items WHERE trade_id IN (SELECT id FROM trades ORDER BY offered_at DESC LIMIT 100)').all(),
-      getSettings(env)
+      getSettings(env),
+      q(env,'SELECT season,archived_at,champion_manager_id FROM season_archives ORDER BY season DESC').all(),
+      q(env,'SELECT season,manager_id,program_id FROM season_rosters ORDER BY season DESC').all(),
+      q(env,'SELECT season,manager_id,programs_count,fantasy_points,final_place FROM season_manager_records ORDER BY season DESC').all(),
+      q(env,'SELECT id,season,manager_id,program_id,drop_program_id,status,created_at,resolved_at FROM waiver_claims ORDER BY created_at DESC LIMIT 150').all(),
+      q(env,'SELECT id,season,manager_id,program_id,action,created_at FROM roster_transactions ORDER BY created_at DESC LIMIT 150').all()
     ]);
     const allUsers=users.results||[];
     const order=resolvedOrder(allUsers,settings);
-    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season};
+    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season,archives:archives.results||[],archived_rosters:archivedRosters.results||[],season_records:seasonRecords.results||[],waiver_claims:waiverClaims.results||[],roster_transactions:rosterMoves.results||[]};
   }
   function parseBody(req){
     if(!(req.headers.get('Content-Type')||'').toLowerCase().includes('application/json'))throw new Error('JSON request required.');
@@ -174,7 +181,9 @@ export default (function makeWorker(){
       const selected=(await q(env,'SELECT conference_id FROM programs WHERE id=?',programId).first());
       if(!selected || !settings.conferences.includes(selected.conference_id))return failure('This program is not eligible.',400);
       await q(env,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',count+1,roundIndex+1,user.id,programId).run();
-      if(count+1===users.length*settings.rounds)await setSetting(env,'draft_status','finished');
+      if(count+1===users.length*settings.rounds){
+        await env.DB.batch([q(env,"UPDATE settings SET value='finished' WHERE key='draft_status'"),q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")]);
+      }else if(settings.draft_clock_seconds>0)await setSetting(env,'draft_deadline',timestamp()+settings.draft_clock_seconds);
       return response({ok:true,overall:count+1});
     }
     // Program ownership is perpetual. The draft board records original picks, not current owners.
@@ -321,6 +330,23 @@ export default (function makeWorker(){
       await env.DB.batch(statements);
       return response({ok:true,added:statements.length,conference_id:confId,source:'verified-2026-27-directory'});
     }
+
+    if(path==='admin/clock'){
+      const settings=await getSettings(env);
+      if(!['pending','paused'].includes(settings.draft_status))return failure('Pause the draft before changing the clock.',409);
+      const secs=Number(data.seconds);
+      if(![0,60,120,180,300,600,900,1800].includes(secs))return failure('Choose a valid draft clock duration.',400);
+      await env.DB.batch([
+        q(env,"INSERT INTO settings(key,value) VALUES('draft_clock_seconds',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",String(secs)),
+        q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")
+      ]);
+      return response({ok:true});
+    }
+    if(path==='admin/waiver-settings'){
+      if(typeof data.enabled!=='boolean')return failure('Invalid waiver setting.',400);
+      await setSetting(env,'waivers_enabled',data.enabled?'1':'0');
+      return response({ok:true});
+    }
     if(path==='admin/draft-control'){
       const mode=String(data.mode||'');
       const settings=await getSettings(env);
@@ -329,12 +355,12 @@ export default (function makeWorker(){
         if(settings.draft_status==='finished'||trades>0)
           return failure('The completed dynasty draft cannot be reset. Permanent ownership and trade history are protected.',409);
         await env.DB.batch([q(env,'DELETE FROM program_owners'),q(env,'DELETE FROM picks')]);
-        await setSetting(env,'draft_status','pending');
+        await env.DB.batch([q(env,"UPDATE settings SET value='pending' WHERE key='draft_status'"),q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")]);
         return response({ok:true});
       }
       if(mode==='pause'){
         if(settings.draft_status!=='live')return failure('Draft is not live.',409);
-        await setSetting(env,'draft_status','paused');
+        await env.DB.batch([q(env,"UPDATE settings SET value='paused' WHERE key='draft_status'"),q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")]);
         return response({ok:true});
       }
       if(mode==='start'){
@@ -344,7 +370,10 @@ export default (function makeWorker(){
         const placeholders=settings.conferences.map(()=>'?').join(',');
         const count=await q(env,'SELECT count(*) AS n FROM programs WHERE conference_id IN ('+placeholders+')',...settings.conferences).first();
         if(count.n<users*settings.rounds)return failure('Not enough eligible programs for all draft rounds. Import more schools or reduce rounds.',409);
-        await setSetting(env,'draft_status','live');
+        await env.DB.batch([
+          q(env,"UPDATE settings SET value='live' WHERE key='draft_status'"),
+          q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",String(settings.draft_clock_seconds>0?timestamp()+settings.draft_clock_seconds:0))
+        ]);
         return response({ok:true});
       }
       return failure('Invalid draft control mode.',400);

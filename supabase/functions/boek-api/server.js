@@ -223,7 +223,7 @@ export default (function makeWorker(){
       }
       await q(env,'DELETE FROM login_attempts WHERE username=?',username).run();
       const user={id:row.id,username:row.username,display_name:row.display_name,role:row.role};
-      return response({user},200,{'Set-Cookie':cookie(await remember(env,row.id))});
+      return response({user,token:await remember(env,row.id)});
     }
     if(path==='logout'){
       const auth=await getUser(request,env);

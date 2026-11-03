@@ -20,3 +20,13 @@ CREATE TABLE IF NOT EXISTS cbb_net_details (
   PRIMARY KEY(season,snapshot_date,program_id)
 );
 CREATE INDEX IF NOT EXISTS cbb_net_details_date ON cbb_net_details(season,snapshot_date DESC);
+CREATE TABLE IF NOT EXISTS cbb_net_snapshots (
+  season TEXT NOT NULL,
+  snapshot_date TEXT NOT NULL,
+  expected_count INTEGER NOT NULL,
+  stored_count INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('loading','complete','error')),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY(season,snapshot_date)
+);

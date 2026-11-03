@@ -765,6 +765,7 @@ const DATA_PIPELINE=(()=>{
       delete t.awards;
     }
     return {seasons:Array.from({length:Number(currentSeason.slice(0,4))-2021+1},(_,i)=>{const y=2021+i;return y+'-'+String((y+1)%100).padStart(2,'0');}),
+      directory:PROGRAM_DIRECTORY.map(p=>({id:String(p[0]),name:String(p[1]),abbr:String(p[2]),conference_id:String(p[3]),logo:'https://a.espncdn.com/i/teamlogos/ncaa/500/'+p[0]+'.png'})),
       rows:[...table.values()].filter(x=>teamIds.has(x.program_id)),complete:false,
       note:'Imported scoring components only; rankings are provisional until game and award coverage is complete.'};
   }

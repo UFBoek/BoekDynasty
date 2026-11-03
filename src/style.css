@@ -600,3 +600,248 @@ a,.link-button{transition:color .15s ease,background .15s ease}
 .field:focus,button:focus-visible,select:focus-visible{outline-color:#dc6a2d}
 ::selection{background:#f5b37e;color:#162b47}
 @media(max-width:850px){.topbar{background:#ffffff}.bottom{background:#142e50}}
+
+
+/* November 2026 visual refresh: crisp, light, high-contrast Gators palette. */
+:root{
+  color-scheme:light;
+  --bd-bg:#f4f6fa;
+  --bd-card:#fff;
+  --bd-border:#dee5ee;
+  --bd-sub:#61738c;
+  --bd-orange:#e66b24;
+  --bd-orange-soft:#fff2e7;
+  --bd-blue:#1558a6;
+  --bd-navy:#142d4c;
+  --bd-ink:#172b45;
+  --bd-ink-secondary:#586b82;
+  --bd-surface:#f7f9fc;
+  --bd-shadow:0 7px 30px rgba(24,49,75,.055);
+  background:#f4f6fa;
+  color:#172b45;
+}
+html,body{background:#f4f6fa;color:#172b45}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.shell{background:#f4f6fa}
+h1,h2,h3,.headline{color:#14283f;letter-spacing:-.025em}
+h1,h2,h3{line-height:1.28}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #1765b6;outline-offset:3px}
+::selection{background:#cce3fa;color:#102b4c}
+/* Navigation: dark desktop rail, quiet bright content area. */
+.sidebar{background:linear-gradient(180deg,#102b4d 0%,#152f52 100%);border-right:1px solid #244364;box-shadow:4px 0 22px rgba(20,43,69,.05)}
+.sidebar .brand-title,.sidebar .brand-title span{color:#fff}
+.sidebar .brand-sub,.sidebar .nav-label{color:#a4bad4}
+.sidebar .nav button{color:#bacbe1;border:1px solid transparent;border-left:3px solid transparent;transition:background .16s,color .16s,border .16s}
+.sidebar .nav button:hover:not(.active){background:#244567;color:#fff}
+.sidebar .nav button.active{color:#fff;background:#254d78;border-color:transparent;border-left-color:#ff833b;font-weight:750;box-shadow:inset 0 0 0 1px #41648a}
+.sidebar .nav button.active svg{color:#ffb37c}
+.sidebar .side-foot{background:#1b3a5e;border-color:#315276}
+.sidebar .season-pill{color:#ffb47c}
+.sidebar .side-foot,.sidebar .side-foot strong,.sidebar .account-mini{color:#f2f7ff}
+.sidebar .side-foot .muted,.sidebar .logout{color:#c2d2e6}
+.sidebar .logout:hover{color:#fff}
+.sidebar .avatar{background:#ff8b49;color:#102b4d}
+.sidebar .brand-icon.brand-image{border-radius:0;overflow:visible;box-shadow:none}
+.brand-icon.brand-image{border-radius:0!important;overflow:visible!important;background:transparent!important}
+.brand-icon.brand-image img{border-radius:0;object-fit:contain}
+/* App header */
+.topbar{background:rgba(255,255,255,.97);border-bottom:1px solid #e1e8f0;box-shadow:0 1px 9px rgba(22,44,69,.035)}
+.topbar .title{color:#1b304d;font-weight:750;letter-spacing:-.015em}
+.topbar .sep{color:#a1b1c2}
+.topbar .chip{background:#f5f8fc;border-color:#dce5ef;color:#435a75}
+.topbar .avatar-small{background:#eaf1fb;color:#1558a6;border:1px solid #d6e4f4}
+.content{max-width:1320px}
+.page-heading{margin-bottom:23px}
+.eyebrow,.page-heading .eyebrow{color:#b45520;letter-spacing:1.1px;font-weight:850}
+.headline{font-weight:800;color:#102943}
+.intro-text{color:#60748a;line-height:1.6}
+.muted,.hint,.settings-hint,.team-footnote{color:#60748a}
+.tiny{font-size:11px}
+/* Cards, hierarchy, clean numbers and restrained hover. */
+.metric,.panel{background:#fff;border:1px solid #dfe6ef;box-shadow:var(--bd-shadow);border-radius:15px}
+.metric{position:relative;overflow:hidden}
+.metric:before{content:"";position:absolute;left:0;top:19px;bottom:19px;width:3px;background:#dde9f4;border-radius:0 4px 4px 0}
+.metric strong,.directory-stats strong,.standings-summary strong,.team-stat strong,.profile-stats strong{color:#122e4e;font-variant-numeric:tabular-nums}
+.metric .m-label,.metric .m-foot,.standings-summary span,.directory-stats span,.team-stat span,.team-stat strong small{color:#62758e}
+.metric strong{font-weight:800}
+.panel-head h2{font-size:16px;color:#142f4d;letter-spacing:-.25px;font-weight:800}
+.panel-head p{color:#6b7b91}
+.subhead,.team-subhead{color:#586f88}
+.panel{padding:23px}
+.rowline{border-color:#e9edf3}
+.rowline strong,.manager-card strong,.team-claim strong{color:#182e47}
+.rowline small,.manager-card small{color:#687b92}
+.rowline .right{color:#203b5a}
+.empty{background:#fafbfd;border-color:#d7e1ed;color:#657a91}
+.empty strong{color:#1c3858}
+.league-status{background:linear-gradient(105deg,#edf4fc,#fff);border:1px solid #d7e5f5}
+.league-status strong{color:#153454}
+.league-status-detail,.league-status .eyebrow{color:#5e7390}
+/* Buttons use readable blue; orange is a highlight, not a wall of color. */
+.btn,.btn:not(.secondary):not(.danger):not(.ghost){background:#1558a6;color:#fff;border:1px solid #1558a6;box-shadow:0 2px 5px rgba(24,80,150,.10);font-weight:750;letter-spacing:.005em}
+.btn:hover:not(:disabled),.btn:not(.secondary):not(.danger):not(.ghost):hover{background:#114a8c;color:#fff;border-color:#114a8c}
+.btn.secondary{background:#f0f5fb;color:#164b83;border:1px solid #d6e2f0;box-shadow:none}
+.btn.secondary:hover:not(:disabled){background:#e2edf9;color:#123f75;border-color:#bdd2e8}
+.btn.ghost{color:#20578e;background:#fff;border:1px solid #ccdaea;box-shadow:none}
+.btn.ghost:hover:not(:disabled){background:#f3f7fc}
+.btn.danger{color:#a5353d;background:#fff0f1;border:1px solid #f0c3c8;box-shadow:none}
+.btn.danger:hover:not(:disabled){background:#ffe2e6;border-color:#e8a6ae;color:#922b35}
+.btn:disabled{opacity:.5;box-shadow:none}
+.link-button,.profile-link,.table-user:hover,.draft-history-toggle{color:#1558a6}
+.link-button:hover{color:#0f417e}
+/* Quiet inputs that stand out from surrounding white cards. */
+.field{background:#fff;color:#1c3552;border:1px solid #cbd7e4;border-radius:10px;box-shadow:inset 0 1px 2px rgba(21,49,79,.025);min-height:44px}
+.field:hover:not(:disabled){border-color:#a9c0d7}
+.field:focus{border-color:#2a72bd;box-shadow:0 0 0 3px rgba(32,105,182,.14);outline:none}
+.field::placeholder{color:#8596a9}
+.form-row label{color:#364e68;font-weight:750}
+input[type=checkbox],input[type=radio]{accent-color:#1558a6}
+.conf-item{background:#f8fafc;border:1px solid #dce5ef;color:#2a4360}
+.conf-item:hover{background:#f0f5fc}
+.conf-item:has(input:checked){background:#edf5ff;border-color:#73a9df;color:#164b89}
+.conf-item input{accent-color:#1558a6}
+.settings-toggle{background:#f8fafc;border-color:#d9e4ef}
+.settings-toggle strong{color:#213b56}
+.settings-toggle span{color:#62758e}
+.settings-toggle input{accent-color:#1558a6}
+.settings-static{background:#f6f9fc;border-color:#dbe4ef}
+.settings-static>span{color:#425a73}
+.settings-static small{color:#77889b}
+.notice{background:#fff4ea;border:1px solid #f1d0ae;color:#8d4d1b}
+.toast{background:#153454;border:1px solid #385d85;color:#fff;box-shadow:0 12px 32px rgba(22,45,71,.24)}
+.toast.error,.data-error{background:#fff1f1;border:1px solid #efc1c5;color:#9b2a38}
+/* Tables and school directory */
+.directory-stats>div,.directory-toolbar,.standings-summary>div,.team-stat,.data-kpis>div{background:#fff;border:1px solid #e0e7ef;box-shadow:var(--bd-shadow)}
+.directory-toolbar{background:#fff}
+.directory-toolbar .field{background:#fdfefe}
+.directory-result,.directory-result span:first-child{color:#516782}
+.directory-result span:first-child{font-weight:750}
+.program-grid{gap:12px}
+.program-card{background:#fff;border:1px solid #dce5ef;border-radius:13px;box-shadow:0 3px 11px rgba(26,52,81,.045);transition:transform .15s,border-color .15s,box-shadow .15s,background .15s}
+.program-card:hover{background:#fafdff;border-color:#94b9dc;box-shadow:0 8px 22px rgba(28,69,113,.10);transform:translateY(-1px)}
+.program-card-main strong,.team-program-link strong{color:#1a3553}
+.program-card-main:hover strong,.team-program-link:hover strong{color:#1558a6}
+.program-card small,.team-program-link small{color:#72829a}
+.program-logo{background:#fff;border:1px solid #e0e7ef}
+.owner-chip{background:#f0f4fa;color:#375574;border-color:#dbe5f0}
+.owner-indicator{background:#607e9e}
+.available-chip{background:#e9f7ef;border-color:#c6e8d2;color:#1c7750}
+.standings-panel{background:#fff}
+.standings-table-wrap{background:#fff;border-color:#dce4ee}
+.standings-table thead{background:#f6f8fb}
+.standings-table th{color:#62748a;border-color:#dce5ef;font-weight:800}
+.standings-table td{color:#213c58;border-color:#e9eef5}
+.standings-table tbody tr:hover{background:#f2f7fd}
+.standings-manager strong{color:#183450}
+.standings-manager small,.standing-roster,.pending-score{color:#75869b!important}
+.standings-notice{background:#f1f6fc;border-color:#d9e6f3;color:#415c78}
+.table td,.table th{border-color:#e6edf4}
+.table th{color:#62758d}
+.pos{color:#5c7591}
+.status{background:#e9f6ee;color:#25724c;border:1px solid #d3eddd}
+.status.wait{background:#fff0e4;color:#a9501d;border:1px solid #f3d2b8}
+.status.draft{background:#e7f0fc;color:#215b9b;border:1px solid #cedff1}
+/* Roster, trades, boards and commissioners */
+.commissioner-menu{background:#fff;border:1px solid #dde6f0;box-shadow:var(--bd-shadow)}
+.commissioner-menu button{color:#60758b}
+.commissioner-menu button:hover{background:#f3f7fb}
+.commissioner-menu button.active{background:#e9f2fc;border-color:#b7d2ed}
+.commissioner-menu button.active strong{color:#154e93}
+.commissioner-menu button span{color:#687c93}
+.draft-order-row,.manager-card,.claim-review,.history-row,.profile-facts>div{border-color:#e7edf4}
+.draft-order-buttons button{background:#f4f8fd;border-color:#cddcec;color:#245a93}
+.draft-order-buttons button:hover:not(:disabled){background:#e4eef9}
+.draft-info{background:linear-gradient(105deg,#edf4fc,#fff);border-color:#d3e3f5}
+.draft-info strong{color:#183754}
+.draft-info p{color:#627991}
+.draft-progress{background:#dce7f3}
+.draft-progress div{background:#eb7935}
+.draft-action{border:1px solid #f0cfae;background:linear-gradient(110deg,#fff2e5 0%,#fffaf6 100%)}
+.draft-action strong{color:#9c4b17}
+.draft-action small{color:#725d51}
+.draft-history-toggle{border-color:#c5d9ed}
+.draft-history-toggle:hover{background:#edf5fe}
+.trade-program-list,.trade-offer,.team-program,.team-offer{background:#fff;border-color:#dce5ee}
+.trade-choice,.trade-submit,.trade-offer p{color:#304962}
+.trade-choice{border-color:#edf1f5}
+.trade-choice:has(input:checked){background:#edf5ff;color:#174b89}
+.trade-offer p strong,.team-offer-detail strong{color:#1b354f}
+.trade-offer p{color:#5f728a}
+.team-program-link:hover{background:#f0f6fe}
+.team-drop{background:#fff5f5;border-top-color:#f1d4d7;color:#a34151}
+.team-drop:hover{background:#feeaea}
+.team-permanence{background:#fff0e4;color:#a7531f;border-color:#f1cdb0}
+.team-subhead{color:#546a84}
+.team-program-arrow{color:#6e84a0}
+.more-menu-item{color:#1b3551}
+.more-menu-item:hover{background:#f3f7fc}
+.more-menu-icon{background:#edf4fc;color:#205996;border-color:#d8e5f3}
+.more-menu-item small,.more-chevron{color:#71839b}
+.profile-hero{background:linear-gradient(105deg,#edf4fc,#fff);border-color:#d8e4f0}
+.profile-hero h1{color:#112d4a}
+.profile-subline{color:#60748a}
+.profile-stats>div,.settings-static,.board-slot,.season-current{background:#f7f9fc;border-color:#dce5ee}
+.profile-stats strong,.board-team,.profile-roster-row,.profile-facts strong{color:#163653}
+.profile-stats>div>span,.profile-stats strong.muted{color:#75869d}
+.profile-roster-row{color:#1c3654;border-color:#e6edf5}
+.profile-roster-row:hover,.profile-row:hover,.manager-profile-link:hover,.history-team:hover{background:#edf5fe}
+.history-team{background:#fff;color:#1d3854;border-color:#e3eaf2}
+.history-team strong{color:#1d3854}
+.history-team span{color:#6d8198}
+.archive-champion{background:#fff7ec;border-color:#f2d5b5}
+.archive-champion strong{color:#a9521c}
+.archive-champion span{color:#746453}
+.board-slot{background:#fbfcfe}
+.board-slot.on-clock{background:#fff4e7;border-color:#efa96a}
+.board-number,.board-team strong,.draft-clock-box strong{color:#214b79}
+.board-manager,.board-open{color:#71869e}
+.draft-clock-box span,.draft-clock-box small{color:#5f7691}
+.readiness-panel{background:#f3f8fe;border-color:#d5e3f2}
+.readiness-panel strong{color:#1b3854}
+.readiness-panel>span{color:#60758c}
+.readiness-panel .ready-label{color:#1b794e}
+.readiness-panel .not-ready-label{color:#ac561b}
+.season-current strong{color:#164e8e}
+.data-run,.result-game-row,.archived-roster{border-color:#e6edf4}
+.data-kpis strong,.result-game-row strong{color:#193450}
+.game-day,.data-run small,.quad-summary span{color:#6c8098}
+.game-score{color:#1456a1}
+.result-game-status{background:#edf3fa;color:#315472;border-color:#d6e4f2}
+.result-game-status.live{background:#e8f6ef;border-color:#bce4cc;color:#1d704b}
+.quad-summary span{background:#f1f6fc;border-color:#d8e6f3}
+.quad-summary strong{color:#175da8}
+.data-run>span{color:#167047}
+.data-run>span.failed,.data-run small.data-error{color:#a82e3b}
+.invite-result{background:#f1f6fc;border-color:#d6e3f3}
+.invite-result>span{color:#315373}
+.auth-layout{background:radial-gradient(ellipse 70% 65% at 50% 15%,#e8f0fb 0%,#f4f6fa 60%,#f8f9fb 100%)}
+.auth-card{background:#fff;border:1px solid #dbe4ee;box-shadow:0 22px 65px rgba(28,52,78,.13)}
+.auth-section{border-top-color:#e5ebf3}
+.auth-section h1,.auth-logo .brand-title{color:#142d4b}
+.auth-desc,.auth-season,.install-help{color:#61758f}
+.auth-top button{color:#3e5875;border-color:#d0ddea;background:#fff}
+.auth-top button.active{color:#fff;background:#1558a6;border-color:#1558a6}
+.auth-top button:hover:not(.active){background:#f2f7fd}
+.auth-card .field{background:#fff}
+.loading{background:#f4f6fa}
+/* Mobile navigation stays compact but matches the light surfaces. */
+@media(max-width:850px){
+  .topbar{background:rgba(255,255,255,.97);border-bottom-color:#e1e7ef}
+  .bottom{background:rgba(255,255,255,.97);border-top:1px solid #dce5ef;box-shadow:0 -6px 26px rgba(25,49,74,.08)}
+  .bottom button{color:#667a94}
+  .bottom button svg{color:#617a99}
+  .bottom button.active{background:#e9f2fc;color:#17589d}
+  .bottom button.active svg{color:#17589d}
+  .topbar .title{color:#183553}
+}
+@media(max-width:650px){
+  .panel{padding:18px}
+  .metrics{gap:9px}
+  .program-card{transform:none!important}
+  .program-card:hover{box-shadow:0 4px 12px rgba(26,52,81,.07)}
+  .auth-card{box-shadow:0 15px 36px rgba(28,52,78,.1)}
+}
+/* Reduce visual noise for low-motion users. */
+@media(prefers-reduced-motion:reduce){
+ .program-card,.nav button,.btn,.commissioner-menu button{transition:none!important}
+}

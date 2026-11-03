@@ -2,6 +2,19 @@ export default (function makeWorker(){
   const COOKIE='boek_session';
   const SESSION_SECONDS=90*24*60*60;
   const ENCODER=new TextEncoder();
+  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_extra":1,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
+  function scoringFrom(raw){
+    let data={};try{data=JSON.parse(raw||'{}');}catch{}
+    if(!data||typeof data!=='object'||Array.isArray(data))data={};
+    const result={...DEFAULT_SCORING};
+    for(const key of Object.keys(result)){
+      const value=data[key];
+      if(typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=100&&
+        (key!=='best_programs'||(Number.isInteger(value)&&value>=1&&value<=20)))result[key]=value;
+    }
+    return result;
+  }
+
   const confIds=new Set(['1','2','3','4','5','6','7','8','9','10','11','12','13','14','16','18','19','20','21','22','23','24','25','26','27','28','29','30','44','45','46','62']);
   const timestamp=()=>Math.floor(Date.now()/1000);
   const rand=(length=24)=>{
@@ -65,7 +78,7 @@ export default (function makeWorker(){
       league_name:map.league_name||'Boek Dynasty',max_managers:Number(map.max_managers||10),
       trading_enabled:map.trading_enabled!=='0',draft_order:JSON.parse(map.draft_order||'[]'),
       draft_clock_seconds:Number(map.draft_clock_seconds||0),draft_deadline:Number(map.draft_deadline||0),
-      waivers_enabled:map.waivers_enabled==='1'};
+      waivers_enabled:map.waivers_enabled==='1',scoring:scoringFrom(map.scoring_rules)};
   }
   async function setSetting(env,key,value){
     await q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',key,String(value)).run();
@@ -309,6 +322,23 @@ export default (function makeWorker(){
         q(env,"INSERT INTO settings(key,value) VALUES('max_managers',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",String(max))
       ]);
       return response({ok:true});
+    }
+    if(path==='admin/scoring-settings'){
+      const input=data.scoring;
+      if(!input||typeof input!=='object'||Array.isArray(input))return failure('Invalid scoring rules.',400);
+      const next={};
+      for(const key of Object.keys(DEFAULT_SCORING)){
+        if(!Object.prototype.hasOwnProperty.call(input,key))return failure('Missing scoring category: '+key,400);
+        const value=input[key];
+        if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>100||Math.round(value*4)!==value*4)
+          return failure('Scoring values must be between 0 and 100 in quarter-point increments.',400);
+        if(key==='best_programs'&&(!Number.isInteger(value)||value<1||value>20))
+          return failure('Best-ball programs must be between 1 and 20.',400);
+        next[key]=value;
+      }
+      if(Object.keys(input).some(key=>!Object.prototype.hasOwnProperty.call(DEFAULT_SCORING,key)))return failure('Unsupported scoring rule.',400);
+      await setSetting(env,'scoring_rules',JSON.stringify(next));
+      return response({ok:true,scoring:next});
     }
     if(path==='admin/trade-settings'){
       if(typeof data.trading_enabled!=='boolean')return failure('Invalid trade setting.',400);

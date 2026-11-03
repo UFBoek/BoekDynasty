@@ -242,9 +242,20 @@ const DATA_PIPELINE=(()=>{
     const seasonStart=season.slice(0,4);
     const provenance=String(payload.updatedAt||payload.updated||payload.lastUpdated||payload.date||'');
     if(provenance){
+      const detected=new Date(provenance);
+      const dated=!Number.isNaN(detected.getTime())?detected.toISOString().slice(0,10):null;
+      if(dated&&dated<seasonStart+'-11-01')
+        throw new Error('NCAA NET source was last updated before this basketball season.');
       const year=(provenance.match(/20\d{2}/)||[])[0];
-      if(year&&Number(year)<Number(seasonStart))throw new Error('NCAA NET source is still displaying the previous season.');
+      if(year&&Number(year)<Number(seasonStart))
+        throw new Error('NCAA NET source is still displaying the previous season.');
     }
+    // An old NET page can remain visible into December. Last-season final
+    // records (20+ games) are impossible during the new season's first NET release.
+    const recordTotals=rows.map(item=>String(item.RECORD||item.Record||item.record||'').match(/^(\d+)-(\d+)$/))
+      .filter(Boolean).map(x=>Number(x[1])+Number(x[2]));
+    if(recordTotals.length>=100&&recordTotals.filter(n=>n>=20).length>recordTotals.length/5)
+      throw new Error('NCAA NET data appears to be from a completed prior season.');
     const matched=[],missing=[],used=new Set();
     for(const item of rows){
       const rawName=String(item.SCHOOL||item.School||item.school||item.team||item.Team||item.team_name||'');

@@ -710,55 +710,32 @@ const DATA_PIPELINE=(()=>{
   }
   // Conference champions from the complete, historical ESPN conference records.
   // Exact ESPN program IDs and all co-champions are retained. No name guessing.
-  async function syncHistoricalConference(env,season,fetchFn=fetch){
-    if(!['2021-22','2022-23','2023-24','2024-25','2025-26'].includes(season))
-      throw new Error('A completed historical season is required.');
-    const year=Number(season.slice(0,4))+1;
-    const uri='https://site.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings?season='+year+'&group=50&level=3&type=0';
-    const runId=crypto.randomUUID();
-    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-conference-v2',?,?,'espn-standings','running')",runId,season,year+'-04-15').run();
-    try{
-      const response=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(20000)});
-      if(!response.ok)throw new Error('ESPN historical standings HTTP '+response.status);
-      const data=await response.json(),winners=[];
-      if(!Array.isArray(data.children)||data.children.length<28)
-        throw new Error('ESPN historical conference list incomplete');
-      for(const group of data.children){
-        const records=(group.standings?.entries||[]).map(e=>{
-          const stats=e.stats||[];
-          const get=t=>Number(stats.find(v=>v.type===t)?.value);
-          return {id:String(e.team?.id||''),pct:get('vsconf_winpercent'),w:get('vsconf_wins'),l:get('vsconf_losses')};
-        }).filter(x=>x.id&&teamIds.has(x.id)&&x.w+x.l>=5&&Number.isFinite(x.pct)&&x.pct>=0&&x.pct<=1);
-        if(!records.length)continue;
-        const best=Math.max(...records.map(x=>x.pct));
-        winners.push(...records.filter(x=>Math.abs(x.pct-best)<0.00001).map(x=>({...x,conf:group.name})));
-      }
-      if(winners.length<27||winners.length>65)throw new Error('Incomplete ESPN champion count: '+winners.length);
-      const note=('ESPN '+season+' final conference standings '+uri).slice(0,240);
-      for(let i=0;i<winners.length;i+=40){
-        await env.DB.batch(winners.slice(i,i+40).map(x=>q(env,
-          "INSERT INTO cbb_awards(season,program_id,award_type,value,source_note) VALUES(?,?,'conference_regular_champion',1,?) ON CONFLICT(season,program_id,award_type) DO UPDATE SET value=1,source_note=excluded.source_note",
-          season,x.id,note)));
-      }
-      await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",data.children.length,winners.length,winners.length,runId).run();
-      return {season,conference_groups:data.children.length,champions:winners.length};
-    }catch(e){
-      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
-      throw e;
+  // The complete archive was verified against ESPN conference standings and
+  // is bundled at build time. This avoids ESPN HTTP 403 from Cloudflare Workers
+  // and makes the backfill resumable after daily D1 write quotas reset.
+  async function syncHistoricalConference(env,season){
+    const entry=HISTORICAL_CONFERENCE_CHAMPIONS.seasons.find(x=>x.season===season);
+    if(!entry||!Array.isArray(entry.winners)||entry.winners.length<28)
+      throw new Error('Verified historical standings are missing for '+season);
+    const saved=(await q(env,"SELECT program_id FROM cbb_awards WHERE season=? AND award_type='conference_regular_champion'",season).all()).results||[];
+    const recorded=new Set(saved.map(x=>String(x.program_id)));
+    const missing=entry.winners.filter(x=>!recorded.has(String(x.id)));
+    const note=('ESPN historical '+season+' final conference standings: '+
+      'https://site.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings?season='+entry.year+'&group=50&type=0').slice(0,240);
+    for(let i=0;i<missing.length;i+=35){
+      await env.DB.batch(missing.slice(i,i+35).map(x=>q(env,
+        "INSERT OR IGNORE INTO cbb_awards(season,program_id,award_type,value,source_note) VALUES(?,?,'conference_regular_champion',1,?)",
+        season,String(x.id),note)));
     }
+    return {season,expected:entry.winners.length,already_saved:recorded.size,added:missing.length};
   }
   async function backfillHistoricalConferences(env){
-    const runs=(await q(env,"SELECT season,status,MAX(started_at) AS last_try FROM cbb_sync_runs WHERE job='historical-conference-v2' GROUP BY season,status").all()).results||[];
-    const complete=new Set(runs.filter(x=>x.status==='ok').map(x=>x.season));
-    const now=Math.floor(Date.now()/1000);
-    for(const season of ['2025-26','2024-25','2023-24','2022-23','2021-22']){
-      if(complete.has(season))continue;
-      const last=Math.max(0,...runs.filter(x=>x.season===season).map(x=>Number(x.last_try)||0));
-      if(now-last<7200)continue;
-      try{return {ok:true,...await syncHistoricalConference(env,season)};}
-      catch(e){return {ok:false,season,error:err(e)};}
+    const reports=[];
+    for(const year of HISTORICAL_CONFERENCE_CHAMPIONS.seasons){
+      try{reports.push({ok:true,...await syncHistoricalConference(env,year.season)});}
+      catch(e){reports.push({ok:false,season:year.season,error:err(e)});break;}
     }
-    return {skipped:'All historical conference seasons completed or awaiting retry.'};
+    return reports;
   }
   // Conference matchups and NET quadrants must use the winning program's
   // actual venue. The ESPN home/away designation is ignored at neutral sites.
@@ -828,15 +805,15 @@ const DATA_PIPELINE=(()=>{
     if(settings.results_auto_sync==='0')return {skipped:'disabled'};
     const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
     // Archival repair is independent of the current basketball calendar.
-    if(cron==='* * * * *'){
-      // Eight ESPN scoreboard dates plus one throttled archived-NET attempt.
-      // Each task is isolated so a blocked ranking source cannot stop games.
+    if(cron==='*/30 * * * *'){
+      // Limit historical writes on Cloudflare D1 free tier. Import only the
+      // missing awards first, then progress eight ordinary and eight March dates.
+      const conference=await backfillHistoricalConferences(env).catch(e=>({error:err(e)}));
       const historical=await backfillHistory(env,8).catch(e=>({error:err(e)}));
       const postseason=await priorityPostseason(env,8).catch(e=>({error:err(e)}));
       const ncaa=await reconcileNCAA2026(env).catch(e=>({error:err(e)}));
       const archiveNet=await backfillArchivedNet(env).catch(e=>({error:err(e)}));
-      const conference=await backfillHistoricalConferences(env).catch(e=>({error:err(e)}));
-      return {historical,postseason,ncaa,archiveNet,conference};
+      return {conference,historical,postseason,ncaa,archiveNet};
     }
     if(cron==='45 9 * * *'){
       const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];

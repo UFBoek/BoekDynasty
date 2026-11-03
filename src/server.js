@@ -131,6 +131,31 @@ export default (function makeWorker(){
       }
       return response(data,200,headers);
     }
+
+    // Result views require an active manager session; data changes require commissioner access.
+    if(request.method==='GET'&&path.startsWith('data/')){
+      const auth=await getUser(request,env);
+      if(!auth)return failure('Sign in required.',401);
+      const settings=await getSettings(env),season=settings.current_season;
+      if(path==='data/status')return response(await DATA_PIPELINE.status(env,season));
+      if(path==='data/records')return response({season,records:await DATA_PIPELINE.records(env,season)});
+      if(path==='data/games')return response({season,games:await DATA_PIPELINE.recentGames(env,season,80)});
+      if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});
+      if(path==='data/program'){
+        const id=String(url.searchParams.get('id')||'');
+        if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
+        const [games,ranks,allRecords,awards]=await Promise.all([
+          DATA_PIPELINE.programGames(env,season,id),
+          DATA_PIPELINE.netRanks(env,season),
+          DATA_PIPELINE.records(env,season),
+          q(env,'SELECT award_type,value,source_note FROM cbb_awards WHERE season=? AND program_id=?',season,id).all()
+        ]);
+        return response({season,id,games,record:allRecords.find(x=>x.program_id===id)||{wins:0,losses:0,played:0},
+          net:ranks.find(x=>x.program_id===id)||null,net_date:ranks[0]?.snapshot_date||null,
+          awards:awards.results||[]});
+      }
+      return failure('Not found.',404);
+    }
     if(request.method!=='POST')return failure('Not found.',404);
     if(request.headers.get('Origin') && request.headers.get('Origin')!==url.origin)return failure('Invalid request origin.',403);
     let data;
@@ -298,6 +323,41 @@ export default (function makeWorker(){
       return response({ok:true});
     }
     if(user.role!=='commissioner')return failure('Commissioner access required.',403);
+
+    if(path==='admin/data/sync'){
+      const settings=await getSettings(env),day=String(data.date||DATA_PIPELINE.localDay());
+      if(!DATA_PIPELINE.dayInSeason(settings.current_season,day))return failure('Choose a date in the current season.',400);
+      const result=await DATA_PIPELINE.importDay(env,settings.current_season,day,{job:'manual'});
+      return response({ok:true,...result});
+    }
+    if(path==='admin/data/backfill'){
+      const settings=await getSettings(env),days=Number(data.days||7);
+      if(!Number.isInteger(days)||days<1||days>14)return failure('Backfill supports 1–14 days.',400);
+      const result=await DATA_PIPELINE.backfill(env,settings.current_season,days);
+      return response({ok:result.every(x=>x.ok),days:result});
+    }
+    if(path==='admin/data/auto'){
+      if(typeof data.enabled!=='boolean')return failure('Invalid automatic import setting.',400);
+      await setSetting(env,'results_auto_sync',data.enabled?'1':'0');
+      return response({ok:true});
+    }
+    if(path==='admin/data/net'){
+      const settings=await getSettings(env),day=String(data.date||'');
+      const result=await DATA_PIPELINE.saveNet(env,settings.current_season,day,data.records);
+      return response({ok:true,...result});
+    }
+    if(path==='admin/data/award'){
+      const settings=await getSettings(env);
+      const kind=String(data.award_type||''),team=String(data.program_id||'');
+      const allowed=new Set(['conference_regular_champion','conference_tournament_champion','ncaa_seed','ncaa_wins','national_champion','kenpom_final_rank']);
+      if(!allowed.has(kind)||!team||!await q(env,'SELECT id FROM programs WHERE id=?',team).first())return failure('Unknown school or achievement type.',400);
+      const value=Number(data.value),note=String(data.source_note||'').trim();
+      const max=kind==='ncaa_seed'?16:kind==='ncaa_wins'?6:kind==='kenpom_final_rank'?400:1;
+      if(!Number.isInteger(value)||value<(kind==='ncaa_wins'?0:1)||value>max||(max===1&&value!==1)||note.length<8||note.length>240)
+        return failure('Provide a valid value and source reference (8–240 characters).',400);
+      await q(env,"INSERT INTO cbb_awards(season,program_id,award_type,value,source_note) VALUES(?,?,?,?,?) ON CONFLICT(season,program_id,award_type) DO UPDATE SET value=excluded.value,source_note=excluded.source_note,confirmed_at=unixepoch()",settings.current_season,team,kind,value,note).run();
+      return response({ok:true});
+    }
     if(path==='admin/invite'){
       const num=await q(env,'SELECT count(*) AS total FROM users').first();
       const settings=await getSettings(env);
@@ -511,6 +571,12 @@ export default (function makeWorker(){
   const ICON='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="38" fill="#0b1626"/><path d="M38 68h116v19c0 38-20 63-58 73-38-10-58-35-58-73V68Z" fill="#e8b66d"/><path d="M43 75h106v11c0 32-17 54-53 65-36-11-53-33-53-65V75Z" fill="#17273b"/><path d="m96 31 13 26 28 4-20 20 5 29-26-14-26 14 5-29-20-20 28-4 13-26Z" fill="#e8b66d"/><text x="96" y="135" font-size="39" font-weight="900" fill="#e8b66d" text-anchor="middle" font-family="Arial">BD</text></svg>';
   const SW="const NAME='boek-dynasty-shell-v1';self.addEventListener('install',e=>{e.waitUntil(caches.open(NAME).then(c=>c.addAll(['/','/style.css','/app.js','/icon.svg'])));self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
   return {
+    async scheduled(controller,env){
+      try{
+        const outcome=await DATA_PIPELINE.scheduled(env,controller.cron);
+        console.log('CBB results sync',JSON.stringify(outcome));
+      }catch(e){console.error('CBB results sync failed',String(e?.message||e));throw e;}
+    },
     async fetch(request,env){
       const url=new URL(request.url);
       try{

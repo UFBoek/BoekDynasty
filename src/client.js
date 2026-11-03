@@ -417,20 +417,21 @@
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
-    return heading('', 'My Team')
-      +'<div class="team-hero panel">'+avatar(me)+'<div class="grow"><span class="eyebrow">DYNASTY FRANCHISE</span><h2>'+escapeHTML(me.display_name)+'</h2><p>@'+escapeHTML(me.username)+' · '+escapeHTML(season())+' season</p></div><span class="team-permanence">Permanent roster</span></div>'
-      +'<div class="team-stats"><div class="team-stat"><span>OWNED PROGRAMS</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong></div>'
-      +'<div class="team-stat"><span>BEST BALL</span><strong>Top '+bestCount+'</strong></div>'
-      +'<div class="team-stat"><span>DYNASTY TITLES</span><strong>'+titles+'</strong></div></div>'
+    return heading('YOUR FRANCHISE', 'My Team',owned.length?'Your permanent collection of college basketball programs.':'Your dynasty starts with the inaugural program draft.')
+      +'<div class="team-hero panel team-hero-fresh">'+avatar(me)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h2>'+escapeHTML(me.display_name)+'</h2><p>@'+escapeHTML(me.username)+' · '+escapeHTML(season())+' season</p></div>'
+      +'<div class="team-hero-schools">'+(owned.length?owned.slice(0,9).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):'<span class="team-draft-prompt">Waiting for your first selection</span>')+'</div></div>'
+      +'<div class="team-stats team-stats-refined"><div class="team-stat"><span>ROSTER</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong><div class="team-roster-progress"><i style="width:'+Math.min(100,100*owned.length/Math.max(1,Number(league.settings.rounds)))+'%"></i></div></div>'
+      +'<div class="team-stat"><span>COUNTING PROGRAMS</span><strong>Best '+bestCount+'</strong><small>Season-long best ball</small></div>'
+      +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div></div>'
       +'<div class="team-actions"><button class="btn" data-act="tab" data-id="trades">Propose trade</button><button class="btn secondary" data-act="tab" data-id="waivers">Waivers</button><button class="btn secondary" data-act="tab" data-id="programs">Browse programs</button></div>'
-      +'<div class="team-layout"><section class="panel team-roster-panel">'+panelHeading('Your programs',owned.length+' schools on your permanent roster')
-      +(owned.length?'<div class="team-program-grid">'+roster+'</div>':empty('No programs owned','Your roster will fill as you draft programs.'))
+      +'<div class="team-layout"><section class="panel team-roster-panel">'+panelHeading('Your programs',owned.length+' permanently owned schools','<button class="btn small ghost" data-act="tab" data-id="programs">Browse schools</button>')
+      +(owned.length?'<div class="team-program-grid">'+roster+'</div>':empty('Your roster is ready to build','Once the draft begins, your selected schools will appear here with their logos and season records.'))
       +(owned.length?'<p class="team-footnote">Program points will appear after verified college basketball results are connected.</p>':'')+'</section>'
       +'<div class="team-aside"><section class="panel team-offers-panel">'+panelHeading('Your trades',offers.filter(t=>t.status==='pending').length+' pending · '+allOffers.length+' total')
-      +(offers.length?offerCards:empty('No trade offers','Incoming and outgoing offers will appear here.'))
+      +(offers.length?offerCards:empty('No trades yet','Proposals and completed deals will appear here.'))
       +'<div class="team-panel-footer"><button class="btn secondary small" data-act="tab" data-id="trades">View all trades</button></div></section>'
       +'<section class="panel team-waivers-panel">'+panelHeading('Waiver activity',claims.filter(c=>c.status==='pending').length+' pending claims')
-      +(claims.length?waiverRows:empty('No waiver claims','Waiver requests and decisions will appear here.'))
+      +(claims.length?waiverRows:empty('Nothing on waivers','Your pending claims and completed waiver moves will appear here.'))
       +(transactionRows?'<h3 class="team-subhead">Recent roster moves</h3>'+transactionRows:'')
       +'<div class="team-panel-footer"><button class="btn secondary small" data-act="tab" data-id="waivers">Manage waivers</button></div></section></div></div>';
   }

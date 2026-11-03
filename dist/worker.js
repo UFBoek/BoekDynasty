@@ -720,9 +720,9 @@ const DATA_PIPELINE=(()=>{
     if(!['2021-22','2022-23','2023-24','2024-25','2025-26'].includes(season))
       throw new Error('A completed historical season is required.');
     const year=Number(season.slice(0,4))+1;
-    const uri='https://site.web.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings?season='+year+'&level=3&type=0';
+    const uri='https://site.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings?season='+year+'&group=50&level=3&type=0';
     const runId=crypto.randomUUID();
-    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-conference',?,?,'espn-standings','running')",runId,season,year+'-04-15').run();
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-conference-v2',?,?,'espn-standings','running')",runId,season,year+'-04-15').run();
     try{
       const response=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(20000)});
       if(!response.ok)throw new Error('ESPN historical standings HTTP '+response.status);
@@ -754,7 +754,7 @@ const DATA_PIPELINE=(()=>{
     }
   }
   async function backfillHistoricalConferences(env){
-    const runs=(await q(env,"SELECT season,status,MAX(started_at) AS last_try FROM cbb_sync_runs WHERE job='historical-conference' GROUP BY season,status").all()).results||[];
+    const runs=(await q(env,"SELECT season,status,MAX(started_at) AS last_try FROM cbb_sync_runs WHERE job='historical-conference-v2' GROUP BY season,status").all()).results||[];
     const complete=new Set(runs.filter(x=>x.status==='ok').map(x=>x.season));
     const now=Math.floor(Date.now()/1000);
     for(const season of ['2025-26','2024-25','2023-24','2022-23','2021-22']){

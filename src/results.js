@@ -825,13 +825,12 @@ const DATA_PIPELINE=(()=>{
     const settings=Object.fromEntries(pairs.map(x=>[x.key,x.value]));
     if(settings.results_auto_sync==='0')return {skipped:'disabled'};
     const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
-    // Archival repair is independent of the current basketball calendar.
-    if(cron==='*/30 * * * *'){
-      // Limit historical writes on Cloudflare D1 free tier. Import only the
-      // missing awards first, then progress eight ordinary and eight March dates.
+    // Pace archive imports so live scoring and manager signups retain D1 write capacity.
+    if(cron==='30 * * * *'){
+      // Process six archived dates hourly rather than sixteen every 30 minutes.
       const conference=await backfillHistoricalConferences(env).catch(e=>({error:err(e)}));
-      const historical=await backfillHistory(env,8).catch(e=>({error:err(e)}));
-      const postseason=await priorityPostseason(env,8).catch(e=>({error:err(e)}));
+      const historical=await backfillHistory(env,4).catch(e=>({error:err(e)}));
+      const postseason=await priorityPostseason(env,2).catch(e=>({error:err(e)}));
       const ncaa=await reconcileNCAA2026(env).catch(e=>({error:err(e)}));
       const archiveNet=await backfillArchivedNet(env).catch(e=>({error:err(e)}));
       return {conference,historical,postseason,ncaa,archiveNet};

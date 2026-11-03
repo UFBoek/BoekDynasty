@@ -207,7 +207,7 @@
     return '<div class="result-game-row"><div class="grow"><span class="game-day">'+escapeHTML(g.game_date)+'</span><strong>'+escapeHTML(away)+' <span class="game-score">'+score+'</span> '+escapeHTML(home)+'</strong></div><span class="result-game-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameOutcome(g,id))+'</span></div>';
   };
   function resultsPage(){
-    const status=resultsStatus,good=(status?.recent_runs||[]).find(r=>r.status==='ok');
+    const status=resultsStatus,good=(status?.recent_runs||[]).find(r=>r.status==='ok'&&Number(r.matched)>0);
     const error=(status?.recent_runs||[]).find(r=>r.status==='error');
     const rows=resultsGames.filter(g=>activeConfs().some(c=>programs().some(p=>p.conference_id===c&&(p.id===g.home_id||p.id===g.away_id)))).slice(0,60);
     return heading('', 'Results')
@@ -490,7 +490,7 @@
       +'<div class="profile-panels"><section class="panel">'+panelHeading('Program details')+'<div class="profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div><div><span>Current season</span><strong>'+escapeHTML(season())+'</strong></div><div><span>Originally drafted by</span><strong>'+escapeHTML(pickedBy?.display_name||'Not drafted')+'</strong></div><div><span>Dynasty status</span><strong>'+(owner?'Rostered':'Available')+'</strong></div></div>'+(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
       +'<section class="panel">'+panelHeading('Season history')+(history.length?history.map(x=>{const u=members().find(m=>m.id===x.manager_id);return '<div class="history-row"><strong>'+escapeHTML(x.season)+'</strong><span>'+escapeHTML(u?.display_name||'Manager')+'</span></div>';}).join(''):empty('No archived seasons'))+'</section></div>'
       +'<section class="panel section-gap">'+panelHeading('2026–27 results',report?.net_date?'NET snapshot '+escapeHTML(report.net_date):'NET pending')
-      +(report?.error?'<div class="notice">'+escapeHTML(report.error)+'</div>':report?.games?.length?'<div class="result-games">'+report.games.map(g=>resultGameRow(g,p.id)).join('')+'</div>':empty(report?'No games imported':'Loading game results'))
+      +(report?.error?'<div class="notice">'+escapeHTML(report.error)+'</div>':report?.games?.length?'<div class="result-games">'+report.games.slice().sort((x,y)=>(x.status==='final')-(y.status==='final')||((x.status==='final')?y.game_date.localeCompare(x.game_date):x.game_date.localeCompare(y.game_date))).map(g=>resultGameRow(g,p.id)).join('')+'</div>':empty(report?'No games imported':'Loading game results'))
       +(report?.net_date?'<div class="quad-summary"><span>Q1 <strong>'+(quads?.q1||0)+'</strong></span><span>Q1A <strong>'+(quads?.q1a||0)+'</strong></span><span>Q2 <strong>'+(quads?.q2||0)+'</strong></span></div><p class="hint">Quadrants are provisional and use the most recent available NET snapshot.</p>':'')
       +'</section>'
       +(report?.awards?.length?'<section class="panel section-gap">'+panelHeading('Verified achievements')+report.awards.map(a=>'<div class="history-row"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+'</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</section>':'')

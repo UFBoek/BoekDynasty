@@ -1,5 +1,7 @@
 name: Deploy Boek Dynasty to GitHub Pages
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -26,8 +28,10 @@ jobs:
         env:
           BOEK_API_BASE: ${{ vars.BOEK_API_BASE }}
         run: node scripts/build-pages.mjs
+      - name: Check generated JavaScript
+        run: node --check pages-dist/app.js
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: pages-dist
       - id: deployment

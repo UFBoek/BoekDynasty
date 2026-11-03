@@ -192,18 +192,27 @@
       +'<div class="directory-stats"><div><strong>'+eligible.length+'</strong><span>Eligible schools</span></div><div><strong>'+available+'</strong><span>Available</span></div><div><strong>'+(eligible.length-available)+'</strong><span>Rostered</span></div></div>'
       +'<div class="directory-toolbar"><label class="search-wrap"><span>⌕</span><input class="field" type="search" id="program-search" value="'+escapeHTML(programQuery)+'" placeholder="Search schools..." aria-label="Search schools"/></label><select class="field" id="program-conference" aria-label="Conference"><option value="all">All conferences</option>'+opts+'</select><select class="field" id="program-ownership" aria-label="Program ownership"><option value="all" '+(programOwnership==='all'?'selected':'')+'>All schools</option><option value="available" '+(programOwnership==='available'?'selected':'')+'>Available</option><option value="owned" '+(programOwnership==='owned'?'selected':'')+'>Rostered</option></select></div>'
       +'<div class="directory-result"><span id="program-results">'+eligible.length+' programs</span><span>'+(league.settings.draft_status==='live'&&isMyTurn()?'Your pick is live':'2026–27 program pool')+'</span></div>'
-      +(eligible.length?'<div class="program-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div>':empty('No programs loaded',me?.role==='commissioner'?(syncActive?'Importing selected conferences...':'Use the import button in Commissioner settings.'): 'The commissioner has not imported schools yet.'));
+      +(eligible.length?'<div class="program-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div><div id="no-program-results" class="empty directory-empty" hidden>No matching schools</div><div id="directory-load" class="directory-load" hidden><button class="btn secondary" data-act="load-programs">Load more schools</button><span id="directory-progress"></span></div>':empty('No programs loaded',me?.role==='commissioner'?(syncActive?'Importing selected conferences...':'Use the import button in Commissioner settings.'): 'The commissioner has not imported schools yet.'));
   }
   function filterPrograms(){
     const query=programQuery.trim().toLowerCase();
-    let found=0;
+    let found=0,visible=0;
     document.querySelectorAll('.program-card[data-search]').forEach(card=>{
-      const match=card.dataset.search.includes(query)&&(programConference==='all'||card.dataset.conference===programConference)&&(programOwnership==='all'||card.dataset.owner===programOwnership);
-      card.hidden=!match;
+      const match=card.dataset.search.includes(query)
+        &&(programConference==='all'||card.dataset.conference===programConference)
+        &&(programOwnership==='all'||card.dataset.owner===programOwnership);
       if(match)found++;
+      card.hidden=!match||found>programShown;
+      if(match&&found<=programShown)visible++;
     });
     const count=document.querySelector('#program-results');
-    if(count)count.textContent=found+' programs';
+    if(count)count.textContent=found>visible?visible+' of '+found+' programs':found+' programs';
+    const more=document.querySelector('#directory-load');
+    if(more)more.hidden=found<=visible;
+    const progress=document.querySelector('#directory-progress');
+    if(progress)progress.textContent=found>visible?(found-visible)+' remaining':'';
+    const emptyMessage=document.querySelector('#no-program-results');
+    if(emptyMessage)emptyMessage.hidden=found!==0;
   }
   function draftPage(){
     const statusText=league.settings.draft_status;
@@ -319,6 +328,8 @@
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='commish-section'){adminSection=id;render();return;}
+    if(act==='load-programs'){programShown+=24;filterPrograms();return;}
+    if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
     if(act==='move-draft'){
       const i=Number(button.dataset.index),j=i+Number(button.dataset.dir);
       if(i>=0&&i<draftOrderPreview.length&&j>=0&&j<draftOrderPreview.length){
@@ -430,12 +441,13 @@
   });
   root.addEventListener('change',e=>{
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
-    if(e.target?.id==='program-conference'){programConference=e.target.value;filterPrograms();}
-    if(e.target?.id==='program-ownership'){programOwnership=e.target.value;filterPrograms();}
+    if(e.target?.id==='program-conference'){programConference=e.target.value;programShown=24;filterPrograms();}
+    if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=24;filterPrograms();}
   });
   root.addEventListener('input',e=>{
     if(e.target?.id!=='program-search')return;
     programQuery=e.target.value;
+    programShown=24;
     filterPrograms();
   });
   boot();

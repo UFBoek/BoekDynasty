@@ -559,3 +559,12 @@
   .result-game-status{min-width:48px;font-size:9px}
   .quad-summary span{padding:9px 10px}
 }
+
+/* Exact league logo across desktop sidebar, sign-in, and mobile header. */
+.brand-icon.brand-image{background:transparent;color:inherit;border:0;border-radius:50%;overflow:hidden;padding:0;flex-shrink:0;box-shadow:none}
+.brand-icon.brand-image img{width:100%;height:100%;display:block;object-fit:contain}
+.topbar-heading{display:flex;align-items:center;gap:10px;min-width:0}
+.topbar-heading .title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar-logo{display:none;width:30px;height:30px;object-fit:contain;flex-shrink:0}
+@media(max-width:850px){.topbar-logo{display:block}}
+@media(max-width:400px){.topbar-heading{gap:6px}.topbar-logo{width:26px;height:26px}.topbar-heading .title{font-size:11px}}

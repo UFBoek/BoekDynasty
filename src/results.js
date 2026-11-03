@@ -204,7 +204,7 @@ const DATA_PIPELINE=(()=>{
     return found.results||[];
   };
   const apPoll=async(env,season)=>{
-    const found=await q(env,"SELECT snapshot_date,program_id,ap_rank FROM cbb_ap_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_ap_rankings WHERE season=?) ORDER BY ap_rank",season,season).all();
+    const found=await q(env,"SELECT snapshot_date,program_id,ap_rank,source FROM cbb_ap_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_ap_rankings WHERE season=?) ORDER BY ap_rank",season,season).all();
     return found.results||[];
   };
   const parseOfficialAP=(payload)=>{

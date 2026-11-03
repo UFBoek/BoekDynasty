@@ -139,7 +139,19 @@ export default (function makeWorker(){
       const settings=await getSettings(env),season=settings.current_season;
       if(path==='data/status')return response(await DATA_PIPELINE.status(env,season));
       if(path==='data/records')return response({season,records:await DATA_PIPELINE.records(env,season)});
-      if(path==='data/games')return response({season,games:await DATA_PIPELINE.recentGames(env,season,80)});
+      if(path==='data/games'){
+        const day=String(url.searchParams.get('date')||DATA_PIPELINE.localDay());
+        if(!DATA_PIPELINE.dayInSeason(season,day))return failure('Select a date in the current basketball season.',400);
+        const confMap=new Map(PROGRAM_DIRECTORY.map(row=>[String(row[0]),String(row[3])]));
+        const games=(await DATA_PIPELINE.gamesByDate(env,season,day)).map(g=>({...g,
+          home_conference_id:confMap.get(g.home_id)||null,away_conference_id:confMap.get(g.away_id)||null}));
+        return response({season,date:day,games});
+      }
+      if(path==='data/rankings'){
+        const poll=await DATA_PIPELINE.apPoll(env,season);
+        return response({season,source:'ESPN AP Top 25',as_of:poll[0]?.snapshot_date||null,
+          teams:poll.map(p=>({program_id:p.program_id,rank:p.ap_rank}))});
+      }
       if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});
       if(path==='data/program'){
         const id=String(url.searchParams.get('id')||'');
@@ -331,6 +343,11 @@ export default (function makeWorker(){
       const result=await DATA_PIPELINE.importDay(env,settings.current_season,day,{job:'manual'});
       return response({ok:true,...result});
     }
+    if(path==='admin/data/ap-refresh'){
+      const settings=await getSettings(env);
+      const result=await DATA_PIPELINE.syncAPPoll(env,settings.current_season);
+      return response({ok:true,...result});
+    }
     if(path==='admin/data/upcoming'){
       const settings=await getSettings(env);
       const output=await DATA_PIPELINE.upcoming(env,settings.current_season,3);
@@ -412,9 +429,21 @@ export default (function makeWorker(){
       ]);
       return response({ok:true});
     }
+    if(path==='admin/bestball'){
+      const settings=await getSettings(env);
+      const count=Number(data.count);
+      if(!Number.isInteger(count)||count<1||count>Number(settings.rounds))
+        return failure('Best-ball programs must be between 1 and the draft rounds ('+settings.rounds+').',400);
+      const updated={...settings.scoring,best_programs:count};
+      await setSetting(env,'scoring_rules',JSON.stringify(updated));
+      return response({ok:true,best_programs:count});
+    }
     if(path==='admin/scoring-settings'){
       const input=data.scoring;
       if(!input||typeof input!=='object'||Array.isArray(input))return failure('Invalid scoring rules.',400);
+      const scoringSettings=await getSettings(env);
+      if(!Number.isInteger(input.best_programs)||input.best_programs<1||input.best_programs>scoringSettings.rounds)
+        return failure('Best-ball programs cannot exceed the number of draft rounds.',400);
       const next={};
       for(const key of Object.keys(DEFAULT_SCORING)){
         if(!Object.prototype.hasOwnProperty.call(input,key))return failure('Missing scoring category: '+key,400);

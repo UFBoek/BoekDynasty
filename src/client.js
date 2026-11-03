@@ -30,6 +30,7 @@
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=24,showAllDraft=false,lastAutoPoll=0;
+  let selectedProgramId='',selectedManagerId='',profileReturn='programs',selectedHistorySeason='',draftRoundView='current';
   let appError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
@@ -168,11 +169,11 @@
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','programs','draft','league','more'];
-    const activeMobile=(current==='trades'||current==='commissioner')?'more':current;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+names[current]+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,commissioner:commissionerPage,more:morePage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>').join('')+'</nav>';
+    const activeMobile=(['trades','commissioner','waivers','history'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>').join('')+'</nav>';
   }
   function morePage(){
-    const links=[['trades','Trades','Propose trades and view league activity']];
+    const links=[['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
     if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
     return heading('', 'More')
       +'<section class="panel more-menu">'+links.map(([id,title,description])=>
@@ -187,15 +188,15 @@
       +'<div class="league-status"><div><span class="eyebrow">DRAFT STATUS</span><strong>'+(league.settings.draft_status==='live'?'Draft in progress':league.settings.draft_status==='finished'?'Draft complete':league.settings.draft_status==='paused'?'Draft paused':'Draft not started')+'</strong>'+(league.settings.draft_status==='live'&&nextManager()?'<span class="league-status-detail">On the clock: '+escapeHTML(nextManager().display_name)+'</span>':'')+'</div><button class="btn secondary small" data-act="tab" data-id="draft">View draft</button></div>'
       +(syncActive?'<div class="standings-notice">Importing programs from the selected conferences...</div>':'')
       +'<div class="metrics"><div class="metric"><span class="m-label">YOUR PROGRAMS</span><strong>'+owned.length+'</strong><span class="m-foot">Owned schools</span></div><div class="metric"><span class="m-label">LEAGUE MANAGERS</span><strong>'+members().length+' <span style="font-size:14px;color:#9babc0">/ '+league.settings.max_managers+'</span></strong><span class="m-foot">Registered managers</span></div><div class="metric"><span class="m-label">ELIGIBLE PROGRAMS</span><strong>'+fmt(selectedCount)+'</strong><span class="m-foot">'+activeConfs().length+' conferences selected</span></div><div class="metric"><span class="m-label">DRAFT ROUNDS</span><strong>'+league.settings.rounds+'</strong><span class="m-foot">Programs per manager</span></div></div>'
-      +'<div class="grid2"><section class="panel">'+panelHeading('Your roster')+(owned.length?owned.map(p=>'<div class="rowline">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div><span class="status draft">ROSTERED</span></div>').join(''):empty('No programs owned','Your roster will appear here after the draft.'))+'</section><section class="panel">'+panelHeading('League rosters')+leaderboard()+'</section></div>';
+      +'<div class="grid2"><section class="panel">'+panelHeading('Your roster')+(owned.length?owned.map(p=>'<button class="rowline profile-row" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div><span class="status draft">ROSTERED</span></button>').join(''):empty('No programs owned','Your roster will appear here after the draft.'))+'</section><section class="panel">'+panelHeading('League rosters')+leaderboard()+'</section></div>';
   }
   function leaderboard(){
-    return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><strong>'+escapeHTML(u.display_name)+'</strong>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';
+    return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><button class="table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</button>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';
   }
   function programCard(p,canPick){
     const owned=programOwned(p.id),owner=members().find(u=>u.id===owned?.manager_id);
     const status=owned?'<span class="owner-chip"><span class="owner-indicator"></span>'+escapeHTML(owner?.display_name||'Rostered')+'</span>':canPick?'<button class="btn small" data-act="pick" data-id="'+escapeHTML(p.id)+'">Draft</button>':'<span class="available-chip">Available</span>';
-    return '<div class="program-card" data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(owned?'owned':'available')+'" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></div>'+status+'</div>';
+    return '<div class="program-card" data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(owned?'owned':'available')+'" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'"><button class="program-card-main" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></div></button>'+status+'</div>';
   }
   function programsPage(){
     const eligible=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name));
@@ -287,7 +288,7 @@
     const rows=users.map(u=>{
       const roster=tracked.filter(o=>o.manager_id===u.id);
       const schoolNames=roster.map(o=>programs().find(p=>p.id===o.program_id)?.name).filter(Boolean);
-      return '<tr class="standing-row"><td><div class="standings-manager">'+avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':u.role==='commissioner'?'Commissioner':'Manager')+'</small></div></div></td><td class="numerical">'+roster.length+'</td><td class="numerical"><span class="pending-score">—</span></td><td class="standing-roster">'+(schoolNames.length?escapeHTML(schoolNames.slice(0,3).join(' · '))+(schoolNames.length>3?' +'+(schoolNames.length-3):''):'No programs yet')+'</td></tr>';
+      return '<tr class="standing-row"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':u.role==='commissioner'?'Commissioner':'Manager')+'</small></div></button></td><td class="numerical">'+roster.length+'</td><td class="numerical"><span class="pending-score">—</span></td><td class="standing-roster">'+(schoolNames.length?escapeHTML(schoolNames.slice(0,3).join(' · '))+(schoolNames.length>3?' +'+(schoolNames.length-3):''):'No programs yet')+'</td></tr>';
     }).join('');
     return heading('', 'Standings')
       +'<div class="standings-summary"><div><span>SEASON</span><strong>'+escapeHTML(season())+'</strong></div><div><span>MANAGERS</span><strong>'+users.length+'</strong></div><div><span>ROSTERED SCHOOLS</span><strong>'+tracked.length+'</strong></div><div><span>DRAFT PICKS</span><strong>'+picks().length+'</strong></div></div>'
@@ -297,6 +298,66 @@
       +'</section>';
   }
 
+
+  function profileBack(){return '<button class="profile-back" data-act="tab" data-id="'+escapeHTML(profileReturn)+'">← Back</button>';}
+  function programProfilePage(){
+    const p=programs().find(p=>p.id===selectedProgramId);
+    if(!p)return heading('', 'Program unavailable')+profileBack();
+    const owner=programOwned(p.id);
+    const manager=members().find(m=>m.id===owner?.manager_id);
+    const selection=picks().find(x=>x.program_id===p.id);
+    const pickedBy=members().find(m=>m.id===selection?.manager_id);
+    const history=(league.archived_rosters||[]).filter(x=>x.program_id===p.id).sort((a,b)=>b.season.localeCompare(a.season));
+    const activity=(league.roster_transactions||[]).filter(x=>x.program_id===p.id).slice(0,10);
+    const ownership=manager?'<button data-act="open-manager" data-id="'+escapeHTML(manager.id)+'" class="profile-link">'+escapeHTML(manager.display_name)+'</button>':'<span>Unrostered</span>';
+    return profileBack()
+      +'<div class="profile-hero">'+img(p)+'<div class="grow"><span class="eyebrow">'+escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1><div class="profile-subline">2026–27 college basketball program</div></div></div>'
+      +'<div class="profile-stats"><div><span>CURRENT OWNER</span><strong>'+ownership+'</strong></div><div><span>ORIGINAL PICK</span><strong>'+(selection?'#'+selection.overall+' · Rd '+selection.round:'Undrafted')+'</strong></div><div><span>RECORD</span><strong class="muted">Not connected</strong></div><div><span>FANTASY POINTS</span><strong class="muted">Pending</strong></div></div>'
+      +'<div class="profile-panels"><section class="panel">'+panelHeading('Program details')+'<div class="profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div><div><span>Current season</span><strong>'+escapeHTML(season())+'</strong></div><div><span>Originally drafted by</span><strong>'+escapeHTML(pickedBy?.display_name||'Not drafted')+'</strong></div><div><span>Dynasty status</span><strong>'+(owner?'Rostered':'Available')+'</strong></div></div>'+(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
+      +'<section class="panel">'+panelHeading('Season history')+(history.length?history.map(x=>{const u=members().find(m=>m.id===x.manager_id);return '<div class="history-row"><strong>'+escapeHTML(x.season)+'</strong><span>'+escapeHTML(u?.display_name||'Manager')+'</span></div>';}).join(''):empty('No archived seasons'))+'</section></div>'
+      +'<section class="panel section-gap">'+panelHeading('Roster activity')+(activity.length?activity.map(t=>'<div class="history-row"><strong>'+escapeHTML(t.action==='claim'?'Claimed':'Dropped')+'</strong><span>'+escapeHTML(t.season)+' · '+escapeHTML(members().find(m=>m.id===t.manager_id)?.display_name||'Manager')+'</span></div>').join(''):empty('No roster moves'))+'</section>';
+  }
+  function managerProfilePage(){
+    const u=members().find(m=>m.id===selectedManagerId);
+    if(!u)return heading('', 'Manager unavailable')+profileBack();
+    const roster=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const records=(league.season_records||[]).filter(x=>x.manager_id===u.id).sort((a,b)=>b.season.localeCompare(a.season));
+    const titles=(league.archives||[]).filter(x=>x.champion_manager_id===u.id).length;
+    const rows=roster.map(p=>'<button class="profile-roster-row" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span>›</span></button>').join('');
+    return profileBack()+'<div class="profile-hero manager-hero">'+avatar(u)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h1>'+escapeHTML(u.display_name)+'</h1><div class="profile-subline">@'+escapeHTML(u.username)+(u.id===me.id?' · Your team':'')+'</div></div></div>'
+      +'<div class="profile-stats"><div><span>OWNED PROGRAMS</span><strong>'+roster.length+'</strong></div><div><span>LEAGUE TITLES</span><strong>'+titles+'</strong></div><div><span>CURRENT POINTS</span><strong class="muted">Pending</strong></div></div>'
+      +'<div class="profile-panels"><section class="panel">'+panelHeading('Current roster')+(rows||empty('No programs owned'))+'</section><section class="panel">'+panelHeading('Dynasty seasons')+(records.length?records.map(x=>'<div class="history-row"><strong>'+escapeHTML(x.season)+'</strong><span>'+x.programs_count+' schools · Points pending</span></div>').join(''):empty('No archived seasons'))+'</section></div>';
+  }
+  function historyPage(){
+    const archives=league.archives||[];
+    const chosen=archives.find(a=>a.season===selectedHistorySeason)||archives[0];
+    if(chosen)selectedHistorySeason=chosen.season;
+    const entries=chosen?(league.season_records||[]).filter(r=>r.season===chosen.season):[];
+    const historyRows=entries.map(r=>{
+      const m=members().find(u=>u.id===r.manager_id);
+      return '<button class="history-team" data-act="open-manager" data-id="'+escapeHTML(r.manager_id)+'"><strong>'+escapeHTML(m?.display_name||'Manager')+'</strong><span>'+r.programs_count+' programs</span><span>'+(r.fantasy_points===null?'Points pending':r.fantasy_points.toFixed(1))+'</span></button>';
+    }).join('');
+    return heading('', 'Dynasty history')
+      +'<div class="archive-intro">Program ownership carries into every new season. Archived rosters stay available for historical reference.</div>'
+      +'<section class="panel">'+panelHeading('Completed seasons')
+      +(archives.length?'<div class="form-row"><label for="history-season">Season</label><select id="history-season" class="field">'+archives.map(a=>'<option value="'+escapeHTML(a.season)+'" '+(a.season===selectedHistorySeason?'selected':'')+'>'+escapeHTML(a.season)+'</option>').join('')+'</select></div>'
+        +'<div class="archive-champion"><span>CHAMPION</span><strong>'+escapeHTML(members().find(u=>u.id===chosen.champion_manager_id)?.display_name||'Not recorded')+'</strong></div>'
+        +'<div class="history-team-list">'+historyRows+'</div>'
+        +'<p class="hint section-gap">Scoring and final positions will populate after the scoring system is configured.</p>':empty('No seasons archived','The inaugural season is still in progress.'))+'</section>';
+  }
+  function waiversPage(){
+    const enabled=league.settings.waivers_enabled&&league.settings.draft_status==='finished';
+    const eligible=programs().filter(p=>activeConfs().includes(p.conference_id)&&!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
+    const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
+    const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
+    const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+    const drop='<option value="">No drop ('+mine.length+'/'+league.settings.rounds+' owned)</option>'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+    return heading('', 'Waivers')
+      +(enabled?'<section class="panel">'+panelHeading('Submit a waiver claim')+'<div class="form-row"><label for="waiver-program">Available program</label><select id="waiver-program" class="field">'+opts+'</select></div><div class="form-row"><label for="waiver-drop">Release program (optional if roster not full)</label><select id="waiver-drop" class="field">'+drop+'</select></div><button class="btn" data-act="waiver-claim" '+(!eligible.length?'disabled':'')+'>Submit claim</button><p class="hint section-gap">Claims are reviewed by the commissioner in submission order. No automatic approvals.</p></section>'
+          +'<section class="panel section-gap">'+panelHeading('Release a program')+'<div class="form-row"><label for="waiver-release">Your roster</label><select id="waiver-release" class="field">'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div><button class="btn secondary" data-act="waiver-drop" '+(!mine.length?'disabled':'')+'>Drop selected program</button></section>'
+          :'<section class="panel">'+empty('Waivers are closed',league.settings.draft_status==='finished'?'The commissioner has not enabled waivers.':'Waivers begin after the inaugural draft.')+'</section>')
+      +'<section class="panel section-gap">'+panelHeading('Your claims')+(claims.length?claims.map(c=>{const p=programs().find(p=>p.id===c.program_id);return '<div class="history-row"><div><strong>'+escapeHTML(p?.name||'Program')+'</strong><small>'+escapeHTML(c.status)+'</small></div>'+(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>';}).join(''):empty('No waiver claims'))+'</section>';
+  }
   function commissionerPage(){
     if(me.role!=='commissioner')return '';
     const settings=league.settings;

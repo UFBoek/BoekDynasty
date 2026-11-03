@@ -331,6 +331,38 @@ export default (function makeWorker(){
       return response({ok:true,added:statements.length,conference_id:confId,source:'verified-2026-27-directory'});
     }
 
+
+    if(path==='admin/season/rollover'){
+      const settings=await getSettings(env);
+      if(settings.draft_status!=='finished')return failure('Complete the inaugural draft before starting a new dynasty season.',409);
+      const last=String(settings.current_season);
+      const match=last.match(/^(\d{4})-(\d{2})$/);
+      if(!match)return failure('Current season format is invalid.',409);
+      const year=Number(match[1]);
+      if(year<2020||year>=2098||Number(match[2])!==(year+1)%100)return failure('Current season cannot roll over automatically.',409);
+      const next=(year+1)+'-'+String((year+2)%100).padStart(2,'0');
+      if(await q(env,'SELECT 1 AS x FROM season_archives WHERE season=?',last).first())return failure('This season has already been archived.',409);
+      const pending=(await q(env,"SELECT count(*) AS n FROM waiver_claims WHERE status='pending'").first()).n;
+      if(pending)return failure('Resolve pending waiver claims before starting a new season.',409);
+      // Store a full permanent season snapshot. Never redraft or clear ownership.
+      const result=await env.DB.batch([
+        q(env,'INSERT INTO season_archives(season) VALUES(?)',last),
+        q(env,'INSERT INTO season_rosters(season,manager_id,program_id) SELECT ?,manager_id,program_id FROM program_owners',last),
+        q(env,'INSERT INTO season_manager_records(season,manager_id,programs_count) SELECT ?,u.id,(SELECT count(*) FROM program_owners po WHERE po.manager_id=u.id) FROM users u',last),
+        q(env,"INSERT INTO settings(key,value) VALUES('current_season',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",next)
+      ]);
+      return response({ok:true,archived:last,current_season:next,rosters:result[1].meta?.changes||0});
+    }
+    if(path==='admin/season/champion'){
+      const season=String(data.season||'');
+      const champion=String(data.manager_id||'');
+      if(!/^[0-9]{4}-[0-9]{2}$/.test(season))return failure('Invalid season.',400);
+      const archived=await q(env,'SELECT 1 AS x FROM season_archives WHERE season=?',season).first();
+      if(!archived)return failure('Season has not been archived.',409);
+      if(champion&&!await q(env,'SELECT 1 AS x FROM season_manager_records WHERE season=? AND manager_id=?',season,champion).first())return failure('Select a manager who participated in that season.',400);
+      await q(env,'UPDATE season_archives SET champion_manager_id=? WHERE season=?',champion||null,season).run();
+      return response({ok:true});
+    }
     if(path==='admin/clock'){
       const settings=await getSettings(env);
       if(!['pending','paused'].includes(settings.draft_status))return failure('Pause the draft before changing the clock.',409);

@@ -202,24 +202,43 @@ export default (function makeWorker(){
       if(settings.draft_status!=='pending')return failure('Conference imports are locked after draft start.',409);
       const confId=String(data.conference_id||'');
       if(!settings.conferences.includes(confId))return failure('Conference not selected.',400);
-      const endpoint='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=500&groups='+encodeURIComponent(confId);
-      let imported;
+      const coreUrl='https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/2027/types/2/groups/'+encodeURIComponent(confId)+'/teams?limit=100&lang=en&region=us';
+      const listUrl='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=500';
+      let ids,all;
       try{
-        const external=await fetch(endpoint,{headers:{'Accept':'application/json','User-Agent':'BoekDynasty/1.0'},signal:AbortSignal.timeout(12000)});
-        if(!external.ok)throw Error('sports data returned '+external.status);
-        const parsed=await external.json();
-        imported=parsed?.sports?.[0]?.leagues?.[0]?.teams;
-      }catch(e){return failure('ESPN import unavailable: '+e.message,502);}
-      if(!Array.isArray(imported)||!imported.length||imported.length>40)return failure('The conference feed was empty or unexpectedly large. No programs were added.',502);
-      const statements=[];
-      for(const entry of imported){
-        const team=entry.team||entry,espnId=String(team.id||''),name=String(team.displayName||team.name||'').trim();
-        if(!/^\d+$/.test(espnId)||!name)continue;
-        const logo=team.logos?.[0]?.href||null;
-        const safeLogo=typeof logo==='string' && /^https:\/\/a\.espncdn\.com\//.test(logo)?logo:null;
-        statements.push(q(env,"INSERT INTO programs(id,name,abbr,conference_id,logo,updated_at) VALUES(?,?,?,?,?,unixepoch()) ON CONFLICT(id) DO UPDATE SET name=excluded.name,abbr=excluded.abbr,conference_id=excluded.conference_id,logo=excluded.logo,updated_at=unixepoch()",espnId,name,String(team.abbreviation||'').slice(0,10),confId,safeLogo));
+        const [core,site]=await Promise.all([
+          fetch(coreUrl,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(12000)}),
+          fetch(listUrl,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(12000)})
+        ]);
+        if(!core.ok||!site.ok)throw Error('Sports feed returned '+core.status+'/'+site.status);
+        const [membership,listing]=await Promise.all([core.json(),site.json()]);
+        const items=membership.items||[];
+        ids=[...new Set(items.map(item=>String(item.$ref||'').match(/\/teams\/(\d+)(?:\?|$)/)?.[1]).filter(Boolean))];
+        all=listing?.sports?.[0]?.leagues?.[0]?.teams||[];
+      }catch(e){return failure('Conference data unavailable: '+e.message,502);}
+      if(!Array.isArray(ids)||!ids.length||ids.length>40)return failure('Membership feed returned an unexpected number of schools. No changes made.',502);
+      const byId=new Map(all.map(e=>[String((e.team||e).id),e.team||e]));
+      const missing=ids.filter(id=>!byId.has(id));
+      if(missing.length){
+        const supplemental=await Promise.all(missing.map(async id=>{
+          try{
+            const result=await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/'+id,{signal:AbortSignal.timeout(7500)});
+            return result.ok?((await result.json()).team||null):null;
+          }catch{return null;}
+        }));
+        for(const t of supplemental)if(t?.id)byId.set(String(t.id),t);
       }
-      if(!statements.length)return failure('No valid programs were returned.',502);
+      const statements=[];
+      for(const id of ids){
+        const team=byId.get(id);
+        if(!team)continue;
+        const name=String(team.displayName||team.name||'').trim();
+        if(!name)continue;
+        const logo=team.logos?.[0]?.href||null;
+        const safeLogo=typeof logo==='string'&&/^https:\/\/a\.espncdn\.com\//.test(logo)?logo:null;
+        statements.push(q(env,"INSERT INTO programs(id,name,abbr,conference_id,logo,updated_at) VALUES(?,?,?,?,?,unixepoch()) ON CONFLICT(id) DO UPDATE SET name=excluded.name,abbr=excluded.abbr,conference_id=excluded.conference_id,logo=excluded.logo,updated_at=unixepoch()",id,name,String(team.abbreviation||'').slice(0,10),confId,safeLogo));
+      }
+      if(statements.length!==ids.length)return failure('Some schools could not be resolved. No changes made; try again later.',502);
       await env.DB.batch(statements);
       return response({ok:true,added:statements.length,conference_id:confId});
     }

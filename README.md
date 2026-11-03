@@ -153,6 +153,14 @@ npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/006_ap_top25.
 - **AP Top 25:** Seeded the **October 19, 2026 preseason Associated Press poll** from the official NCAA rankings page (`data/ap-polls/2026-preseason.json`) with 25 verified ESPN IDs into `cbb_ap_rankings`. Current Results Top 25 filtering immediately works, even if future ESPN poll access is blocked. Automatic refresh tries ESPN first, then the NCAA basketball men's Associated Press proxy, and refuses incomplete or mismatched school lists. Snapshot source/date are preserved. No AP Poll points are awarded in league scoring.
 - **My Team:** Compact identity card with real roster logos, progress bar toward the manager's permanent roster size, best-ball count, more helpful empty states and cleaner roster/trade/waiver sections.
 
+## November 3, 2026 historical scoring repairs
+
+- Historical scoreboard ingestion now runs every minute, selecting up to eight unchecked dates in rotation across **all five seasons (2021–22 through 2025–26)**. The dates, source groups, imported games and failures are persisted in D1; current-season polling continues independently every fifteen minutes.
+- Commissioner → Data now displays per-season checked dates, collected games, historical NET coverage and verified achievement counts. Commissioners can manually advance eight historical dates, import historical NET for a selected season, or enter source-cited conference/postseason achievements for any season back to 2021–22.
+- Archived final NET is imported separately by season from Warren Nolan. Strict school-ID alias matching and a threshold of at least 350 validated Division I programs prevent incomplete or misidentified rankings from silently entering quadrant scoring. Provider errors are audited and retried.
+- Historic program scores display verified partial totals, including regular wins, NET-dependent Q1/Q1A/Q2 wins, recorded NCAA tournament wins and source-backed achievements. Until full schedules, seeds and all conference/postseason achievements are verified, no program-year total should be described as final.
+- Official NCAA national champions have been backfilled for each of the five completed seasons (Kansas 2022, Connecticut 2023 and 2024, Florida 2025, Michigan 2026), with source https://www.ncaa.com/history/basketball-men/d1. These are production data rows; they are not recalculated from incomplete game imports.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:

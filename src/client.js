@@ -236,6 +236,18 @@
       +'</section></div>';
   }
 
+  function updateTradeSelections(){
+    const give=document.querySelectorAll('input[name="trade-give"]:checked').length;
+    const receive=document.querySelectorAll('input[name="trade-receive"]:checked').length;
+    const giveLabel=document.querySelector('#trade-give-count');
+    const receiveLabel=document.querySelector('#trade-receive-count');
+    const summary=document.querySelector('#trade-selection-summary');
+    const submit=document.querySelector('[data-act="trade-propose"]');
+    if(giveLabel)giveLabel.textContent=give+' selected';
+    if(receiveLabel)receiveLabel.textContent=receive+' selected';
+    if(summary)summary.textContent=give&&receive?give+' sent · '+receive+' requested':'Select schools from both teams';
+    if(submit)submit.disabled=!give||!receive;
+  }
   function tradesPage(){
     const ready=league.settings.draft_status==='finished'&&league.settings.trading_enabled;
     const others=members().filter(u=>u.id!==me.id);
@@ -253,7 +265,7 @@
       return '<div class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div><p><strong>Offering:</strong> '+escapeHTML(give.join(', '))+'</p><p><strong>Requesting:</strong> '+escapeHTML(receive.join(', '))+'</p>'+actions+'</div>';
     };
     return heading('', 'Trades')
-      +(ready?'<section class="panel section-gap">'+panelHeading('Propose trade')+'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'+others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select></div><div class="trade-columns"><div><h3 class="subhead">YOU SEND · '+mine.length+' OWNED</h3>'+selections(mine,'trade-give')+'</div><div><h3 class="subhead">YOU RECEIVE · '+theirs.length+' OWNED</h3>'+selections(theirs,'trade-receive')+'</div></div><div class="section-gap"><button class="btn" data-act="trade-propose" '+(!mine.length||!theirs.length?'disabled':'')+'>Send trade offer</button></div></section>':
+      +(ready?'<section class="panel section-gap">'+panelHeading('Propose trade')+'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'+others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select></div><div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'+selections(mine,'trade-give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'+selections(theirs,'trade-receive')+'</div></div><div class="trade-submit"><div id="trade-selection-summary">Select schools from both teams</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></section>':
         '<section class="panel section-gap">'+empty(league.settings.trading_enabled?'Trading unavailable':'Trading disabled',league.settings.trading_enabled?'Trading opens after the initial draft.':'The commissioner has disabled new trades.')+'</section>')
       +'<section class="panel section-gap">'+panelHeading('Trade history')+(offers.length?offers.map(card).join(''):empty('No trades yet',''))+'</section>';
   }
@@ -453,6 +465,7 @@
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programShown=24;filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=24;filterPrograms();}
+    if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
     if(e.target?.id!=='program-search')return;

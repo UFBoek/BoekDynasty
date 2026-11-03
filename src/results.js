@@ -20,7 +20,7 @@ const DATA_PIPELINE=(()=>{
     const home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
     if(!home||!away)return null;
     const hId=String(home.team?.id||''),aId=String(away.team?.id||'');
-    if(!hId||!aId||hId===aId||(!teamIds.has(hId)&&!teamIds.has(aId)))return null;
+    if(!hId||!aId||hId===aId)return null; // store unmatched ESPN opponents for complete Division I coverage
     const utc=ev.date||c.date||null;
     const gameDay=utc&&!isNaN(new Date(utc).getTime())?localDay(new Date(utc)):day;
     if(!dayInSeason(season,gameDay))return null;
@@ -33,7 +33,7 @@ const DATA_PIPELINE=(()=>{
     const title=String(ev.name||ev.shortName||'').slice(0,140);
     const notes=(c.notes||[]).map(x=>x.headline||x.text||'').join(' ').slice(0,200);
     const note=(title+' '+notes).toLowerCase();
-    const tag=/ncaa (men.s )?(basketball )?tournament|march madness|first four/.test(note)?'ncaa':/\bconference tournament\b|\b(acc|sec|big ten|big 12|big east|pac-12|mountain west|wcc|atlantic 10|american) tournament\b/.test(note)?'conference':null;
+    const tag=ev.__sourceGroup===100||/ncaa (men.s )?(basketball )?tournament|march madness|first four/.test(note)?'ncaa':/\bconference tournament\b|\b(acc|sec|big ten|big 12|big east|pac-12|mountain west|wcc|atlantic 10|american) tournament\b/.test(note)?'conference':null;
     const row=[String(ev.id).slice(0,80),season,gameDay,utc,hId,aId,
       String(home.team?.displayName||home.team?.name||'Home').slice(0,100),String(away.team?.displayName||away.team?.name||'Away').slice(0,100),
       hs,as,phase,String(st.shortDetail||st.detail||st.description||'').slice(0,140),
@@ -77,7 +77,7 @@ const DATA_PIPELINE=(()=>{
       const result=await fetchGroup(day,group,fetchFn);
       sources.push({group,host:result.host,count:result.events.length});
       for(const event of result.events){
-        if(event?.id)all.set(String(event.id),event);
+        if(event?.id)all.set(String(event.id),{...event,__sourceGroup:group});
       }
     }
     return {events:[...all.values()],sources,host:sources.map(s=>s.host).join(', ')};
@@ -101,6 +101,15 @@ const DATA_PIPELINE=(()=>{
       for(let k=0;k<rows.length;k+=60){
         const batch=await env.DB.batch(rows.slice(k,k+60).map(x=>q(env,INSERT,...x.row,x.hash)));
         changed+=batch.reduce((n,r)=>n+Number(r.meta?.changes||0),0);
+      }
+      // Persist per-group coverage, including genuine empty dates. This lets
+      // reconciliation distinguish a checked date from a missing date.
+      if(feed.sources?.length){
+        await env.DB.batch(feed.sources.map(source=>q(env,`INSERT INTO cbb_game_coverage(season,game_date,source_group,event_count,matched_count,provider,fetched_at)
+          VALUES(?,?,?,?,?,?,unixepoch()) ON CONFLICT(season,game_date,source_group)
+          DO UPDATE SET event_count=excluded.event_count,matched_count=excluded.matched_count,
+          provider=excluded.provider,fetched_at=unixepoch()`,season,day,source.group,source.count,
+          matched,source.host)));
       }
       await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",received,matched,changed,id).run();
       return {date:day,received,matched,changed,provider:feed.host,groups:feed.sources||[]};
@@ -131,16 +140,48 @@ const DATA_PIPELINE=(()=>{
     }
     return results;
   }
+  async function coverage(env,season){
+    const dates=(await q(env,"SELECT game_date,source_group,event_count,fetched_at FROM cbb_game_coverage WHERE season=? ORDER BY game_date DESC",season).all()).results||[];
+    const seen=new Map();
+    for(const d of dates){
+      const a=seen.get(d.game_date)||new Set();
+      a.add(Number(d.source_group));seen.set(d.game_date,a);
+    }
+    const today=localDay(),first=season.slice(0,4)+'-11-01',end=seasonOf(today)===season?today:season.slice(0,4).replace(/\d{4}/,x=>String(Number(x)+1))+'-04-30';
+    const missing=[],checked=[],empty=[];
+    for(let date=first;date<=end;date=shiftDay(date,1)){
+      if(!dayInSeason(season,date))break;
+      const expected=groupsForDay(date),found=seen.get(date)||new Set();
+      if(expected.every(group=>found.has(group))){
+        checked.push(date);
+        if(dates.filter(d=>d.game_date===date&&expected.includes(d.source_group)).every(d=>d.event_count===0))empty.push(date);
+      }else missing.push({date,groups:expected.filter(group=>!found.has(group))});
+    }
+    return {season,checked_dates:checked.length,missing_dates:missing.length,
+      empty_dates:empty.length,missing_samples:missing.slice(0,15),empty_samples:empty.slice(-10),
+      monitored_from:first,monitored_through:end};
+  }
+  async function fillMissing(env,season,days=4){
+    if(!Number.isInteger(days)||days<1||days>6)throw new Error('Missing-date repair limited to 1–6 days.');
+    const report=await coverage(env,season);
+    const result=[];
+    for(const item of report.missing_samples.slice(0,days)){
+      try{result.push({ok:true,...await importDay(env,season,item.date,{job:'gap-repair',includeSecondary:true})});}
+      catch(e){result.push({date:item.date,ok:false,error:err(e)});}
+    }
+    return result;
+  }
   const status=async(env,season)=>{
-    const [games,runs,net,awards,opt]=await Promise.all([
+    const [games,runs,net,awards,opt,health]=await Promise.all([
       q(env,"SELECT COUNT(*) AS n,SUM(CASE WHEN status='final' THEN 1 ELSE 0 END) AS final_count,MAX(updated_at) AS last_change FROM cbb_games WHERE season=?",season).first(),
       q(env,'SELECT id,job,target_date,source,status,received,matched,changed,error_text,started_at,finished_at FROM cbb_sync_runs WHERE season=? ORDER BY started_at DESC LIMIT 20',season).all(),
       q(env,"SELECT MAX(snapshot_date) AS day,COUNT(*) AS total FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_rankings WHERE season=?)",season,season).first(),
       q(env,'SELECT COUNT(*) AS n FROM cbb_awards WHERE season=?',season).first(),
-      q(env,"SELECT value FROM settings WHERE key='results_auto_sync'").first()
+      q(env,"SELECT value FROM settings WHERE key='results_auto_sync'").first(),
+      coverage(env,season)
     ]);
     return {season,game_count:games?.n||0,final_games:games?.final_count||0,last_game_change:games?.last_change||null,
-      net_date:net?.day||null,net_count:net?.total||0,awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',recent_runs:runs.results||[]};
+      net_date:net?.day||null,net_count:net?.total||0,awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',coverage:health,recent_runs:runs.results||[]};
   };
   const records=async(env,season)=>{
     const rows=await q(env,`SELECT program_id,SUM(w) AS wins,SUM(1-w) AS losses,COUNT(*) AS played FROM (
@@ -217,7 +258,8 @@ const DATA_PIPELINE=(()=>{
     if(cron==='15 10 * * *'){
       const reconciled=await backfill(env,season,7);
       const future=await upcoming(env,season,3);
-      if(!env.NET_FEED_URL)return {games:reconciled,upcoming:future,net:{skipped:'No verified NET feed connected'}};
+      const repaired=await fillMissing(env,season,4);
+      if(!env.NET_FEED_URL)return {games:reconciled,upcoming:future,repaired,net:{skipped:'No verified NET feed connected'}};
       const id=crypto.randomUUID();
       await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,'configured-net-feed','running')",id,season,day).run();
       try{
@@ -237,5 +279,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

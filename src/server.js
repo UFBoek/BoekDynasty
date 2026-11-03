@@ -24,7 +24,7 @@ export default (function makeWorker(){
     return new Response(JSON.stringify(payload),{status:code,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
   }
   const failure=(message,code=400)=>response({error:message},code);
-  const htmlHeaders={'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=300','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://a.espncdn.com data:; font-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"};
+  const htmlHeaders={'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://a.espncdn.com data:; font-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"};
   async function getUser(request,env){
     const raw=request.headers.get('Cookie')||'';
     const part=raw.split(';').map(v=>v.trim()).find(v=>v.startsWith(COOKIE+'='));
@@ -344,8 +344,8 @@ export default (function makeWorker(){
       try{
         if(url.pathname.startsWith('/api/'))return await handleApi(request,env,url);
         if(request.method!=='GET'&&request.method!=='HEAD')return failure('Method not allowed.',405);
-        if(url.pathname==='/app.js')return new Response(CLIENT,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'public, max-age=600','X-Content-Type-Options':'nosniff'}});
-        if(url.pathname==='/style.css')return new Response(CSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'public, max-age=600','X-Content-Type-Options':'nosniff'}});
+        if(url.pathname==='/app.js')return new Response(CLIENT,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff'}});
+        if(url.pathname==='/style.css')return new Response(CSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff'}});
         if(url.pathname==='/sw.js')return new Response(SW,{headers:{'Content-Type':'application/javascript','Cache-Control':'no-cache'}});
         if(url.pathname==='/icon.svg'||url.pathname==='/favicon.svg')return new Response(ICON,{headers:{'Content-Type':'image/svg+xml','Cache-Control':'public, max-age=86400'}});
         if(url.pathname==='/manifest.webmanifest')return response({id:'/',name:'Boek Dynasty',short_name:'Boek Dynasty',description:'College basketball fantasy by NCAA program',start_url:'/',display:'standalone',theme_color:'#0b1626',background_color:'#0b1626',icons:[{src:'/icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]},200,{'Content-Type':'application/manifest+json'});

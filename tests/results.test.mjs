@@ -5,7 +5,7 @@ import test from 'node:test';
 const source=readFileSync(new URL('../src/results.js',import.meta.url),'utf8');
 const crosswalk=JSON.parse(readFileSync(new URL('../data/net-name-crosswalk-2027.json',import.meta.url),'utf8')).teams;
 const programs=crosswalk.map(x=>[x[0],x[2],x[3],'23']);
-const pipeline=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK',source+'\nreturn DATA_PIPELINE;')(programs,crosswalk);
+const pipeline=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK',source+'\\nreturn DATA_PIPELINE;')(programs,crosswalk);
 
 const game={
   id:'401234567',date:'2026-11-04T00:30:00Z',name:'Florida Gators at Duke Blue Devils',
@@ -103,4 +103,30 @@ test('ESPN group feed never treats failed required postseason group as complete'
     json:async()=>({events:[fixture]})
   });
   await assert.rejects(pipeline.fetchScoreboard(day,fn),/group 100 failed/);
+});
+
+test('historical NET parser validates complete season-specific school rankings',()=>{
+  const html='<h1>NET Rankings</h1><table>'+
+    crosswalk.map((school,i)=>'<tr><td><a href="/team">'+school[1]+'</a></td><td>22-10</td><td>'+(i+1)+'</td><td>0</td></tr>').join('')+
+    '</table>';
+  const parsed=pipeline.parseArchivedNet(html,'2025-26');
+  assert.equal(parsed.records.length,365);
+  assert.equal(parsed.unmatched.length,0);
+  assert.throws(()=>pipeline.parseArchivedNet('<h1>NET Rankings</h1><table><tr><td>Duke</td><td>20-12</td><td>1</td></tr></table>','2025-26'),/only 1 teams/);
+});
+
+test('historical backfill advances all five seasons rather than starving older years',async()=>{
+  const mockFetch=async()=>({ok:true,json:async()=>({events:[]})});
+  const mock=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK','fetch',source+'\nreturn DATA_PIPELINE;')
+    (programs,crosswalk,mockFetch);
+  const env={DB:{
+    prepare(sql){return {bind(){return {
+      all:async()=>({results:[]}),
+      run:async()=>({meta:{changes:1}})
+    };}}},
+    batch:async statements=>statements.map(()=>({meta:{changes:1}}))
+  }};
+  const outcome=await mock.backfillHistory(env,5);
+  assert.deepEqual(outcome.results.map(row=>row.season),['2025-26','2024-25','2023-24','2022-23','2021-22']);
+  assert.ok(outcome.results.every(row=>row.ok));
 });

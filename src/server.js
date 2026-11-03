@@ -616,7 +616,7 @@ export default (function makeWorker(){
         if(url.pathname==='/sw.js')return new Response(SW,{headers:{'Content-Type':'application/javascript','Cache-Control':'no-cache'}});
         if(['/brand-logo.png','/icon.png','/apple-touch-icon.png','/favicon.ico'].includes(url.pathname))return new Response(BRAND_LOGO_BYTES,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}});
         if(url.pathname==='/icon.svg'||url.pathname==='/favicon.svg')return Response.redirect(new URL('/icon.png',request.url).toString(),302);
-        if(url.pathname==='/manifest.webmanifest')return response({id:'/',name:'Boek Dynasty',short_name:'Boek Dynasty',description:'College basketball fantasy by NCAA program',start_url:'/',display:'standalone',theme_color:'#061133',background_color:'#061133',icons:[{src:'/icon.png?v=3',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon.png?v=3',sizes:'192x192',type:'image/png',purpose:'maskable'}]},200,{'Content-Type':'application/manifest+json'});
+        if(url.pathname==='/manifest.webmanifest')return response({id:'/',name:'Boek Dynasty',short_name:'Boek Dynasty',description:'College basketball fantasy by NCAA program',start_url:'/',display:'standalone',theme_color:'#f4f6fa',background_color:'#f4f6fa',icons:[{src:'/icon.png?v=3',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon.png?v=3',sizes:'192x192',type:'image/png',purpose:'maskable'}]},200,{'Content-Type':'application/manifest+json'});
         if(url.pathname!=='/'&&url.pathname!=='/index.html')return new Response('Not found.',{status:404});
         return new Response(PAGE,{headers:htmlHeaders});
       }catch(e){

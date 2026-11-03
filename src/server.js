@@ -266,45 +266,18 @@ export default (function makeWorker(){
       if(settings.draft_status!=='pending')return failure('Conference imports are locked after draft start.',409);
       const confId=String(data.conference_id||'');
       if(!settings.conferences.includes(confId))return failure('Conference not selected.',400);
-      const coreUrl='https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/2027/types/2/groups/'+encodeURIComponent(confId)+'/teams?limit=100&lang=en&region=us';
-      const listUrl='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=500';
-      let ids,all;
-      try{
-        const [core,site]=await Promise.all([
-          fetch(coreUrl,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(12000)}),
-          fetch(listUrl,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(12000)})
-        ]);
-        if(!core.ok||!site.ok)throw Error('Sports feed returned '+core.status+'/'+site.status);
-        const [membership,listing]=await Promise.all([core.json(),site.json()]);
-        const items=membership.items||[];
-        ids=[...new Set(items.map(item=>String(item.$ref||'').match(/\/teams\/(\d+)(?:\?|$)/)?.[1]).filter(Boolean))];
-        all=listing?.sports?.[0]?.leagues?.[0]?.teams||[];
-      }catch(e){return failure('Conference data unavailable: '+e.message,502);}
-      if(!Array.isArray(ids)||!ids.length||ids.length>40)return failure('Membership feed returned an unexpected number of schools. No changes made.',502);
-      const byId=new Map(all.map(e=>[String((e.team||e).id),e.team||e]));
-      const missing=ids.filter(id=>!byId.has(id));
-      if(missing.length){
-        const supplemental=await Promise.all(missing.map(async id=>{
-          try{
-            const result=await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/'+id,{signal:AbortSignal.timeout(7500)});
-            return result.ok?((await result.json()).team||null):null;
-          }catch{return null;}
-        }));
-        for(const t of supplemental)if(t?.id)byId.set(String(t.id),t);
-      }
-      const statements=[];
-      for(const id of ids){
-        const team=byId.get(id);
-        if(!team)continue;
-        const name=String(team.displayName||team.name||'').trim();
-        if(!name)continue;
-        const logo=team.logos?.[0]?.href||null;
-        const safeLogo=typeof logo==='string'&&/^https:\/\/a\.espncdn\.com\//.test(logo)?logo:null;
-        statements.push(q(env,"INSERT INTO programs(id,name,abbr,conference_id,logo,updated_at) VALUES(?,?,?,?,?,unixepoch()) ON CONFLICT(id) DO UPDATE SET name=excluded.name,abbr=excluded.abbr,conference_id=excluded.conference_id,logo=excluded.logo,updated_at=unixepoch()",id,name,String(team.abbreviation||'').slice(0,10),confId,safeLogo));
-      }
-      if(statements.length!==ids.length)return failure('Some schools could not be resolved. No changes made; try again later.',502);
+      // Frozen ESPN 2026–27 conference roster. The live ESPN Core endpoint
+      // refuses requests from Cloudflare with HTTP 403; never depend on it at draft time.
+      const rows=PROGRAM_DIRECTORY.filter(row=>row[3]===confId);
+      if(rows.length<5||rows.length>40)return failure('No verified 2026–27 school list exists for this conference.',502);
+      if(rows.some(row=>!/^[0-9]+$/.test(row[0])||!row[1]||!row[2]))
+        return failure('Conference data failed integrity checks.',502);
+      const statements=rows.map(([id,name,abbr])=>
+        q(env,"INSERT INTO programs(id,name,abbr,conference_id,logo,updated_at) VALUES(?,?,?,?,?,unixepoch()) ON CONFLICT(id) DO UPDATE SET name=excluded.name,abbr=excluded.abbr,conference_id=excluded.conference_id,logo=excluded.logo,updated_at=unixepoch()",
+          id,name,abbr.slice(0,10),confId,'https://a.espncdn.com/i/teamlogos/ncaa/500/'+id+'.png')
+      );
       await env.DB.batch(statements);
-      return response({ok:true,added:statements.length,conference_id:confId});
+      return response({ok:true,added:statements.length,conference_id:confId,source:'verified-2026-27-directory'});
     }
     if(path==='admin/draft-control'){
       const mode=String(data.mode||'');

@@ -216,14 +216,24 @@
   }
   function draftPage(){
     const statusText=league.settings.draft_status;
-    const n=nextManager();
+    const next=nextManager();
     const total=draftTotal();
-    const round=Math.floor(picks().length/Math.max(1,members().length))+1;
-    const owner=members().find(m=>m.id===n?.id);
+    const round=Math.min(Number(league.settings.rounds),Math.floor(picks().length/Math.max(1,members().length))+1);
+    const recent=[...picks()].reverse();
+    const visible=showAllDraft?recent:recent.slice(0,12);
     return heading('', 'Draft')
-      +'<div class="draft-info"><div><span class="eyebrow">'+(statusText==='live'?'● DRAFT LIVE':statusText==='finished'?'✓ DRAFT COMPLETED':'● DRAFT NOT STARTED')+'</span><strong>'+(statusText==='live'?'On the clock: '+escapeHTML(owner?.display_name||''):(statusText==='finished'?'Draft complete':'Not started'))+'</strong><p>'+picks().length+' of '+total+' picks made · '+members().length+' managers · '+league.settings.rounds+' rounds</p><div class="draft-progress"><div style="width:'+((picks().length/Math.max(1,total))*100)+'%"></div></div></div><span class="status '+(statusText==='live'?'':'wait')+'">'+(statusText==='live'?'LIVE':statusText.toUpperCase())+'</span></div>'
-      +'<div class="grid2"><section class="panel">'+panelHeading('Draft board')+(picks().length?[...picks()].reverse().map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow"><strong>'+escapeHTML(t?.name||'Program')+'</strong><small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No picks yet','Draft selections appear here.'))+'</section><section class="panel">'+panelHeading('Draft order','Snake draft')+order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<div class="manager-card"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</div>':''}).join('')+'<div class="notice section-gap">Original picks stay on this board. Trading changes current rosters, not draft history.</div></section></div>'
-      +(statusText==='live'?'<div class="button-row section-gap"><button class="btn" data-act="tab" data-id="programs">'+(isMyTurn()?'Make your pick →':'Browse eligible schools →')+'</button></div>':'');
+      +'<div class="draft-info"><div class="draft-info-main"><span class="eyebrow">'+(statusText==='live'?'DRAFT LIVE':statusText==='finished'?'DRAFT COMPLETE':statusText==='paused'?'DRAFT PAUSED':'NOT STARTED')+'</span>'
+      +'<strong>'+(statusText==='live'?'On the clock: '+escapeHTML(next?.display_name||''):(statusText==='finished'?'Draft complete':statusText==='paused'?'Draft paused':'Awaiting draft start'))+'</strong>'
+      +'<p>'+picks().length+' of '+total+' picks'+(statusText==='live'?' · Round '+round+' of '+league.settings.rounds:'')+'</p>'
+      +'<div class="draft-progress"><div style="width:'+((picks().length/Math.max(1,total))*100)+'%"></div></div></div>'
+      +'<span class="status '+(statusText==='live'?'':'wait')+'">'+(statusText==='live'?'LIVE':statusText.toUpperCase())+'</span></div>'
+      +(statusText==='live'?'<div class="draft-action"><div><strong>'+(isMyTurn()?'Your pick is up':'Draft in progress')+'</strong><small>'+(isMyTurn()?'Choose an available school.':'Browse schools while the draft continues.')+'</small></div><button class="btn" data-act="tab" data-id="programs">'+(isMyTurn()?'Make pick':'View programs')+'</button></div>':'')
+      +'<div class="grid2 draft-layout"><section class="panel draft-picks-panel">'+panelHeading('Draft board')
+      +(visible.length?visible.map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow"><strong>'+escapeHTML(t?.name||'Program')+'</strong><small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No picks yet'))
+      +(recent.length>12?'<button type="button" class="draft-history-toggle" data-act="draft-history-toggle">'+(showAllDraft?'Show recent picks':'View all '+recent.length+' picks')+'</button>':'')
+      +'</section><section class="panel draft-order-panel">'+panelHeading('Draft order','Snake draft')
+      +order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<div class="manager-card"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</div>':''}).join('')
+      +'</section></div>';
   }
 
   function tradesPage(){

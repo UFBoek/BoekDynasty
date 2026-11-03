@@ -175,7 +175,7 @@ const DATA_PIPELINE=(()=>{
     const [games,runs,net,awards,opt,health]=await Promise.all([
       q(env,"SELECT COUNT(*) AS n,SUM(CASE WHEN status='final' THEN 1 ELSE 0 END) AS final_count,MAX(updated_at) AS last_change FROM cbb_games WHERE season=?",season).first(),
       q(env,'SELECT id,job,target_date,source,status,received,matched,changed,error_text,started_at,finished_at FROM cbb_sync_runs WHERE season=? ORDER BY started_at DESC LIMIT 20',season).all(),
-      q(env,"SELECT MAX(snapshot_date) AS day,COUNT(*) AS total FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_rankings WHERE season=?)",season,season).first(),
+      q(env,"SELECT snapshot_date AS day,stored_count AS total FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1",season).first(),
       q(env,'SELECT COUNT(*) AS n FROM cbb_awards WHERE season=?',season).first(),
       q(env,"SELECT value FROM settings WHERE key='results_auto_sync'").first(),
       coverage(env,season)
@@ -194,7 +194,7 @@ const DATA_PIPELINE=(()=>{
     return rows.results||[];
   };
   const netRanks=async(env,season)=>{
-    const rows=await q(env,"SELECT program_id,net_rank,snapshot_date FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_rankings WHERE season=?)",season,season).all();
+    const rows=await q(env,"SELECT program_id,net_rank,snapshot_date FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT snapshot_date FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1)",season,season).all();
     return rows.results||[];
   };
   const recentGames=async(env,season,limit=60)=>{
@@ -282,15 +282,35 @@ const DATA_PIPELINE=(()=>{
       ids.add(x.id);ranks.add(x.rank);
     }
     if(!ranks.has(1))throw new Error('NET list is missing ranking #1.');
-    const old=await q(env,'SELECT COUNT(*) AS n FROM cbb_net_rankings WHERE season=? AND snapshot_date=?',season,day).first();
-    if(old?.n)return {date:day,count:old.n,duplicate:true};
-    for(let i=0;i<parsed.length;i+=45){
-      await env.DB.batch(parsed.slice(i,i+45).flatMap(x=>[
-        q(env,'INSERT INTO cbb_net_rankings(season,snapshot_date,program_id,net_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,source),
-        q(env,'INSERT INTO cbb_net_details(season,snapshot_date,program_id,raw_json,source) VALUES(?,?,?,?,?)',season,day,x.id,JSON.stringify(x.raw).slice(0,2500),source)
-      ]));
+    const previous=await q(env,"SELECT status,stored_count AS n FROM cbb_net_snapshots WHERE season=? AND snapshot_date=?",season,day).first();
+    if(previous?.status==='complete'&&previous.n===parsed.length)
+      return {date:day,count:previous.n,duplicate:true};
+    // Previous write may have stopped halfway; remove only the incomplete date,
+    // then rebuild and make the new data visible after every row is saved.
+    await env.DB.batch([
+      q(env,'DELETE FROM cbb_net_rankings WHERE season=? AND snapshot_date=?',season,day),
+      q(env,'DELETE FROM cbb_net_details WHERE season=? AND snapshot_date=?',season,day),
+      q(env,"INSERT INTO cbb_net_snapshots(season,snapshot_date,expected_count,stored_count,source,status) VALUES(?,?,?,?,?,'loading') ON CONFLICT(season,snapshot_date) DO UPDATE SET expected_count=excluded.expected_count,stored_count=0,source=excluded.source,status='loading',updated_at=unixepoch()",season,day,parsed.length,0,source)
+    ]);
+    try{
+      for(let i=0;i<parsed.length;i+=45){
+        await env.DB.batch(parsed.slice(i,i+45).flatMap(x=>[
+          q(env,'INSERT INTO cbb_net_rankings(season,snapshot_date,program_id,net_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,source),
+          q(env,'INSERT INTO cbb_net_details(season,snapshot_date,program_id,raw_json,source) VALUES(?,?,?,?,?)',season,day,x.id,JSON.stringify(x.raw).slice(0,2500),source)
+        ]));
+      }
+      const [ranksCount,detailsCount]=await Promise.all([
+        q(env,'SELECT COUNT(*) AS n FROM cbb_net_rankings WHERE season=? AND snapshot_date=?',season,day).first(),
+        q(env,'SELECT COUNT(*) AS n FROM cbb_net_details WHERE season=? AND snapshot_date=?',season,day).first()
+      ]);
+      if(ranksCount?.n!==parsed.length||detailsCount?.n!==parsed.length)
+        throw new Error('NET snapshot validation failed: not all source records were stored.');
+      await q(env,"UPDATE cbb_net_snapshots SET status='complete',stored_count=?,updated_at=unixepoch() WHERE season=? AND snapshot_date=?",parsed.length,season,day).run();
+      return {date:day,count:parsed.length};
+    }catch(e){
+      await q(env,"UPDATE cbb_net_snapshots SET status='error',updated_at=unixepoch() WHERE season=? AND snapshot_date=?",season,day).run().catch(()=>{});
+      throw e;
     }
-    return {date:day,count:parsed.length};
   }
   const quadrant=(rank,site)=>{
     if(!Number.isInteger(rank)||rank<1)return null;

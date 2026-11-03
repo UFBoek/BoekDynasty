@@ -40,24 +40,47 @@ const DATA_PIPELINE=(()=>{
       c.neutralSite===true?1:0,c.conferenceCompetition===true?1:0,Number(ev.season?.type)||null,title,tag,'espn-scoreboard'];
     return {row,hash:fingerprint(row)};
   };
-  const scoreboardUrls=day=>{
-    const k=day.replace(/-/g,'');
-    return ['https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+k+'&groups=50&limit=500',
-      'https://cdn.espn.com/core/mens-college-basketball/scoreboard?xhr=1&dates='+k+'&groups=50&limit=500'];
+  // Group 50 is Division I / NIT, but ESPN also uses group 100 for NCAA
+  // Tournament games. CBI/CIT are isolated in groups 55/56.
+  const groupsForDay=(day,includeSecondary=false)=>{
+    const month=Number(day.slice(5,7));
+    if(month!==3&&month!==4)return [50];
+    return includeSecondary?[50,100,55,56]:[50,100];
   };
-  const fetchScoreboard=async(day,fetchFn=fetch)=>{
+  const scoreboardUrls=(day,group=50)=>{
+    const date=day.replace(/-/g,'');
+    return [
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+date+'&groups='+group+'&limit=1000',
+      'https://cdn.espn.com/core/mens-college-basketball/scoreboard?xhr=1&date='+date+'&groups='+group+'&limit=1000'
+    ];
+  };
+  const fetchGroup=async(day,group,fetchFn=fetch)=>{
     const errors=[];
-    for(const url of scoreboardUrls(day)){
+    for(const url of scoreboardUrls(day,group)){
       try{
         const res=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});
         if(!res.ok){errors.push(new URL(url).hostname+' HTTP '+res.status);continue;}
-        const body=await res.json(),events=body.events||body.content?.sbData?.events||body.page?.content?.sbData?.events;
+        const body=await res.json();
+        const events=body.events||body.content?.sbData?.events||body.page?.content?.sbData?.events;
         if(!Array.isArray(events)){errors.push('Unexpected response from '+new URL(url).hostname);continue;}
-        if(events.length>=500){errors.push('500-game limit reached');continue;}
-        return {events,host:new URL(url).hostname};
+        if(events.length>=1000){errors.push('1000-game limit reached for group '+group);continue;}
+        return {events,host:new URL(url).hostname,group};
       }catch(e){errors.push(new URL(url).hostname+' '+err(e));}
     }
-    throw new Error('Scoreboard failed: '+errors.join(' | '));
+    throw new Error('ESPN group '+group+' failed: '+errors.join(' | '));
+  };
+  const fetchScoreboard=async(day,fetchFn=fetch,includeSecondary=false)=>{
+    const groups=groupsForDay(day,includeSecondary),all=new Map(),sources=[];
+    // A failed required group marks the day as incomplete instead of silently
+    // presenting an incomplete slate as a successful import.
+    for(const group of groups){
+      const result=await fetchGroup(day,group,fetchFn);
+      sources.push({group,host:result.host,count:result.events.length});
+      for(const event of result.events){
+        if(event?.id)all.set(String(event.id),event);
+      }
+    }
+    return {events:[...all.values()],sources,host:sources.map(s=>s.host).join(', ')};
   };
   const INSERT=`INSERT INTO cbb_games(game_id,season,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,event_name,tournament_tag,source,content_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(game_id) DO UPDATE SET season=excluded.season,game_date=excluded.game_date,start_utc=excluded.start_utc,home_id=excluded.home_id,away_id=excluded.away_id,
@@ -71,7 +94,7 @@ const DATA_PIPELINE=(()=>{
     await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,?,?,?,?,'running')",id,job,season,day,'espn-scoreboard').run();
     let received=0,matched=0,changed=0;
     try{
-      const feed=options.payload?{events:options.payload.events,host:'manual'}:await fetchScoreboard(day,options.fetchFn);
+      const feed=options.payload?{events:options.payload.events,host:'manual',sources:[]} :await fetchScoreboard(day,options.fetchFn,options.includeSecondary===true);
       if(!Array.isArray(feed.events)||feed.events.length>=500)throw new Error('Invalid or oversized scoreboard.');
       received=feed.events.length;
       const rows=feed.events.map(x=>parseEvent(x,day,season)).filter(Boolean);matched=rows.length;
@@ -80,7 +103,7 @@ const DATA_PIPELINE=(()=>{
         changed+=batch.reduce((n,r)=>n+Number(r.meta?.changes||0),0);
       }
       await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",received,matched,changed,id).run();
-      return {date:day,received,matched,changed,provider:feed.host};
+      return {date:day,received,matched,changed,provider:feed.host,groups:feed.sources||[]};
     }catch(e){
       await q(env,"UPDATE cbb_sync_runs SET status='error',received=?,matched=?,changed=?,error_text=?,finished_at=unixepoch() WHERE id=?",received,matched,changed,err(e),id).run().catch(()=>{});
       throw e;
@@ -92,7 +115,7 @@ const DATA_PIPELINE=(()=>{
     for(let i=days-1;i>=0;i--){
       const day=shiftDay(today,-i);
       if(!dayInSeason(season,day))continue;
-      try{results.push({ok:true,...await importDay(env,season,day,{job:'reconcile'})});}
+      try{results.push({ok:true,...await importDay(env,season,day,{job:'reconcile',includeSecondary:true})});}
       catch(e){results.push({date:day,ok:false,error:err(e)});}
     }
     return results;
@@ -103,7 +126,7 @@ const DATA_PIPELINE=(()=>{
     for(let i=1;i<=days;i++){
       const day=shiftDay(today,i);
       if(!dayInSeason(season,day))continue;
-      try{results.push({ok:true,...await importDay(env,season,day,{job:'schedule'})});}
+      try{results.push({ok:true,...await importDay(env,season,day,{job:'schedule',includeSecondary:true})});}
       catch(e){results.push({date:day,ok:false,error:err(e)});}
     }
     return results;
@@ -214,5 +237,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,parseEvent,fetchScoreboard,importDay,backfill,upcoming,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

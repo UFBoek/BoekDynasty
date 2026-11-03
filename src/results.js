@@ -561,6 +561,8 @@ const DATA_PIPELINE=(()=>{
   };
   const archivedNetNames=new Map(Object.entries(archivedNetAliases)
     .map(([alias,school])=>[netKey(alias),netNames.get(netKey(school))]));
+  // Verified historical school-name aliases tied to ESPN program IDs.
+  const archivedNetIdAliases=new Map(Object.entries({"Stephen F. Austin":"2617","George Washington":"45","California Baptist":"2856","Hawaii":"62","Pittsburgh":"221","North Dakota State":"2449","Seattle University":"2547","UTRGV":"292","East Tennessee State":"2193","UC Santa Barbara":"2540","Northern Colorado":"2458","Western Kentucky":"98","Middle Tennessee":"2393","Central Arkansas":"2110","Cal State Fullerton":"2239","Northern Kentucky":"94","Appalachian State":"2026","Eastern Washington":"331","South Dakota State":"2571","New Orleans":"2443","Jacksonville State":"55","Detroit":"2174","Southeast Missouri":"2546","Coastal Carolina":"324","Eastern Michigan":"2199","Charleston Southern":"2127","Abilene Christian":"2000","Purdue Fort Wayne":"2870","Presbyterian College":"2506","Bethune-Cookman":"2065","Boston University":"104","North Carolina A&T":"2448","Central Michigan":"2117","Western Michigan":"2711","Eastern Kentucky":"2198","Houston Christian":"2277","Prairie View A&M":"2504","Northwestern State":"2466","Grambling State":"2755","Northern Arizona":"2464","Arkansas-Pine Bluff":"2029","Eastern Illinois":"2197","IU Indianapolis":"85","Loyola-Maryland":"2352","Cal State Bakersfield":"2934","Fairleigh Dickinson":"161","Northern Illinois":"2459","Southern Indiana":"88","Maryland Eastern Shore":"2379","UMKC":"140","Western Illinois":"2710","Mississippi Valley State":"2400"}).map(([name,id])=>[netKey(name),id]));
   const textOnly=markup=>String(markup||'').replace(/<[^>]*>/g,' ')
     .replace(/&amp;/gi,'&').replace(/&nbsp;|&#160;/gi,' ')
     .replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"')
@@ -574,7 +576,7 @@ const DATA_PIPELINE=(()=>{
       if(cells.length<3||!/^\d+-\d+$/.test(cells[1]))continue;
       const rank=Number(cells[2]),school=cells[0];
       if(!Number.isInteger(rank)||rank<1||rank>400)continue;
-      const key=netKey(school),id=netNames.get(key)||archivedNetNames.get(key);
+      const key=netKey(school),id=netNames.get(key)||archivedNetNames.get(key)||archivedNetIdAliases.get(key);
       if(!id||!teamIds.has(id)||usedIds.has(id)||usedRanks.has(rank)){
         missing.push({school,rank});continue;
       }
@@ -597,7 +599,7 @@ const DATA_PIPELINE=(()=>{
     const year=Number(season.slice(0,4))+1;
     const url='https://www.warrennolan.com/basketball/'+year+'/net';
     const runId=crypto.randomUUID();
-    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-net-v3',?,?,'warrennolan-archive','running')",runId,season,year+'-04-15').run();
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-net-v4',?,?,'warrennolan-archive','running')",runId,season,year+'-04-15').run();
     try{
       const response=await fetchFn(url,{headers:{Accept:'text/html'},signal:AbortSignal.timeout(15000)});
       if(!response.ok)throw new Error('Historical NET archive HTTP '+response.status);

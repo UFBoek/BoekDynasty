@@ -351,8 +351,8 @@ const DATA_PIPELINE=(()=>{
     const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
     if(![11,12,1,2,3,4].includes(month)||!dayInSeason(season,day))return {skipped:'offseason'};
     if(cron==='*/15 * * * *'){
-      const localHour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',hour12:false}).format(new Date()));
-      if(localHour>=3&&localHour<10)return {skipped:'outside-games-window'};
+      // Keep the feed active overnight: late games and corrections can post
+      // after midnight, and never rely on a "quiet hours" assumption.
       return importDay(env,season,day,{job:'live'});
     }
     if(cron==='15 10 * * *'){

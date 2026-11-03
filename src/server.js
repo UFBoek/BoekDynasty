@@ -344,9 +344,15 @@ export default (function makeWorker(){
     }
     if(path==='admin/data/net'){
       const settings=await getSettings(env),day=String(data.date||'');
-      const records=typeof data.csv==='string'?data.csv.split(/\r?\n/).map(line=>line.trim()).filter(line=>/^\d+[\s,;\t]+\d+$/.test(line)).map(line=>{
-        const pieces=line.split(/[\s,;\t]+/);return {program_id:pieces[0],net_rank:Number(pieces[1])};
-      }):data.records;
+      let records=data.records;
+      if(typeof data.csv==='string'){
+        const lines=data.csv.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+        if(lines.some(line=>!/^\d+[\s,;\t]+\d+$/.test(line)))return failure('Every NET row must contain exactly ESPN_ID,rank.',400);
+        records=lines.map(line=>{
+          const parts=line.split(/[\s,;\t]+/);
+          return {program_id:parts[0],net_rank:Number(parts[1])};
+        });
+      }
       const result=await DATA_PIPELINE.saveNet(env,settings.current_season,day,records);
       return response({ok:true,...result});
     }

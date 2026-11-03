@@ -38,6 +38,16 @@ export function createD1(pg) {
   }
   async function execute(connection,statement,mode){
     const rows=await connection.unsafe(normalize(statement.query),statement.args);
+    // Postgres COUNT(*) returns int8 text. D1 returned JS numbers, and the
+    // draft relies on numeric arithmetic for overall pick numbers.
+    for (const row of rows) {
+      for (const key of ['total','n','regular_wins','q1','q1a','q2','opening_wins','main_wins','played']) {
+        if (typeof row[key] === 'string' && /^-?\\d+$/.test(row[key])) {
+          const parsed=Number(row[key]);
+          if (Number.isSafeInteger(parsed)) row[key]=parsed;
+        }
+      }
+    }
     if(mode==='run')return {success:true,meta:{changes:Number(rows.count||0)}};
     if(mode==='first')return rows[0]||null;
     return {success:true,results:Array.from(rows)};

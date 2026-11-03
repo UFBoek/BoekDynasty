@@ -37,7 +37,7 @@ export default (function makeWorker(){
     return new Response(JSON.stringify(payload),{status:code,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
   }
   const failure=(message,code=400)=>response({error:message},code);
-  const htmlHeaders={'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://a.espncdn.com data:; font-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"};
+  const htmlHeaders={'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://a.espncdn.com data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"};
   async function getUser(request,env){
     const raw=request.headers.get('Cookie')||'';
     const part=raw.split(';').map(v=>v.trim()).find(v=>v.startsWith(COOKIE+'='));
@@ -638,7 +638,7 @@ export default (function makeWorker(){
     return failure('Not found.',404);
   }
   const BRAND_LOGO_BYTES=Uint8Array.from(atob(BRAND_LOGO_BASE64),x=>x.charCodeAt(0));
-  const SW="const NAME='boek-dynasty-shell-v3';self.addEventListener('install',e=>{e.waitUntil(caches.open(NAME).then(c=>c.addAll(['/','/style.css','/app.js','/icon.png'])));self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
+  const SW="const NAME='boek-dynasty-shell-v4';self.addEventListener('install',e=>{e.waitUntil(caches.open(NAME).then(c=>c.addAll(['/','/style.css','/app.js','/icon.png'])));self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
   return {
     async scheduled(controller,env){
       try{

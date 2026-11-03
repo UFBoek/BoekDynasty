@@ -113,7 +113,8 @@ The scoring **weights** may be configured separately, but this pipeline does **n
 **Data migration and tests**
 
 Run `npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/004_cbb_results.sql
-npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/005_cbb_coverage.sql` before deploying a Worker with `src/results.js`. Then run `node --test tests/results.test.mjs` to validate event normalization and quadrant boundaries. The migration is additive and preserves members, ownership, trades and draft history.
+npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/005_cbb_coverage.sql
+npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/006_ap_top25.sql` before deploying a Worker with `src/results.js`. Then run `node --test tests/results.test.mjs` to validate event normalization and quadrant boundaries. The migration is additive and preserves members, ownership, trades and draft history.
 
 **Important limitations:** ESPN feed reachability from the actual Cloudflare Worker must be verified via **Commissioner → Data → Import date** or a real Cron run. No live scoreboard fetch has been confirmed just by deploying code. NCAA NET automatic ingestion requires an authorized NET feed; until one is connected, NET data must be imported by the commissioner. ESPN tournament annotations can be incomplete and should not be treated as authoritative bracket data.
 
@@ -129,6 +130,18 @@ npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/005_cbb_cover
 **Apply** `migrations/005_cbb_coverage.sql` after 004 before deploying. The migration only adds audit, source-row, and snapshot-status tables.
 
 **Do not confuse scheduled collection with verified collection:** An ESPN or NCAA endpoint can return HTTP 403 or an unexpected response from Cloudflare. The live league should only be considered fully populated after import logs show genuine returned games, all required calendar dates verified, and a current-season NET snapshot with complete school coverage. The live 2026–27 NET feed is not available in early November.
+
+## November 2026 visual and navigation refinement
+
+- **Draft Room:** A true full-width **snake draft grid** with manager columns and round rows. Even rounds reverse overall pick order, while manager positions remain fixed. Selected schools display ESPN logos and link to their profiles; the on-clock pick and current manager column are highlighted. Full board, current round, and my-picks views work on mobile with horizontal and vertical scrolling. Recap panels show the most recent and upcoming selections. The draft action still uses the existing authenticated `draft/pick` endpoint; no auto-picks were added.
+- **League Overview:** Removes redundant rostered-program and draft-pick metrics. Replaces the old league-roster table with compact manager tiles, each showing their owned programs as small school logos. Empty rosters are labeled honestly.
+- **Standings:** Removes school counts and roster previews; keeps manager name and pending fantasy-point totals until real scoring is enabled.
+- **Scores & Results:** Browses games by a selected Eastern-time date, with seven-day date navigation, a calendar picker, conference filtering, My League filtering, and verified **current AP Top 25** filtering. The daily endpoint returns up to 1,000 date-matched games (instead of the most recent 80 irrespective of date), including team conference IDs. Cards show logos, game status, scores, and links to ESPN box scores.
+- **AP poll data:** Uses ESPNs site-v2 rankings endpoint; validates the year and a complete 25-school AP poll, then archives dated snapshots in `cbb_ap_rankings`. Daily collection attempts to update it; Commissioner → Data has a manual refresh button. Without a verified AP snapshot, Top 25 displays a descriptive unavailable state rather than claiming a fabricated ranking. AP ranks are **display metadata only**, not scoring or NET quadrant inputs.
+- **Best ball:** Commissioner → General includes a separately saved best-ball setting, with a count from 1 through the draft round count. Only the `best_programs` configuration changes; all other scoring weights remain untouched. The scoring settings page links users back to General for this value.
+- **Visual density:** Reduces oversized panels, sharpens typography and focus behavior, and adds restrained active, hover and live-score states while preserving the existing navy/white/orange scheme.
+- **Deployment:** Apply `migrations/006_ap_top25.sql` before deploying. This only adds the AP ranking snapshot table.
+- **Regression tests:** `node --test tests/ui.test.mjs` and `node --test tests/results.test.mjs`.
 
 ## Publishing an update
 

@@ -29,7 +29,7 @@
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
-  let programQuery='',programConference='all',programOwnership='all',programShown=24,showAllDraft=false;
+  let programQuery='',programConference='all',programOwnership='all',programShown=24,showAllDraft=false,lastAutoPoll=0;
   let appError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
@@ -94,12 +94,25 @@
   async function loadPublic(){
     try{status=await api('status');authMode=status.needs_setup?'setup':selectedInvite?'join':'login';}catch(e){appError=e.message;}
   }
+  function startPolling(){
+    if(refreshId)return;
+    lastAutoPoll=Date.now();
+    refreshId=setInterval(()=>{
+      if(!me||busy||syncActive||current==='commissioner'||document.hidden)return;
+      const onMobile=window.matchMedia?.('(max-width: 850px)').matches||false;
+      const interval=onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
+      const now=Date.now();
+      if(now-lastAutoPoll<interval)return;
+      lastAutoPoll=now;
+      refresh(true);
+    },6000);
+  }
   async function boot(){
     root.innerHTML='<div class="loading"><div class="spinner"></div></div>';
     await loadPublic();
     try{
       const next=await api('state'); me=next.user;league=next;render();
-      refreshId=setInterval(()=>{if(me&&!busy&&!syncActive&&current!=='commissioner')refresh(true);},12000);
+      startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
     if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
@@ -455,7 +468,7 @@
         selectedInvite='';
         if(location.search)history.replaceState({},'',location.pathname);
         me=res.user;await refresh();
-        if(!refreshId)refreshId=setInterval(()=>{if(me&&!busy&&!syncActive&&current!=='commissioner')refresh(true);},12000);
+        startPolling();
         notice('Signed in.');
         if(me?.role==='commissioner')autoImportPrograms();
       }

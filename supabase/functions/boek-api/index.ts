@@ -62,6 +62,21 @@ Deno.serve(async (request)=>{
       else if(kind==='ncaa')result=await DATA_PIPELINE.reconcileNCAA2026(env);
       else if(kind==='titles')result=await DATA_PIPELINE.backfillHistoricalConferences(env);
       else if(kind==='archive-net')result=await DATA_PIPELINE.backfillArchivedNet(env);
+      else if(kind==='verify-leaders'){
+        const raw=(await db.prepare("SELECT value FROM settings WHERE key='scoring_rules'").first())?.value;
+        let rules={};try{rules=JSON.parse(raw||'{}');}catch{}
+        const leaders=await DATA_PIPELINE.historicalLeaders(env,rules,season);
+        result={seasons:leaders.seasons,programSeasons:leaders.rows.length,
+          distinctPrograms:new Set(leaders.rows.map(x=>x.program_id)).size,
+          withWins:leaders.rows.filter(x=>x.regular_wins>0).length,
+          pointsNonzero:leaders.rows.filter(x=>x.points>0).length};
+      }
+      else if(kind==='verify-quads'){
+        const quads=await DATA_PIPELINE.seasonQuadrants(env,season);
+        result={season,netSnapshot:quads.snapshot_date,
+          programsWithQuadrantWins:Object.keys(quads.by_program).length};
+      }
+
       else return Response.json({error:'Unknown task.'},{status:400,headers:cors});
       return Response.json({ok:true,kind,result},{headers:cors});
     }catch(error){

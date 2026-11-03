@@ -18,6 +18,7 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 - College basketball conference membership from a verified 2026–27 ESPN standings snapshot (via SportsDataverse), bundled with the app; manual program entry if a school is missing.
 - Initial snake-format draft, with exclusive ownership, turn checks, pause/resume and pre-completion commissioner reset.
 - **Permanent rosters:** draft selections remain immutable draft history, while `program_owners` tracks the current owner from year to year.
+- **My Team workspace:** View your complete roster, open program profiles, release programs when waivers are enabled, review incoming/outgoing trades and accept/decline/cancel pending offers, and review waiver claims. No annual redrafts.
 - **Manager-to-manager trades:** select schools from each roster, send an offer, and accept, decline or cancel. Both owners' programs transfer together after acceptance, with server-side validation against stale offers. League-wide trade activity is visible.
 - Responsive desktop/mobile design and PWA home-screen setup.
 - **Scoring tab:** regular-season wins, Q1/Q2/Q1A bonuses, conference championships, NCAA appearance seed tiers, NCAA wins, and a +15 national championship bonus. AP and KenPom award no points. Commissioner can edit the settings; members can view them.
@@ -29,7 +30,7 @@ Treat Boek Dynasty as a functional league application, not a marketing landing p
 
 ## League display and program imports
 
-The navigation uses **Standings** for the league standings table. Scores remain unranked until verified results ingestion is connected; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
+The navigation uses **League Overview** for a league-wide dashboard and **My Team** for permanent program ownership, incoming/outgoing trade review, and waiver activity. **Standings** remains the season scoring table. Scores remain unranked until verified results ingestion is connected; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
 
 When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the bundled verified program directory, in small batches. Once the imports finish, the program directory shows schools and their ESPN CDN logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
 
@@ -63,7 +64,7 @@ Existing D1 deployments **must apply `migrations/002_commissioner_controls.sql` 
 ## Mobile layout
 
 The authenticated app has a dedicated responsive phone layout:
-- Five primary bottom tabs: Overview, Programs, Draft, Standings, and More. Trades, Commissioner (for authorized accounts), and sign-out are available through More. Desktop keeps the full sidebar.
+- Six primary bottom tabs: League, My Team, Programs, Draft, Standings, and More. League Overview and My Team have distinct desktop navigation entries. Trades, Commissioner (for authorized accounts), and sign-out are available through More. Desktop keeps the full sidebar.
 - On phones, school cards use a compact two-row layout, full-width filters and search, and incremental batches of 24 schools; all eligible schools remain searchable.
 - Draft view puts the actionable pick link above the board and displays the latest 12 picks with an option to expand; draft order appears ahead of picks on narrow screens.
 - Trade offers have larger checkbox targets, selection counts and a disabled-until-valid submit button.

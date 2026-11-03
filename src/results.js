@@ -205,11 +205,77 @@ const DATA_PIPELINE=(()=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND (home_id=? OR away_id=?) ORDER BY game_date DESC,start_utc DESC LIMIT 70",season,id,id).all();
     return rows.results||[];
   };
+  const netKey=value=>String(value||'')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/&/g,' and ').replace(/\bst[.]?\b/g,'saint')
+    .replace(/\bstate\b/g,'st').replace(/\buniversity\b/g,'')
+    .replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  const netNames=(()=>{
+    const map=new Map();
+    for(const [id,short,full,abbr] of NET_NAME_CROSSWALK){
+      for(const alias of [short,full,abbr]){
+        const key=netKey(alias);
+        if(!key)continue;
+        const existing=map.get(key);
+        if(!existing)map.set(key,String(id));
+        else if(existing!==String(id))map.set(key,null); // ambiguous: never guess
+      }
+    }
+    // NCAA sometimes uses institutional names instead of ESPN display names.
+    const preferred={
+      'connecticut':'UConn','albany':'UAlbany','central connecticut':'C Connecticut',
+      'miami florida':'Miami','miami fl':'Miami','miami ohio':'Miami OH',
+      'saint johns':'St. John\'s','st johns ny':'St. John\'s',
+      'sam houston state':'Sam Houston','tennessee martin':'UT Martin',
+      'texas a and m corpus christi':'Texas A&M-CC',
+      'texas a m corpus christi':'Texas A&M-CC'
+    };
+    for(const [alias,target] of Object.entries(preferred)){
+      const id=map.get(netKey(target));
+      if(id)map.set(netKey(alias),id);
+    }
+    return map;
+  })();
+  const parseNCAANet=(payload,season)=>{
+    const rows=payload?.data||payload?.rankings||payload?.records;
+    if(!Array.isArray(rows)||rows.length<350||rows.length>400)throw new Error('NCAA rankings source did not return a complete Division I list.');
+    const seasonStart=season.slice(0,4);
+    const provenance=String(payload.updatedAt||payload.updated||payload.lastUpdated||payload.date||'');
+    if(provenance){
+      const year=(provenance.match(/20\d{2}/)||[])[0];
+      if(year&&Number(year)<Number(seasonStart))throw new Error('NCAA NET source is still displaying the previous season.');
+    }
+    const matched=[],missing=[],used=new Set();
+    for(const item of rows){
+      const rawName=String(item.SCHOOL||item.School||item.school||item.team||item.Team||item.team_name||'');
+      const rank=Number(item.RANK??item.Rank??item.rank??item.NET??item.net_rank);
+      const id=netNames.get(netKey(rawName));
+      if(!id||!Number.isInteger(rank)||rank<1||rank>400||used.has(id)){
+        missing.push({school:rawName,rank});continue;
+      }
+      used.add(id);
+      matched.push({program_id:id,net_rank:rank,raw:item});
+    }
+    if(missing.length||matched.length!==rows.length)
+      throw new Error('NET name crosswalk incomplete ('+matched.length+'/'+rows.length+
+        '). Unmatched: '+missing.slice(0,6).map(x=>x.school).join(', ')+'. Review mappings before importing.');
+    return matched;
+  };
+  async function fetchOfficialNet(day,season,fetchFn=fetch){
+    const year=Number(day.slice(0,4)),month=Number(day.slice(5,7));
+    if((year===Number(season.slice(0,4))&&month<12)||day<season.slice(0,4)+'-12-08')
+      return {skipped:'NET is not released until December; prior season data is forbidden'};
+    const url='https://ncaa-api.henrygd.me/rankings/basketball-men/d1/ncaa-mens-basketball-net-rankings';
+    const response=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw new Error('NCAA NET rankings HTTP '+response.status);
+    const body=await response.json();
+    return {records:parseNCAANet(body,season),date:day,source:'NCAA NET via open-source NCAA API'};
+  }
   async function saveNet(env,season,day,rows,source='NCAA NET / commissioner verified'){
     if(!dayInSeason(season,day))throw new Error('Ranking snapshot date is outside the season.');
-    if(!Array.isArray(rows)||rows.length<250||rows.length>400)throw new Error('NET import requires 250–400 ranked D-I programs.');
+    if(!Array.isArray(rows)||rows.length<350||rows.length>400)throw new Error('NET import must cover at least 350 current Division I teams.');
     const ids=new Set(),ranks=new Set();
-    const parsed=rows.map(x=>({id:String(x.program_id||x.team_id||''),rank:Number(x.net_rank??x.rank)}));
+    const parsed=rows.map(x=>({id:String(x.program_id||x.team_id||''),rank:Number(x.net_rank??x.rank),raw:x.raw||x}));
     for(const x of parsed){
       if(!teamIds.has(x.id)||!Number.isInteger(x.rank)||x.rank<1||x.rank>400||ids.has(x.id)||ranks.has(x.rank))
         throw new Error('NET records must contain unique, known ESPN IDs and unique NET rankings.');
@@ -218,8 +284,11 @@ const DATA_PIPELINE=(()=>{
     if(!ranks.has(1))throw new Error('NET list is missing ranking #1.');
     const old=await q(env,'SELECT COUNT(*) AS n FROM cbb_net_rankings WHERE season=? AND snapshot_date=?',season,day).first();
     if(old?.n)return {date:day,count:old.n,duplicate:true};
-    for(let i=0;i<parsed.length;i+=60){
-      await env.DB.batch(parsed.slice(i,i+60).map(x=>q(env,'INSERT INTO cbb_net_rankings(season,snapshot_date,program_id,net_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,source)));
+    for(let i=0;i<parsed.length;i+=45){
+      await env.DB.batch(parsed.slice(i,i+45).flatMap(x=>[
+        q(env,'INSERT INTO cbb_net_rankings(season,snapshot_date,program_id,net_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,source),
+        q(env,'INSERT INTO cbb_net_details(season,snapshot_date,program_id,raw_json,source) VALUES(?,?,?,?,?)',season,day,x.id,JSON.stringify(x.raw).slice(0,2500),source)
+      ]));
     }
     return {date:day,count:parsed.length};
   }
@@ -279,5 +348,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

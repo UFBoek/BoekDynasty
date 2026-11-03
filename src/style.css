@@ -1699,3 +1699,12 @@ input[type="checkbox"],input[type="radio"]{flex-shrink:0}
  .scoreboard-match,.league-team-tile,.draft-command-progress span,
  .draft-board-cell{transition:none!important}
 }
+
+
+/* Waiting-for-manager slots retain the full pre-draft grid without inventing owners. */
+.draft-board-manager.vacant{background:#f7f9fc;color:#8596a9}
+.draft-board-manager.vacant .avatar{background:#e8eef6;color:#91a3b8;border:1px dashed #becde0}
+.draft-board-manager.vacant strong{color:#8293a6}
+.draft-board-manager.vacant small{color:#9aaabb}
+.draft-board-cell.vacant{background:repeating-linear-gradient(135deg,#fafbfd 0px,#fafbfd 11px,#f5f8fc 11px,#f5f8fc 22px)}
+.draft-board-cell.vacant .draft-cell-placeholder{color:#a2afbe}

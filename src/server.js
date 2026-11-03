@@ -412,6 +412,12 @@ export default (function makeWorker(){
     }
     if(path==='admin/data/award'){
       const settings=await getSettings(env);
+      const selectedSeason=String(data.season||settings.current_season);
+      const first=Number(selectedSeason.slice(0,4));
+      if(!/^20\d{2}-\d{2}$/.test(selectedSeason)||!Number.isInteger(first)||
+        first<2021||first>Number(settings.current_season.slice(0,4))||
+        selectedSeason!==first+'-'+String((first+1)%100).padStart(2,'0'))
+        return failure('Select a historical season from 2021–22 through the current season.',400);
       const kind=String(data.award_type||''),team=String(data.program_id||'');
       const allowed=new Set(['conference_regular_champion','conference_tournament_champion','ncaa_seed','ncaa_wins','national_champion','kenpom_final_rank']);
       if(!allowed.has(kind)||!team||!await q(env,'SELECT id FROM programs WHERE id=?',team).first())return failure('Unknown school or achievement type.',400);
@@ -419,7 +425,7 @@ export default (function makeWorker(){
       const max=kind==='ncaa_seed'?16:kind==='ncaa_wins'?6:kind==='kenpom_final_rank'?400:1;
       if(!Number.isInteger(value)||value<(kind==='ncaa_wins'?0:1)||value>max||(max===1&&value!==1)||note.length<8||note.length>240)
         return failure('Provide a valid value and source reference (8–240 characters).',400);
-      await q(env,"INSERT INTO cbb_awards(season,program_id,award_type,value,source_note) VALUES(?,?,?,?,?) ON CONFLICT(season,program_id,award_type) DO UPDATE SET value=excluded.value,source_note=excluded.source_note,confirmed_at=unixepoch()",settings.current_season,team,kind,value,note).run();
+      await q(env,"INSERT INTO cbb_awards(season,program_id,award_type,value,source_note) VALUES(?,?,?,?,?) ON CONFLICT(season,program_id,award_type) DO UPDATE SET value=excluded.value,source_note=excluded.source_note,confirmed_at=unixepoch()",selectedSeason,team,kind,value,note).run();
       return response({ok:true});
     }
     if(path==='admin/invite'){

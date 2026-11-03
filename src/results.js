@@ -606,6 +606,21 @@ const DATA_PIPELINE=(()=>{
       throw e;
     }
   }
+  async function backfillArchivedNet(env){
+    const [ready,runs]=await Promise.all([
+      q(env,"SELECT DISTINCT season FROM cbb_net_snapshots WHERE status='complete' AND stored_count>=350 AND season BETWEEN '2021-22' AND '2025-26'").all(),
+      q(env,"SELECT season,MAX(started_at) AS last_attempt FROM cbb_sync_runs WHERE job='historical-net' GROUP BY season").all()
+    ]);
+    const completed=new Set((ready.results||[]).map(r=>r.season));
+    const lastTry=new Map((runs.results||[]).map(r=>[r.season,Number(r.last_attempt)]));
+    const now=Math.floor(Date.now()/1000);
+    for(const season of ['2025-26','2024-25','2023-24','2022-23','2021-22']){
+      if(completed.has(season)||now-(lastTry.get(season)||0)<21600)continue;
+      try{return {ok:true,...await syncArchivedNet(env,season)};}
+      catch(e){return {ok:false,season,error:err(e)};}
+    }
+    return {skipped:'All historical NET seasons are already imported or awaiting retry.'};
+  }
   const quadrant=(rank,site)=>{
     if(!Number.isInteger(rank)||rank<1)return null;
     const t=site==='home'?[30,75,160]:site==='away'?[75,135,240]:[50,100,200];
@@ -633,8 +648,12 @@ const DATA_PIPELINE=(()=>{
     if(settings.results_auto_sync==='0')return {skipped:'disabled'};
     const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
     // Archival repair is independent of the current basketball calendar.
-    if(cron==='*/5 * * * *'){
-      return {historical:await backfillHistory(env,8)};
+    if(cron==='* * * * *'){
+      // Eight ESPN scoreboard dates plus one throttled archived-NET attempt.
+      // Each task is isolated so a blocked ranking source cannot stop games.
+      const historical=await backfillHistory(env,8).catch(e=>({error:err(e)}));
+      const archiveNet=await backfillArchivedNet(env).catch(e=>({error:err(e)}));
+      return {historical,archiveNet};
     }
     if(cron==='45 9 * * *'){
       const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];
@@ -685,5 +704,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,backfillHistory,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,backfillHistory,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

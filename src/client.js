@@ -478,40 +478,45 @@
     const settings=league.settings,fullOrder=order(),count=fullOrder.length;
     const total=draftTotal(),completed=picks().length;
     const status=settings.draft_status,rounds=Number(settings.rounds||0);
+    const preview=status==='pending'&&count<2;
+    const openSeats=preview?Math.max(0,Math.min(20,Number(settings.max_managers||7))-count):0;
+    const visualOrder=preview?[...fullOrder,...Array.from({length:openSeats},(_,i)=>'open-seat-'+i)]:fullOrder;
+    const visualCount=visualOrder.length;
+    const plannedTotal=preview?visualCount*rounds:total;
     const roundNumber=Math.min(rounds,Math.floor(completed/Math.max(1,count))+1);
     const next=nextManager(),available=programs().filter(p=>activeConfs().includes(p.conference_id)).length;
     const canStart=count>=2&&available>=total;
     const mode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
-    const columns=mode==='mine'?fullOrder.filter(id=>id===me.id):fullOrder;
+    const columns=mode==='mine'?visualOrder.filter(id=>id===me.id):visualOrder;
     const rows=mode==='current'?[roundNumber]:Array.from({length:rounds},(_,i)=>i+1);
     const draftPicks=new Map(picks().map(p=>[Number(p.overall),p]));
     const programIndex=new Map(programs().map(p=>[String(p.id),p]));
     const memberIndex=new Map(members().map(m=>[String(m.id),m]));
     const boardWidth='grid-template-columns:75px repeat('+Math.max(columns.length,1)+',minmax(154px,1fr));min-width:'+(75+columns.length*154)+'px';
     const headers=columns.map(id=>{
-      const manager=memberIndex.get(id);
-      return '<div class="draft-board-manager '+(id===me.id?'mine':'')+'"><span class="draft-board-avatar">'+avatar(manager||{display_name:'?'})+'</span><div><strong>'+escapeHTML(manager?.display_name||'Manager')+'</strong><small>'+(id===me.id?'YOUR TEAM':'PICK POSITION '+(fullOrder.indexOf(id)+1))+'</small></div></div>';
+      const manager=memberIndex.get(id),vacant=id.startsWith('open-seat-');
+      return '<div class="draft-board-manager '+(id===me.id?'mine':vacant?'vacant':'')+'"><span class="draft-board-avatar">'+avatar(manager||{display_name:'+'})+'</span><div><strong>'+escapeHTML(manager?.display_name||'Open seat')+'</strong><small>'+(vacant?'WAITING FOR MANAGER':id===me.id?'YOUR TEAM':'PICK POSITION '+(fullOrder.indexOf(id)+1))+'</small></div></div>';
     }).join('');
     const cells=rows.map(round=>{
       const slots=columns.map(id=>{
-        const columnIndex=fullOrder.indexOf(id);
-        const overall=(round-1)*count+(round%2===1?columnIndex+1:count-columnIndex);
+        const vacant=id.startsWith('open-seat-');
+        const columnIndex=visualOrder.indexOf(id);
+        const overall=(round-1)*visualCount+(round%2===1?columnIndex+1:visualCount-columnIndex);
         const pick=draftPicks.get(overall),program=programIndex.get(String(pick?.program_id||''));
         const onClock=status==='live'&&overall===completed+1;
         const mine=id===me.id;
-        const state=program?'selected':onClock?'on-clock':'open';
-        const label='Pick '+overall;
-        return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'" data-pick="'+overall+'">'
-          +'<div class="draft-cell-meta"><span>#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON CLOCK</strong>':program?'<span class="draft-cell-done">PICKED</span>':'')+'</div>'
+        const state=program?'selected':onClock?'on-clock':vacant?'vacant':'open';
+        return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'" '+(vacant?'':'data-pick="'+overall+'"')+'>'
+          +'<div class="draft-cell-meta"><span>'+(preview?'PROJ. ':'')+'#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON CLOCK</strong>':program?'<span class="draft-cell-done">PICKED</span>':'')+'</div>'
           +(program?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(program.id)+'">'+img(program)+'<span title="'+escapeHTML(program.name)+'">'+escapeHTML(program.name)+'</span></button>'
             :onClock?'<div class="draft-cell-open"><strong>'+escapeHTML(memberIndex.get(id)?.display_name||'Manager')+'</strong><small>Making selection</small></div>'
-            :'<div class="draft-cell-placeholder">Open pick</div>')
+            :'<div class="draft-cell-placeholder">'+(vacant?'Awaiting manager':'Open pick')+'</div>')
           +'</div>';
       }).join('');
       return '<div class="draft-board-round">ROUND '+round+'<span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
     }).join('');
     const recent=[...picks()].reverse().slice(0,8);
-    const nextSlots=Array.from({length:Math.min(6,Math.max(0,total-completed))},(_,i)=>{
+    const nextSlots=preview?[]:Array.from({length:Math.min(6,Math.max(0,total-completed))},(_,i)=>{
       const overall=completed+i+1,r=Math.floor((overall-1)/Math.max(1,count)),local=(overall-1)%Math.max(1,count);
       const id=r%2===0?fullOrder[local]:fullOrder[count-1-local];
       return {overall,manager:memberIndex.get(id)};
@@ -521,13 +526,13 @@
       +'<section class="draft-command">'
       +'<div class="draft-command-state"><span class="draft-state-tag '+(status==='live'?'live':'')+'"><i></i>'+escapeHTML(status==='live'?'LIVE DRAFT':status==='finished'?'DRAFT COMPLETE':status==='paused'?'PAUSED':'PRE-DRAFT')+'</span>'
       +'<h2>'+(status==='live'?'On the clock: '+escapeHTML(next?.display_name||'Manager'):status==='finished'?'The draft is complete':status==='paused'?'The draft is paused':'Ready to build your dynasty')+'</h2>'
-      +'<p>'+completed+' of '+total+' picks complete <span>·</span> '+count+' managers <span>·</span> '+rounds+' rounds</p>'
-      +'<div class="draft-command-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,total))+'%"></span></div></div>'
-      +'<div class="draft-command-right">'+(settings.draft_clock_seconds>0?'<div class="draft-clock-box"><span>DRAFT CLOCK</span><strong id="draft-clock">--:--</strong><small>Manual selections only</small></div>':'<div class="draft-command-count"><strong>'+Math.max(0,total-completed)+'</strong><small>PICKS REMAINING</small></div>')+'</div>'
+      +'<p>'+completed+' of '+plannedTotal+(preview?' projected':'')+' picks <span>·</span> '+count+' registered <span>·</span> '+rounds+' rounds</p>'
+      +'<div class="draft-command-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,plannedTotal))+'%"></span></div></div>'
+      +'<div class="draft-command-right">'+(settings.draft_clock_seconds>0?'<div class="draft-clock-box"><span>DRAFT CLOCK</span><strong id="draft-clock">--:--</strong><small>Manual selections only</small></div>':'<div class="draft-command-count"><strong>'+Math.max(0,plannedTotal-completed)+'</strong><small>'+(preview?'PROJECTED PICKS':'PICKS REMAINING')+'</small></div>')+'</div>'
       +'<button class="btn draft-command-cta" data-act="tab" data-id="programs">'+(isMyTurn()?'Make your pick':'Browse programs')+' <span>→</span></button></section>'
       +(status==='pending'?'<div class="draft-readiness"><span class="'+(count>=2?'good':'')+'">'+(count>=2?'✓':'○')+' '+count+' managers</span><span class="'+(available>=total?'good':'')+'">'+(available>=total?'✓':'○')+' '+available+' eligible schools for '+total+' picks</span><strong>'+(canStart?'Draft pool ready':'Waiting for draft readiness')+'</strong></div>':'')
       +'<section class="panel draft-board-panel">'
-      +'<div class="draft-board-toolbar"><div><h2>Draft board</h2><p>Snake format · Rounds '+rounds+' · Live selection tracker</p></div><div class="draft-board-switch" role="group" aria-label="Draft board view">'+modeButton('all','Full board')+modeButton('current','Current round')+modeButton('mine','My picks')+'</div></div>'
+      +'<div class="draft-board-toolbar"><div><h2>Draft board</h2><p>'+(preview?'Projected positions · '+openSeats+' manager seats available':'Snake format · '+rounds+' rounds · Live pick tracker')+'</p></div><div class="draft-board-switch" role="group" aria-label="Draft board view">'+modeButton('all','Full board')+modeButton('current','Current round')+modeButton('mine','My picks')+'</div></div>'
       +'<div class="draft-board-key"><span><i class="selected"></i> Selected</span><span><i class="on-clock"></i> On the clock</span><span><i class="mine"></i> Your column</span><small>Scroll horizontally to view every manager</small></div>'
       +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable draft board"><div class="draft-board-grid" style="'+boardWidth+'"><div class="draft-board-corner">ROUND</div>'+headers+cells+'</div></div>'
       +'</section>'
@@ -537,7 +542,7 @@
         return '<div class="draft-recap-item"><span class="draft-recap-position">'+p.overall+'</span>'+(team?img(team):'')+'<span class="grow"><strong>'+escapeHTML(team?.name||'School')+'</strong><small>'+escapeHTML(manager?.display_name||'Manager')+' · Round '+p.round+'</small></span></div>';
       }).join(''):empty('No picks yet','The first selection will appear here.'))+'</section>'
       +'<section class="panel">'+panelHeading('Upcoming picks','Next managers to select')
-      +(nextSlots.length?nextSlots.map(item=>'<div class="draft-next-item"><span class="draft-recap-position">'+item.overall+'</span>'+avatar(item.manager||{display_name:'?'})+'<div class="grow"><strong>'+escapeHTML(item.manager?.display_name||'Manager')+'</strong><small>'+(item.overall===completed+1&&status==='live'?'On the clock':'Upcoming selection')+'</small></div></div>').join(''):empty('Draft complete'))+'</section></div>';
+      +(nextSlots.length?nextSlots.map(item=>'<div class="draft-next-item"><span class="draft-recap-position">'+item.overall+'</span>'+avatar(item.manager||{display_name:'?'})+'<div class="grow"><strong>'+escapeHTML(item.manager?.display_name||'Manager')+'</strong><small>'+(item.overall===completed+1&&status==='live'?'On the clock':'Upcoming selection')+'</small></div></div>').join(''):empty(preview?'Awaiting managers':'Draft complete',preview?'Upcoming picks will appear once managers join.':''))+'</section></div>';
   }
 
   function updateTradeSelections(){

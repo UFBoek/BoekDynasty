@@ -336,6 +336,20 @@ export default (function makeWorker(){
       const output=await DATA_PIPELINE.upcoming(env,settings.current_season,3);
       return response({ok:output.every(x=>x.ok),days:output});
     }
+    if(path==='admin/data/fill-missing'){
+      const settings=await getSettings(env);
+      const days=Number(data.days||4);
+      if(!Number.isInteger(days)||days<1||days>6)return failure('Missing day repair supports 1–6 days.',400);
+      const repaired=await DATA_PIPELINE.fillMissing(env,settings.current_season,days);
+      return response({ok:repaired.every(x=>x.ok),days:repaired,coverage:await DATA_PIPELINE.coverage(env,settings.current_season)});
+    }
+    if(path==='admin/data/net-auto'){
+      const settings=await getSettings(env),day=DATA_PIPELINE.localDay();
+      if(day<settings.current_season.slice(0,4)+'-12-08')return failure('Current-season NET is not yet released.',409);
+      const feed=await DATA_PIPELINE.fetchOfficialNet(day,settings.current_season);
+      const result=await DATA_PIPELINE.saveNet(env,settings.current_season,feed.date,feed.records,feed.source);
+      return response({ok:true,...result});
+    }
     if(path==='admin/data/backfill'){
       const settings=await getSettings(env),days=Number(data.days||7);
       if(!Number.isInteger(days)||days<1||days>14)return failure('Backfill supports 1–14 days.',400);

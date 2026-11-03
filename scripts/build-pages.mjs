@@ -24,7 +24,27 @@ if (!client.includes(first)) throw new Error('Client bootstrap marker not found.
 client = client.replace(first, first + '\n  const API_BASE = ' + JSON.stringify(apiBase) + ';\n  const SITE_BASE = ' + JSON.stringify(basePath) + ';');
 if (!client.includes("fetch('/api/'+path")) throw new Error('Client API marker not found.');
 client = client.replace("fetch('/api/'+path", "fetch(API_BASE+'/'+path");
-client = client.replace("credentials:'same-origin'", "credentials:'include'");
+client = client.replace("credentials:'same-origin'", "credentials:'omit'");
+client = client.replace(
+  "  const root=document.querySelector('#app');",
+  "  const root=document.querySelector('#app');\\n  const TOKEN_KEY='boek_dynasty_session';\\n  let bearerToken=localStorage.getItem(TOKEN_KEY)||'';"
+);
+client = client.replace(
+  "headers:body===undefined?{}:{'Content-Type':'application/json'}",
+  "headers:{...(body===undefined?{}:{'Content-Type':'application/json'}),...(bearerToken?{Authorization:'Bearer '+bearerToken}:{})}"
+);
+client = client.replace(
+  "if(!res.ok)throw new Error(parsed.error||'Request failed.');",
+  "if(!res.ok){if(res.status===401&&path==='state'){bearerToken='';localStorage.removeItem(TOKEN_KEY);}throw new Error(parsed.error||'Request failed.');}"
+);
+client = client.replace(
+  "        me=res.user;await refresh();",
+  "        if(!res.token)throw new Error('Login succeeded without a session token.');\\n        bearerToken=res.token;localStorage.setItem(TOKEN_KEY,bearerToken);\\n        me=res.user;await refresh();"
+);
+client = client.replace(
+  "if(act==='logout'){await api('logout',{});me=null;",
+  "if(act==='logout'){await api('logout',{});bearerToken='';localStorage.removeItem(TOKEN_KEY);me=null;"
+);
 client = client.replaceAll('src="/brand-logo.png?v=3"', 'src="' + basePath + 'brand-logo.png?v=3"');
 client = client.replace("location.origin+'/?invite='+", "location.origin+SITE_BASE+'?invite='+");
 const swRegistration="if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});";

@@ -1259,3 +1259,17 @@ input[type="checkbox"],input[type="radio"]{flex-shrink:0}
   .btn,.program-card,.standings-table tbody tr,.more-menu-item,
   .field,.sidebar .nav button{transition:none!important}
 }
+
+
+/* Secondary copy still meets comfortable contrast at small UI sizes. */
+.program-card small,.team-program-link small,.team-hero p,.rowline small,
+.manager-card small,.profile-roster-row small,.history-team span,
+.more-menu-item small,.more-chevron,.game-day,.data-run small,
+.board-manager,.board-open,.profile-stats>div>span,.profile-stats strong.muted,
+.profile-subline,.commissioner-menu button span,.settings-static small,
+.settings-toggle span,.directory-result,.team-footnote{
+  color:#596e86;
+}
+.standings-manager small,.standing-roster,.pending-score{color:#596e86!important}
+.field::placeholder{color:#657990}
+.data-run small.data-error{color:#a82e3b}

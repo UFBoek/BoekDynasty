@@ -8,6 +8,6 @@ binding = "DB"
 database_name = "boek-dynasty-db"
 database_id = "301926bb-b803-4a11-ad1a-ff931ffaf72b"
 
-# 15-minute live scores, hourly quota-conscious history and daily reconciliation (UTC).
+# Live score updates and daily reconciliation only; historical bulk backfills are paused while migrating off D1.
 [triggers]
-crons = ["*/15 * * * *", "15 10 * * *", "30 * * * *"]
+crons = ["*/15 * * * *", "15 10 * * *"]

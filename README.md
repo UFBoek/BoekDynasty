@@ -1,6 +1,6 @@
 # Boek Dynasty
 
-Permanent fantasy college basketball dynasty league starting in the **2026–27 season**. Managers draft **NCAA programs**, not individual athletes, and **keep those programs across future seasons** unless traded. Season-long scoring is deliberately **not yet configured**.
+Permanent fantasy college basketball dynasty league starting in the **2026–27 season**. Managers draft **NCAA programs**, not individual athletes, and **keep those programs across future seasons** unless traded. Season-long scoring weights are configured, with **best 8 programs counting** per manager. Verified game results are not yet connected.
 
 ## Live app
 
@@ -14,13 +14,14 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 - One-time commissioner setup code, then single-use invitation links valid for 7 days.
 - Each manager creates a team with a username, team name, and password.
 - Passwords hashed with PBKDF2-SHA256 using Cloudflare-compatible 100,000 iterations; 90-day HttpOnly, Secure, SameSite cookies renew on use.
-- Commissioner settings are organized into General, Draft, Programs, Members, and Trades. The commissioner can rename the league, set the manager cap (2–20), configure conferences and draft rounds (1–20), reorder/shuffle draft positions before the draft, manage invitations, and enable/disable trading.
+- Commissioner settings are organized into General, Draft, Programs, Members, Scoring, and Trades. The commissioner can rename the league, set the manager cap (2–20), configure conferences and draft rounds (1–20), reorder/shuffle draft positions before the draft, manage invitations, and enable/disable trading.
 - College basketball conference membership from a verified 2026–27 ESPN standings snapshot (via SportsDataverse), bundled with the app; manual program entry if a school is missing.
 - Initial snake-format draft, with exclusive ownership, turn checks, pause/resume and pre-completion commissioner reset.
 - **Permanent rosters:** draft selections remain immutable draft history, while `program_owners` tracks the current owner from year to year.
 - **Manager-to-manager trades:** select schools from each roster, send an offer, and accept, decline or cancel. Both owners' programs transfer together after acceptance, with server-side validation against stale offers. League-wide trade activity is visible.
 - Responsive desktop/mobile design and PWA home-screen setup.
-- No fabricated game results or fantasy points. Scoring, live results, and historical season awards come later.
+- **Scoring tab:** regular-season wins, Q1/Q2/Q1A bonuses, conference championships, NCAA appearance seed tiers, NCAA wins, and a +15 national championship bonus. AP and KenPom award no points. Commissioner can edit the settings; members can view them.
+- No fabricated game results or fantasy points. Live results integration and year-end awards come later.
 
 ## Interface copy and layout
 
@@ -28,7 +29,7 @@ Treat Boek Dynasty as a functional league application, not a marketing landing p
 
 ## League display and program imports
 
-The navigation uses **Standings** for the league standings table. Scores remain unranked until the season-long points system is configured; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
+The navigation uses **Standings** for the league standings table. Scores remain unranked until verified results ingestion is connected; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
 
 When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the bundled verified program directory, in small batches. Once the imports finish, the program directory shows schools and their ESPN CDN logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
 
@@ -98,4 +99,4 @@ If recreating D1: `npx wrangler d1 execute boek-dynasty-db --remote --file=schem
 
 ## Not yet implemented
 
-Season scoring, real live game results, year-end roster snapshots / season rollover UI, account recovery, email verification, advanced commissioner reorder/shuffle tools, draft-pick trading and free agency. The initial goal is a usable shared fantasy league shell, account management, eligible program selection and drafting.
+Real live game results and scoring ingestion, year-end roster snapshots / season rollover UI, account recovery, email verification, advanced commissioner reorder/shuffle tools, draft-pick trading and free agency. The initial goal is a usable shared fantasy league shell, account management, eligible program selection and drafting.

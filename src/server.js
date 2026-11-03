@@ -14,7 +14,7 @@ export default (function makeWorker(){
   }
   async function hashPassword(password,salt){
     const key=await crypto.subtle.importKey('raw',ENCODER.encode(password),'PBKDF2',false,['deriveBits']);
-    const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:ENCODER.encode(salt),iterations:120000,hash:'SHA-256'},key,256);
+    const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:ENCODER.encode(salt),iterations:100000,hash:'SHA-256'},key,256);
     return Array.from(new Uint8Array(bits),x=>x.toString(16).padStart(2,'0')).join('');
   }
   const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);

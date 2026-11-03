@@ -35,6 +35,7 @@
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
+  let resultsSelectedDay='',resultsConference='all',resultsScope='all',resultsAP=[],resultsAPAsOf=null,resultsFetchedAt=0,resultsRequest=0;
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
   const fmt=(v)=>Number(v||0).toLocaleString('en-US');
@@ -88,7 +89,7 @@
       const next=await api('state');
       me=next.user;league=next;appError='';
       if(!silent)current='home';
-      if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);}
+      if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();}
       if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
     }catch(e){
       if(String(e.message).includes('Sign in required')){me=null;league=null;if(!silent)await loadPublic();renderAuth();}
@@ -177,14 +178,42 @@
     root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span></button>').join('')+'</nav>';
   }
 
+  const resultsToday=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
+  const shiftResultsDay=(day,offset)=>{
+    const d=new Date(day+'T12:00:00Z');
+    if(Number.isNaN(d.getTime()))return resultsToday();
+    d.setUTCDate(d.getUTCDate()+offset);
+    return d.toISOString().slice(0,10);
+  };
+  const formatResultsDay=(day,parts={weekday:'short',month:'short',day:'numeric'})=>
+    new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',...parts});
   async function loadResults(){
-    if(!me||resultsLoading)return;
-    resultsLoading=true;resultsError='';
+    if(!me)return;
+    const request=++resultsRequest;
+    const day=resultsSelectedDay||resultsToday();
+    resultsSelectedDay=day;resultsLoading=true;resultsError='';
+    if(current==='results')render();
     try{
-      const [status,games]=await Promise.all([api('data/status'),api('data/games')]);
-      resultsStatus=status;resultsGames=games.games||[];resultsSeason=season();
-    }catch(e){resultsError=e.message;}
-    finally{resultsLoading=false;if(current==='results'||(current==='commissioner'&&adminSection==='data'))render();}
+      const outcomes=await Promise.allSettled([
+        api('data/status'),
+        api('data/games?date='+encodeURIComponent(day)),
+        api('data/rankings')
+      ]);
+      if(request!==resultsRequest)return;
+      if(outcomes[0].status==='fulfilled')resultsStatus=outcomes[0].value;
+      if(outcomes[1].status==='fulfilled'){
+        resultsGames=outcomes[1].value.games||[];
+        resultsSeason=season();resultsFetchedAt=Date.now();
+      }else{
+        resultsGames=[];
+        throw outcomes[1].reason;
+      }
+      if(outcomes[2].status==='fulfilled'){
+        const ap=outcomes[2].value;
+        resultsAP=ap.teams||[];resultsAPAsOf=ap.as_of||null;
+      }else{resultsAP=[];resultsAPAsOf=null;}
+    }catch(e){if(request===resultsRequest)resultsError=e.message;}
+    finally{if(request===resultsRequest){resultsLoading=false;if(current==='results'||(current==='commissioner'&&adminSection==='data'))render();}}
   }
   async function loadProgramResults(id){
     if(!me||(programResultCache[id]?.season===season()&&Date.now()-(programResultCache[id]?.loadedAt||0)<60000))return;
@@ -206,17 +235,93 @@
     const score=(g.status==='final'||g.status==='live')&&g.home_score!==null&&g.away_score!==null?escapeHTML(g.away_score)+'–'+escapeHTML(g.home_score):'vs';
     return '<div class="result-game-row"><div class="grow"><span class="game-day">'+escapeHTML(g.game_date)+'</span><strong>'+escapeHTML(away)+' <span class="game-score">'+score+'</span> '+escapeHTML(home)+'</strong></div><span class="result-game-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameOutcome(g,id))+'</span></div>';
   };
+  const scoreboardLogo=(id)=>{
+    const school=programs().find(p=>String(p.id)===String(id));
+    if(school)return img(school);
+    return /^\d+$/.test(String(id||''))?'<img class="program-logo" src="https://a.espncdn.com/i/teamlogos/ncaa/500/'+id+'.png" loading="lazy" alt=""/>':'<span class="program-logo program-initial">NCAA</span>';
+  };
+  const scoreboardRank=(id,map)=>map.has(String(id))?'<span class="scoreboard-rank">'+map.get(String(id))+'</span>':'';
+  const scoreboardCard=(g,ranks)=>{
+    const canScore=['final','live'].includes(g.status);
+    const awayScore=canScore&&g.away_score!==null?String(g.away_score):'';
+    const homeScore=canScore&&g.home_score!==null?String(g.home_score):'';
+    const gameStatus=g.status==='live'?'LIVE':g.status==='final'?'FINAL':g.status==='postponed'?'PPD':g.status==='cancelled'?'CANCELLED':
+      (g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}):'TBD');
+    const gameLink=/^\d+$/.test(String(g.game_id))?'https://www.espn.com/mens-college-basketball/game/_/gameId/'+g.game_id:null;
+    const teamRow=(id,name,score,isWinner)=>'<div class="scoreboard-team-line '+(isWinner?'winner':'')+'">'
+      +scoreboardLogo(id)+scoreboardRank(id,ranks)+'<span class="scoreboard-team-name">'+escapeHTML(name)+'</span>'
+      +'<strong class="scoreboard-team-score">'+escapeHTML(score)+'</strong></div>';
+    const winner=canScore&&g.status==='final'&&g.home_score!==null&&g.away_score!==null;
+    return '<article class="scoreboard-match '+(g.status==='live'?'is-live':'')+'">'
+      +'<div class="scoreboard-match-head"><span class="scoreboard-match-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameStatus)+'</span>'
+      +'<span class="scoreboard-match-venue">'+(g.neutral_site?'NEUTRAL SITE':g.conference_game?'CONFERENCE':'NCAA MEN’S BASKETBALL')+'</span></div>'
+      +'<div class="scoreboard-match-teams">'
+      +teamRow(g.away_id,g.away_name||'Away',awayScore,winner&&g.away_score>g.home_score)
+      +teamRow(g.home_id,g.home_name||'Home',homeScore,winner&&g.home_score>g.away_score)
+      +'</div>'
+      +(gameLink?'<a class="scoreboard-game-link" href="'+gameLink+'" target="_blank" rel="noopener noreferrer">Box score <span>↗</span></a>':'')
+      +'</article>';
+  };
   function resultsPage(){
-    const status=resultsStatus,good=(status?.recent_runs||[]).find(r=>r.status==='ok'&&Number(r.matched)>0),coverage=status?.coverage;
-    const error=(status?.recent_runs||[]).find(r=>r.status==='error');
-    const rows=resultsGames.filter(g=>activeConfs().some(c=>programs().some(p=>p.conference_id===c&&(p.id===g.home_id||p.id===g.away_id)))).slice(0,60);
-    return heading('', 'Results')
-      +'<div class="standings-summary"><div><span>GAMES STORED</span><strong>'+Number(status?.game_count||0)+'</strong></div><div><span>FINAL GAMES</span><strong>'+Number(status?.final_games||0)+'</strong></div><div><span>NET COVERAGE</span><strong>'+(status?.net_count?status.net_count+'/365':'Pending')+'</strong></div><div><span>DATES NOT VERIFIED</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div></div>'
-      +'<section class="panel">'+panelHeading('Game results','Current season · '+escapeHTML(season()),'<button class="btn small secondary" data-act="refresh-results">Refresh</button>')
-      +(resultsError?'<div class="notice">'+escapeHTML(resultsError)+'</div>':'')
-      +(rows.length?rows.map(g=>resultGameRow(g)).join(''):empty(resultsLoading?'Loading results':'No imported games','The data collector will populate game results when its source is available.'))+'</section>'
-      +'<section class="panel section-gap">'+panelHeading('Import status')
-      +'<div class="profile-facts"><div><span>Automatic updates</span><strong>'+(status?.auto_enabled?'Enabled':'Disabled')+'</strong></div><div><span>Verified dates</span><strong>'+(coverage?coverage.checked_dates:'—')+'</strong></div><div><span>Dates missing coverage</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div><div><span>Last successful import</span><strong>'+(good?escapeHTML(good.target_date)+' · '+good.matched+' games':'None recorded')+'</strong></div><div><span>Last error</span><strong>'+(error?escapeHTML(error.error_text):'None recorded')+'</strong></div><div><span>Latest NET snapshot</span><strong>'+(status?.net_date?escapeHTML(status.net_date)+' ('+status.net_count+'/365 programs)':'Not released or imported')+'</strong></div></div></section>';
+    const day=resultsSelectedDay||resultsToday(),pollRank=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
+    const all=resultsGames;
+    const conferenceOptions=Object.entries(conferenceNames).sort((a,b)=>a[1].localeCompare(b[1]))
+      .map(([id,label])=>'<option value="'+escapeHTML(id)+'" '+(resultsConference===id?'selected':'')+'>'+escapeHTML(label)+'</option>').join('');
+    let list=all.filter(g=>{
+      if(resultsConference==='league'&&!activeConfs().some(id=>g.home_conference_id===id||g.away_conference_id===id))return false;
+      if(resultsConference!=='all'&&resultsConference!=='league'&&g.home_conference_id!==resultsConference&&g.away_conference_id!==resultsConference)return false;
+      if(resultsScope==='league'&&!owners().some(o=>o.program_id===g.home_id||o.program_id===g.away_id))return false;
+      if(resultsScope==='top25'&&!pollRank.has(g.home_id)&&!pollRank.has(g.away_id))return false;
+      return true;
+    });
+    list=list.sort((a,b)=>{
+      const priority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
+      const d=(priority[a.status]??5)-(priority[b.status]??5);
+      return d||(a.start_utc||'').localeCompare(b.start_utc||'');
+    });
+    const groups=new Map();
+    for(const game of list){
+      const id=resultsConference!=='all'&&resultsConference!=='league'?resultsConference:
+        (activeConfs().includes(game.home_conference_id)?game.home_conference_id:game.home_conference_id||game.away_conference_id||'other');
+      const name=conferenceNames[id]||'Other matchups';
+      if(!groups.has(name))groups.set(name,[]);
+      groups.get(name).push(game);
+    }
+    const activeDatePills=Array.from({length:7},(_,i)=>{
+      const value=shiftResultsDay(day,i-3);
+      return '<button type="button" class="scoreboard-day '+(value===day?'active':'')+'" data-act="results-date" data-date="'+value+'" aria-pressed="'+(value===day)+'">'
+        +'<span>'+formatResultsDay(value,{weekday:'short'}).toUpperCase()+'</span><strong>'+formatResultsDay(value,{month:'short',day:'numeric'})+'</strong></button>';
+    }).join('');
+    const scopeButton=(id,title)=>'<button type="button" class="'+(resultsScope===id?'active':'')+'" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+title+'</button>';
+    const live=all.filter(g=>g.status==='live').length,finals=all.filter(g=>g.status==='final').length;
+    const hasPoll=resultsAP.length===25;
+    const subtitle='All Division I games · '+escapeHTML(season());
+    return heading('COLLEGE BASKETBALL','Scores & Results','Browse schedules, live games and final scores by day, conference or AP Top 25.')
+      +'<section class="scoreboard-shell">'
+      +'<div class="scoreboard-utility"><div><span class="scoreboard-live-dot"></span><strong>'+all.length+'</strong> games <span class="scoreboard-utility-divider">/</span> <strong>'+live+'</strong> live <span class="scoreboard-utility-divider">/</span> <strong>'+finals+'</strong> final</div>'
+      +'<div class="scoreboard-utility-actions">'+(resultsLoading?'<span class="scoreboard-updating">Updating…</span>':'')+'<button type="button" class="btn small secondary" data-act="refresh-results">↻ Refresh</button></div></div>'
+      +'<div class="scoreboard-calendar"><button class="scoreboard-calendar-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
+      +'<div class="scoreboard-days">'+activeDatePills+'</div>'
+      +'<button class="scoreboard-calendar-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
+      +'<div class="scoreboard-filterbar"><div class="scoreboard-scopes" role="group" aria-label="Show games">'+scopeButton('all','All games')+scopeButton('league','My league')+scopeButton('top25','AP Top 25')+'</div>'
+      +'<div class="scoreboard-filter-tools"><label class="scoreboard-conference-label" for="scoreboard-conference">Conference</label><select class="field" id="scoreboard-conference"><option value="all">All conferences</option><option value="league" '+(resultsConference==='league'?'selected':'')+'>League conferences</option>'+conferenceOptions+'</select>'
+      +'<input type="date" id="scoreboard-date" class="field scoreboard-date-input" aria-label="Select game date" value="'+escapeHTML(day)+'"/>'
+      +'<button class="scoreboard-today" data-act="results-today" type="button">Today</button></div></div>'
+      +'<div class="scoreboard-day-heading"><div><span>'+formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</span><h2>'+list.length+' '+(list.length===1?'matchup':'matchups')+'</h2></div>'
+      +'<small>'+(resultsScope==='top25'?(hasPoll?'AP poll as of '+escapeHTML(resultsAPAsOf||''):'AP rankings not available'):'Eastern Time (ET)')+'</small></div>'
+      +(resultsError?'<div class="notice scoreboard-alert">'+escapeHTML(resultsError)+'</div>':'')
+      +(resultsScope==='top25'&&!hasPoll?'<div class="scoreboard-empty"><strong>AP Top 25 is not available yet</strong><span>We only show verified ESPN AP rankings. Check again after the poll is imported.</span></div>':
+        list.length?'<div class="scoreboard-conference-groups">'+[...groups].map(([name,games])=>
+          '<section class="scoreboard-group"><div class="scoreboard-group-heading"><strong>'+escapeHTML(name)+'</strong><span>'+games.length+' games</span></div>'
+          +'<div class="scoreboard-match-grid">'+games.map(g=>scoreboardCard(g,pollRank)).join('')+'</div></section>'
+        ).join('')+'</div>':
+        '<div class="scoreboard-empty"><strong>'+(resultsLoading?'Loading game schedule…':'No games found')+'</strong><span>'+(resultsScope==='league'?'No games involving rostered programs match these filters.':'Try another date or a different conference. Some schedules may still be syncing.')+'</span>'
+        +(me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this date</button>':'')+'</div>')
+      +'<details class="scoreboard-source"><summary>Data sources & update status</summary><div class="scoreboard-source-details"><div><span>Game feed</span><strong>ESPN scoreboards</strong></div>'
+      +'<div><span>Ranked teams</span><strong>'+(hasPoll?'ESPN AP Top 25 · '+escapeHTML(resultsAPAsOf||''):'AP poll pending')+'</strong></div>'
+      +'<div><span>Automatic updates</span><strong>'+(resultsStatus?.auto_enabled?'Enabled':'Disabled')+'</strong></div>'
+      +'<div><span>Days missing verification</span><strong>'+String(resultsStatus?.coverage?.missing_dates??'—')+'</strong></div></div></details>'
+      +'</section>';
   }
 
   function morePage(){
@@ -711,6 +816,11 @@
     if(act==='load-programs'){programShown+=24;filterPrograms();return;}
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
     if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();return;}
+    if(act==='results-date'){resultsSelectedDay=button.dataset.date;loadResults();return;}
+    if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));loadResults();return;}
+    if(act==='results-today'){resultsSelectedDay=resultsToday();loadResults();return;}
+    if(act==='results-scope'){resultsScope=button.dataset.scope;render();return;}
+
     if(act==='draft-round-change'){draftRoundView=id;render();return;}
     if(act==='move-draft'){
       const i=Number(button.dataset.index),j=i+Number(button.dataset.dir);
@@ -731,6 +841,11 @@
     if(busy)return;
     busy=true;
     try{
+      if(act==='results-import-day'){
+        const result=await api('admin/data/sync',{date:resultsSelectedDay||resultsToday()});
+        notice('Imported '+result.matched+' games from '+result.date+'.');
+        await loadResults();busy=false;return;
+      }
       if(act==='data-sync'){
         const data=await api('admin/data/sync',{date:v('#data-date')});
         notice('Imported '+data.matched+' games · '+data.changed+' updated.');
@@ -906,6 +1021,8 @@
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=24;filterPrograms();}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
     if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
+    if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
+    if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;loadResults();}
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{

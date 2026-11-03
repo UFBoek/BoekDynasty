@@ -681,6 +681,9 @@ export default (function makeWorker(){
       }catch(e){
         const msg=e?.message||'Unexpected server error.';
         if(url.pathname.startsWith('/api/')){
+          console.error('Boek Dynasty API error',url.pathname,e?.name||'Error',msg);
+          if(/daily row write limit|exceeded.*D1.*write/i.test(msg))
+            return failure('Cloudflare database write limit reached for today. Registration and other updates will resume after the midnight UTC reset. Please try again then.',503);
           if(/UNIQUE constraint failed/i.test(msg))return failure('This username or program has already been taken. Please try another.',409);
           if(/League is full/i.test(msg))return failure('The league is full. Ask the commissioner to increase the manager limit.',409);
           return failure(msg.startsWith('Username')||msg.startsWith('Team name')||msg.startsWith('Password')?msg:'Server could not complete the request.',500);

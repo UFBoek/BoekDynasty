@@ -139,7 +139,7 @@
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','programs','draft','trades','league',...(isAdmin?['commissioner']:[])];
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">BOEK DYNASTY <span class="sep">/</span> '+names[current]+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,commissioner:commissionerPage}[current]||overview)()+'</section></main></div><nav class="bottom">'+tabs.map(id=>'<button class="'+(current===id?'active':'')+'" data-act="tab" data-id="'+id+'"><span>'+ICONS[id]+'</span>'+names[id].replace(' Room','')+'</button>').join('')+'</nav>';
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">BOEK DYNASTY <span class="sep">/</span> '+names[current]+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,commissioner:commissionerPage}[current]||overview)()+'</section></main></div><nav class="bottom">'+tabs.map(id=>'<button class="'+(current===id?'active':'')+'" data-act="tab" data-id="'+id+'"><span>'+ICONS[id]+'</span>'+(id==='commissioner'?'Commish':names[id])+'</button>').join('')+'</nav>';
   }
   function overview(){
     const owned=myPrograms();

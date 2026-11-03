@@ -328,21 +328,28 @@ const DATA_PIPELINE=(()=>{
       const reconciled=await backfill(env,season,7);
       const future=await upcoming(env,season,3);
       const repaired=await fillMissing(env,season,4);
-      if(!env.NET_FEED_URL)return {games:reconciled,upcoming:future,repaired,net:{skipped:'No verified NET feed connected'}};
-      const id=crypto.randomUUID();
-      await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,'configured-net-feed','running')",id,season,day).run();
+      // NCAA NET is not issued until December, and the NCAA public proxy may
+      // legitimately show last season's rankings before the new release.
+      if(day<season.slice(0,4)+'-12-08')
+        return {games:reconciled,upcoming:future,repaired,net:{skipped:'NET has not started'}};
+      const id=crypto.randomUUID(),source=env.NET_FEED_URL?'configured-net-feed':'NCAA NET official rankings proxy';
+      await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,?,'running')",id,season,day,source).run();
       try{
-        const response=await fetch(env.NET_FEED_URL,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
-        if(!response.ok)throw new Error('Configured NET feed HTTP '+response.status);
-        const payload=await response.json();
-        if(!Array.isArray(payload.records))throw new Error('NET feed must return {date,records:[{program_id,net_rank}]}');
-        const snapshot=String(payload.date||day);
-        const result=await saveNet(env,season,snapshot,payload.records,'configured-verified-net-feed');
+        let feed;
+        if(env.NET_FEED_URL){
+          const response=await fetch(env.NET_FEED_URL,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+          if(!response.ok)throw new Error('Configured NET feed HTTP '+response.status);
+          const payload=await response.json();
+          if(!Array.isArray(payload.records))throw new Error('NET feed must return {date,records:[{program_id,net_rank}]}');
+          feed={date:String(payload.date||day),records:payload.records,source:'configured-verified-net-feed'};
+        }else feed=await fetchOfficialNet(day,season);
+        if(feed.skipped)return {games:reconciled,upcoming:future,repaired,net:{skipped:feed.skipped}};
+        const result=await saveNet(env,season,feed.date,feed.records,feed.source);
         await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",result.count,result.count,result.duplicate?0:result.count,id).run();
-        return {games:reconciled,upcoming:future,net:result};
+        return {games:reconciled,upcoming:future,repaired,net:result};
       }catch(e){
         await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),id).run().catch(()=>{});
-        return {games:reconciled,upcoming:future,net:{error:err(e)}};
+        return {games:reconciled,upcoming:future,repaired,net:{error:err(e)}};
       }
     }
     return {skipped:'unknown-cron'};

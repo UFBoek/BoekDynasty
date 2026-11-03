@@ -331,6 +331,11 @@ export default (function makeWorker(){
       const result=await DATA_PIPELINE.importDay(env,settings.current_season,day,{job:'manual'});
       return response({ok:true,...result});
     }
+    if(path==='admin/data/upcoming'){
+      const settings=await getSettings(env);
+      const output=await DATA_PIPELINE.upcoming(env,settings.current_season,3);
+      return response({ok:output.every(x=>x.ok),days:output});
+    }
     if(path==='admin/data/backfill'){
       const settings=await getSettings(env),days=Number(data.days||7);
       if(!Number.isInteger(days)||days<1||days>14)return failure('Backfill supports 1–14 days.',400);

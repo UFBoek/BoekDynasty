@@ -212,7 +212,7 @@ const DATA_PIPELINE=(()=>{
     if(!Array.isArray(rows))throw new Error('NCAA API did not provide a ranked AP poll table.');
     const aliases={'southern cal':'30','southern california':'30','st john s':'2599',
       'saint john s':'2599','connecticut':'41','miami fl':'2390','miami florida':'2390',
-      'michigan state':'127','texas tech':'2641','iowa state':'66'};
+      'michigan state':'127','michigan st':'127','texas tech':'2641','iowa state':'66'};
     const normalizedName=v=>netKey(String(v||'').replace(/\s*\(\d+\)\s*$/,''));
     const mapped=rows.slice(0,25).map((item,index)=>{
       const rank=Number(item.RANK??item.rank??item.Rank);

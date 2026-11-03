@@ -810,6 +810,9 @@
         +'<div class="form-row section-gap"><label for="data-date">Check specific game date</label><input class="field" id="data-date" type="date" value="'+escapeHTML(today)+'"/></div>'
         +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn secondary" data-act="data-fill-missing">Repair missing dates</button><button class="btn secondary" data-act="data-ap-refresh">Sync AP Top 25</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
         +'<p class="hint section-gap">Game scores do not activate fantasy scoring. Import errors are kept in the audit log.</p></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Historical seasons','2021–22 through 2025–26')
+        +'<p class="hint">The site progressively imports verified past-game results. Historical points will update as game, NET, and postseason records are validated. Unverified years stay marked as pending.</p>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-history-backfill">Import next historical dates</button></div></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
         +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
@@ -919,6 +922,11 @@
       if(act==='data-sync'){
         const data=await api('admin/data/sync',{date:v('#data-date')});
         notice('Imported '+data.matched+' games · '+data.changed+' updated.');
+        await loadResults();
+      }else if(act==='data-history-backfill'){
+        const data=await api('admin/data/history-backfill',{days:3});
+        const failed=(data.results||[]).filter(x=>!x.ok);
+        notice('Checked '+(data.results||[]).length+' historical dates'+(failed.length?' · '+failed.length+' errors':''),failed.length>0);
         await loadResults();
       }else if(act==='data-backfill'){
         const result=await api('admin/data/backfill',{days:7});

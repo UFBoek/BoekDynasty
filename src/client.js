@@ -16,6 +16,7 @@
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
+  let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all';
   let appError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -83,7 +84,7 @@
     await loadPublic();
     try{
       const next=await api('state'); me=next.user;league=next;render();
-      refreshId=setInterval(()=>{if(me&&!busy&&!syncActive)refresh(true);},12000);
+      refreshId=setInterval(()=>{if(me&&!busy&&!syncActive&&current!=='commissioner')refresh(true);},12000);
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
     if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
@@ -192,7 +193,7 @@
   }
 
   function tradesPage(){
-    const ready=league.settings.draft_status==='finished';
+    const ready=league.settings.draft_status==='finished'&&league.settings.trading_enabled;
     const others=members().filter(u=>u.id!==me.id);
     const recipient=others.find(u=>u.id===tradeTargetId)||others[0];
     tradeTargetId=recipient?.id||'';
@@ -209,7 +210,7 @@
     };
     return heading('', 'Trades')
       +(ready?'<section class="panel section-gap">'+panelHeading('Propose trade')+'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'+others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select></div><div class="trade-columns"><div><h3 class="subhead">YOU SEND · '+mine.length+' OWNED</h3>'+selections(mine,'trade-give')+'</div><div><h3 class="subhead">YOU RECEIVE · '+theirs.length+' OWNED</h3>'+selections(theirs,'trade-receive')+'</div></div><div class="section-gap"><button class="btn" data-act="trade-propose" '+(!mine.length||!theirs.length?'disabled':'')+'>Send trade offer</button></div></section>':
-        '<section class="panel section-gap">'+empty('Trading unlocks after the draft','Finish the initial program draft before submitting offers. Drafted schools will be permanent franchise assets.')+'</section>')
+        '<section class="panel section-gap">'+empty(league.settings.trading_enabled?'Trading unavailable':'Trading disabled',league.settings.trading_enabled?'Trading opens after the initial draft.':'The commissioner has disabled new trades.')+'</section>')
       +'<section class="panel section-gap">'+panelHeading('Trade history')+(offers.length?offers.map(card).join(''):empty('No trades yet',''))+'</section>';
   }
   function leaguePage(){
@@ -226,23 +227,105 @@
       +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>TEAM</th><th class="numerical">SCHOOLS</th><th class="numerical">POINTS</th><th>ROSTER PREVIEW</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</section>';
   }
+
   function commissionerPage(){
     if(me.role!=='commissioner')return '';
-    const disabled=picks().length>0||league.settings.draft_status==='live'||league.settings.draft_status==='finished';
-    const confs=conferenceGroups.map(group=>'<h3 class="subhead section-gap">'+group.name+'</h3><div class="conf-grid">'+group.ids.map(id=>'<label class="conf-item"><input type="checkbox" name="conference" value="'+id+'" '+(activeConfs().includes(id)?'checked':'')+' '+(disabled?'disabled':'')+'/><span>'+conf(id)+'</span><small class="muted">'+programs().filter(p=>p.conference_id===id).length+'</small></label>').join('')+'</div>').join('');
-    return heading('', 'Commissioner')
-      +'<div class="grid2 section-gap"><section class="panel">'+panelHeading('Draft pool settings')+'<p class="hint">Select conferences and import programs before drafting.</p>'+confs+'<div class="form-row section-gap"><label>Rounds per manager</label><input class="field" id="rounds" type="number" min="1" max="20" value="'+league.settings.rounds+'" '+(disabled?'disabled':'')+'/></div><div class="button-row"><button class="btn" data-act="save-confs" '+(disabled?'disabled':'')+'>Save draft pool</button><button class="btn secondary" data-act="sync" '+(syncActive?'disabled':'')+'>'+(syncActive?'Importing schools...':'Import selected programs')+'</button></div>'+(importError?'<p class="notice section-gap">'+escapeHTML(importError)+'</p>':'<p class="hint section-gap">2026–27 team lists are stored locally. Review conference membership before drafting.</p>')+'</section>'
-      +'<section class="panel">'+panelHeading('Invitations')+'<p class="hint">'+members().length+' of 10 manager slots filled. Invitation codes expire after 7 days and can only be used once.</p><div class="button-row section-gap"><button class="btn" data-act="invite" '+(members().length>=10?'disabled':'')+'>Generate invite link</button></div>'+(inviteLink?'<div class="notice section-gap"><div style="overflow-wrap:anywhere">'+escapeHTML(inviteLink)+'</div><button class="btn small secondary section-gap" data-act="copy-invite">Copy invite link</button></div>':'')+'<hr style="border:0;border-top:1px solid #2c3951;margin:25px 0"/>'+panelHeading('Draft controls')+'<p class="hint">Draft order follows signup order.</p><div class="button-row section-gap"><button class="btn" data-act="start" '+(league.settings.draft_status==='live'||league.settings.draft_status==='finished'?'disabled':'')+'>Start / resume draft</button><button class="btn secondary" data-act="pause" '+(league.settings.draft_status!=='live'?'disabled':'')+'>Pause draft</button><button class="btn danger" data-act="reset" '+(league.settings.draft_status==='finished'?'disabled title="Permanent dynasty draft cannot be reset"':'')+'>Reset picks</button></div><hr style="border:0;border-top:1px solid #2c3951;margin:25px 0"/>'+panelHeading('Add program')+'<form data-form="program">'+input('Program name','name','text','University or school name')+input('Abbreviation','abbr','text','e.g. UF')+'<div class="form-row"><label>Conference</label><select class="field" name="conference_id">'+activeConfs().map(id=>'<option value="'+id+'">'+conf(id)+'</option>').join('')+'</select></div><button class="btn secondary" type="submit">Add program</button></form></section></div>';
+    const settings=league.settings;
+    const locked=settings.draft_status!=='pending'||picks().length>0;
+    const cap=Number(settings.max_managers||10);
+    const sections=[['general','General','League settings'],['draft','Draft','Order and controls'],['programs','Programs','Eligible schools'],['members','Members','Managers and invites'],['trades','Trades','Trade permissions']];
+    const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
+      '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
+    ).join('')+'</nav>';
+    let body='';
+    if(adminSection==='general'){
+      body='<section class="panel setting-panel">'+panelHeading('General')
+        +'<div class="settings-grid"><div class="form-row"><label for="league-name">League name</label><input id="league-name" class="field" type="text" maxlength="40" value="'+escapeHTML(settings.league_name||'Boek Dynasty')+'"/></div>'
+        +'<div class="form-row"><label for="manager-limit">Maximum managers</label><input id="manager-limit" class="field" type="number" min="'+Math.max(2,members().length)+'" max="20" step="1" value="'+cap+'" '+(locked?'disabled':'')+'/></div></div>'
+        +'<p class="settings-hint">'+members().length+' of '+cap+' spots filled'+(locked?' · Capacity locked once drafting begins':' · Allowed: 2–20 managers')+'</p>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-general">Save changes</button></div>'
+        +'</section>';
+    }else if(adminSection==='draft'){
+      if(draftOrderPreview.length!==members().length||draftOrderPreview.some(id=>!members().some(u=>u.id===id)))draftOrderPreview=order().slice();
+      const rows=draftOrderPreview.map((id,index)=>{
+        const person=members().find(u=>u.id===id);
+        return '<div class="draft-order-row"><span class="draft-order-number">'+(index+1)+'</span>'+avatar(person)+'<strong class="grow">'+escapeHTML(person.display_name)+'</strong>'
+          +(locked?'':'<span class="draft-order-buttons"><button data-act="move-draft" data-index="'+index+'" data-dir="-1" '+(index===0?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' up">↑</button><button data-act="move-draft" data-index="'+index+'" data-dir="1" '+(index===draftOrderPreview.length-1?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' down">↓</button></span>')
+          +'</div>';
+      }).join('');
+      body='<section class="panel setting-panel">'+panelHeading('Draft settings')
+        +'<div class="settings-grid"><div class="form-row"><label for="rounds">Rounds per manager</label><input class="field" id="rounds" type="number" min="1" max="20" value="'+settings.rounds+'" '+(locked?'disabled':'')+'/></div>'
+        +'<div class="settings-static"><span>Draft format</span><strong>Snake</strong><small>Status: '+escapeHTML(settings.draft_status)+'</small></div></div>'
+        +'<button class="btn" data-act="save-rounds" '+(locked?'disabled':'')+'>Save rounds</button></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Draft order')
+        +(rows||empty('Waiting for managers'))
+        +(locked?'':'<div class="button-row section-gap"><button class="btn secondary" data-act="shuffle-draft" '+(members().length<2?'disabled':'')+'>Shuffle</button><button class="btn ghost" data-act="signup-draft">Signup order</button><button class="btn" data-act="save-draft-order" '+(members().length<2?'disabled':'')+'>Save order</button></div>')+'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Draft controls')+'<div class="button-row">'
+        +'<button class="btn" data-act="start" '+(settings.draft_status==='live'||settings.draft_status==='finished'?'disabled':'')+'>Start / resume</button>'
+        +'<button class="btn secondary" data-act="pause" '+(settings.draft_status!=='live'?'disabled':'')+'>Pause draft</button>'
+        +'<button class="btn danger" data-act="reset" '+(settings.draft_status==='finished'?'disabled':'')+'>Reset picks</button>'
+        +'</div></section>';
+    }else if(adminSection==='programs'){
+      const confs=conferenceGroups.map(group=>'<h3 class="subhead section-gap">'+group.name+'</h3><div class="conf-grid">'+group.ids.map(id=>
+        '<label class="conf-item"><input type="checkbox" name="conference" value="'+id+'" '+(activeConfs().includes(id)?'checked':'')+' '+(locked?'disabled':'')+'/><span>'+escapeHTML(conf(id))+'</span><small class="muted">'+programs().filter(p=>p.conference_id===id).length+'</small></label>'
+      ).join('')+'</div>').join('');
+      body='<section class="panel setting-panel">'+panelHeading('Eligible conferences')+confs
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-confs" '+(locked?'disabled':'')+'>Save conferences</button><button class="btn secondary" data-act="sync" '+(locked||syncActive?'disabled':'')+'>'+(syncActive?'Importing...':'Import schools')+'</button></div>'
+        +(importError?'<p class="notice section-gap">'+escapeHTML(importError)+'</p>':'')+'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Add a school')+'<form data-form="program">'
+        +input('Program name','name','text','School name')+input('Abbreviation','abbr','text','e.g. UF')
+        +'<div class="form-row"><label for="conference_id">Conference</label><select class="field" id="conference_id" name="conference_id">'+activeConfs().map(id=>'<option value="'+id+'">'+escapeHTML(conf(id))+'</option>').join('')+'</select></div>'
+        +'<button class="btn secondary" type="submit" '+(locked?'disabled':'')+'>Add school</button></form></section>';
+    }else if(adminSection==='members'){
+      body='<section class="panel setting-panel">'+panelHeading('Managers',members().length+' / '+cap+' registered')
+        +members().map(u=>'<div class="manager-card">'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div><span class="status '+(u.role==='commissioner'?'wait':'')+'">'+(u.role==='commissioner'?'COMMISSIONER':'MANAGER')+'</span></div>').join('')
+        +'</section><section class="panel setting-panel section-gap">'+panelHeading('Invitations')
+        +'<p class="hint">Each invite link expires after 7 days and works once.</p>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="invite" '+(members().length>=cap||settings.draft_status!=='pending'?'disabled':'')+'>Generate invite</button></div>'
+        +(inviteLink?'<div class="invite-result section-gap"><span>'+escapeHTML(inviteLink)+'</span><button class="btn small secondary" data-act="copy-invite">Copy</button></div>':'')+'</section>';
+    }else if(adminSection==='trades'){
+      body='<section class="panel setting-panel">'+panelHeading('Trading')
+        +'<label class="settings-toggle" for="trading-enabled"><div><strong>Allow program trades</strong><span>Managers can propose and accept trades after the initial draft.</span></div><input id="trading-enabled" type="checkbox" '+(settings.trading_enabled?'checked':'')+'/></label>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-trades">Save trading settings</button></div></section>';
+    }
+    return heading('', 'Commissioner')+'<div class="commissioner-layout">'+menu+'<div class="commissioner-body">'+body+'</div></div>';
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(act==='commish-section'){adminSection=id;render();return;}
+    if(act==='move-draft'){
+      const i=Number(button.dataset.index),j=i+Number(button.dataset.dir);
+      if(i>=0&&i<draftOrderPreview.length&&j>=0&&j<draftOrderPreview.length){
+        [draftOrderPreview[i],draftOrderPreview[j]]=[draftOrderPreview[j],draftOrderPreview[i]];
+        render();
+      }
+      return;
+    }
+    if(act==='signup-draft'){draftOrderPreview=members().map(u=>u.id);render();return;}
+    if(act==='shuffle-draft'){
+      const list=draftOrderPreview.slice();
+      for(let i=list.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[list[i],list[j]]=[list[j],list[i]];}
+      draftOrderPreview=list;render();return;
+    }
     if(act==='auth-mode'){authMode=button.dataset.mode;renderAuth();return;}
     if(act==='logout'){await api('logout',{});me=null;league=null;inviteLink='';await loadPublic();renderAuth();return;}
     if(busy)return;
     busy=true;
     try{
-      if(act==='trade-propose'){
+      if(act==='save-general'){
+        await api('admin/general',{league_name:v('#league-name').trim(),max_managers:Number(v('#manager-limit')||league.settings.max_managers)});
+        notice('General settings saved.');
+      }else if(act==='save-trades'){
+        await api('admin/trade-settings',{trading_enabled:!!document.querySelector('#trading-enabled')?.checked});
+        notice('Trading settings saved.');
+      }else if(act==='save-draft-order'){
+        await api('admin/draft-order',{order:draftOrderPreview});
+        notice('Draft order saved.');
+      }else if(act==='save-rounds'){
+        await api('admin/settings',{rounds:Number(v('#rounds')),conferences:activeConfs()});
+        notice('Draft rounds saved.');
+      }else if(act==='trade-propose'){
         const give_ids=[...document.querySelectorAll('input[name="trade-give"]:checked')].map(x=>x.value);
         const receive_ids=[...document.querySelectorAll('input[name="trade-receive"]:checked')].map(x=>x.value);
         if(!give_ids.length||!receive_ids.length)throw Error('Select at least one program from each team.');
@@ -257,8 +340,7 @@
         await api('trade/cancel',{trade_id:id});notice('Trade offer cancelled.');
       }else if(act==='save-confs'){
         const selected=[...document.querySelectorAll('input[name="conference"]:checked')].map(x=>x.value);
-        const rounds=Number(v('#rounds'));
-        await api('admin/settings',{conferences:selected,rounds});
+        await api('admin/settings',{conferences:selected,rounds:league.settings.rounds});
         notice('Draft pool settings saved.');
       }else if(act==='invite'){
         const r=await api('admin/invite',{});
@@ -283,7 +365,7 @@
         const selected=[...document.querySelectorAll('input[name="conference"]:checked')].map(x=>x.value);
         if(!selected.length)throw Error('Select at least one conference.');
         if(!window.confirm('Import programs for '+selected.length+' conferences? This may take several moments.')){busy=false;return;}
-        await api('admin/settings',{conferences:selected,rounds:Number(v('#rounds'))});
+        await api('admin/settings',{conferences:selected,rounds:league.settings.rounds});
         syncActive=true;let done=0,errors=[];
         for(const confId of selected){
           try{const result=await api('admin/sync',{conference_id:confId});done+=result.added||0;}catch(e){errors.push(conf(confId)+': '+e.message);}
@@ -315,7 +397,7 @@
         selectedInvite='';
         if(location.search)history.replaceState({},'',location.pathname);
         me=res.user;await refresh();
-        if(!refreshId)refreshId=setInterval(()=>{if(me&&!busy&&!syncActive)refresh(true);},12000);
+        if(!refreshId)refreshId=setInterval(()=>{if(me&&!busy&&!syncActive&&current!=='commissioner')refresh(true);},12000);
         notice('Signed in.');
         if(me?.role==='commissioner')autoImportPrograms();
       }

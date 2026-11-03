@@ -207,16 +207,16 @@
     return '<div class="result-game-row"><div class="grow"><span class="game-day">'+escapeHTML(g.game_date)+'</span><strong>'+escapeHTML(away)+' <span class="game-score">'+score+'</span> '+escapeHTML(home)+'</strong></div><span class="result-game-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameOutcome(g,id))+'</span></div>';
   };
   function resultsPage(){
-    const status=resultsStatus,good=(status?.recent_runs||[]).find(r=>r.status==='ok'&&Number(r.matched)>0);
+    const status=resultsStatus,good=(status?.recent_runs||[]).find(r=>r.status==='ok'&&Number(r.matched)>0),coverage=status?.coverage;
     const error=(status?.recent_runs||[]).find(r=>r.status==='error');
     const rows=resultsGames.filter(g=>activeConfs().some(c=>programs().some(p=>p.conference_id===c&&(p.id===g.home_id||p.id===g.away_id)))).slice(0,60);
     return heading('', 'Results')
-      +'<div class="standings-summary"><div><span>GAMES STORED</span><strong>'+Number(status?.game_count||0)+'</strong></div><div><span>FINAL GAMES</span><strong>'+Number(status?.final_games||0)+'</strong></div><div><span>NET RANKINGS</span><strong>'+(status?.net_date?escapeHTML(status.net_date):'Pending')+'</strong></div><div><span>DATA STATUS</span><strong>'+(resultsLoading?'Checking':resultsError?'Unavailable':good?'Connected':'Not verified')+'</strong></div></div>'
+      +'<div class="standings-summary"><div><span>GAMES STORED</span><strong>'+Number(status?.game_count||0)+'</strong></div><div><span>FINAL GAMES</span><strong>'+Number(status?.final_games||0)+'</strong></div><div><span>NET COVERAGE</span><strong>'+(status?.net_count?status.net_count+'/365':'Pending')+'</strong></div><div><span>DATES NOT VERIFIED</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div></div>'
       +'<section class="panel">'+panelHeading('Game results','Current season · '+escapeHTML(season()),'<button class="btn small secondary" data-act="refresh-results">Refresh</button>')
       +(resultsError?'<div class="notice">'+escapeHTML(resultsError)+'</div>':'')
       +(rows.length?rows.map(g=>resultGameRow(g)).join(''):empty(resultsLoading?'Loading results':'No imported games','The data collector will populate game results when its source is available.'))+'</section>'
       +'<section class="panel section-gap">'+panelHeading('Import status')
-      +'<div class="profile-facts"><div><span>Automatic updates</span><strong>'+(status?.auto_enabled?'Enabled':'Disabled')+'</strong></div><div><span>Last successful import</span><strong>'+(good?escapeHTML(good.target_date)+' · '+good.matched+' games':'None recorded')+'</strong></div><div><span>Last error</span><strong>'+(error?escapeHTML(error.error_text):'None recorded')+'</strong></div><div><span>Latest NET snapshot</span><strong>'+(status?.net_date?escapeHTML(status.net_date)+' ('+status.net_count+' teams)':'Not available yet')+'</strong></div></div></section>';
+      +'<div class="profile-facts"><div><span>Automatic updates</span><strong>'+(status?.auto_enabled?'Enabled':'Disabled')+'</strong></div><div><span>Verified dates</span><strong>'+(coverage?coverage.checked_dates:'—')+'</strong></div><div><span>Dates missing coverage</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div><div><span>Last successful import</span><strong>'+(good?escapeHTML(good.target_date)+' · '+good.matched+' games':'None recorded')+'</strong></div><div><span>Last error</span><strong>'+(error?escapeHTML(error.error_text):'None recorded')+'</strong></div><div><span>Latest NET snapshot</span><strong>'+(status?.net_date?escapeHTML(status.net_date)+' ('+status.net_count+'/365 programs)':'Not released or imported')+'</strong></div></div></section>';
   }
 
   function morePage(){
@@ -592,21 +592,21 @@
       const runs=resultsStatus?.recent_runs||[];
       const latest=runs.find(x=>x.status==='ok');
       const failure=runs.find(x=>x.status==='error');
-      const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
+      const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'}),coverage=resultsStatus?.coverage;
       const progOptions=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name))
         .map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
       const awardOptions=[['conference_regular_champion','Conference regular-season champion'],['conference_tournament_champion','Conference tournament champion'],['ncaa_seed','NCAA Tournament seed'],['ncaa_wins','NCAA Tournament wins'],['national_champion','National champion'],['kenpom_final_rank','Final KenPom rank']];
       body='<section class="panel setting-panel">'+panelHeading('Results pipeline','ESPN scoreboards · current season')
-        +'<div class="data-kpis"><div><span>GAMES</span><strong>'+Number(resultsStatus?.game_count||0)+'</strong></div><div><span>FINAL</span><strong>'+Number(resultsStatus?.final_games||0)+'</strong></div><div><span>LAST SUCCESS</span><strong>'+(latest?escapeHTML(latest.target_date):'None')+'</strong></div></div>'
+        +'<div class="data-kpis"><div><span>GAMES</span><strong>'+Number(resultsStatus?.game_count||0)+'</strong></div><div><span>VERIFIED DAYS</span><strong>'+(coverage?coverage.checked_dates:'—')+'</strong></div><div><span>MISSING DAYS</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div></div>'
         +(resultsError?'<p class="notice section-gap">'+escapeHTML(resultsError)+'</p>':'')
         +(failure?'<p class="data-error section-gap">Latest error: '+escapeHTML(failure.error_text)+'</p>':'')
         +'<label class="settings-toggle section-gap" for="data-auto"><div><strong>Automatic results collection</strong><span>Every 15 minutes during game hours, plus daily reconciliation.</span></div><input id="data-auto" type="checkbox" '+(resultsStatus?.auto_enabled!==false?'checked':'')+'/></label>'
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-auto-save">Save automation setting</button></div>'
         +'<div class="form-row section-gap"><label for="data-date">Check specific game date</label><input class="field" id="data-date" type="date" value="'+escapeHTML(today)+'"/></div>'
-        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
+        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn secondary" data-act="data-fill-missing">Repair missing dates</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
         +'<p class="hint section-gap">Game scores do not activate fantasy scoring. Import errors are kept in the audit log.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
-        +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A full list of at least 250 teams is required.</p>'
+        +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
         +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
         +'<div class="form-row"><label for="data-net-csv">NET ranking rows (ESPN ID, rank)</label><textarea class="field data-csv" id="data-net-csv" rows="5" placeholder="57,4&#10;150,1"></textarea></div>'
         +'<button class="btn secondary" data-act="data-net-import">Import verified rankings</button></section>'

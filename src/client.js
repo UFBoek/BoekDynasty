@@ -609,7 +609,7 @@
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
         +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
         +'<div class="form-row"><label for="data-net-csv">NET ranking rows (ESPN ID, rank)</label><textarea class="field data-csv" id="data-net-csv" rows="5" placeholder="57,4&#10;150,1"></textarea></div>'
-        +'<button class="btn secondary" data-act="data-net-import">Import verified rankings</button></section>'
+        +'<div class="button-row"><button class="btn secondary" data-act="data-net-import">Import verified rankings</button><button class="btn secondary" data-act="data-net-fetch" '+(today<season().slice(0,4)+'-12-08'?'disabled':'')+'>Fetch NCAA NET</button></div></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Verified season achievements')
         +'<details class="data-award"><summary>Add a confirmed conference or postseason result</summary>'
         +'<div class="form-row section-gap"><label for="data-award-school">Program</label><select class="field" id="data-award-school">'+progOptions+'</select></div>'
@@ -710,13 +710,21 @@
         const failed=(result.days||[]).filter(x=>!x.ok);
         notice('Checked '+(result.days||[]).length+' upcoming dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
         await loadResults();
+      }else if(act==='data-fill-missing'){
+        const result=await api('admin/data/fill-missing',{days:4});
+        const failures=(result.days||[]).filter(x=>!x.ok);
+        notice('Rechecked '+(result.days||[]).length+' missing dates'+(failures.length?' · '+failures.length+' failed':''),failures.length>0);
+        await loadResults();
+      }else if(act==='data-net-fetch'){
+        const outcome=await api('admin/data/net-auto',{});
+        notice('Saved '+outcome.count+' NCAA NET records.');await loadResults();
       }else if(act==='data-health-refresh'){await loadResults();notice('Data status refreshed.');
       }else if(act==='data-auto-save'){
         await api('admin/data/auto',{enabled:!!document.querySelector('#data-auto')?.checked});
         notice('Automatic collection setting saved.');await loadResults();
       }else if(act==='data-net-import'){
         const csv=v('#data-net-csv').trim();
-        if(csv.split(/\r?\n/).filter(Boolean).length<250)throw new Error('Provide a complete NET ranking list (250 or more teams).');
+        if(csv.split(/\r?\n/).filter(Boolean).length<350)throw new Error('Provide a full NET ranking list (at least 350 teams).');
         const outcome=await api('admin/data/net',{date:v('#data-net-date'),csv});
         notice('Saved '+outcome.count+' NET rankings.');await loadResults();
       }else if(act==='data-award-save'){

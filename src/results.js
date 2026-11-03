@@ -418,8 +418,8 @@ const DATA_PIPELINE=(()=>{
   };
   const netKey=value=>String(value||'')
     .normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
-    .replace(/&/g,' and ').replace(/\bst[.]?\b/g,'saint')
-    .replace(/\bstate\b/g,'st').replace(/\buniversity\b/g,'')
+    .replace(/&/g,' and ').replace(/\bsaint\b|\bstate\b|\bst(?=\.|\b)/g,'st')
+    .replace(/\buniversity\b/g,'')
     .replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
   const netNames=(()=>{
     const map=new Map();
@@ -456,7 +456,7 @@ const DATA_PIPELINE=(()=>{
       const detected=new Date(provenance);
       const dated=!Number.isNaN(detected.getTime())?detected.toISOString().slice(0,10):null;
       if(dated&&dated<seasonStart+'-11-01')
-        throw new Error('NCAA NET source was last updated before this basketball season.');
+        throw new Error('NCAA NET source was last updated before this basketball season (previous season).');
       const year=(provenance.match(/20\d{2}/)||[])[0];
       if(year&&Number(year)<Number(seasonStart))
         throw new Error('NCAA NET source is still displaying the previous season.');
@@ -559,6 +559,8 @@ const DATA_PIPELINE=(()=>{
     'north carolina central':'NC Central','south carolina state':'SC State',
     'south carolina upstate':'SC Upstate'
   };
+  const archivedNetNames=new Map(Object.entries(archivedNetAliases)
+    .map(([alias,school])=>[netKey(alias),netNames.get(netKey(school))]));
   const textOnly=markup=>String(markup||'').replace(/<[^>]*>/g,' ')
     .replace(/&amp;/gi,'&').replace(/&nbsp;|&#160;/gi,' ')
     .replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"')
@@ -572,7 +574,7 @@ const DATA_PIPELINE=(()=>{
       if(cells.length<3||!/^\d+-\d+$/.test(cells[1]))continue;
       const rank=Number(cells[2]),school=cells[0];
       if(!Number.isInteger(rank)||rank<1||rank>400)continue;
-      const key=netKey(school),id=netNames.get(key)||netNames.get(netKey(archivedNetAliases[key]||''));
+      const key=netKey(school),id=netNames.get(key)||archivedNetNames.get(key);
       if(!id||!teamIds.has(id)||usedIds.has(id)||usedRanks.has(rank)){
         missing.push({school,rank});continue;
       }

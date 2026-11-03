@@ -22,6 +22,10 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 - Responsive desktop/mobile design and PWA home-screen setup.
 - No fabricated game results or fantasy points. Scoring, live results, and historical season awards come later.
 
+## Interface copy and layout
+
+Treat Boek Dynasty as a functional league application, not a marketing landing page. Keep authentication compact and league pages focused on the status, programs, owners, picks, trades and actions users actually need. Avoid oversized promotional headlines, motivational slogans, filler descriptions and repetitive instructions. Use short, informative labels; add help text only when a rule, error or action needs explanation.
+
 ## Architecture
 
 Production has **zero npm dependencies**: Cloudflare Workers serve the backend and web app, Cloudflare D1 stores league data. The ESPN team directory is an unofficial external source whose membership should be reviewed before drafting.

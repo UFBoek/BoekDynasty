@@ -338,14 +338,16 @@ const DATA_PIPELINE=(()=>{
         earned+=seed<=4?weight('ncaa_seed_1_4'):seed<=8?weight('ncaa_seed_5_8'):
           seed<=12?weight('ncaa_seed_9_12'):weight('ncaa_seed_13_16');
       }
-      const ncaaWins=awardValue('ncaa_wins');
+      const verifiedNCAA=wins.filter(g=>g.tournament_tag==='ncaa');
+      const manualNCAA=honors.some(a=>a.award_type==='ncaa_wins');
+      const ncaaWins=manualNCAA?awardValue('ncaa_wins'):verifiedNCAA.length;
       if(ncaaWins>0)earned+=ncaaWins*weight('ncaa_tournament_win');
       if(awardValue('national_champion'))earned+=weight('national_championship');
       const have=completed.length>0||honors.length>0;
       periods.push({season:label,points:have?Math.round(earned*100)/100:null,
         status:have?'partial':'unavailable',games:completed.length,wins:wins.length,
         losses,regular_wins:regularWins.length,q1,q1a,q2,
-        net_verified:!!(ranks&&ranks.size>=350),
+        net_verified:!!(ranks&&ranks.size>=350),ncaa_wins:ncaaWins,
         awards_verified:honors.length,
         note:have?'Verified components only; not a final fantasy total.':'Historical game and award data not yet imported.'});
     }
@@ -353,10 +355,12 @@ const DATA_PIPELINE=(()=>{
       source:'ESPN game results, dated NET snapshots, commissioner-verified awards',
       complete:false};
   }
-  // Import a small batch of missing historical dates each scheduled run.
-  // Keep existing live scoreboard collection the priority.
-  async function backfillHistory(env,limit=3){
-    const seasonYears=[2025,2024,2023,2022,2021];
+  // Fair, idempotent historical backfill: each pass advances across every
+  // requested year instead of exhausting 2025-26 before 2021-22 begins.
+  // The coverage table is the cursor, so retries and deployments are safe.
+  async function backfillHistory(env,limit=8){
+    if(!Number.isInteger(limit)||limit<1||limit>12)throw new Error('Historical backfill must be 1–12 dates.');
+    const years=[2025,2024,2023,2022,2021];
     const covered=(await q(env,`SELECT season,game_date,source_group FROM cbb_game_coverage
       WHERE season>='2021-22' AND season<='2025-26'`).all()).results||[];
     const checked=new Set(covered.map(row=>row.season+'|'+row.game_date+'|'+row.source_group));
@@ -364,20 +368,24 @@ const DATA_PIPELINE=(()=>{
       FROM cbb_sync_runs WHERE job='historical' AND status='error'
       GROUP BY season,target_date`).all()).results||[];
     const attempts=new Map(recentErrors.map(row=>[row.season+'|'+row.target_date,row]));
-    const targets=[],today=Math.floor(Date.now()/1000);
-    // Newest first, but prioritize unfinished groups for a given date.
-    for(const y of seasonYears){
-      const season=y+'-'+String((y+1)%100).padStart(2,'0');
-      const last=(y+1)+'-04-15';
-      for(let day=y+'-11-01';day<=last;day=shiftDay(day,1)){
-        if(targets.length>=limit)break;
-        const groups=groupsForDay(day);
-        if(groups.every(g=>checked.has(season+'|'+day+'|'+g)))continue;
-        const failure=attempts.get(season+'|'+day);
-        if(failure&&failure.tries>=3&&today-Number(failure.last_try)<86400)continue;
-        targets.push({season,day});
+    const selected=new Set(),targets=[],now=Math.floor(Date.now()/1000);
+    for(let step=0;step<limit;step++){
+      let candidate=null;
+      for(let pass=0;pass<years.length&&!candidate;pass++){
+        const y=years[(step+pass)%years.length];
+        const season=y+'-'+String((y+1)%100).padStart(2,'0');
+        for(let day=y+'-11-01';day<=(y+1)+'-04-15';day=shiftDay(day,1)){
+          const key=season+'|'+day;
+          if(selected.has(key)||groupsForDay(day).every(g=>checked.has(key+'|'+g)))continue;
+          const failure=attempts.get(key);
+          if(failure&&Number(failure.tries)>=3&&now-Number(failure.last_try)<86400)continue;
+          candidate={season,day};
+          selected.add(key);
+          break;
+        }
       }
-      if(targets.length>=limit)break;
+      if(!candidate)break;
+      targets.push(candidate);
     }
     const imported=[];
     for(const target of targets){
@@ -385,6 +393,16 @@ const DATA_PIPELINE=(()=>{
       catch(e){imported.push({ok:false,season:target.season,date:target.day,error:err(e)});}
     }
     return {requested:targets.length,results:imported};
+  }
+  async function historicalProgress(env){
+    const rows=(await q(env,`SELECT season,COUNT(DISTINCT game_date) AS checked_dates,
+      SUM(CASE WHEN source_group=50 THEN event_count ELSE 0 END) AS primary_events
+      FROM cbb_game_coverage WHERE season>='2021-22' AND season<='2025-26'
+      GROUP BY season ORDER BY season`).all()).results||[];
+    return ['2021-22','2022-23','2023-24','2024-25','2025-26'].map(season=>{
+      const row=rows.find(r=>r.season===season)||{};
+      return {season,checked_dates:Number(row.checked_dates||0),primary_events:Number(row.primary_events||0)};
+    });
   }
   const programGames=async(env,season,id)=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND (home_id=? OR away_id=?) ORDER BY game_date DESC,start_utc DESC LIMIT 70",season,id,id).all();
@@ -508,6 +526,78 @@ const DATA_PIPELINE=(()=>{
       throw e;
     }
   }
+  // Warren Nolan keeps final, season-specific NET tables for past seasons.
+  // Do not use current-season NET for historical quadrants.
+  const archivedNetAliases={
+    'saint mary s college':'Saint Mary\'s','north carolina st':'NC State',
+    'north carolina state':'NC State','saint john s':'St John\'s',
+    'uncw':'UNC Wilmington','uncg':'UNC Greensboro','unc asheville':'UNC Asheville',
+    'cal st northridge':'CSU Northridge','cal state northridge':'CSU Northridge',
+    'loyola marymount':'LMU','loyola marymount university':'LMU',
+    'loyola chicago':'Loyola Chicago','university of charleston':'Charleston',
+    'charleston':'Charleston','saint bonaventure':'St Bonaventure',
+    'saint joseph s':'St Joseph\'s','university of texas arlington':'UT Arlington',
+    'uta':'UT Arlington','georgia southern':'GA Southern',
+    'southeastern louisiana':'SE Louisiana','siu edwardsville':'SIUE',
+    'south florida':'South Florida','mount saint mary s':'Mount St Marys',
+    'california state bakersfield':'CSU Bakersfield','cal st bakersfield':'CSU Bakersfield',
+    'tennessee martin':'UT Martin','texas a and m corpus christi':'Texas A&M-CC',
+    'saint peter s':'Saint Peter\'s','miami fl':'Miami',
+    'miami ohio':'Miami OH','saint thomas':'St Thomas','st thomas':'St Thomas',
+    'california baptist':'California Baptist','saint francis pa':'Saint Francis',
+    'massachusetts lowell':'UMass Lowell','umass lowell':'UMass Lowell',
+    'university of texas rio grande valley':'UT Rio Grande Valley',
+    'southern illinois':'S Illinois','western carolina':'W Carolina',
+    'north carolina central':'NC Central','south carolina state':'SC State',
+    'south carolina upstate':'SC Upstate'
+  };
+  const textOnly=markup=>String(markup||'').replace(/<[^>]*>/g,' ')
+    .replace(/&amp;/gi,'&').replace(/&nbsp;|&#160;/gi,' ')
+    .replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"')
+    .replace(/\s+/g,' ').trim();
+  function parseArchivedNet(html,season){
+    if(!/^202[1-5]-\d\d$/.test(season)||!html.includes('NET Rankings'))
+      throw new Error('Historical NET archive season or page is invalid.');
+    const mapped=[],missing=[],usedIds=new Set(),usedRanks=new Set();
+    for(const match of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)){
+      const cells=[...match[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map(m=>textOnly(m[1]));
+      if(cells.length<3||!/^\d+-\d+$/.test(cells[1]))continue;
+      const rank=Number(cells[2]),school=cells[0];
+      if(!Number.isInteger(rank)||rank<1||rank>400)continue;
+      const key=netKey(school),id=netNames.get(key)||netNames.get(netKey(archivedNetAliases[key]||''));
+      if(!id||!teamIds.has(id)||usedIds.has(id)||usedRanks.has(rank)){
+        missing.push({school,rank});continue;
+      }
+      usedIds.add(id);usedRanks.add(rank);
+      mapped.push({program_id:id,net_rank:rank,raw:{SCHOOL:school,RANK:rank,archive:season}});
+    }
+    if(mapped.length<350||!usedRanks.has(1))
+      throw new Error('Historical NET archive mapped only '+mapped.length+' teams for '+season+
+        '; missing: '+missing.slice(0,8).map(x=>x.school).join(', '));
+    return {records:mapped,unmatched:missing};
+  }
+  async function syncArchivedNet(env,season,fetchFn=fetch){
+    if(!/^202[1-5]-\d\d$/.test(season)||Number(season.slice(0,4))>2025)
+      throw new Error('Historical NET is limited to completed 2021–22 through 2025–26 seasons.');
+    const existing=await q(env,"SELECT status,stored_count FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1",season).first();
+    if(existing&&Number(existing.stored_count)>=350)return {season,duplicate:true,count:existing.stored_count};
+    const year=Number(season.slice(0,4))+1;
+    const url='https://www.warrennolan.com/basketball/'+year+'/net';
+    const runId=crypto.randomUUID();
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-net',?,?,'warrennolan-archive','running')",runId,season,year+'-04-15').run();
+    try{
+      const response=await fetchFn(url,{headers:{Accept:'text/html'},signal:AbortSignal.timeout(15000)});
+      if(!response.ok)throw new Error('Historical NET archive HTTP '+response.status);
+      const html=await response.text();
+      const parsed=parseArchivedNet(html,season);
+      const result=await saveNet(env,season,year+'-04-15',parsed.records,'Warren Nolan archived '+year+' final NET (season-end reference date)');
+      await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",parsed.records.length,parsed.records.length,result.duplicate?0:parsed.records.length,runId).run();
+      return {season,...result,unmatched_count:parsed.unmatched.length};
+    }catch(e){
+      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
+      throw e;
+    }
+  }
   const quadrant=(rank,site)=>{
     if(!Number.isInteger(rank)||rank<1)return null;
     const t=site==='home'?[30,75,160]:site==='away'?[75,135,240]:[50,100,200];
@@ -539,8 +629,19 @@ const DATA_PIPELINE=(()=>{
       // Keep the feed active overnight: late games and corrections can post
       // after midnight, and never rely on a "quiet hours" assumption.
       const live=await importDay(env,season,day,{job:'live'});
-      const historical=await backfillHistory(env,3).catch(e=>({error:err(e)}));
-      return {live,historical};
+      return {live};
+    }
+    if(cron==='*/5 * * * *'){
+      return {historical:await backfillHistory(env,8)};
+    }
+    if(cron==='45 9 * * *'){
+      const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];
+      const report=[];
+      for(const historicalSeason of years){
+        try{report.push({ok:true,...await syncArchivedNet(env,historicalSeason)});}
+        catch(e){report.push({season:historicalSeason,ok:false,error:err(e)});}
+      }
+      return {archiveNet:report};
     }
     if(cron==='15 10 * * *'){
       const reconciled=await backfill(env,season,7);
@@ -575,5 +676,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,backfillHistory,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,backfillHistory,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

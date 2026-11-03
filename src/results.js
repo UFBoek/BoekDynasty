@@ -632,13 +632,7 @@ const DATA_PIPELINE=(()=>{
     const settings=Object.fromEntries(pairs.map(x=>[x.key,x.value]));
     if(settings.results_auto_sync==='0')return {skipped:'disabled'};
     const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
-    if(![11,12,1,2,3,4].includes(month)||!dayInSeason(season,day))return {skipped:'offseason'};
-    if(cron==='*/15 * * * *'){
-      // Keep the feed active overnight: late games and corrections can post
-      // after midnight, and never rely on a "quiet hours" assumption.
-      const live=await importDay(env,season,day,{job:'live'});
-      return {live};
-    }
+    // Archival repair is independent of the current basketball calendar.
     if(cron==='*/5 * * * *'){
       return {historical:await backfillHistory(env,8)};
     }
@@ -650,6 +644,13 @@ const DATA_PIPELINE=(()=>{
         catch(e){report.push({season:historicalSeason,ok:false,error:err(e)});}
       }
       return {archiveNet:report};
+    }
+    if(![11,12,1,2,3,4].includes(month)||!dayInSeason(season,day))return {skipped:'offseason'};
+    if(cron==='*/15 * * * *'){
+      // Keep the feed active overnight: late games and corrections can post
+      // after midnight, and never rely on a "quiet hours" assumption.
+      const live=await importDay(env,season,day,{job:'live'});
+      return {live};
     }
     if(cron==='15 10 * * *'){
       const reconciled=await backfill(env,season,7);

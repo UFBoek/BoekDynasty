@@ -15,7 +15,7 @@
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
   };
-  const names={home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',more:'More',waivers:'Waivers',history:'Dynasty history','program-detail':'Program','manager-detail':'Manager'};
+  const names={home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',more:'More',waivers:'Waivers',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -34,6 +34,7 @@
   let programQuery='',programConference='all',programOwnership='all',programShown=24,showAllDraft=false,lastAutoPoll=0;
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',draftRoundView='current';
   let appError='';
+  let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
   const fmt=(v)=>Number(v||0).toLocaleString('en-US');
@@ -164,7 +165,7 @@
     return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(current===id?'active':'')+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>';
   }
   function sidebar(){
-    return '<aside class="sidebar"><div class="brand"><div class="brand-icon">★</div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">NAVIGATION</div><nav class="nav">'+['home','team','programs','draft','trades','league','scoring',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
+    return '<aside class="sidebar"><div class="brand"><div class="brand-icon">★</div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">NAVIGATION</div><nav class="nav">'+['home','team','programs','draft','trades','league','results','scoring',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
@@ -172,11 +173,54 @@
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','team','programs','draft','league','more'];
     const mobileLabels={home:'League',team:'My Team',programs:'Programs',draft:'Draft',league:'Standings',more:'More'};
-    const activeMobile=(['trades','commissioner','waivers','history','scoring'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span></button>').join('')+'</nav>';
+    const activeMobile=(['trades','commissioner','waivers','history','scoring','results'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span></button>').join('')+'</nav>';
   }
+
+  async function loadResults(){
+    if(!me||resultsLoading)return;
+    resultsLoading=true;resultsError='';
+    try{
+      const [status,games]=await Promise.all([api('data/status'),api('data/games')]);
+      resultsStatus=status;resultsGames=games.games||[];resultsSeason=season();
+    }catch(e){resultsError=e.message;}
+    finally{resultsLoading=false;if(current==='results'||(current==='commissioner'&&adminSection==='data'))render();}
+  }
+  async function loadProgramResults(id){
+    if(!me||programResultCache[id]?.season===season())return;
+    try{
+      const data=await api('data/program?id='+encodeURIComponent(id));
+      programResultCache[id]=data;
+    }catch(e){programResultCache[id]={season:season(),error:e.message};}
+    if(current==='program-detail'&&selectedProgramId===id)render();
+  }
+  const gameOutcome=(g,id)=>{
+    if(g.status!=='final')return g.status==='live'?'LIVE':g.status==='scheduled'?'Scheduled':g.status;
+    if(g.home_score===null||g.away_score===null)return 'Final';
+    if(id){const own=g.home_id===id?g.home_score:g.away_score,opp=g.home_id===id?g.away_score:g.home_score;return own>opp?'W':own<opp?'L':'T';}
+    return 'Final';
+  };
+  const resultGameRow=(g,id='')=>{
+    const home=g.home_name||programs().find(p=>p.id===g.home_id)?.name||'Home';
+    const away=g.away_name||programs().find(p=>p.id===g.away_id)?.name||'Away';
+    const score=g.home_score!==null&&g.away_score!==null?escapeHTML(g.away_score)+'–'+escapeHTML(g.home_score):'vs';
+    return '<div class="result-game-row"><div class="grow"><span class="game-day">'+escapeHTML(g.game_date)+'</span><strong>'+escapeHTML(away)+' <span class="game-score">'+score+'</span> '+escapeHTML(home)+'</strong></div><span class="result-game-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameOutcome(g,id))+'</span></div>';
+  };
+  function resultsPage(){
+    const status=resultsStatus,good=(status?.recent_runs||[]).find(r=>r.status==='ok');
+    const error=(status?.recent_runs||[]).find(r=>r.status==='error');
+    const rows=resultsGames.filter(g=>activeConfs().some(c=>programs().some(p=>p.conference_id===c&&(p.id===g.home_id||p.id===g.away_id)))).slice(0,60);
+    return heading('', 'Results')
+      +'<div class="standings-summary"><div><span>GAMES STORED</span><strong>'+Number(status?.game_count||0)+'</strong></div><div><span>FINAL GAMES</span><strong>'+Number(status?.final_games||0)+'</strong></div><div><span>NET RANKINGS</span><strong>'+(status?.net_date?escapeHTML(status.net_date):'Pending')+'</strong></div><div><span>DATA STATUS</span><strong>'+(resultsLoading?'Checking':resultsError?'Unavailable':good?'Connected':'Not verified')+'</strong></div></div>'
+      +'<section class="panel">'+panelHeading('Game results','Current season · '+escapeHTML(season()),'<button class="btn small secondary" data-act="refresh-results">Refresh</button>')
+      +(resultsError?'<div class="notice">'+escapeHTML(resultsError)+'</div>':'')
+      +(rows.length?rows.map(g=>resultGameRow(g)).join(''):empty(resultsLoading?'Loading results':'No imported games','The data collector will populate game results when its source is available.'))+'</section>'
+      +'<section class="panel section-gap">'+panelHeading('Import status')
+      +'<div class="profile-facts"><div><span>Automatic updates</span><strong>'+(status?.auto_enabled?'Enabled':'Disabled')+'</strong></div><div><span>Last successful import</span><strong>'+(good?escapeHTML(good.target_date)+' · '+good.matched+' games':'None recorded')+'</strong></div><div><span>Last error</span><strong>'+(error?escapeHTML(error.error_text):'None recorded')+'</strong></div><div><span>Latest NET snapshot</span><strong>'+(status?.net_date?escapeHTML(status.net_date)+' ('+status.net_count+' teams)':'Not available yet')+'</strong></div></div></section>';
+  }
+
   function morePage(){
-    const links=[['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
+    const links=[['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
     if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
     return heading('', 'More')
       +'<section class="panel more-menu">'+links.map(([id,title,description])=>
@@ -582,10 +626,10 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
-    if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='open-program'){
       programBackPage=current==='program-detail'?programBackPage:current;
-      selectedProgramId=id;current='program-detail';render();window.scrollTo({top:0});return;
+      selectedProgramId=id;current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
       managerBackPage=current==='manager-detail'?managerBackPage:current;
@@ -614,6 +658,7 @@
     if(busy)return;
     busy=true;
     try{
+      if(act==='refresh-results'){await loadResults();return;}
       if(act==='save-clock'){
         await api('admin/clock',{seconds:Number(v('#clock-duration'))});
         notice('Draft clock saved.');

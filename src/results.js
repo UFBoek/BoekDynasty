@@ -197,6 +197,48 @@ const DATA_PIPELINE=(()=>{
     const rows=await q(env,"SELECT program_id,net_rank,snapshot_date FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT snapshot_date FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1)",season,season).all();
     return rows.results||[];
   };
+  // All games on a requested date, so the Results browser never truncates a busy slate.
+  const gamesByDate=async(env,season,date)=>{
+    if(!dayInSeason(season,date))throw new Error('Choose a valid date during this basketball season.');
+    const found=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND game_date=? ORDER BY CASE status WHEN 'live' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'final' THEN 2 ELSE 3 END,start_utc ASC LIMIT 1000",season,date).all();
+    return found.results||[];
+  };
+  const apPoll=async(env,season)=>{
+    const found=await q(env,"SELECT snapshot_date,program_id,ap_rank FROM cbb_ap_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_ap_rankings WHERE season=?) ORDER BY ap_rank",season,season).all();
+    return found.results||[];
+  };
+  async function syncAPPoll(env,season,fetchFn=fetch){
+    const day=localDay(),year=Number(season.slice(0,4))+1;
+    const uri='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/rankings?groups=50&season='+year;
+    const runId=crypto.randomUUID();
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'ap-poll',?,?,'espn-site-v2','running')",runId,season,day).run();
+    try{
+      const res=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+      if(!res.ok)throw new Error('ESPN AP poll HTTP '+res.status);
+      const payload=await res.json();
+      const candidates=payload.rankings||[];
+      const poll=candidates.find(p=>/\bAP\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
+      if(!poll||!Array.isArray(poll.ranks))throw new Error('Verified AP Top 25 not found in ESPN rankings feed.');
+      const declaredYear=Number(payload.season?.year||payload.season?.endYear||0);
+      if(declaredYear&&declaredYear!==year)throw new Error('ESPN AP rankings came from an unexpected season.');
+      const ranks=poll.ranks.map(row=>({id:String(row.team?.id||''),rank:Number(row.current)}))
+        .filter(row=>teamIds.has(row.id)&&Number.isInteger(row.rank)&&row.rank>=1&&row.rank<=25);
+      if(ranks.length!==25||new Set(ranks.map(x=>x.rank)).size!==25||new Set(ranks.map(x=>x.id)).size!==25)
+        throw new Error('AP poll is incomplete or does not match the verified school directory.');
+      const previous=await q(env,"SELECT COUNT(*) AS n FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?",season,day).first();
+      if(previous?.n===25){
+        await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=0,finished_at=unixepoch() WHERE id=?",runId).run();
+        return {date:day,count:25,duplicate:true};
+      }
+      const ops=[q(env,'DELETE FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?',season,day),...ranks.map(x=>q(env,'INSERT INTO cbb_ap_rankings(season,snapshot_date,program_id,ap_rank) VALUES(?,?,?,?)',season,day,x.id,x.rank))];
+      await env.DB.batch(ops);
+      await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=25,finished_at=unixepoch() WHERE id=?",runId).run();
+      return {date:day,count:25};
+    }catch(e){
+      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
+      throw e;
+    }
+  }
   const recentGames=async(env,season,limit=60)=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? ORDER BY game_date DESC,start_utc DESC LIMIT ?",season,Math.min(100,Math.max(1,limit))).all();
     return rows.results||[];
@@ -359,10 +401,12 @@ const DATA_PIPELINE=(()=>{
       const reconciled=await backfill(env,season,7);
       const future=await upcoming(env,season,3);
       const repaired=await fillMissing(env,season,4);
+      let ap;
+      try{ap=await syncAPPoll(env,season);}catch(e){ap={error:err(e)};}
       // NCAA NET is not issued until December, and the NCAA public proxy may
       // legitimately show last season's rankings before the new release.
       if(day<season.slice(0,4)+'-12-08')
-        return {games:reconciled,upcoming:future,repaired,net:{skipped:'NET has not started'}};
+        return {games:reconciled,upcoming:future,repaired,ap,net:{skipped:'NET has not started'}};
       const id=crypto.randomUUID(),source=env.NET_FEED_URL?'configured-net-feed':'NCAA NET official rankings proxy';
       await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,?,'running')",id,season,day,source).run();
       try{
@@ -374,17 +418,17 @@ const DATA_PIPELINE=(()=>{
           if(!Array.isArray(payload.records))throw new Error('NET feed must return {date,records:[{program_id,net_rank}]}');
           feed={date:String(payload.date||day),records:payload.records,source:'configured-verified-net-feed'};
         }else feed=await fetchOfficialNet(day,season);
-        if(feed.skipped)return {games:reconciled,upcoming:future,repaired,net:{skipped:feed.skipped}};
+        if(feed.skipped)return {games:reconciled,upcoming:future,repaired,ap,net:{skipped:feed.skipped}};
         const result=await saveNet(env,season,feed.date,feed.records,feed.source);
         await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",result.count,result.count,result.duplicate?0:result.count,id).run();
-        return {games:reconciled,upcoming:future,repaired,net:result};
+        return {games:reconciled,upcoming:future,repaired,ap,net:result};
       }catch(e){
         await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),id).run().catch(()=>{});
-        return {games:reconciled,upcoming:future,repaired,net:{error:err(e)}};
+        return {games:reconciled,upcoming:future,repaired,ap,net:{error:err(e)}};
       }
     }
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

@@ -2694,3 +2694,406 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .auth-card .btn{min-height:43px}
 .loading{background:linear-gradient(145deg,#f5f8fd,#eaf1fb)}
 .spinner{border-color:#d8e4f4;border-top-color:#ff862a}
+
+
+/* 2026-11-03 | Courtside draft, scoreboard and responsive refinement */
+/* Draft board: usable as a real pick tracker even with 6–8 managers. */
+.draft-command{
+  min-height:122px;border-radius:15px;padding:21px 24px;gap:20px;
+  background:linear-gradient(112deg,#071b43,#19407f 72%,#285da7);
+  box-shadow:0 13px 30px rgba(10,38,93,.16);
+}
+.draft-command h2{font-size:21px;line-height:1.3}
+.draft-state-tag{font-size:9px;letter-spacing:.12em}
+.draft-command p{font-size:11px;color:#c6d7ee}
+.draft-command-progress{height:5px;max-width:420px;margin-top:13px}
+.draft-command-progress span{background:linear-gradient(90deg,#ff882b,#ffd29f)}
+.draft-clock-box{padding:6px 0}
+.draft-clock-box span{font-size:9.5px;letter-spacing:.11em;color:#c7d7f1}
+.draft-clock-box strong{font-family:var(--bd-font-display);letter-spacing:-.07em;font-size:30px}
+.draft-clock-box small{color:#c9d7e9}
+.draft-command-cta{font-weight:800;min-width:125px}
+.draft-command-cta span{transition:transform .19s ease}
+.draft-command-cta:hover span{transform:translateX(3px)}
+.draft-readiness{border:1px solid #e0e9f3;background:#fff;box-shadow:var(--arena-shadow);border-radius:11px}
+.draft-readiness>strong{color:#365573}
+.draft-board-panel{padding:0;border:1px solid #d9e4f2;border-radius:14px;box-shadow:var(--arena-shadow);overflow:hidden}
+.draft-board-toolbar{padding:17px 20px 15px;gap:13px;background:linear-gradient(180deg,#fff,#fafcff);border-bottom:1px solid #e0e9f4}
+.draft-board-toolbar h2{font-family:var(--bd-font-display);font-size:16px;letter-spacing:-.035em;color:#1b3965}
+.draft-board-toolbar p{color:#67809b;font-size:10.5px;margin-top:4px}
+.draft-board-switch{padding:4px;border-radius:10px;background:#edf2fa;border:1px solid #dde7f3}
+.draft-board-switch button{font-size:10.5px;font-weight:760;min-height:33px}
+.draft-board-switch button.active{background:#fff;color:#1c56a0;box-shadow:0 2px 6px rgba(16,59,122,.09)}
+.draft-board-key{gap:13px;background:#fff;padding:9px 20px}
+.draft-board-key>span{color:#617995}
+.draft-board-key small{color:#8397ac}
+.draft-board-key i.selected{background:#d9eafc;border-color:#9ebfe6}
+.draft-board-key i.on-clock{background:#ffe4cf;border-color:#f8b78d}
+.draft-board-key i.mine{background:#dae8ff;border-color:#9ac0eb}
+.draft-board-scroll{max-height:min(72vh,820px);background:#e7eef8;scrollbar-color:#a3b9d4 #edf3fb}
+.draft-board-grid{gap:1px;background:#dce6f2;grid-auto-rows:minmax(94px,auto)}
+.draft-board-corner{
+  background:#0d2859;color:#d9e9fc;font-size:9px;letter-spacing:.1em;
+  box-shadow:inset 0 3px 0 #ff8026;border-right:1px solid rgba(255,255,255,.08);
+}
+.draft-board-manager{min-height:63px;padding:9px 10px;background:#f2f6fc;box-shadow:inset 0 3px 0 #dce7f5}
+.draft-board-manager.mine{background:#e9f3ff;box-shadow:inset 0 3px 0 #ff842c}
+.draft-board-manager .avatar{border:1px solid #dae6f4;background:#fff;color:#265b97}
+.draft-board-manager.mine .avatar{background:#1c5098;border-color:#1c5098;color:#fff}
+.draft-board-manager strong{font-size:10.5px;color:#21446b}
+.draft-board-manager small{font-size:8.5px;letter-spacing:.04em;color:#778fa8}
+.draft-board-manager.vacant{background:#f7f9fd}
+.draft-board-round{background:#f0f5fb;font-size:9px;color:#5f7995;padding:0 9px}
+.draft-board-round span{color:#8aa3bd}
+.draft-board-cell{min-height:94px;padding:10px 9px;background:#fff}
+.draft-board-cell:hover{background:#f9fbff}
+.draft-board-cell.my-cell{background:#f4f9ff;box-shadow:inset 3px 0 0 #c8dcf4}
+.draft-board-cell.selected.my-cell{background:#eff6ff}
+.draft-board-cell.on-clock{background:#fff0e1;border-color:#efad7b;box-shadow:inset 0 0 0 2px #eda366}
+.draft-cell-meta{margin-bottom:7px}
+.draft-cell-meta>span:first-child{font-size:9px;color:#798faa}
+.draft-cell-done{font-size:8px;color:#9eafc2}
+.draft-cell-program{min-height:42px;gap:7px;align-items:center}
+.draft-cell-program .program-logo{width:32px;height:32px;flex:0 0 32px;background:#fff;border-radius:8px;border:1px solid #e6edf5;padding:3px}
+.draft-cell-team{display:block!important;min-width:0;flex:1;overflow:hidden;line-height:1.28}
+.draft-cell-program .draft-cell-team strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:760;font-size:10.5px;line-height:1.28;white-space:normal;color:#1f416b;overflow-wrap:anywhere}
+.draft-cell-program .draft-cell-team small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8.5px;color:#8094ad;margin-top:4px}
+.draft-cell-program:hover .draft-cell-team strong{color:#1b5aa5}
+.draft-cell-open strong{color:#a04e1c;font-size:10px}
+.draft-cell-open small{color:#a87855;font-size:9px}
+.draft-cell-placeholder{color:#a0b0c2;font-size:10px}
+.draft-recap-grid{gap:13px}
+.draft-recap-grid>.panel{padding:17px 19px}
+.draft-recap-item,.draft-next-item{padding:10px 2px;min-height:56px}
+.draft-recap-position{font-variant-numeric:tabular-nums;color:#7e95ac}
+.draft-recap-item strong,.draft-next-item strong{color:#214367;font-size:11.5px}
+.draft-recap-item small,.draft-next-item small{font-size:10px;color:#7089a1}
+.draft-next-item .avatar{background:#edf4ff;color:#2a5e99}
+/* Scoreboards: ESPN-like cards with visible scores and contextual league ownership. */
+.scoreboard-shell{min-width:0}
+.scoreboard-utility{padding:11px 15px;border-radius:11px;background:linear-gradient(90deg,#fff,#f6faff);border:1px solid #dfe8f4}
+.scoreboard-utility>div:first-child{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.scoreboard-utility strong{color:#214773;font-family:var(--bd-font-display);font-size:12px}
+.scoreboard-utility-actions{display:flex;align-items:center;gap:9px}
+.scoreboard-calendar{padding:7px;border:1px solid #dfe8f3;border-radius:12px;box-shadow:var(--arena-shadow);background:#fff}
+.scoreboard-days{gap:5px}
+.scoreboard-calendar-arrow{background:#f6f9fd;border:1px solid #e0e8f3;border-radius:8px;color:#275b96}
+.scoreboard-calendar-arrow:hover{background:#eaf2ff;border-color:#bed4ed}
+.scoreboard-day{min-width:0;border:1px solid transparent;border-radius:9px}
+.scoreboard-day>span{font-size:9px;letter-spacing:.085em;color:#7c91a8}
+.scoreboard-day strong{font-size:12px;color:#335678}
+.scoreboard-day.active{background:#edf5ff;border-color:#b8d1ed;box-shadow:inset 0 -3px 0 #fb862b,0 2px 8px rgba(29,74,133,.06)}
+.scoreboard-day.active>span{color:#215b9f}
+.scoreboard-day.active strong{color:#194984}
+.scoreboard-filterbar{gap:9px;border:1px solid #dfe7f2;border-radius:12px;background:#fff;padding:11px 12px}
+.scoreboard-scopes{background:#eef3f9;border-radius:10px}
+.scoreboard-scopes button{font-weight:750;min-height:35px}
+.scoreboard-scopes button.active{color:#1c559b;border-radius:8px}
+.scoreboard-filter-tools .field{border-radius:8px}
+.scoreboard-today{font-weight:800;border-radius:8px;white-space:nowrap}
+.scoreboard-day-heading{margin:19px 2px 11px}
+.scoreboard-day-heading h2{font-size:20px;color:#1c3960}
+.scoreboard-day-heading>div>span{font-size:11px;color:#6b819b}
+.scoreboard-conference-groups{gap:20px}
+.scoreboard-group-heading{margin-bottom:9px}
+.scoreboard-group-heading strong{font-size:13.5px;color:#1a3b65}
+.scoreboard-group-heading span{color:#8599ae}
+.scoreboard-match-grid{gap:10px}
+.scoreboard-match{border:1px solid #dde7f3;border-radius:12px;min-height:159px;box-shadow:var(--arena-shadow);overflow:hidden;background:#fff}
+.scoreboard-match:hover{box-shadow:var(--arena-shadow-hover);border-color:#a8c5e5;transform:translateY(-2px)}
+.scoreboard-match.is-league-game{border-color:#c5d9f0}
+.scoreboard-match.is-league-game:not(.is-live){box-shadow:inset 3px 0 0 #a8c5eb,var(--arena-shadow)}
+.scoreboard-match.is-my-game:not(.is-live){box-shadow:inset 3px 0 0 #fb8a34,var(--arena-shadow)}
+.scoreboard-match.is-live{border-color:#87d4ab;box-shadow:inset 3px 0 0 #26aa74,0 4px 17px rgba(21,116,75,.07)}
+.scoreboard-match-head{padding:10px 13px 7px;min-height:35px;border-bottom:1px solid #f0f3f8;background:#fdfefe}
+.scoreboard-match-status{font-size:9.5px;color:#607894;letter-spacing:.035em}
+.scoreboard-match-status.live{color:#168354;font-weight:850}
+.scoreboard-match-tags{display:flex;align-items:center;gap:7px;min-width:0;justify-content:flex-end}
+.scoreboard-roster-tag{font-size:8.5px;line-height:1;white-space:nowrap;padding:5px 6px;background:#eaf3ff;border:1px solid #d0e2f6;color:#235a9b;border-radius:5px;font-weight:850;letter-spacing:.025em}
+.scoreboard-roster-tag.is-personal{color:#a4521d;background:#fff1e5;border-color:#f2d2b6}
+.scoreboard-match-venue{font-size:8px;color:#93a2b5;white-space:nowrap}
+.scoreboard-match-teams{padding:8px 13px 9px;gap:3px}
+.scoreboard-team-line{gap:8px;min-height:38px}
+.scoreboard-team-line .program-logo{width:29px;height:29px;flex:0 0 29px;object-fit:contain}
+.scoreboard-team-name{font-size:11.8px;font-weight:620;color:#617793}
+.scoreboard-team-line.winner .scoreboard-team-name{color:#16365f}
+.scoreboard-team-score{font-size:18px;color:#7a91aa;line-height:1.35;letter-spacing:-.035em}
+.scoreboard-team-line.winner .scoreboard-team-score{font-size:20px;color:#173661}
+.scoreboard-game-link{background:#fafcff;padding:8px 13px;font-size:10.5px;min-height:32px;border-top-color:#edf1f7}
+.scoreboard-game-link:hover{background:#f0f6ff}
+.scoreboard-empty{border-color:#ccdcee;background:linear-gradient(135deg,#fff,#f9fbfe);min-height:125px}
+.scoreboard-source{border-color:#dfe8f2;border-radius:10px}
+.scoreboard-source summary{color:#526c8d}
+/* Directory and filters: no wasted space, strong logos and accessible selection. */
+.directory-welcome{min-height:64px;padding:15px 20px}
+.directory-welcome strong{font-size:20px}
+.directory-welcome small{color:#cbdcf3}
+.directory-welcome-hint{color:#c9d9ee}
+.directory-filters{padding:12px 14px}
+.directory-search-row{gap:9px}
+.directory-search .field,.directory-conference-select,.directory-sort{min-height:42px}
+.directory-search .field{font-size:12px;background:#fbfdff}
+.directory-conference-strip{gap:6px}
+.directory-conference-strip button{font-size:10.5px;padding:7px 11px;border-radius:100px}
+.directory-conference-strip button.active{background:#e7f1ff;color:#1a549a;border-color:#b5d2f1}
+.directory-status-tabs button{font-size:10.5px;white-space:nowrap}
+.directory-current-count{color:#6b83a0}
+.directory-letter-strip{gap:1px}
+.directory-letter-strip button{min-height:30px;border-radius:6px}
+.directory-letter-strip button.active{background:#e9f1ff;color:#1c5098;box-shadow:inset 0 -2px 0 #ff8629}
+.program-directory-grid{gap:10px}
+.program-directory-card{min-height:75px;padding:10px 12px;border-color:#dfe8f3;border-radius:12px}
+.program-directory-card:hover{border-color:#a1bfe4;box-shadow:var(--arena-shadow-hover)}
+.program-directory-card .program-card-main{gap:10px}
+.program-directory-card .program-card-main .program-logo{width:39px;height:39px;flex:0 0 39px;background:#fff;padding:4px}
+.program-directory-card .program-card-main strong{font-size:12px;line-height:1.28;letter-spacing:-.01em}
+.program-directory-card .program-card-main small{font-size:10px}
+.program-dir-owner{max-width:105px;color:#466385;background:#f0f4fa;border-color:#dfe8f4}
+.program-dir-open{color:#28724c;background:#edfaf3;border-color:#d4ebdd}
+.program-dir-pick{min-height:29px}
+/* Mobile layout: prioritize usable labels, readable rows and consistent safe areas. */
+@media(max-width:1150px){
+  .content{padding:24px 24px 95px}
+  .topbar{padding:0 24px}
+  .sidebar .nav button{font-size:11.75px}
+  .sidebar .nav-label-secondary{margin-top:17px}
+  .standings-table th,.standings-table td{padding-left:13px;padding-right:13px}
+  .league-team-tile{padding:12px}
+}
+@media(max-width:1000px){
+  .overview-status-hub{padding:16px 18px}
+  .overview-hub-actions{gap:6px}
+  .overview-hub-actions .btn{padding:8px 10px}
+  .scoreboard-match-head{padding-right:11px;padding-left:11px}
+  .scoreboard-match-teams{padding-left:11px;padding-right:11px}
+  .scoreboard-match-venue{display:none}
+  .draft-board-toolbar{padding:15px}
+  .draft-board-grid{grid-auto-rows:minmax(89px,auto)}
+}
+@media(max-width:850px){
+  .shell{display:block}
+  .main:before{height:150px}
+  .content{max-width:850px;padding:22px 18px calc(106px + env(safe-area-inset-bottom))}
+  .topbar{height:63px;padding:0 18px}
+  .bottom{
+    display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;
+    padding:7px 6px max(8px,env(safe-area-inset-bottom));
+    border-top:1px solid #dbe6f3;background:rgba(255,255,255,.98);
+    box-shadow:0 -7px 20px rgba(18,49,96,.09);
+  }
+  .bottom button{min-width:0;min-height:52px;gap:4px;padding:5px 2px;border-radius:10px}
+  .bottom button span{font-size:10px!important;line-height:1.2;font-weight:750;letter-spacing:-.016em;white-space:nowrap}
+  .bottom button svg{width:20px;height:20px}
+  .bottom button.active{background:#e9f3ff;color:#1c529a}
+  .bottom button.active span{font-weight:850}
+  .bottom button.active:before{top:-7px;left:30%;right:30%}
+  .bottom button.has-live .nav-live-indicator{right:22%;top:3px}
+  .overview-status-hub{min-height:96px}
+  .overview-metrics{gap:10px}
+  .program-directory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .draft-board-scroll{max-height:68vh}
+  .draft-recap-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .scoreboard-match-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .scoreboard-filterbar{flex-wrap:wrap}
+  .scoreboard-filter-tools{flex:1;justify-content:flex-end}
+  .scoreboard-utility{flex-wrap:wrap}
+  .scoring-grid{gap:11px}
+}
+@media(max-width:700px){
+  .scoreboard-match-grid{grid-template-columns:1fr}
+  .draft-recap-grid{grid-template-columns:1fr}
+  .overview-status-hub{gap:10px;padding:15px}
+  .overview-status-hub .overview-status-copy strong{font-size:17px}
+  .overview-status-hub .overview-status-copy small{font-size:10px}
+  .overview-hub-actions .btn{min-height:33px;font-size:10px}
+  .league-teams-grid{grid-template-columns:1fr}
+  .league-team-tile{min-height:87px}
+  .overview-activity-list{grid-template-columns:1fr}
+  .scoreboard-day strong{font-size:11px}
+  .scoreboard-calendar{padding:5px}
+  .scoreboard-scopes{width:100%;justify-content:stretch}
+  .scoreboard-scopes button{flex:1}
+  .scoreboard-filter-tools{width:100%;justify-content:space-between}
+  .program-profile-bottom{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  body{background-image:none}
+  .content{padding:19px 13px calc(111px + env(safe-area-inset-bottom))}
+  .topbar{padding:0 13px;height:59px}
+  .topbar-logo{width:27px;height:27px;flex-basis:27px}
+  .topbar-heading{gap:7px}
+  .topbar .title{font-size:11.5px}
+  .topbar .sep{margin:0 3px}
+  .top-right{gap:7px}
+  .top-right .chip{font-size:9px;padding:6px 7px}
+  .topbar .avatar-small{width:29px;height:29px;font-size:10px}
+  .page-heading{margin-bottom:15px}
+  .page-heading .headline{font-size:26px}
+  .page-heading .intro-text{font-size:11.5px}
+  .panel{padding:15px}
+  .panel-head{margin-bottom:12px}
+  .panel-head h2{font-size:14.5px}
+  .panel-head p{font-size:10.5px}
+  .overview-status-hub{flex-wrap:wrap;min-height:0;padding:14px 15px;gap:10px}
+  .overview-status-hub .overview-status-dot{margin:0 2px}
+  .overview-status-hub .overview-status-copy{flex:1 1 calc(100% - 25px)}
+  .overview-status-hub .overview-status-copy strong{font-size:17.5px}
+  .overview-hub-actions{flex:1 1 100%;justify-content:flex-start;margin:4px 0 0 21px}
+  .overview-hub-actions .btn{flex:none}
+  .overview-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:11px}
+  .overview-metric{padding:11px 10px;min-height:76px}
+  .overview-metric>span{font-size:8px}
+  .overview-metric>strong{font-size:19px;letter-spacing:-.055em}
+  .overview-metric small{font-size:9px}
+  .overview-teams-panel,.overview-activity-panel{padding:15px}
+  .league-team-tile{padding:12px;gap:7px}
+  .league-logo-holder{width:29px;height:29px}
+  .league-logo-holder .program-logo{width:26px;height:26px}
+  /* Each standing becomes a compact scorecard: no forced horizontal table scroll. */
+  .standings-panel{padding:13px}
+  .standings-table-wrap{border:0;border-radius:0;overflow:visible;background:transparent}
+  .standings-table{min-width:0;width:100%;display:block}
+  .standings-table thead{display:none}
+  .standings-table tbody{display:grid;gap:9px}
+  .standings-table tbody tr{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(62px,auto);
+    grid-template-areas:"manager points" "schools points";column-gap:9px;row-gap:7px;
+    border:1px solid #e0e9f3;border-radius:11px;padding:12px;background:#fff;
+  }
+  .standings-table tbody tr.is-mine{border-color:#abc8e8;background:#f4f9ff}
+  .standings-table td,.standings-table tr:last-child td{border:0!important;padding:0!important}
+  .standings-table td:first-child{grid-area:manager;min-width:0}
+  .standings-table td:nth-child(2){grid-area:schools;min-width:0;padding-left:42px!important}
+  .standings-table td:last-child{
+    grid-area:points;align-self:stretch;display:flex;flex-direction:column;align-items:flex-end;
+    justify-content:center;gap:4px;padding-left:12px!important;border-left:1px solid #e4ebf3!important;
+  }
+  .standings-table td:last-child:before{content:"POINTS";font-size:8.5px;letter-spacing:.08em;color:#7990a7;font-weight:850}
+  .standings-table .standings-manager{min-width:0}
+  .standings-table .standings-manager strong{font-size:12px}
+  .standings-table .standings-manager small{font-size:10px}
+  .standings-table .standings-manager .avatar{width:33px;height:33px}
+  .standings-mini-roster{gap:3px}
+  .standings-mini-roster>span:not(.standings-roster-more){width:23px;height:23px;flex:0 0 23px;border-radius:6px}
+  .standings-mini-roster .program-logo{width:21px;height:21px}
+  .standings-roster-more{min-width:24px;height:24px;font-size:9px}
+  .standings-table .pending-score{font-size:19px}
+  .standings-notice{font-size:10.5px;margin-bottom:12px}
+  /* Score date/filter controls remain touchable even on small screens. */
+  .scoreboard-day-heading{margin-top:15px}
+  .scoreboard-match-grid{gap:8px}
+  .scoreboard-match{min-height:148px}
+  .scoreboard-match-head{min-height:33px}
+  .scoreboard-match-venue{display:inline}
+  .scoreboard-match-tags{gap:5px}
+  .scoreboard-roster-tag{font-size:8px;padding:4px 5px}
+  .scoreboard-team-score{font-size:18px}
+  .scoreboard-team-line.winner .scoreboard-team-score{font-size:20px}
+  .scoreboard-utility{gap:9px}
+  .scoreboard-calendar-arrow{flex:0 0 27px;min-height:49px}
+  .scoreboard-days{gap:3px}
+  .scoreboard-day{min-width:60px;flex:0 0 60px}
+  .scoreboard-scopes button{min-height:35px;font-size:10px}
+  .scoreboard-filter-tools{gap:7px}
+  .scoreboard-filter-tools select{min-width:120px}
+  .scoreboard-filter-tools .scoreboard-date-input{width:128px}
+  .directory-welcome{min-height:60px;padding:12px 14px}
+  .directory-welcome strong{font-size:18px}
+  .directory-welcome small{font-size:10px}
+  .directory-filters{padding:10px}
+  .directory-search-row{gap:7px;flex-wrap:wrap}
+  .directory-search{flex:1 1 100%}
+  .directory-conference-select{flex:1}
+  .directory-sort{flex:0 0 118px}
+  .directory-conference-strip{gap:4px}
+  .directory-status-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .directory-status-tabs button{font-size:9.5px;padding:8px 2px;white-space:normal}
+  .directory-letter-strip button{flex:0 0 28px;min-width:28px}
+  .program-directory-grid{grid-template-columns:1fr;gap:8px}
+  .program-directory-card{min-height:68px;padding:9px 11px;flex-direction:row;align-items:center;gap:8px}
+  .program-directory-card .program-card-main{min-height:44px;min-width:0}
+  .program-directory-card .program-card-main .program-logo{width:40px;height:40px;flex:0 0 40px}
+  .program-directory-card .program-card-main strong{font-size:12.5px}
+  .program-directory-card>.program-dir-status{align-self:center;margin:0}
+  .program-dir-owner{max-width:90px;font-size:9px;padding:5px}
+  .program-dir-open{font-size:9px}
+  .program-dir-pick{min-height:29px;font-size:10px}
+  .program-profile-header{gap:10px}
+  .program-profile-header h1{font-size:19px}
+  .program-profile-summary{gap:8px}
+  .program-profile-summary>div{min-height:75px;padding:11px}
+  .program-profile-summary strong{font-size:17px}
+  .program-history-panel{padding:15px 12px}
+  .program-season-card{min-height:90px;flex:0 0 108px}
+  .program-season-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .team-hero-fresh{padding:13px}
+  .team-stats-refined{gap:7px}
+  .team-stats-refined .team-stat{padding:12px 10px;min-height:83px}
+  .team-stats-refined .team-stat strong{font-size:19px}
+  .team-hero-schools{justify-content:flex-start;max-width:none}
+  .team-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .team-actions .btn{font-size:10.5px;padding:10px 7px;min-height:36px}
+  .team-actions .btn:last-child{grid-column:1/-1}
+  .team-program-grid{grid-template-columns:1fr}
+  .team-aside>.panel{margin-bottom:11px}
+  .trade-columns{grid-template-columns:1fr}
+  .trade-offer{padding:12px}
+  .trade-exchange{gap:5px;grid-template-columns:minmax(0,1fr) 19px minmax(0,1fr)}
+  .trade-exchange-side{padding:9px;gap:5px}
+  .trade-exchange-side strong{font-size:10.5px}
+  .trade-exchange-side>span{font-size:8px}
+  .trade-exchange-arrow{width:19px;height:19px;font-size:13px}
+  .scoring-grid{grid-template-columns:1fr;gap:9px}
+  .scoring-lead{padding:16px}
+  .scoring-lead h2{font-size:19px}
+  .setting-panel{padding:15px}
+  .commissioner-menu button{min-height:42px}
+  .draft-command{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:15px;min-height:0}
+  .draft-command h2{font-size:17px}
+  .draft-command-cta{grid-column:1/-1;width:100%}
+  .draft-board-toolbar{padding:13px}
+  .draft-board-key{padding:9px 13px}
+  .draft-board-scroll{max-height:62vh}
+  .draft-recap-grid>.panel{padding:14px}
+  .more-menu-item{min-height:59px}
+  .auth-card{padding:25px 20px}
+  .bottom button{min-height:51px}
+  .bottom button span{font-size:9.5px!important}
+}
+@media(max-width:400px){
+  .content{padding-left:11px;padding-right:11px}
+  .topbar{padding:0 11px}
+  .topbar .title{font-size:10.5px}
+  .top-right .chip{font-size:8.5px}
+  .overview-metric>strong{font-size:18px}
+  .overview-metric>span{font-size:7.7px}
+  .scoreboard-match-venue{display:none}
+  .scoreboard-filter-tools .scoreboard-date-input{width:116px}
+  .scoreboard-filter-tools select{min-width:110px}
+  .bottom{padding-left:3px;padding-right:3px;gap:0}
+  .bottom button{padding:4px 1px;min-height:48px}
+  .bottom button svg{width:19px;height:19px}
+  .bottom button span{font-size:8.9px!important}
+  .bottom button.has-live .nav-live-indicator{right:20%}
+}
+@media(max-width:360px){
+  .topbar-logo{width:24px;height:24px;flex-basis:24px}
+  .topbar .title{font-size:10px}
+  .top-right .chip{display:none}
+  .overview-hub-actions{gap:6px}
+  .overview-hub-actions .btn{padding:7px 8px}
+  .scoreboard-day{min-width:58px;flex-basis:58px}
+  .scoreboard-filter-tools .scoreboard-date-input{width:108px}
+  .standings-table tbody tr{padding:10px}
+  .standings-mini-roster>span:not(.standings-roster-more):nth-child(n+5){display:none}
+}
+@media(hover:none),(pointer:coarse){
+  :where(.btn,.league-team-tile,.program-directory-card,.scoreboard-match,.program-season-card,.draft-cell-program):hover{transform:none!important}
+  .league-team-tile:hover,.program-directory-card:hover,.scoreboard-match:hover{box-shadow:var(--arena-shadow)}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .program-season-meter i,.draft-command-cta span,.scoreboard-day,.scoreboard-match,
+  .league-team-tile,.program-directory-card,.draft-cell-program .program-logo{transition:none!important}
+  .draft-command-progress span:after,.draft-board-cell.on-clock,.scoreboard-match.is-live:before{animation:none!important}
+}

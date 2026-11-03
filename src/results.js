@@ -181,7 +181,7 @@ const DATA_PIPELINE=(()=>{
       coverage(env,season)
     ]);
     return {season,game_count:games?.n||0,final_games:games?.final_count||0,last_game_change:games?.last_change||null,
-      net_date:net?.day||null,net_count:net?.total||0,awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',coverage:health,recent_runs:runs.results||[]};
+      net_date:net?.day||null,net_count:net?.total||0,awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',coverage:health,historical:await historicalProgress(env),recent_runs:runs.results||[]};
   };
   const records=async(env,season)=>{
     const rows=await q(env,`SELECT program_id,SUM(w) AS wins,SUM(1-w) AS losses,COUNT(*) AS played FROM (
@@ -395,13 +395,21 @@ const DATA_PIPELINE=(()=>{
     return {requested:targets.length,results:imported};
   }
   async function historicalProgress(env){
-    const rows=(await q(env,`SELECT season,COUNT(DISTINCT game_date) AS checked_dates,
-      SUM(CASE WHEN source_group=50 THEN event_count ELSE 0 END) AS primary_events
-      FROM cbb_game_coverage WHERE season>='2021-22' AND season<='2025-26'
-      GROUP BY season ORDER BY season`).all()).results||[];
+    const [coverageRows,rankRows,awardRows]=(await Promise.all([
+      q(env,`SELECT season,COUNT(DISTINCT game_date) AS checked_dates,
+        SUM(CASE WHEN source_group=50 THEN event_count ELSE 0 END) AS primary_events
+        FROM cbb_game_coverage WHERE season>='2021-22' AND season<='2025-26'
+        GROUP BY season ORDER BY season`).all(),
+      q(env,`SELECT season,MAX(stored_count) AS ranked_teams FROM cbb_net_snapshots
+        WHERE status='complete' AND season BETWEEN '2021-22' AND '2025-26' GROUP BY season`).all(),
+      q(env,`SELECT season,COUNT(*) AS award_count FROM cbb_awards
+        WHERE season BETWEEN '2021-22' AND '2025-26' GROUP BY season`).all()
+    ])).map(r=>r.results||[]);
     return ['2021-22','2022-23','2023-24','2024-25','2025-26'].map(season=>{
-      const row=rows.find(r=>r.season===season)||{};
-      return {season,checked_dates:Number(row.checked_dates||0),primary_events:Number(row.primary_events||0)};
+      const row=coverageRows.find(r=>r.season===season)||{};
+      return {season,checked_dates:Number(row.checked_dates||0),primary_events:Number(row.primary_events||0),
+        net_teams:Number(rankRows.find(r=>r.season===season)?.ranked_teams||0),
+        award_count:Number(awardRows.find(r=>r.season===season)?.award_count||0)};
     });
   }
   const programGames=async(env,season,id)=>{

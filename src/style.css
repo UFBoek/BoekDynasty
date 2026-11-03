@@ -3097,3 +3097,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .league-team-tile,.program-directory-card,.draft-cell-program .program-logo{transition:none!important}
   .draft-command-progress span:after,.draft-board-cell.on-clock,.scoreboard-match.is-live:before{animation:none!important}
 }
+
+/* Mobile viewport must never reserve a white desktop scrollbar gutter. */
+@media(max-width:850px){html{scrollbar-gutter:auto}.auth-layout{width:100%;max-width:100vw}}

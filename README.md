@@ -86,6 +86,36 @@ Mobile markup and JavaScript were smoke-tested across multiple pages and manager
 
 Apply `migrations/003_dynasty_seasons_waivers_clock.sql` to existing production D1 before deploying this version. The migration only creates new tables and settings. No existing schools, managers, picks, accepted trades or ownership records are modified.
 
+## Basketball results pipeline
+
+The scoring **weights** may be configured separately, but this pipeline does **not** award fantasy points. It only stores traceable games and ranking inputs.
+
+**Sources & normalization**
+- Primary: public ESPN site-v2 men's basketball scoreboard with `groups=50`, date `YYYYMMDD`, and 500-event safety limit; a second ESPN CDN representation is attempted if the first is unavailable. These endpoints are undocumented/unauthenticated and can block Workers, return incomplete results, or change schema. Do not treat a successful deployment as proof of successful upstream ingestion.
+- Maps ESPN team IDs to the 365-school verified 2026–27 directory. Retains games involving any known Division I school; original scores, opponent names, game status, time, location, conference flag, and an *unverified* tournament tag are persisted in `cbb_games`.
+- A game is only counted as final if the ESPN feed explicitly says it is final and both scores are valid. Canceled/postponed games never become losses. Existing rows update only when content changes.
+- Every import creates an audit record in `cbb_sync_runs`. Errors, HTTP failures, missing data and malformed shapes remain visible under **Commissioner → Data** and the **Results** screen.
+
+**Automatic updates**
+- Cloudflare Cron Trigger `*/15 * * * *` checks scoreboards every 15 minutes during American Eastern game hours, November–April. In off-hours/offseason, it skips without network activity.
+- Cloudflare Cron Trigger `15 10 * * *` rechecks the past seven days at 10:15 UTC daily for corrected final scores. This preserves earlier results and matches by ESPN event ID.
+- `wrangler.toml` declares both triggers; for manual Cloudflare API deployments, update the Worker's Cron Trigger schedules separately. `results_auto_sync` controls whether the scheduled handler runs.
+- **Commissioner → Data** can import a specific date, retry the past seven days, disable auto polling, and view logged failures.
+
+**NET and quadrant metadata**
+- Rankings are separate dated snapshots in `cbb_net_rankings`. NET rankings are generally not available at the start of November; the site must never carry over the previous season's values.
+- Commissioners can import official NET snapshots as `ESPN_TEAM_ID,NET_RANK` CSV rows. Imports are rejected if dates/IDs/ranks are invalid, duplicate, or fewer than 250 Division I schools. Every snapshot has season/date/source provenance. A duplicate date is not overwritten silently.
+- Optional **verified provider integration**: set `NET_FEED_URL` as a Worker environment variable (or secret) to a trusted, authorized JSON endpoint returning `{"date":"2026-12-01","records":[{"program_id":"57","net_rank":4}, ...]}`. It is not set by default. The nightly job will then ingest and audit the feed. Only use feeds for which you have redistribution/access rights.
+- Provisional Q1/Q1A/Q2/Q3/Q4 wins are derived from finished games, venue and the **latest current-season NET snapshot**. This data will change as NET ranks change. Final quadrants should be settled against final NET at the end of the season.
+- Program profiles load current season W–L and game log on demand, plus NET and provisional quadrant counts. **Standings points remain pending** until an independently verified scoring calculation is implemented.
+- Commissioner-supported manual achievements (season champions, NCAA seed and wins, national champion and optional final KenPom ranking) go into `cbb_awards` with source references. These are factual inputs, not fantasy points.
+
+**Data migration and tests**
+
+Run `npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/004_cbb_results.sql` before deploying a Worker with `src/results.js`. Then run `node --test tests/results.test.mjs` to validate event normalization and quadrant boundaries. The migration is additive and preserves members, ownership, trades and draft history.
+
+**Important limitations:** ESPN feed reachability from the actual Cloudflare Worker must be verified via **Commissioner → Data → Import date** or a real Cron run. No live scoreboard fetch has been confirmed just by deploying code. NCAA NET automatic ingestion requires an authorized NET feed; until one is connected, NET data must be imported by the commissioner. ESPN tournament annotations can be incomplete and should not be treated as authoritative bracket data.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:
@@ -101,6 +131,7 @@ npx wrangler deploy
 npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/001_program_ownership_trades.sql
 npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/002_commissioner_controls.sql
 npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/003_dynasty_seasons_waivers_clock.sql
+npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/004_cbb_results.sql
 node scripts/build.mjs
 npx wrangler deploy
 ```

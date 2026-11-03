@@ -692,6 +692,10 @@
         +'<div class="form-row"><label for="manager-limit">Maximum managers</label><input id="manager-limit" class="field" type="number" min="'+Math.max(2,members().length)+'" max="20" step="1" value="'+cap+'" '+(locked?'disabled':'')+'/></div></div>'
         +'<p class="settings-hint">'+members().length+' of '+cap+' spots filled'+(locked?' · Capacity locked once drafting begins':' · Allowed: 2–20 managers')+'</p>'
         +'<div class="button-row section-gap"><button class="btn" data-act="save-general">Save changes</button></div>'
+        +'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Best-ball lineup','Season scoring format')
+        +'<div class="bestball-setting-row"><div><strong>Counting programs</strong><p>Only the highest-scoring programs on each manager’s roster count toward the annual standings. The others remain owned.</p></div><div class="bestball-input"><label for="bestball-count">Best of '+settings.rounds+'</label><input id="bestball-count" class="field" type="number" min="1" max="'+settings.rounds+'" step="1" value="'+Number(settings.scoring?.best_programs||8)+'"/></div></div>'
+        +'<div class="button-row"><button class="btn" data-act="save-bestball">Save best-ball format</button></div>'
         +'</section>';
     }else if(adminSection==='draft'){
       if(draftOrderPreview.length!==members().length||draftOrderPreview.some(id=>!members().some(u=>u.id===id)))draftOrderPreview=order().slice();
@@ -768,7 +772,7 @@
     }else if(adminSection==='scoring'){
       const r=scoreRules();
       body='<section class="panel setting-panel">'+panelHeading('Scoring settings')
-        +'<div class="form-row"><label for="score-best_programs">Best-ball counting programs</label><input id="score-best_programs" class="field" type="number" min="1" max="20" step="1" value="'+Number(r.best_programs||8)+'"/></div>'
+        +'<p class="settings-hint">Best-ball format: top '+Number(r.best_programs||8)+' counting programs. Change that number in Commissioner → General.</p>'
         +scoringGroups.map(([title,fields])=>'<div class="section-gap"><h3 class="subhead">'+escapeHTML(title)+'</h3><div class="settings-grid">'
         +fields.map(([key,label])=>'<div class="form-row"><label for="score-'+key+'">'+escapeHTML(label)+'</label><input class="field" id="score-'+key+'" type="number" min="0" max="100" step="0.25" value="'+Number(r[key]||0)+'"/></div>').join('')+'</div></div>').join('')
         +'<p class="settings-hint">Q1A stacks with Q1. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
@@ -923,11 +927,16 @@
       }else if(act==='save-general'){
         await api('admin/general',{league_name:v('#league-name').trim(),max_managers:Number(v('#manager-limit')||league.settings.max_managers)});
         notice('General settings saved.');
+      }else if(act==='save-bestball'){
+        const count=Number(v('#bestball-count'));
+        if(!Number.isInteger(count)||count<1||count>Number(league.settings.rounds))throw new Error('Select between 1 and '+league.settings.rounds+' counting programs.');
+        await api('admin/bestball',{count});
+        notice('Best-ball updated: top '+count+' programs count.');
       }else if(act==='save-scoring'){
         const scoring={};
-        for(const key of Object.keys(scoreRules()))scoring[key]=Number(v('#score-'+key));
+        for(const key of Object.keys(scoreRules()))scoring[key]=key==='best_programs'?Number(scoreRules().best_programs):Number(v('#score-'+key));
         await api('admin/scoring-settings',{scoring});
-        notice('Scoring rules saved.');
+        notice('Scoring weights saved.');
       }else if(act==='save-trades'){
         await api('admin/trade-settings',{trading_enabled:!!document.querySelector('#trading-enabled')?.checked});
         notice('Trading settings saved.');

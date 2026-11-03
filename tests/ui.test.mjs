@@ -11,7 +11,7 @@ const injection=`  return {
  filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;}
 };
 })();`;
-const compiled=source.replace('  setInterval(updateDraftClock,1000);\n  boot();\n})();',injection);
+const compiled=source.replace('  try{\n    setInterval(updateDraftClock,1000);\n    Promise.resolve(boot()).catch(startupFailure);\n  }catch(e){startupFailure(e);}\n})();',injection);
 assert.notEqual(compiled,source);
 const root={innerHTML:'',addEventListener(){}};
 const app=new Function('document','location','URLSearchParams','return '+compiled)(
@@ -57,4 +57,30 @@ test('results filters are based on actual AP and conference IDs',()=>{
  app.filter('all','all');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,2);
  app.filter('top25','all');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,1);
  app.filter('all','8');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,1);
+});
+
+test('mobile navigation presents six usable primary destinations with Standings under More',()=>{
+ const html=app.page('home');
+ const mobile=html.slice(html.indexOf('<nav class="bottom"'));
+ const tabs=[...mobile.matchAll(/data-id="([^"]+)"/g)].map(x=>x[1]);
+ assert.deepEqual(tabs,['home','team','results','programs','draft','more']);
+ assert.match(app.page('more'),/data-id="league"/);
+});
+test('program draft, results and standings expose honest contextual visual data',()=>{
+ league.ownership=[{program_id:'57',manager_id:'1'}];
+ league.picks=[{overall:1,round:1,program_id:'57',manager_id:'1',picked_at:1793710000}];
+ const draft=app.page('draft');
+ assert.match(draft,/draft-cell-team/);
+ assert.match(draft,/SEC/);
+ const standings=app.page('league');
+ assert.match(standings,/standings-mini-roster/);
+ assert.match(standings,/ROSTERED SCHOOLS/);
+ const games=[{game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',
+   home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',
+   home_conference_id:'23',away_conference_id:'2'}];
+ app.results(games,[]);
+ app.filter('all','all');
+ assert.match(app.page('results'),/scoreboard-roster-tag is-personal/);
+ league.ownership=[];
+ league.picks=[];
 });

@@ -5,7 +5,8 @@ import test from 'node:test';
 const source=readFileSync(new URL('../src/results.js',import.meta.url),'utf8');
 const crosswalk=JSON.parse(readFileSync(new URL('../data/net-name-crosswalk-2027.json',import.meta.url),'utf8')).teams;
 const programs=crosswalk.map(x=>[x[0],x[2],x[3],'23']);
-const pipeline=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK',source+'\\nreturn DATA_PIPELINE;')(programs,crosswalk);
+const historicalConferences=JSON.parse(readFileSync(new URL('../data/historical-conference-2022-2026.json',import.meta.url),'utf8'));
+const pipeline=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK','HISTORICAL_CONFERENCE_CHAMPIONS',source+'\nreturn DATA_PIPELINE;')(programs,crosswalk,historicalConferences);
 
 const game={
   id:'401234567',date:'2026-11-04T00:30:00Z',name:'Florida Gators at Duke Blue Devils',
@@ -174,4 +175,16 @@ test('historical points stack seeds, conference titles, NCAA wins and First Four
   assert.equal(year.opening_round_wins,1);
   assert.equal(year.points,52.5);
   assert.equal(year.status,'partial');
+});
+
+test('verified conference champions score immediately while D1 archival writes are quota-blocked',async()=>{
+  const entry=historicalConferences.seasons.find(x=>x.season==='2025-26');
+  const winner=entry.winners[0];
+  const env={DB:{prepare(){return {bind(){return {all:async()=>({results:[]})};}}}}};
+  const profile=await pipeline.programHistory(env,winner.id,{conference_regular_title:8},'2026-27');
+  const season=profile.seasons.find(x=>x.season==='2025-26');
+  assert.equal(season.points,8);
+  assert.equal(season.status,'partial');
+  const leaders=await pipeline.historicalLeaders(env,{conference_regular_title:8},'2026-27');
+  assert.equal(leaders.rows.find(x=>x.season==='2025-26'&&x.program_id===winner.id)?.points,8);
 });

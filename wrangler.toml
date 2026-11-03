@@ -1,0 +1,9 @@
+name = "boek-dynasty"
+main = "dist/worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "boek-dynasty-db"
+database_id = "301926bb-b803-4a11-ad1a-ff931ffaf72b"

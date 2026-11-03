@@ -499,7 +499,7 @@
         const pick=draftPicks.get(overall),program=programIndex.get(String(pick?.program_id||''));
         const onClock=status==='live'&&overall===completed+1;
         const mine=id===me.id;
-        const state=program?'selected':onClock?'on-clock':'empty';
+        const state=program?'selected':onClock?'on-clock':'open';
         const label='Pick '+overall;
         return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'" data-pick="'+overall+'">'
           +'<div class="draft-cell-meta"><span>#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON CLOCK</strong>':program?'<span class="draft-cell-done">PICKED</span>':'')+'</div>'
@@ -746,7 +746,7 @@
         +'<label class="settings-toggle section-gap" for="data-auto"><div><strong>Automatic results collection</strong><span>Every 15 minutes during game hours, plus daily reconciliation.</span></div><input id="data-auto" type="checkbox" '+(resultsStatus?.auto_enabled!==false?'checked':'')+'/></label>'
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-auto-save">Save automation setting</button></div>'
         +'<div class="form-row section-gap"><label for="data-date">Check specific game date</label><input class="field" id="data-date" type="date" value="'+escapeHTML(today)+'"/></div>'
-        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn secondary" data-act="data-fill-missing">Repair missing dates</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
+        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn secondary" data-act="data-fill-missing">Repair missing dates</button><button class="btn secondary" data-act="data-ap-refresh">Sync AP Top 25</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
         +'<p class="hint section-gap">Game scores do not activate fantasy scoring. Import errors are kept in the audit log.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
@@ -863,6 +863,10 @@
         const result=await api('admin/data/upcoming',{});
         const failed=(result.days||[]).filter(x=>!x.ok);
         notice('Checked '+(result.days||[]).length+' upcoming dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-ap-refresh'){
+        const poll=await api('admin/data/ap-refresh',{});
+        notice('Verified '+poll.count+' AP-ranked teams.');
         await loadResults();
       }else if(act==='data-fill-missing'){
         const result=await api('admin/data/fill-missing',{days:4});

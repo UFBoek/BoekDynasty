@@ -286,6 +286,7 @@ const DATA_PIPELINE=(()=>{
       status,season_type,tournament_tag,neutral_site
       FROM cbb_games WHERE (home_id=? OR away_id=?) AND season>=? AND season<=?
       ORDER BY season DESC,game_date DESC`,id,id,'2021-22',currentSeason).all()).results||[];
+    const ncaaResults=(await q(env,`SELECT season,opening_round FROM cbb_ncaa_results WHERE winner_id=? AND season BETWEEN '2021-22' AND ?`,id,currentSeason).all()).results||[];
     const awards=(await q(env,`SELECT season,award_type,value FROM cbb_awards WHERE program_id=?
       AND season>=? AND season<=?`,id,'2021-22',currentSeason).all()).results||[];
     const net=(await q(env,`SELECT r.season,r.program_id,r.net_rank
@@ -338,21 +339,25 @@ const DATA_PIPELINE=(()=>{
         earned+=seed<=4?weight('ncaa_seed_1_4'):seed<=8?weight('ncaa_seed_5_8'):
           seed<=12?weight('ncaa_seed_9_12'):weight('ncaa_seed_13_16');
       }
-      const verifiedNCAA=wins.filter(g=>g.tournament_tag==='ncaa');
+      const verifiedNCAA=ncaaResults.filter(g=>g.season===label);
       const manualNCAA=honors.some(a=>a.award_type==='ncaa_wins');
-      const ncaaWins=manualNCAA?awardValue('ncaa_wins'):verifiedNCAA.length;
+      const taggedNCAA=wins.filter(g=>g.tournament_tag==='ncaa');
+      const ncaaWins=verifiedNCAA.length?verifiedNCAA.filter(g=>Number(g.opening_round)!==1).length:
+        manualNCAA?awardValue('ncaa_wins'):taggedNCAA.filter(g=>g.game_date>(y+1)+'-03-20').length;
+      const openingWins=verifiedNCAA.filter(g=>Number(g.opening_round)===1).length;
       if(ncaaWins>0)earned+=ncaaWins*weight('ncaa_tournament_win');
+      if(openingWins>0)earned+=openingWins*weight('ncaa_opening_round_win');
       if(awardValue('national_champion'))earned+=weight('national_championship');
       const have=completed.length>0||honors.length>0;
       periods.push({season:label,points:have?Math.round(earned*100)/100:null,
         status:have?'partial':'unavailable',games:completed.length,wins:wins.length,
         losses,regular_wins:regularWins.length,q1,q1a,q2,
-        net_verified:!!(ranks&&ranks.size>=350),ncaa_wins:ncaaWins,
+        net_verified:!!(ranks&&ranks.size>=350),ncaa_wins:ncaaWins,opening_round_wins:openingWins,
         awards_verified:honors.length,
         note:have?'Verified components only; not a final fantasy total.':'Historical game and award data not yet imported.'});
     }
     return {program_id:String(id),current_season:currentSeason,seasons:periods,
-      source:'ESPN game results, dated NET snapshots, commissioner-verified awards',
+      source:'ESPN game results, archived final NET, NCAA tournament game archive, verified championships',
       complete:false};
   }
   // Fair, idempotent historical backfill: each pass advances across every
@@ -637,7 +642,7 @@ const DATA_PIPELINE=(()=>{
   const isQ1A=(rank,site)=>Number.isInteger(rank)&&rank>0&&rank<=(site==='home'?15:site==='away'?40:25);
   async function seasonQuadrants(env,season){
     const [games,rankings]=await Promise.all([
-      q(env,"SELECT home_id,away_id,home_score,away_score,neutral_site FROM cbb_games WHERE season=? AND status='final' AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score",season).all(),
+      q(env,"SELECT home_id,away_id,home_score,away_score,neutral_site FROM cbb_games WHERE season=? AND status='final' AND season_type=2 AND tournament_tag IS NULL AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score",season).all(),
       netRanks(env,season)
     ]);
     const rankMap=new Map(rankings.map(x=>[x.program_id,Number(x.net_rank)])),out={};
@@ -650,6 +655,119 @@ const DATA_PIPELINE=(()=>{
     }
     return {snapshot_date:rankings[0]?.snapshot_date||null,by_program:out};
   }
+  // Conference champions from the complete, historical ESPN conference records.
+  // Exact ESPN program IDs and all co-champions are retained. No name guessing.
+  async function syncHistoricalConference(env,season,fetchFn=fetch){
+    if(!['2021-22','2022-23','2023-24','2024-25','2025-26'].includes(season))
+      throw new Error('A completed historical season is required.');
+    const year=Number(season.slice(0,4))+1;
+    const uri='https://site.web.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings?season='+year+'&level=3&type=0';
+    const runId=crypto.randomUUID();
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-conference',?,?,'espn-standings','running')",runId,season,year+'-04-15').run();
+    try{
+      const response=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(20000)});
+      if(!response.ok)throw new Error('ESPN historical standings HTTP '+response.status);
+      const data=await response.json(),winners=[];
+      if(!Array.isArray(data.children)||data.children.length<28)
+        throw new Error('ESPN historical conference list incomplete');
+      for(const group of data.children){
+        const records=(group.standings?.entries||[]).map(e=>{
+          const stats=e.stats||[];
+          const get=t=>Number(stats.find(v=>v.type===t)?.value);
+          return {id:String(e.team?.id||''),pct:get('vsconf_winpercent'),w:get('vsconf_wins'),l:get('vsconf_losses')};
+        }).filter(x=>x.id&&teamIds.has(x.id)&&x.w+x.l>=5&&Number.isFinite(x.pct)&&x.pct>=0&&x.pct<=1);
+        if(!records.length)continue;
+        const best=Math.max(...records.map(x=>x.pct));
+        winners.push(...records.filter(x=>Math.abs(x.pct-best)<0.00001).map(x=>({...x,conf:group.name})));
+      }
+      if(winners.length<27||winners.length>65)throw new Error('Incomplete ESPN champion count: '+winners.length);
+      const note=('ESPN '+season+' final conference standings '+uri).slice(0,240);
+      for(let i=0;i<winners.length;i+=40){
+        await env.DB.batch(winners.slice(i,i+40).map(x=>q(env,
+          "INSERT INTO cbb_awards(season,program_id,award_type,value,source_note) VALUES(?,?,'conference_regular_champion',1,?) ON CONFLICT(season,program_id,award_type) DO UPDATE SET value=1,source_note=excluded.source_note",
+          season,x.id,note)));
+      }
+      await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",data.children.length,winners.length,winners.length,runId).run();
+      return {season,conference_groups:data.children.length,champions:winners.length};
+    }catch(e){
+      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
+      throw e;
+    }
+  }
+  async function backfillHistoricalConferences(env){
+    const runs=(await q(env,"SELECT season,status,MAX(started_at) AS last_try FROM cbb_sync_runs WHERE job='historical-conference' GROUP BY season,status").all()).results||[];
+    const complete=new Set(runs.filter(x=>x.status==='ok').map(x=>x.season));
+    const now=Math.floor(Date.now()/1000);
+    for(const season of ['2025-26','2024-25','2023-24','2022-23','2021-22']){
+      if(complete.has(season))continue;
+      const last=Math.max(0,...runs.filter(x=>x.season===season).map(x=>Number(x.last_try)||0));
+      if(now-last<7200)continue;
+      try{return {ok:true,...await syncHistoricalConference(env,season)};}
+      catch(e){return {ok:false,season,error:err(e)};}
+    }
+    return {skipped:'All historical conference seasons completed or awaiting retry.'};
+  }
+  // Conference matchups and NET quadrants must use the winning program's
+  // actual venue. The ESPN home/away designation is ignored at neutral sites.
+  const venueFor=(neutral,isHome)=>neutral?'neutral':isHome?'home':'away';
+  // One cross-season leaderboard query, assembled from precisely the same
+  // regular-season, NET, postseason and award scoring rules as school profiles.
+  async function historicalLeaders(env,scoring,currentSeason){
+    const rows=(await q(env,`WITH latest AS (
+        SELECT season,MAX(snapshot_date) AS day FROM cbb_net_snapshots WHERE status='complete' GROUP BY season
+      ), ranks AS (
+        SELECT r.season,r.program_id,r.net_rank FROM cbb_net_rankings r
+        JOIN latest l ON l.season=r.season AND l.day=r.snapshot_date
+      ), won AS (
+        SELECT season,home_id AS program_id,away_id AS opponent_id,neutral_site,1 AS at_home
+        FROM cbb_games WHERE status='final' AND season_type=2 AND tournament_tag IS NULL
+          AND home_score>away_score AND season BETWEEN '2021-22' AND ?
+        UNION ALL
+        SELECT season,away_id AS program_id,home_id AS opponent_id,neutral_site,0 AS at_home
+        FROM cbb_games WHERE status='final' AND season_type=2 AND tournament_tag IS NULL
+          AND away_score>home_score AND season BETWEEN '2021-22' AND ?
+      )
+      SELECT w.season,w.program_id,COUNT(*) AS regular_wins,
+        SUM(CASE WHEN r.net_rank BETWEEN 1 AND
+          CASE WHEN w.neutral_site=1 THEN 50 WHEN w.at_home=1 THEN 30 ELSE 75 END THEN 1 ELSE 0 END) AS q1,
+        SUM(CASE WHEN r.net_rank BETWEEN 1 AND
+          CASE WHEN w.neutral_site=1 THEN 25 WHEN w.at_home=1 THEN 15 ELSE 40 END THEN 1 ELSE 0 END) AS q1a,
+        SUM(CASE WHEN r.net_rank >
+          CASE WHEN w.neutral_site=1 THEN 50 WHEN w.at_home=1 THEN 30 ELSE 75 END
+          AND r.net_rank<=CASE WHEN w.neutral_site=1 THEN 100 WHEN w.at_home=1 THEN 75 ELSE 135 END THEN 1 ELSE 0 END) AS q2
+      FROM won w LEFT JOIN ranks r ON r.season=w.season AND r.program_id=w.opponent_id
+      GROUP BY w.season,w.program_id`,currentSeason,currentSeason).all()).results||[];
+    const [awards,ncaa,ranks]=(await Promise.all([
+      q(env,"SELECT season,program_id,award_type,value FROM cbb_awards WHERE season BETWEEN '2021-22' AND ?",currentSeason).all(),
+      q(env,"SELECT season,winner_id AS program_id,SUM(CASE WHEN opening_round=1 THEN 1 ELSE 0 END) opening_wins,SUM(CASE WHEN opening_round=0 THEN 1 ELSE 0 END) main_wins FROM cbb_ncaa_results WHERE season BETWEEN '2021-22' AND ? GROUP BY season,winner_id",currentSeason).all(),
+      q(env,"SELECT season,stored_count FROM cbb_net_snapshots WHERE status='complete' AND season BETWEEN '2021-22' AND ?",currentSeason).all()
+    ])).map(r=>r.results||[]);
+    const table=new Map(),find=(season,id)=>{
+      const key=season+'|'+id;
+      if(!table.has(key))table.set(key,{season,program_id:String(id),regular_wins:0,q1:0,q1a:0,q2:0,opening_wins:0,ncaa_wins:0,awards:{}});
+      return table.get(key);
+    };
+    for(const r of rows){const t=find(r.season,r.program_id);Object.assign(t,{regular_wins:Number(r.regular_wins)||0,q1:Number(r.q1)||0,q1a:Number(r.q1a)||0,q2:Number(r.q2)||0});}
+    for(const a of awards)find(a.season,a.program_id).awards[a.award_type]=Number(a.value);
+    for(const a of ncaa){const t=find(a.season,a.program_id);t.opening_wins=Number(a.opening_wins)||0;t.ncaa_wins=Number(a.main_wins)||0;}
+    const wt=k=>Number(scoring?.[k]||0),validNet=new Set(ranks.filter(x=>Number(x.stored_count)>=350).map(x=>x.season));
+    for(const t of table.values()){
+      const a=t.awards,seed=Number(a.ncaa_seed)||0;
+      const seedPoints=!seed?0:wt(seed<=4?'ncaa_seed_1_4':seed<=8?'ncaa_seed_5_8':seed<=12?'ncaa_seed_9_12':'ncaa_seed_13_16');
+      const ncaaWins=t.ncaa_wins||Number(a.ncaa_wins)||0;
+      t.points=Math.round(100*(t.regular_wins*wt('regular_win')+
+        t.q1*wt('quad_1_win')+t.q1a*wt('quad_1a_extra')+t.q2*wt('quad_2_win')+
+        (a.conference_regular_champion?wt('conference_regular_title'):0)+
+        (a.conference_tournament_champion?wt('conference_tournament_title'):0)+
+        seedPoints+ncaaWins*wt('ncaa_tournament_win')+t.opening_wins*wt('ncaa_opening_round_win')+
+        (a.national_champion?wt('national_championship'):0)))/100;
+      t.ncaa_wins=ncaaWins;t.net_verified=validNet.has(t.season);
+      delete t.awards;
+    }
+    return {seasons:Array.from({length:Number(currentSeason.slice(0,4))-2021+1},(_,i)=>{const y=2021+i;return y+'-'+String((y+1)%100).padStart(2,'0');}),
+      rows:[...table.values()].filter(x=>teamIds.has(x.program_id)),complete:false,
+      note:'Imported scoring components only; rankings are provisional until game and award coverage is complete.'};
+  }
   async function scheduled(env,cron){
     const pairs=(await q(env,"SELECT key,value FROM settings WHERE key IN ('current_season','results_auto_sync')").all()).results||[];
     const settings=Object.fromEntries(pairs.map(x=>[x.key,x.value]));
@@ -661,7 +779,8 @@ const DATA_PIPELINE=(()=>{
       // Each task is isolated so a blocked ranking source cannot stop games.
       const historical=await backfillHistory(env,8).catch(e=>({error:err(e)}));
       const archiveNet=await backfillArchivedNet(env).catch(e=>({error:err(e)}));
-      return {historical,archiveNet};
+      const conference=await backfillHistoricalConferences(env).catch(e=>({error:err(e)}));
+      return {historical,archiveNet,conference};
     }
     if(cron==='45 9 * * *'){
       const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];
@@ -712,5 +831,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,backfillHistory,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

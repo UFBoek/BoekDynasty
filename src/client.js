@@ -848,7 +848,8 @@
         +'<div class="button-row"><button class="btn secondary" data-act="data-net-import">Import verified rankings</button><button class="btn secondary" data-act="data-net-fetch" '+(today<season().slice(0,4)+'-12-08'?'disabled':'')+'>Fetch NCAA NET</button></div></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Verified season achievements')
         +'<details class="data-award"><summary>Add a confirmed conference or postseason result</summary>'
-        +'<div class="form-row section-gap"><label for="data-award-school">Program</label><select class="field" id="data-award-school">'+progOptions+'</select></div>'
+        +'<div class="form-row section-gap"><label for="data-award-season">Season</label><select class="field" id="data-award-season">'+Array.from({length:Number(season().slice(0,4))-2021+1},(_,i)=>{const y=Number(season().slice(0,4))-i;const label=y+'-'+String((y+1)%100).padStart(2,'0');return '<option value="'+label+'">'+label+'</option>';}).join('')+'</select></div>'
+        +'<div class="form-row"><label for="data-award-school">Program</label><select class="field" id="data-award-school">'+progOptions+'</select></div>'
         +'<div class="form-row"><label for="data-award-type">Achievement</label><select class="field" id="data-award-type">'+awardOptions.map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('')+'</select></div>'
         +'<div class="form-row"><label for="data-award-value">Value (1 for titles, seed/rank for rankings)</label><input class="field" type="number" id="data-award-value" min="0" max="400" value="1"/></div>'
         +'<div class="form-row"><label for="data-award-source">Source or official reference</label><input class="field" id="data-award-source" placeholder="Official conference / NCAA bracket URL"/></div>'
@@ -992,7 +993,7 @@
         const outcome=await api('admin/data/net',{date:v('#data-net-date'),csv});
         notice('Saved '+outcome.count+' NET rankings.');await loadResults();
       }else if(act==='data-award-save'){
-        await api('admin/data/award',{program_id:v('#data-award-school'),award_type:v('#data-award-type'),value:Number(v('#data-award-value')),source_note:v('#data-award-source')});
+        await api('admin/data/award',{season:v('#data-award-season'),program_id:v('#data-award-school'),award_type:v('#data-award-type'),value:Number(v('#data-award-value')),source_note:v('#data-award-source')});
         notice('Verified achievement saved.');
       }else if(act==='refresh-results'){await loadResults();return;}
       if(act==='save-clock'){

@@ -180,7 +180,25 @@ const DATA_PIPELINE=(()=>{
       if(localHour>=3&&localHour<10)return {skipped:'outside-games-window'};
       return importDay(env,season,day,{job:'live'});
     }
-    if(cron==='15 10 * * *')return backfill(env,season,7);
+    if(cron==='15 10 * * *'){
+      const reconciled=await backfill(env,season,7);
+      if(!env.NET_FEED_URL)return {games:reconciled,net:{skipped:'No verified NET feed connected'}};
+      const id=crypto.randomUUID();
+      await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,'configured-net-feed','running')",id,season,day).run();
+      try{
+        const response=await fetch(env.NET_FEED_URL,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+        if(!response.ok)throw new Error('Configured NET feed HTTP '+response.status);
+        const payload=await response.json();
+        if(!Array.isArray(payload.records))throw new Error('NET feed must return {date,records:[{program_id,net_rank}]}');
+        const snapshot=String(payload.date||day);
+        const result=await saveNet(env,season,snapshot,payload.records,'configured-verified-net-feed');
+        await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",result.count,result.count,result.duplicate?0:result.count,id).run();
+        return {games:reconciled,net:result};
+      }catch(e){
+        await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),id).run().catch(()=>{});
+        return {games:reconciled,net:{error:err(e)}};
+      }
+    }
     return {skipped:'unknown-cron'};
   }
 

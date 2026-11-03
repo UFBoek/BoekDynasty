@@ -583,8 +583,8 @@ export default (function makeWorker(){
     }
     return failure('Not found.',404);
   }
-  const ICON='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="38" fill="#0b1626"/><path d="M38 68h116v19c0 38-20 63-58 73-38-10-58-35-58-73V68Z" fill="#e8b66d"/><path d="M43 75h106v11c0 32-17 54-53 65-36-11-53-33-53-65V75Z" fill="#17273b"/><path d="m96 31 13 26 28 4-20 20 5 29-26-14-26 14 5-29-20-20 28-4 13-26Z" fill="#e8b66d"/><text x="96" y="135" font-size="39" font-weight="900" fill="#e8b66d" text-anchor="middle" font-family="Arial">BD</text></svg>';
-  const SW="const NAME='boek-dynasty-shell-v1';self.addEventListener('install',e=>{e.waitUntil(caches.open(NAME).then(c=>c.addAll(['/','/style.css','/app.js','/icon.svg'])));self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
+  const BRAND_LOGO_BYTES=Uint8Array.from(atob(BRAND_LOGO_BASE64),x=>x.charCodeAt(0));
+  const SW="const NAME='boek-dynasty-shell-v2';self.addEventListener('install',e=>{e.waitUntil(caches.open(NAME).then(c=>c.addAll(['/','/style.css','/app.js','/icon.png'])));self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
   return {
     async scheduled(controller,env){
       try{
@@ -600,8 +600,9 @@ export default (function makeWorker(){
         if(url.pathname==='/app.js')return new Response(CLIENT,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff'}});
         if(url.pathname==='/style.css')return new Response(CSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate','X-Content-Type-Options':'nosniff'}});
         if(url.pathname==='/sw.js')return new Response(SW,{headers:{'Content-Type':'application/javascript','Cache-Control':'no-cache'}});
-        if(url.pathname==='/icon.svg'||url.pathname==='/favicon.svg')return new Response(ICON,{headers:{'Content-Type':'image/svg+xml','Cache-Control':'public, max-age=86400'}});
-        if(url.pathname==='/manifest.webmanifest')return response({id:'/',name:'Boek Dynasty',short_name:'Boek Dynasty',description:'College basketball fantasy by NCAA program',start_url:'/',display:'standalone',theme_color:'#0b1626',background_color:'#0b1626',icons:[{src:'/icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]},200,{'Content-Type':'application/manifest+json'});
+        if(['/brand-logo.png','/icon.png','/apple-touch-icon.png','/favicon.ico'].includes(url.pathname))return new Response(BRAND_LOGO_BYTES,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}});
+        if(url.pathname==='/icon.svg'||url.pathname==='/favicon.svg')return Response.redirect(new URL('/icon.png',request.url).toString(),302);
+        if(url.pathname==='/manifest.webmanifest')return response({id:'/',name:'Boek Dynasty',short_name:'Boek Dynasty',description:'College basketball fantasy by NCAA program',start_url:'/',display:'standalone',theme_color:'#0b1626',background_color:'#0b1626',icons:[{src:'/icon.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon.png',sizes:'192x192',type:'image/png',purpose:'maskable'}]},200,{'Content-Type':'application/manifest+json'});
         if(url.pathname!=='/'&&url.pathname!=='/index.html')return new Response('Not found.',{status:404});
         return new Response(PAGE,{headers:htmlHeaders});
       }catch(e){

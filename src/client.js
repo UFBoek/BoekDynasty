@@ -88,7 +88,7 @@
       const next=await api('state');
       me=next.user;league=next;appError='';
       if(!silent)current='home';
-      if(!editing){render();if(current==='programs')filterPrograms();}
+      if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);}
       if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
     }catch(e){
       if(String(e.message).includes('Sign in required')){me=null;league=null;if(!silent)await loadPublic();renderAuth();}
@@ -187,10 +187,10 @@
     finally{resultsLoading=false;if(current==='results'||(current==='commissioner'&&adminSection==='data'))render();}
   }
   async function loadProgramResults(id){
-    if(!me||programResultCache[id]?.season===season())return;
+    if(!me||(programResultCache[id]?.season===season()&&Date.now()-(programResultCache[id]?.loadedAt||0)<60000))return;
     try{
       const data=await api('data/program?id='+encodeURIComponent(id));
-      programResultCache[id]=data;
+      programResultCache[id]={...data,loadedAt:Date.now()};
     }catch(e){programResultCache[id]={season:season(),error:e.message};}
     if(current==='program-detail'&&selectedProgramId===id)render();
   }
@@ -203,7 +203,7 @@
   const resultGameRow=(g,id='')=>{
     const home=g.home_name||programs().find(p=>p.id===g.home_id)?.name||'Home';
     const away=g.away_name||programs().find(p=>p.id===g.away_id)?.name||'Away';
-    const score=g.home_score!==null&&g.away_score!==null?escapeHTML(g.away_score)+'–'+escapeHTML(g.home_score):'vs';
+    const score=(g.status==='final'||g.status==='live')&&g.home_score!==null&&g.away_score!==null?escapeHTML(g.away_score)+'–'+escapeHTML(g.home_score):'vs';
     return '<div class="result-game-row"><div class="grow"><span class="game-day">'+escapeHTML(g.game_date)+'</span><strong>'+escapeHTML(away)+' <span class="game-score">'+score+'</span> '+escapeHTML(home)+'</strong></div><span class="result-game-status '+(g.status==='live'?'live':'')+'">'+escapeHTML(gameOutcome(g,id))+'</span></div>';
   };
   function resultsPage(){
@@ -493,6 +493,7 @@
       +(report?.error?'<div class="notice">'+escapeHTML(report.error)+'</div>':report?.games?.length?'<div class="result-games">'+report.games.map(g=>resultGameRow(g,p.id)).join('')+'</div>':empty(report?'No games imported':'Loading game results'))
       +(report?.net_date?'<div class="quad-summary"><span>Q1 <strong>'+(quads?.q1||0)+'</strong></span><span>Q1A <strong>'+(quads?.q1a||0)+'</strong></span><span>Q2 <strong>'+(quads?.q2||0)+'</strong></span></div><p class="hint">Quadrants are provisional and use the most recent available NET snapshot.</p>':'')
       +'</section>'
+      +(report?.awards?.length?'<section class="panel section-gap">'+panelHeading('Verified achievements')+report.awards.map(a=>'<div class="history-row"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+'</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</section>':'')
       +'<section class="panel section-gap">'+panelHeading('Roster activity')+(activity.length||tradeHistory.length?activity.map(t=>'<div class="history-row"><strong>'+escapeHTML(t.action==='claim'?'Claimed':'Dropped')+'</strong><span>'+escapeHTML(t.season)+' · '+escapeHTML(members().find(m=>m.id===t.manager_id)?.display_name||'Manager')+'</span></div>').join('')+tradeHistory.map(t=>'<div class="history-row"><strong>Traded</strong><span>'+escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join(''):empty('No roster moves'))+'</section>';
   }
   function managerProfilePage(){

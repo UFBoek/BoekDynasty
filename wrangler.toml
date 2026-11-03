@@ -8,6 +8,6 @@ binding = "DB"
 database_name = "boek-dynasty-db"
 database_id = "301926bb-b803-4a11-ad1a-ff931ffaf72b"
 
-# 15-minute score refresh plus daily 7-day reconciliation (UTC).
+# 15-minute live scores; 5-minute five-year history; daily archival NET and results (UTC).
 [triggers]
-crons = ["*/15 * * * *", "15 10 * * *"]
+crons = ["*/15 * * * *", "*/5 * * * *", "45 9 * * *", "15 10 * * *"]

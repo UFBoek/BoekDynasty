@@ -33,6 +33,7 @@
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
+  let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
@@ -457,7 +458,62 @@
       +img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span class="program-directory-chevron">›</span></button>'
       +'<span class="program-dir-status">'+status+'</span></div>';
   }
+  async function loadSchoolLeaders(){
+    if(!me||schoolLeadersLoading)return;
+    schoolLeadersLoading=true;schoolLeadersError='';
+    if(current==='programs'&&programMode==='leaders')render();
+    try{schoolLeaders=await api('data/leaders');}
+    catch(e){schoolLeadersError=e.message;}
+    finally{schoolLeadersLoading=false;if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}}
+  }
+  function schoolLeadersPage(){
+    const all=schoolLeaders,years=all?.seasons||[];
+    const period=leaderSeason==='all'?'all':years.includes(leaderSeason)?leaderSeason:'all';
+    const nav='<div class="school-leaders-seasons" role="group" aria-label="Select scoring season">'
+      +[['all','All seasons'],...years.slice().reverse().map(y=>[y,y])].map(([id,label])=>'<button type="button" data-act="leaders-season" data-id="'+id+'" class="'+(period===id?'active':'')+'" aria-pressed="'+(period===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
+    if(!all)return '<section class="panel school-leaders-shell">'+panelHeading('Historical points','Every Division I program from 2021–22 onward')+nav
+      +(schoolLeadersError?empty('Unable to load rankings',escapeHTML(schoolLeadersError)):empty('Loading school leaderboards','Calculating historical scores, seeds, championships and quadrant wins.'))+'</section>';
+    const byId=new Map();
+    for(const item of all.rows||[]){
+      const id=String(item.program_id),map=byId.get(id)||new Map();
+      map.set(item.season,item);byId.set(id,map);
+    }
+    const rows=(all.directory||[]).map(p=>{
+      const history=byId.get(String(p.id))||new Map();
+      const values=years.map(y=>history.get(y)?.points??null);
+      const known=values.filter(v=>v!==null);
+      const total=known.length?known.reduce((sum,val)=>sum+Number(val),0):null;
+      const selected=period==='all'?total:history.get(period)?.points??null;
+      return {p,history,values,selected,total};
+    }).sort((a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
+    const score=value=>value===null||value===undefined?'—':Number(value).toLocaleString('en-US',{maximumFractionDigits:2});
+    const headerYears=years.map(y=>'<th class="school-leader-year">'+escapeHTML(y.slice(2))+'</th>').join('');
+    const body=rows.map((row,index)=>{
+      const p=row.p;return '<tr class="school-leader-row" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'
+        +'<td class="school-leader-rank">'+(index+1)+'</td>'
+        +'<td><button class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
+        +'<td class="school-leader-points">'+score(row.selected)+'</td>'
+        +row.values.map((v,i)=>'<td class="school-leader-year '+(period===years[i]?'selected':'')+'">'+score(v)+'</td>').join('')
+        +'</tr>';
+    }).join('');
+    return '<section class="panel school-leaders-shell">'+panelHeading('Historical point leaders','All '+rows.length+' Division I programs · 2021–22 to '+escapeHTML(season()))
+      +'<p class="school-leaders-note">Points use verified games, final NET rankings, NCAA seeds, tournament wins and confirmed titles. Historical totals remain provisional while game coverage is being completed.</p>'
+      +nav
+      +'<div class="school-leader-tools"><label class="directory-search"><span aria-hidden="true">⌕</span><input id="leader-search" class="field" type="search" value="'+escapeHTML(leaderQuery)+'" placeholder="Find a team in the rankings..." aria-label="Search school leaders" autocomplete="off"/></label><span id="leader-count">'+rows.length+' schools</span></div>'
+      +'<div class="school-leader-table-wrap"><table class="school-leader-table"><thead><tr><th>#</th><th>PROGRAM</th><th>'+(period==='all'?'TOTAL':escapeHTML(period))+'</th>'+headerYears+'</tr></thead><tbody>'+body+'</tbody></table></div></section>';
+  }
+  function filterSchoolLeaders(){
+    const query=leaderQuery.toLowerCase().trim();let visible=0;
+    document.querySelectorAll('.school-leader-row').forEach(row=>{
+      const match=row.dataset.search.includes(query);row.hidden=!match;if(match)visible++;
+    });
+    const counter=document.querySelector('#leader-count');
+    if(counter)counter.textContent=visible+' '+(visible===1?'school':'schools');
+  }
   function programsPage(){
+    const nav='<div class="school-view-tabs" role="group" aria-label="Schools sections">'
+      +[['directory','School directory'],['leaders','Historical leaders']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
+    if(programMode==='leaders')return heading('COLLEGE BASKETBALL','Schools','Browse programs or compare historical fantasy scoring across all Division I schools.')+nav+schoolLeadersPage();
     const eligible=programs().filter(p=>activeConfs().includes(p.conference_id));
     const available=eligible.filter(p=>!programOwned(p.id)).length;
     const sorters={
@@ -466,20 +522,20 @@
       availability:(a,b)=>Number(!!programOwned(a.id))-Number(!!programOwned(b.id))||a.name.localeCompare(b.name)
     };
     eligible.sort(sorters[programSort]||sorters.name);
-    const quickIds=['23','2','7','8','4','21','44','3','62','29'].filter(id=>activeConfs().includes(id));
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
-    const majorChips=chip('all','All conferences')+quickIds.map(id=>chip(id,conf(id))).join('');
-    const options=activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>
-      '<option value="'+id+'" '+(programConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
+    const conferenceChips=chip('all','All conferences')+activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
-    return heading('DIVISION I · PROGRAM DIRECTORY','Find your next program','Search the entire draft pool, jump between conferences, or open a school for season-by-season history.')
+    const sortButtons=[['name','A–Z'],['conference','Conference'],['availability','Available first']]
+      .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
+    return heading('COLLEGE BASKETBALL','Schools','Explore the draft pool, compare programs and review season-by-season histories.')
+      +nav
       +'<section class="program-directory-shell">'
-      +'<div class="directory-welcome"><div><span>THE DRAFT POOL</span><strong>'+eligible.length+' schools</strong><small>'+available+' available · '+(eligible.length-available)+' rostered</small></div>'
-      +(isMyTurn()?'<button class="btn small" data-act="tab" data-id="draft">Your pick is live →</button>':'<span class="directory-welcome-hint">Select any school to see its history and results</span>')+'</div>'
-      +'<div class="directory-filters"><div class="directory-search-row"><label class="directory-search"><span aria-hidden="true">⌕</span><input class="field" type="search" id="program-search" value="'+escapeHTML(programQuery)+'" placeholder="Search school, abbreviation, or conference..." aria-label="Search programs" autocomplete="off"/></label><select class="field directory-conference-select" id="program-conference" aria-label="Conference"><option value="all">All conferences</option>'+options+'</select>'
-      +'<select class="field directory-sort" id="directory-sort" aria-label="Sort programs"><option value="name" '+(programSort==='name'?'selected':'')+'>Name A–Z</option><option value="conference" '+(programSort==='conference'?'selected':'')+'>Conference</option><option value="availability" '+(programSort==='availability'?'selected':'')+'>Availability</option></select></div>'
-      +'<div class="directory-conference-strip" aria-label="Quick conference selection">'+majorChips+'</div>'
+      +'<div class="directory-welcome"><div><span>THE DRAFT POOL</span><strong>'+eligible.length+' programs</strong><small>'+available+' available · '+(eligible.length-available)+' rostered</small></div>'
+      +(isMyTurn()?'<button class="btn small" data-act="tab" data-id="draft">Your pick is live →</button>':'<span class="directory-welcome-hint">Tap a school to view scores and history</span>')+'</div>'
+      +'<div class="directory-filters"><div class="directory-search-row"><label class="directory-search"><span aria-hidden="true">⌕</span><input class="field" type="search" id="program-search" value="'+escapeHTML(programQuery)+'" placeholder="Search programs or conferences..." aria-label="Search programs" autocomplete="off"/></label>'
+      +'<div class="directory-sort-tabs" role="group" aria-label="Sort schools">'+sortButtons+'</div></div>'
+      +'<div class="directory-conference-strip" role="group" aria-label="Filter by conference">'+conferenceChips+'</div>'
       +'<div class="directory-filter-row"><div class="directory-status-tabs">'+filter('all','All schools')+filter('available','Available')+filter('owned','Rostered')+filter('mine','My programs')+'</div><span id="program-results" class="directory-current-count">'+eligible.length+' programs</span></div>'
       +'<div class="directory-letter-strip" aria-label="Browse schools alphabetically">'+letters+'</div></div>'
       +(eligible.length?'<div class="program-grid program-directory-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div><div id="no-program-results" class="empty directory-empty" hidden>No schools match those filters.</div><div id="directory-load" class="directory-load" hidden><button class="btn secondary" data-act="load-programs">Show more programs</button><span id="directory-progress"></span></div>'
@@ -661,7 +717,7 @@
 
   function profileBack(){return '<button class="profile-back" data-act="tab" data-id="'+escapeHTML(current==='program-detail'?programBackPage:managerBackPage)+'">← Back</button>';}
   function programProfilePage(){
-    const p=programs().find(p=>p.id===selectedProgramId);
+    const p=programs().find(p=>p.id===selectedProgramId)||(schoolLeaders?.directory||[]).find(p=>p.id===selectedProgramId);
     if(!p)return heading('', 'Program unavailable')+profileBack();
     const report=programResultCache[p.id]?.season===season()?programResultCache[p.id]:null;
     const record=report?.record;
@@ -903,9 +959,12 @@
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
+    if(act==='school-mode'){programMode=id;render();if(id==='leaders'){if(!schoolLeaders)loadSchoolLeaders();else filterSchoolLeaders();}else filterPrograms();return;}
+    if(act==='leaders-season'){leaderSeason=id;render();filterSchoolLeaders();return;}
+    if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       programBackPage=current==='program-detail'?programBackPage:current;
-      selectedProgramId=id;selectedProgramSeason=season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
+      selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
       managerBackPage=current==='manager-detail'?managerBackPage:current;
@@ -1147,6 +1206,7 @@
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
+    if(e.target?.id==='leader-search'){leaderQuery=e.target.value;filterSchoolLeaders();return;}
     if(e.target?.id!=='program-search')return;
     programQuery=e.target.value;
     programShown=36;

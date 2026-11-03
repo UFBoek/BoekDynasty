@@ -15,7 +15,7 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 - Each manager creates a team with a username, team name, and password.
 - Passwords hashed with PBKDF2-SHA256 using Cloudflare-compatible 100,000 iterations; 90-day HttpOnly, Secure, SameSite cookies renew on use.
 - Commissioner chooses Division I conferences and draft rounds (1–20).
-- College basketball conference membership imported from ESPN's 2026–27 data; manual program entry if a school is missing.
+- College basketball conference membership from a verified 2026–27 ESPN standings snapshot (via SportsDataverse), bundled with the app; manual program entry if a school is missing.
 - Initial snake-format draft, with exclusive ownership, turn checks, pause/resume and pre-completion commissioner reset.
 - **Permanent rosters:** draft selections remain immutable draft history, while `program_owners` tracks the current owner from year to year.
 - **Manager-to-manager trades:** select schools from each roster, send an offer, and accept, decline or cancel. Both owners' programs transfer together after acceptance, with server-side validation against stale offers. League-wide trade activity is visible.
@@ -30,12 +30,13 @@ Treat Boek Dynasty as a functional league application, not a marketing landing p
 
 The navigation uses **Standings** for the league standings table. Scores remain unranked until the season-long points system is configured; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
 
-When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the existing ESPN-based admin endpoint, in small batches. Once the imports finish, the program directory shows schools and logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
+When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the bundled verified program directory, in small batches. Once the imports finish, the program directory shows schools and their ESPN CDN logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
 
 ## Architecture
 
-Production has **zero npm dependencies**: Cloudflare Workers serve the backend and web app, Cloudflare D1 stores league data. The ESPN team directory is an unofficial external source whose membership should be reviewed before drafting.
+Production has **zero npm dependencies**: Cloudflare Workers serve the backend and web app, Cloudflare D1 stores league data. The 2026–27 program directory is bundled from the SportsDataverse ESPN standings snapshot; review school membership before drafting.
 
+- `data/programs-2027.json` vetted 2026–27 programs with 365 ESPN team IDs and all 32 conferences
 - `src/client.js` browser interface
 - `src/style.css` visual system
 - `src/server.js` Worker/API implementation
@@ -43,6 +44,10 @@ Production has **zero npm dependencies**: Cloudflare Workers serve the backend a
 - `schema.sql` D1 schema
 - `scripts/build.mjs` build pipeline
 - `dist/worker.js` Worker bundle
+
+## Program directory source
+
+The original live ESPN Core conference endpoint returned HTTP 403 from Cloudflare in November 2026. The bundled `data/programs-2027.json` file replaces that dependency. It was extracted from SportsDataverse's `raw/mbb/espn_standings_2027.json.gz`, a 2026–27 ESPN standings snapshot containing 365 unique ESPN team IDs across 32 conferences. `admin/sync` now loads locally bundled records, not external network feeds. The first production import loaded 135 schools from the commissioner's then-current 10 selected conferences. This dataset is season-specific and must be refreshed and verified before a later season.
 
 ## Publishing an update
 

@@ -156,12 +156,12 @@ export default (function makeWorker(){
       if(path==='data/leaders')return response(await DATA_PIPELINE.historicalLeaders(env,settings.scoring,season));
       if(path==='data/history'){
         const id=String(url.searchParams.get('id')||'');
-        if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
+        if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
         return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season));
       }
       if(path==='data/program'){
         const id=String(url.searchParams.get('id')||'');
-        if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
+        if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
         const [games,ranks,allRecords,awards,quads]=await Promise.all([
           DATA_PIPELINE.programGames(env,season,id),
           DATA_PIPELINE.netRanks(env,season),

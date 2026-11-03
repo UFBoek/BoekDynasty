@@ -3100,3 +3100,76 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* Mobile viewport must never reserve a white desktop scrollbar gutter. */
 @media(max-width:850px){html{scrollbar-gutter:auto}.auth-layout{width:100%;max-width:100vw}}
+
+/* November 2026: compact score browsing and touch-first school navigation. */
+.school-view-tabs{display:inline-flex;max-width:100%;align-items:center;gap:4px;padding:5px;background:#e9f0f8;border:1px solid #d9e5f3;border-radius:13px;margin:0 0 15px;overflow-x:auto}
+.school-view-tabs button{appearance:none;border:0;background:transparent;border-radius:9px;color:#57708e;padding:10px 16px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
+.school-view-tabs button:hover{background:#f7faff;color:#214e82}
+.school-view-tabs button.active{background:#fff;color:#164b8d;box-shadow:0 1px 7px #152f501b}
+.directory-search-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.directory-search-row>.directory-search{flex:1 1 280px}
+.directory-sort-tabs{display:flex;gap:4px;padding:4px;background:#edf3fa;border-radius:9px;max-width:100%;overflow-x:auto}
+.directory-sort-tabs button{border:0;border-radius:7px;background:transparent;color:#586e88;font-size:11px;font-weight:750;padding:8px 10px;white-space:nowrap;cursor:pointer}
+.directory-sort-tabs button.active{background:#fff;color:#1b5195;box-shadow:0 1px 5px #16365716}
+.directory-conference-strip{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain;gap:7px;padding:3px 1px 8px}
+.directory-conference-strip button{flex:0 0 auto;white-space:nowrap}
+.school-leaders-shell{padding:18px 19px}
+.school-leaders-note{font-size:12px;line-height:1.55;color:#6a809c;max-width:85ch;margin:6px 0 16px}
+.school-leaders-seasons{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding:4px 0 12px}
+.school-leaders-seasons button{flex:0 0 auto;appearance:none;background:#f4f7fb;border:1px solid #dee8f3;border-radius:999px;color:#59718e;padding:8px 13px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.school-leaders-seasons button.active{background:#e7f1ff;border-color:#accbeb;color:#164e8c}
+.school-leader-tools{display:flex;align-items:center;gap:14px;justify-content:space-between;margin:0 0 12px}
+.school-leader-tools .directory-search{flex:1 1 330px;max-width:490px}
+.school-leader-tools #leader-count{color:#6b829d;font-size:11px;font-weight:700;white-space:nowrap}
+.school-leader-table-wrap{max-height:70vh;overflow:auto;border:1px solid #e2ebf6;border-radius:12px;scrollbar-width:thin}
+.school-leader-table{border-collapse:separate;border-spacing:0;min-width:890px;width:100%;font-variant-numeric:tabular-nums}
+.school-leader-table th{position:sticky;top:0;z-index:2;background:#f1f6fc;border-bottom:1px solid #dce6f3;padding:11px 10px;color:#7086a0;text-align:left;font-size:10px;letter-spacing:.055em;white-space:nowrap}
+.school-leader-table td{padding:7px 10px;border-bottom:1px solid #edf2f8;color:#54718d;font-size:11px;white-space:nowrap}
+.school-leader-table tr:hover td{background:#f5f9ff}
+.school-leader-table .school-leader-rank{width:44px;color:#8094aa;font-weight:850}
+.school-leader-table .school-leader-points{color:#163e71;font-size:14px;font-weight:850}
+.school-leader-table .school-leader-year{font-variant-numeric:tabular-nums;text-align:right;min-width:66px}
+.school-leader-table .school-leader-year.selected{background:#eaf3ff;color:#194e90;font-weight:800}
+.school-leader-school{border:0;background:transparent;display:flex;align-items:center;gap:9px;text-align:left;cursor:pointer;padding:0;color:inherit;min-width:210px}
+.school-leader-school .program-logo{width:30px;height:30px;flex:0 0 30px;object-fit:contain}
+.school-leader-school span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.school-leader-school strong{color:#20436c;font-size:11.5px;font-weight:800}
+.school-leader-school small{color:#8497ac;font-size:10px}
+.school-leader-school:hover strong{text-decoration:underline;color:#2161ac}
+.school-leader-row[hidden]{display:none}
+.scoreboard-conference-strip{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain;padding:8px 2px 11px;margin:6px 0 0}
+.scoreboard-conference-strip button{appearance:none;flex:0 0 auto;white-space:nowrap;border:1px solid #dae5f2;border-radius:999px;padding:7px 12px;background:#fff;color:#59738f;font-size:10.5px;font-weight:800;cursor:pointer;transition:background .15s,border-color .15s}
+.scoreboard-conference-strip button:hover{border-color:#b1cce9;background:#f0f6ff}
+.scoreboard-conference-strip button.active{background:#e9f3ff;border-color:#a5c6ed;color:#1b5499}
+.scoreboard-conference-groups{gap:15px}
+.scoreboard-group-heading{margin-bottom:7px}
+.scoreboard-match-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));gap:8px}
+.scoreboard-match{min-height:0!important;border-radius:10px;transition:box-shadow .15s,border-color .15s}
+.scoreboard-match-head{padding:7px 10px 6px;min-height:0!important}
+.scoreboard-match-status{font-size:9px}
+.scoreboard-roster-tag{padding:3px 5px;font-size:8px}
+.scoreboard-match-teams{padding:5px 10px 6px;gap:1px}
+.scoreboard-team-line{min-height:29px;gap:6px}
+.scoreboard-team-line .program-logo{width:23px;height:23px;flex:0 0 23px;padding:0}
+.scoreboard-team-name{font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scoreboard-team-score,.scoreboard-team-line.winner .scoreboard-team-score{font-size:16px!important;line-height:1.2}
+.scoreboard-game-link{min-height:0;padding:5px 10px;font-size:9px}
+.scoreboard-day-heading{margin-top:11px;margin-bottom:8px}
+.scoreboard-match:hover{transform:translateY(-1px)}
+@media(max-width:650px){
+  .school-view-tabs{display:flex;width:max-content}
+  .school-view-tabs button{font-size:11px;padding:9px 13px}
+  .school-leaders-shell{padding:12px}
+  .school-leader-table-wrap{max-height:65vh}
+  .scoreboard-match-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .scoreboard-match-head{padding:6px 7px}
+  .scoreboard-match-teams{padding:4px 7px}
+  .scoreboard-team-line{gap:4px}
+  .scoreboard-team-line .program-logo{width:20px;height:20px;flex:0 0 20px}
+  .scoreboard-team-name{font-size:10px}
+  .scoreboard-team-score,.scoreboard-team-line.winner .scoreboard-team-score{font-size:14px!important}
+  .scoreboard-match-venue{display:none}
+  .scoreboard-game-link{padding:4px 7px}
+  .school-leader-tools{gap:8px}
+}
+@media(max-width:380px){.scoreboard-match-grid{grid-template-columns:1fr}}

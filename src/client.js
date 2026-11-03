@@ -1,7 +1,7 @@
 (function startApp(){
   const root=document.querySelector('#app');
-  const ICONS={home:'⌂',programs:'▦',draft:'▤',league:'♙',commissioner:'⚙'};
-  const names={home:'Overview',programs:'Programs',draft:'Draft Room',league:'League',commissioner:'Commissioner'};
+  const ICONS={home:'⌂',programs:'▦',draft:'▤',trades:'⇄',league:'♙',commissioner:'⚙'};
+  const names={home:'Overview',programs:'Programs',draft:'Draft Room',trades:'Trades',league:'League',commissioner:'Commissioner'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -15,7 +15,7 @@
     {name:'OTHER DIVISION I',ids:['1','5','6','12','13','16','19','20','22','24','25','26','27','28','30','46']}
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
-  let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null;
+  let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='';
   let appError='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
@@ -26,7 +26,10 @@
   const members=()=>league?.users||[];
   const activeConfs=()=>league?.settings?.conferences||[];
   const picks=()=>league?.picks||[];
-  const programOwned=(id)=>picks().find(p=>p.program_id===id);
+  const owners=()=>league?.ownership||[];
+  const programOwned=(id)=>owners().find(p=>p.program_id===id);
+  const myPrograms=()=>owners().filter(o=>o.manager_id===me?.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
+  const season=()=>league?.season||'2026-27';
   const order=()=>league?.draft_order||members().map(x=>x.id);
   const nextManager=()=>{
     const arr=order();
@@ -94,25 +97,25 @@
     return '<button data-act="tab" data-id="'+id+'" class="'+(current===id?'active':'')+'"><span>'+ICONS[id]+'</span>'+names[id]+'</button>';
   }
   function sidebar(){
-    return '<aside class="sidebar"><div class="brand"><div class="brand-icon">★</div><div><div class="brand-title">BOEK <span>DYNASTY</span></div><div class="brand-sub">COLLEGE BASKETBALL FANTASY</div></div></div><div><div class="nav-label">LEAGUE WORKSPACE</div><nav class="nav">'+['home','programs','draft','league',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">2026–27 SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
+    return '<aside class="sidebar"><div class="brand"><div class="brand-icon">★</div><div><div class="brand-title">BOEK <span>DYNASTY</span></div><div class="brand-sub">COLLEGE BASKETBALL FANTASY</div></div></div><div><div class="nav-label">LEAGUE WORKSPACE</div><nav class="nav">'+['home','programs','draft','trades','league',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
-    const tabs=['home','programs','draft','league',...(isAdmin?['commissioner']:[])];
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">BOEK DYNASTY <span class="sep">/</span> '+names[current]+'</span><div class="top-right"><span class="chip">2026–27</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,league:leaguePage,commissioner:commissionerPage}[current]||overview)()+'</section></main></div><nav class="bottom">'+tabs.map(id=>'<button class="'+(current===id?'active':'')+'" data-act="tab" data-id="'+id+'"><span>'+ICONS[id]+'</span>'+names[id].replace(' Room','')+'</button>').join('')+'</nav>';
+    const tabs=['home','programs','draft','trades','league',...(isAdmin?['commissioner']:[])];
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">BOEK DYNASTY <span class="sep">/</span> '+names[current]+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,commissioner:commissionerPage}[current]||overview)()+'</section></main></div><nav class="bottom">'+tabs.map(id=>'<button class="'+(current===id?'active':'')+'" data-act="tab" data-id="'+id+'"><span>'+ICONS[id]+'</span>'+names[id].replace(' Room','')+'</button>').join('')+'</nav>';
   }
   function overview(){
-    const owned=picks().filter(p=>p.manager_id===me.id).map(p=>programs().find(t=>t.id===p.program_id)).filter(Boolean);
+    const owned=myPrograms();
     const selectedCount=programs().filter(p=>activeConfs().includes(p.conference_id)).length;
-    return heading('2026–27 / SEASON-LONG LEAGUE','Your basketball <em>dynasty.</em>','Every school you draft belongs to your team for the full season. Standings will update after we set the scoring system.')
+    return heading('2026–27 / SEASON-LONG LEAGUE','Your basketball <em>dynasty.</em>','Your programs remain with your franchise year after year. Trade schools and build a lasting dynasty.')
       +'<div class="hero"><div class="hero-copy"><span class="hero-tag">THE WHOLE PROGRAM. THE WHOLE SEASON.</span><h2>'+escapeHTML(me.display_name)+'</h2><p>'+(league.settings.draft_status==='live'?'The program draft is live. Check whose turn is next and make your selections.':league.settings.draft_status==='finished'?'Draft complete. Your roster is set for the season.':'Your league is being assembled. Explore eligible conferences and follow league setup.')+'</p><div class="section-gap"><button class="btn" data-act="tab" data-id="draft">Go to draft room →</button></div></div><div class="hero-badge">★</div></div>'
-      +'<div class="metrics"><div class="metric"><span class="m-label">YOUR PROGRAMS</span><strong>'+owned.length+'</strong><span class="m-foot">Drafted schools</span></div><div class="metric"><span class="m-label">LEAGUE MANAGERS</span><strong>'+members().length+' <span style="font-size:14px;color:#9babc0">/ 10</span></strong><span class="m-foot">Up to ten teams</span></div><div class="metric"><span class="m-label">ELIGIBLE PROGRAMS</span><strong>'+fmt(selectedCount)+'</strong><span class="m-foot">'+activeConfs().length+' conferences selected</span></div><div class="metric"><span class="m-label">SCORING SYSTEM</span><strong style="font-size:24px">Pending</strong><span class="m-foot">To be decided</span></div></div>'
-      +'<div class="grid2"><section class="panel">'+panelHeading('Your programs','Schools you own in the season-long draft','<button class="link-button" data-act="tab" data-id="draft">Draft room →</button>')+(owned.length?owned.map(p=>'<div class="rowline">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div><span class="status draft">ROSTERED</span></div>').join(''):empty('No programs drafted yet','Your drafted schools will appear here.'))+'</section><section class="panel">'+panelHeading('League leaderboard','Season-long fantasy standings')+leaderboard()+'</section></div>';
+      +'<div class="metrics"><div class="metric"><span class="m-label">YOUR PROGRAMS</span><strong>'+owned.length+'</strong><span class="m-foot">Permanently owned</span></div><div class="metric"><span class="m-label">LEAGUE MANAGERS</span><strong>'+members().length+' <span style="font-size:14px;color:#9babc0">/ 10</span></strong><span class="m-foot">Up to ten teams</span></div><div class="metric"><span class="m-label">ELIGIBLE PROGRAMS</span><strong>'+fmt(selectedCount)+'</strong><span class="m-foot">'+activeConfs().length+' conferences selected</span></div><div class="metric"><span class="m-label">SCORING SYSTEM</span><strong style="font-size:24px">Pending</strong><span class="m-foot">To be decided</span></div></div>'
+      +'<div class="grid2"><section class="panel">'+panelHeading('Your programs','Your permanently owned schools','<button class="link-button" data-act="tab" data-id="draft">Draft room →</button>')+(owned.length?owned.map(p=>'<div class="rowline">'+img(p)+'<div class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+conf(p.conference_id)+'</small></div><span class="status draft">ROSTERED</span></div>').join(''):empty('No programs drafted yet','Owned programs will appear here after the draft or a trade.'))+'</section><section class="panel">'+panelHeading('League leaderboard','Season-long fantasy standings')+leaderboard()+'</section></div>';
   }
   function leaderboard(){
-    return '<table class="table"><thead><tr><th>RANK</th><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map((u,i)=>'<tr><td class="pos">'+(i+1)+'</td><td><strong>'+escapeHTML(u.display_name)+'</strong>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+picks().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table><div class="hint section-gap">Listed in draft order. Rankings and points begin after scoring is defined.</div>';
+    return '<table class="table"><thead><tr><th>RANK</th><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map((u,i)=>'<tr><td class="pos">'+(i+1)+'</td><td><strong>'+escapeHTML(u.display_name)+'</strong>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table><div class="hint section-gap">Listed in draft order. Rankings and points begin after scoring is defined.</div>';
   }
   function programCard(p,canPick){
     const owned=programOwned(p.id);
@@ -122,7 +125,7 @@
   function programsPage(){
     const eligible=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name));
     const available=eligible.filter(p=>!programOwned(p.id)).length;
-    return heading('PROGRAM DIRECTORY','Find your next <em>powerhouse.</em>','The commissioner controls eligible conferences. Every program can be drafted by only one manager.')
+    return heading('PROGRAM DIRECTORY','Find your next <em>powerhouse.</em>','Every school has one owner. Programs remain on a roster across seasons unless traded.')
       +'<div class="controls"><div><h2>'+eligible.length+' eligible programs</h2><p class="hint">'+available+' currently undrafted</p></div><input class="field search" type="search" id="program-search" placeholder="Search programs or conferences..." aria-label="Search programs"/></div>'
       +(eligible.length?'<div class="program-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div>':empty('Program pool is not loaded','Your commissioner can select conferences and import their schools in Commissioner settings.'))
       +'<p class="hint section-gap">Conference rosters are imported separately from ESPN and should be reviewed for current membership. No scoring rules have been set.</p>';
@@ -135,11 +138,33 @@
     const owner=members().find(m=>m.id===n?.id);
     return heading('DRAFT HEADQUARTERS','Build your <em>program empire.</em>','An exclusive, shared draft where managers select entire NCAA basketball teams.')
       +'<div class="draft-info"><div><span class="eyebrow">'+(statusText==='live'?'● DRAFT LIVE':statusText==='finished'?'✓ DRAFT COMPLETED':'● DRAFT NOT STARTED')+'</span><strong>'+(statusText==='live'?'On the clock: '+escapeHTML(owner?.display_name||''):(statusText==='finished'?'The board is complete':'Waiting for the commissioner'))+'</strong><p>'+picks().length+' of '+total+' picks made · '+members().length+' managers · '+league.settings.rounds+' rounds</p><div class="draft-progress"><div style="width:'+((picks().length/Math.max(1,total))*100)+'%"></div></div></div><span class="status '+(statusText==='live'?'':'wait')+'">'+(statusText==='live'?'LIVE':statusText.toUpperCase())+'</span></div>'
-      +'<div class="grid2"><section class="panel">'+panelHeading('Draft board','Picks are saved live for everyone')+(picks().length?[...picks()].reverse().map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow"><strong>'+escapeHTML(t?.name||'Program')+'</strong><small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No draft picks yet','The draft board fills when your commissioner starts the draft.'))+'</section><section class="panel">'+panelHeading('Draft order','Snake format, alternating each round')+order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<div class="manager-card"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</div>':''}).join('')+'<div class="notice section-gap">Draft picks are permanent until the commissioner resets the draft. No points are calculated yet.</div></section></div>'
+      +'<div class="grid2"><section class="panel">'+panelHeading('Draft board','Picks are saved live for everyone')+(picks().length?[...picks()].reverse().map(p=>{const t=programs().find(t=>t.id===p.program_id),m=members().find(m=>m.id===p.manager_id);return '<div class="rowline"><span class="pos">'+p.overall+'</span>'+(t?img(t):'')+'<div class="grow"><strong>'+escapeHTML(t?.name||'Program')+'</strong><small>'+escapeHTML(m?.display_name||'Manager')+' · Round '+p.round+'</small></div></div>'}).join(''):empty('No draft picks yet','The draft board fills when your commissioner starts the draft.'))+'</section><section class="panel">'+panelHeading('Draft order','Snake format, alternating each round')+order().map((id,i)=>{const u=members().find(m=>m.id===id);return u?'<div class="manager-card"><span class="pos">'+(i+1)+'</span>'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+escapeHTML(u.username)+'</small></div>'+(id===me.id?'<span class="status">YOU</span>':'')+'</div>':''}).join('')+'<div class="notice section-gap">Original picks stay on this board. Trading changes current rosters, not draft history.</div></section></div>'
       +(statusText==='live'?'<div class="button-row section-gap"><button class="btn" data-act="tab" data-id="programs">'+(isMyTurn()?'Make your pick →':'Browse eligible schools →')+'</button></div>':'');
   }
+
+  function tradesPage(){
+    const ready=league.settings.draft_status==='finished';
+    const others=members().filter(u=>u.id!==me.id);
+    const recipient=others.find(u=>u.id===tradeTargetId)||others[0];
+    tradeTargetId=recipient?.id||'';
+    const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
+    const theirs=owners().filter(o=>o.manager_id===tradeTargetId).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const selections=(items,side)=>items.length?'<div class="trade-program-list">'+items.map(p=>'<label class="trade-choice"><input type="checkbox" name="'+side+'" value="'+escapeHTML(p.id)+'"/>'+img(p)+'<span>'+escapeHTML(p.name)+'</span></label>').join('')+'</div>':empty('No programs available','This manager does not own any schools.');
+    const offers=league.trades||[],items=league.trade_items||[];
+    const card=(t)=>{
+      const from=members().find(m=>m.id===t.from_manager_id),to=members().find(m=>m.id===t.to_manager_id);
+      const give=items.filter(i=>i.trade_id===t.id&&i.from_manager_id===t.from_manager_id).map(i=>programs().find(p=>p.id===i.program_id)?.name||'Program');
+      const receive=items.filter(i=>i.trade_id===t.id&&i.from_manager_id===t.to_manager_id).map(i=>programs().find(p=>p.id===i.program_id)?.name||'Program');
+      const actions=t.status==='pending'?(t.to_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept trade</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div>':t.from_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small ghost" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button></div>':''):'';
+      return '<div class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div><p><strong>Offering:</strong> '+escapeHTML(give.join(', '))+'</p><p><strong>Requesting:</strong> '+escapeHTML(receive.join(', '))+'</p>'+actions+'</div>';
+    };
+    return heading('DYNASTY TRANSFER PORTAL','The <em>trade center.</em>','Propose and respond to program-for-program trades. Accepted deals transfer permanent ownership without changing the original draft board.')
+      +(ready?'<section class="panel section-gap">'+panelHeading('Propose a trade','Choose programs from both franchises')+'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'+others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select></div><div class="trade-columns"><div><h3 class="subhead">YOU SEND · '+mine.length+' OWNED</h3>'+selections(mine,'trade-give')+'</div><div><h3 class="subhead">YOU RECEIVE · '+theirs.length+' OWNED</h3>'+selections(theirs,'trade-receive')+'</div></div><div class="section-gap"><button class="btn" data-act="trade-propose" '+(!mine.length||!theirs.length?'disabled':'')+'>Send trade offer</button></div></section>':
+        '<section class="panel section-gap">'+empty('Trading unlocks after the draft','Finish the initial program draft before submitting offers. Drafted schools will be permanent franchise assets.')+'</section>')
+      +'<section class="panel section-gap">'+panelHeading('League trade activity','Latest offers and completed deals')+(offers.length?offers.map(card).join(''):empty('No trades yet','Offers and accepted deals appear here for the whole league.'))+'</section>';
+  }
   function leaguePage(){
-    return heading('YOUR FANTASY LEAGUE','The whole <em>league.</em>','Up to 10 managers. One collection of college basketball programs. One season-long champion.')
+    return heading('YOUR FANTASY LEAGUE','The whole <em>league.</em>','Up to 10 managers. Permanent program ownership, trading, and a new championship every season.')
       +'<div class="metrics"><div class="metric"><span class="m-label">MANAGERS</span><strong>'+members().length+' / 10</strong><span class="m-foot">Registered team owners</span></div><div class="metric"><span class="m-label">CONFERENCES</span><strong>'+activeConfs().length+'</strong><span class="m-foot">Eligible for draft</span></div><div class="metric"><span class="m-label">DRAFT FORMAT</span><strong style="font-size:22px">Snake</strong><span class="m-foot">'+league.settings.rounds+' rounds</span></div><div class="metric"><span class="m-label">COMPETITION</span><strong style="font-size:22px">Season-long</strong><span class="m-foot">No head-to-head matchups</span></div></div>'
       +'<div class="grid2"><section class="panel">'+panelHeading('League members',members().length+' registered · '+(10-members().length)+' slots open')+members().map(u=>'<div class="manager-card">'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div>'+(u.role==='commissioner'?'<span class="status wait">COMMISH</span>':'')+'</div>').join('')+'</section><section class="panel">'+panelHeading('Eligible conferences','Selected by your commissioner')+(activeConfs().length?activeConfs().map(id=>'<div class="rowline"><span class="grow"><strong>'+escapeHTML(conf(id))+'</strong></span><span class="right">'+programs().filter(p=>p.conference_id===id).length+' teams</span></div>').join(''):empty('No conferences selected','The commissioner will configure the eligible draft pool.'))+'</section></div>';
   }
@@ -159,7 +184,20 @@
     if(busy)return;
     busy=true;
     try{
-      if(act==='save-confs'){
+      if(act==='trade-propose'){
+        const give_ids=[...document.querySelectorAll('input[name="trade-give"]:checked')].map(x=>x.value);
+        const receive_ids=[...document.querySelectorAll('input[name="trade-receive"]:checked')].map(x=>x.value);
+        if(!give_ids.length||!receive_ids.length)throw Error('Select at least one program from each team.');
+        if(!window.confirm('Send this trade offer? The other manager must accept before any programs move.')){busy=false;return;}
+        await api('trade/propose',{to_manager_id:tradeTargetId,give_ids,receive_ids});notice('Trade offer sent.');
+      }else if(act==='trade-accept'){
+        if(!window.confirm('Accept this trade and permanently exchange the selected programs?')){busy=false;return;}
+        await api('trade/respond',{trade_id:id,mode:'accept'});notice('Trade accepted. Rosters updated.');
+      }else if(act==='trade-decline'){
+        await api('trade/respond',{trade_id:id,mode:'decline'});notice('Trade declined.');
+      }else if(act==='trade-cancel'){
+        await api('trade/cancel',{trade_id:id});notice('Trade offer cancelled.');
+      }else if(act==='save-confs'){
         const selected=[...document.querySelectorAll('input[name="conference"]:checked')].map(x=>x.value);
         const rounds=Number(v('#rounds'));
         await api('admin/settings',{conferences:selected,rounds});
@@ -223,6 +261,9 @@
         notice('Signed in. Your device will remember this account.');
       }
     }catch(err){notice(err.message,true);}finally{busy=false;}
+  });
+  root.addEventListener('change',e=>{
+    if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
   });
   root.addEventListener('input',e=>{
     if(e.target?.id!=='program-search')return;

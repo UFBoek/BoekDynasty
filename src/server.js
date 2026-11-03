@@ -354,10 +354,17 @@ export default (function makeWorker(){
       return response({ok:true,...result});
     }
     if(path==='admin/data/history-backfill'){
-      const days=Number(data.days||3);
-      if(!Number.isInteger(days)||days<1||days>4)return failure('Historical batch must be 1–4 dates.',400);
+      const days=Number(data.days||8);
+      if(!Number.isInteger(days)||days<1||days>12)return failure('Historical batch must be 1–12 dates.',400);
       const result=await DATA_PIPELINE.backfillHistory(env,days);
       return response({ok:result.results.every(x=>x.ok),...result});
+    }
+    if(path==='admin/data/history-net'){
+      const season=String(data.season||'');
+      if(!['2021-22','2022-23','2023-24','2024-25','2025-26'].includes(season))
+        return failure('Select a completed season from 2021–22 to 2025–26.',400);
+      const result=await DATA_PIPELINE.syncArchivedNet(env,season);
+      return response({ok:true,...result});
     }
     if(path==='admin/data/upcoming'){
       const settings=await getSettings(env);

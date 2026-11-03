@@ -442,3 +442,70 @@
  .program-card>.owner-chip,.program-card>.available-chip,.program-card>.btn{display:inline-flex;align-self:flex-start;margin:0 0 0 53px;max-width:calc(100% - 53px)}
  .board-slot .board-team .program-logo{width:28px;height:28px}
 }
+
+/* League overview and personal dynasty manager workspace */
+.league-cap{font-size:14px;color:#93a8c4}
+.league-activity{padding:13px 0;border-bottom:1px solid #2b3d53;display:grid;gap:5px}
+.league-activity:last-child{border-bottom:0}
+.league-activity strong{font-size:12px;color:#e5edf8}
+.league-activity span{font-size:12px;color:#92a9c5;line-height:1.45}
+.team-hero{display:flex;align-items:center;gap:18px;padding:22px;margin-bottom:14px}
+.team-hero .avatar{width:54px;height:54px;font-size:18px;flex:0 0 54px}
+.team-hero .grow{min-width:0;flex:1}
+.team-hero h2{font-size:24px;line-height:1.1;letter-spacing:-.5px}
+.team-hero p{font-size:12px;color:#91a6c2;margin-top:7px}
+.team-permanence{font-size:11px;font-weight:750;color:#ddb97b;border:1px solid #6b5539;background:#2a2530;border-radius:20px;padding:7px 10px;white-space:nowrap}
+.team-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.team-stat{padding:18px 20px;background:#132238;border:1px solid #2b3d54;border-radius:14px;min-width:0}
+.team-stat span{display:block;font-size:10px;letter-spacing:.8px;font-weight:750;color:#8ea3c0}
+.team-stat strong{display:block;font-size:26px;margin-top:8px;letter-spacing:-.5px}
+.team-stat strong small{font-size:13px;color:#8fa3c1}
+.team-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:18px}
+.team-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,1fr);gap:16px;align-items:start}
+.team-aside{display:grid;gap:16px;min-width:0}
+.team-program-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.team-program{border:1px solid #30445d;background:#0f1c2d;border-radius:11px;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.team-program-link{border:0;background:none;color:inherit;width:100%;text-align:left;display:flex;gap:10px;align-items:center;min-width:0;padding:12px;min-height:63px}
+.team-program-link:hover{background:#1b2c42}
+.team-program-link .grow{min-width:0;flex:1}
+.team-program-link strong{display:block;color:#e8edf6;font-size:12px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.team-program-link small{display:block;color:#90a5bf;font-size:11px;margin-top:4px}
+.team-program-arrow{color:#b1c4db;font-size:19px}
+.team-program .program-logo{flex-shrink:0}
+.team-drop{background:#1c2d43;border:0;border-top:1px solid #2c4059;text-align:left;padding:7px 12px;color:#d4aeb8;font-size:11px;font-weight:700}
+.team-drop:hover{background:#382932}
+.team-offer{background:#0e1a2b;border:1px solid #30445d;border-radius:12px;padding:13px;margin-top:10px;min-width:0}
+.team-offer-head{display:flex;align-items:start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.team-offer-head strong{font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.team-offer-detail{display:grid;gap:3px;margin-top:7px}
+.team-offer-detail span{font-size:10px;letter-spacing:.5px;color:#839bb9;text-transform:uppercase}
+.team-offer-detail strong{font-size:12px;line-height:1.45;font-weight:650;color:#e0e8f4;overflow-wrap:anywhere}
+.team-offer-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.team-offer-actions .btn{min-height:38px}
+.team-panel-footer{margin-top:15px}
+.team-claim{display:flex;align-items:center;gap:12px;justify-content:space-between;border-bottom:1px solid #2c3d54;padding:11px 0}
+.team-claim:last-child{border:0}
+.team-claim .grow{min-width:0}
+.team-claim strong{font-size:12px}
+.team-claim small{display:block;margin-top:4px;font-size:10px;color:#91a7c2}
+.team-subhead{margin-top:19px;font-size:11px;color:#a8b8ce;font-weight:800;letter-spacing:.5px}
+.team-footnote{font-size:11px;color:#90a6c2;margin-top:16px;line-height:1.5}
+@media(max-width:1150px){.team-layout{grid-template-columns:1fr}.team-aside{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.team-layout{display:flex;flex-direction:column}.team-aside{display:grid;grid-template-columns:1fr;width:100%;order:-1}.team-roster-panel{width:100%}}
+@media(max-width:650px){
+ .bottom button{padding-left:0;padding-right:0;gap:3px}
+ .bottom button span{font-size:9px}
+ .team-hero{padding:15px;gap:11px}
+ .team-hero .avatar{width:42px;height:42px;flex-basis:42px;font-size:13px}
+ .team-hero h2{font-size:19px}
+ .team-permanence{font-size:9px;padding:6px 8px}
+ .team-stats{gap:8px}
+ .team-stat{padding:12px 10px}
+ .team-stat strong{font-size:21px}
+ .team-stat span{font-size:9px;letter-spacing:.2px}
+ .team-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .team-actions .btn{padding:10px 8px;font-size:11px}
+ .team-program-grid{grid-template-columns:1fr}
+ .team-program-link{min-height:62px}
+}
+@media(max-width:370px){.bottom button span{font-size:8px}.team-permanence{display:none}}

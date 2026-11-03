@@ -61,11 +61,18 @@ export default (function makeWorker(){
   async function getSettings(env){
     const result=(await q(env,'SELECT key,value FROM settings').all()).results||[];
     const map=Object.fromEntries(result.map(x=>[x.key,x.value]));
-    return {conferences:JSON.parse(map.conferences||'[]'),rounds:Number(map.rounds||8),draft_status:map.draft_status||'pending',current_season:map.current_season||'2026-27'};
+    return {conferences:JSON.parse(map.conferences||'[]'),rounds:Number(map.rounds||8),draft_status:map.draft_status||'pending',current_season:map.current_season||'2026-27',
+      league_name:map.league_name||'Boek Dynasty',max_managers:Number(map.max_managers||10),
+      trading_enabled:map.trading_enabled!=='0',draft_order:JSON.parse(map.draft_order||'[]')};
   }
   async function setSetting(env,key,value){
     await q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',key,String(value)).run();
   }
+  const resolvedOrder=(users,settings)=>{
+    const ids=users.map(u=>u.id);
+    const saved=Array.isArray(settings.draft_order)?settings.draft_order:[];
+    return [...new Set([...saved.filter(id=>ids.includes(id)),...ids])];
+  };
   async function getState(env,user){
     const [users,teams,picks,ownership,trades,tradeItems,settings]=await Promise.all([
       q(env,"SELECT id,username,display_name,role,created_at FROM users ORDER BY created_at,rowid").all(),
@@ -77,8 +84,8 @@ export default (function makeWorker(){
       getSettings(env)
     ]);
     const allUsers=users.results||[];
-    const order=allUsers.map(u=>u.id);
-    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:10,season:settings.current_season};
+    const order=resolvedOrder(allUsers,settings);
+    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season};
   }
   function parseBody(req){
     if(!(req.headers.get('Content-Type')||'').toLowerCase().includes('application/json'))throw new Error('JSON request required.');
@@ -90,7 +97,8 @@ export default (function makeWorker(){
     const path=url.pathname.slice(5);
     if(path==='status'&&request.method==='GET'){
       const row=await q(env,'SELECT count(*) AS total FROM users').first();
-      return response({needs_setup:Number(row?.total||0)===0,max_managers:10,registered:Number(row?.total||0)});
+      const settings=await getSettings(env);
+       return response({needs_setup:Number(row?.total||0)===0,max_managers:settings.max_managers,registered:Number(row?.total||0),league_name:settings.league_name});
     }
     if(path==='state'&&request.method==='GET'){
       const auth=await getUser(request,env);
@@ -123,7 +131,7 @@ export default (function makeWorker(){
       const setting=await getSettings(env);
       if(setting.draft_status!=='pending')return failure('New members cannot join after the draft has started.',409);
       const num=await q(env,'SELECT count(*) AS total FROM users').first();
-      if(num.total>=10)return failure('This league already has 10 managers.',409);
+      if(num.total>=setting.max_managers)return failure('This league is full ('+setting.max_managers+' managers).',409);
       const user=await createUser(env,data,'manager');
       await q(env,'UPDATE invites SET used_at=? WHERE code_hash=? AND used_at IS NULL',timestamp(),entry.code_hash).run();
       return response({user},200,{'Set-Cookie':cookie(await remember(env,user.id))});
@@ -156,7 +164,7 @@ export default (function makeWorker(){
     if(path==='draft/pick'){
       const settings=await getSettings(env);
       if(settings.draft_status!=='live')return failure('The draft is not live.',409);
-      const users=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results;
+      const users=resolvedOrder((await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results,settings).map(id=>({id}));
       const count=(await q(env,'SELECT count(*) AS total FROM picks').first()).total;
       const roundIndex=Math.floor(count/users.length);
       if(roundIndex>=settings.rounds)return failure('Draft already finished.',409);
@@ -173,6 +181,7 @@ export default (function makeWorker(){
     if(path==='trade/propose'){
       const settings=await getSettings(env);
       if(settings.draft_status!=='finished')return failure('Trading opens after the initial draft is complete.',409);
+      if(!settings.trading_enabled)return failure('Trades are disabled by the commissioner.',409);
       const recipient=String(data.to_manager_id||'');
       const other=await q(env,'SELECT id FROM users WHERE id=?',recipient).first();
       if(!other||recipient===user.id)return failure('Choose another league manager.',400);
@@ -203,6 +212,7 @@ export default (function makeWorker(){
       }
       const settings=await getSettings(env);
       if(settings.draft_status!=='finished')return failure('Trading is not available until the draft finishes.',409);
+      if(!settings.trading_enabled)return failure('Trades are disabled by the commissioner.',409);
       const nonce=rand(18);
       // D1 batch statements run in one transaction. A unique acceptance nonce makes
       // ownership transfers conditional on this request actually accepting the offer.
@@ -233,12 +243,44 @@ export default (function makeWorker(){
     if(user.role!=='commissioner')return failure('Commissioner access required.',403);
     if(path==='admin/invite'){
       const num=await q(env,'SELECT count(*) AS total FROM users').first();
-      if(num.total>=10)return failure('League is full.',409);
       const settings=await getSettings(env);
+      if(num.total>=settings.max_managers)return failure('League is full ('+settings.max_managers+' managers).',409);
       if(settings.draft_status!=='pending')return failure('Invitations are closed after the draft starts.',409);
       const code=rand(24);
       await q(env,'INSERT INTO invites(code_hash,created_at,expires_at,issued_by) VALUES(?,?,?,?)',await hash(code),timestamp(),timestamp()+7*86400,user.id).run();
       return response({code,expires_in_days:7});
+    }
+    if(path==='admin/general'){
+      const leagueName=String(data.league_name||'').trim().replace(/\s+/g,' ');
+      const max=Number(data.max_managers);
+      if(leagueName.length<3||leagueName.length>40)return failure('League name must be 3–40 characters.',400);
+      if(!Number.isInteger(max)||max<2||max>20)return failure('Manager limit must be between 2 and 20.',400);
+      const settings=await getSettings(env);
+      const currentManagers=(await q(env,'SELECT count(*) AS n FROM users').first()).n;
+      if(max<currentManagers)return failure('Manager limit cannot be below the number of registered managers.',409);
+      if(max!==settings.max_managers && (settings.draft_status!=='pending'||(await q(env,'SELECT count(*) AS n FROM picks').first()).n>0))
+        return failure('Manager limit is locked after the draft begins.',409);
+      await env.DB.batch([
+        q(env,"INSERT INTO settings(key,value) VALUES('league_name',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",leagueName),
+        q(env,"INSERT INTO settings(key,value) VALUES('max_managers',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",String(max))
+      ]);
+      return response({ok:true});
+    }
+    if(path==='admin/trade-settings'){
+      if(typeof data.trading_enabled!=='boolean')return failure('Invalid trade setting.',400);
+      await setSetting(env,'trading_enabled',data.trading_enabled?'1':'0');
+      return response({ok:true});
+    }
+    if(path==='admin/draft-order'){
+      const settings=await getSettings(env);
+      const havePicks=(await q(env,'SELECT count(*) AS n FROM picks').first()).n;
+      if(settings.draft_status!=='pending'||havePicks>0)return failure('Draft order is locked once the draft begins.',409);
+      const actual=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results.map(u=>u.id);
+      const ids=Array.isArray(data.order)?data.order.map(String):[];
+      if(ids.length!==actual.length||new Set(ids).size!==ids.length||ids.some(id=>!actual.includes(id)))
+        return failure('Draft order must contain each registered manager exactly once.',400);
+      await setSetting(env,'draft_order',JSON.stringify(ids));
+      return response({ok:true});
     }
     if(path==='admin/settings'){
       const picksCount=(await q(env,'SELECT count(*) AS total FROM picks').first()).total;
@@ -328,7 +370,7 @@ export default (function makeWorker(){
         const msg=e?.message||'Unexpected server error.';
         if(url.pathname.startsWith('/api/')){
           if(/UNIQUE constraint failed/i.test(msg))return failure('This username or program has already been taken. Please try another.',409);
-          if(/League is full/i.test(msg))return failure('The league is full (10 managers).',409);
+          if(/League is full/i.test(msg))return failure('The league is full. Ask the commissioner to increase the manager limit.',409);
           return failure(msg.startsWith('Username')||msg.startsWith('Team name')||msg.startsWith('Password')?msg:'Server could not complete the request.',500);
         }
         return new Response('Application error.',{status:500});

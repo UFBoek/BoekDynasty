@@ -817,6 +817,8 @@
       const progOptions=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name))
         .map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
       const awardOptions=[['conference_regular_champion','Conference regular-season champion'],['conference_tournament_champion','Conference tournament champion'],['ncaa_seed','NCAA Tournament seed'],['ncaa_wins','NCAA Tournament wins'],['national_champion','National champion'],['kenpom_final_rank','Final KenPom rank']];
+      const archivedYears=resultsStatus?.historical||[];
+      const historicalRows=archivedYears.map(h=>'<div class="data-run"><span>'+escapeHTML(h.season)+'</span><div><strong>'+Number(h.checked_dates||0)+' dates checked</strong><small>'+Number(h.primary_events||0)+' ESPN games · '+(h.net_teams>=350?'NET verified ('+h.net_teams+' teams)':'NET missing')+' · '+Number(h.award_count||0)+' achievements</small></div></div>').join('');
       body='<section class="panel setting-panel">'+panelHeading('Results pipeline','ESPN scoreboards · current season')
         +'<div class="data-kpis"><div><span>GAMES</span><strong>'+Number(resultsStatus?.game_count||0)+'</strong></div><div><span>VERIFIED DAYS</span><strong>'+(coverage?coverage.checked_dates:'—')+'</strong></div><div><span>MISSING DAYS</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div></div>'
         +(resultsError?'<p class="notice section-gap">'+escapeHTML(resultsError)+'</p>':'')
@@ -827,8 +829,11 @@
         +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn secondary" data-act="data-fill-missing">Repair missing dates</button><button class="btn secondary" data-act="data-ap-refresh">Sync AP Top 25</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
         +'<p class="hint section-gap">Game scores do not activate fantasy scoring. Import errors are kept in the audit log.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Historical seasons','2021–22 through 2025–26')
-        +'<p class="hint">The site progressively imports verified past-game results. Historical points will update as game, NET, and postseason records are validated. Unverified years stay marked as pending.</p>'
-        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-history-backfill">Import next historical dates</button></div></section>'
+        +'<p class="hint">Historical games import across all five years every five minutes, independently of live scores. NET standings and verified achievements are required for complete fantasy totals.</p>'
+        +(historicalRows||empty('Historical import has not started'))
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-history-backfill">Import 8 historical dates</button></div>'
+        +'<div class="form-row section-gap"><label for="history-net-season">Historical NET season</label><select class="field" id="history-net-season">'+['2025-26','2024-25','2023-24','2022-23','2021-22'].map(year=>'<option value="'+year+'">'+year+'</option>').join('')+'</select></div>'
+        +'<button class="btn secondary" data-act="data-history-net">Import archived NET rankings</button></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
         +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
@@ -940,9 +945,13 @@
         notice('Imported '+data.matched+' games · '+data.changed+' updated.');
         await loadResults();
       }else if(act==='data-history-backfill'){
-        const data=await api('admin/data/history-backfill',{days:3});
+        const data=await api('admin/data/history-backfill',{days:8});
         const failed=(data.results||[]).filter(x=>!x.ok);
         notice('Checked '+(data.results||[]).length+' historical dates'+(failed.length?' · '+failed.length+' errors':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-history-net'){
+        const data=await api('admin/data/history-net',{season:v('#history-net-season')});
+        notice(data.duplicate?'Historical NET was already verified.':'Imported '+data.count+' historical NET rankings for '+data.season+'.');
         await loadResults();
       }else if(act==='data-backfill'){
         const result=await api('admin/data/backfill',{days:7});

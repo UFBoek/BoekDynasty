@@ -98,9 +98,9 @@ The scoring **weights** may be configured separately, but this pipeline does **n
 
 **Automatic updates**
 - Cloudflare Cron Trigger `*/15 * * * *` checks scoreboards every 15 minutes during American Eastern game hours, November–April. In off-hours/offseason, it skips without network activity.
-- Cloudflare Cron Trigger `15 10 * * *` rechecks the past seven days at 10:15 UTC daily for corrected final scores. This preserves earlier results and matches by ESPN event ID.
+- Cloudflare Cron Trigger `15 10 * * *` rechecks the past seven days and imports the next three days of scheduled matchups at 10:15 UTC daily. This preserves earlier results and matches by ESPN event ID.
 - `wrangler.toml` declares both triggers; for manual Cloudflare API deployments, update the Worker's Cron Trigger schedules separately. `results_auto_sync` controls whether the scheduled handler runs.
-- **Commissioner → Data** can import a specific date, retry the past seven days, disable auto polling, and view logged failures.
+- **Commissioner → Data** can import a specific date, retry the past seven days, preload three upcoming days, disable auto polling, and view logged failures.
 
 **NET and quadrant metadata**
 - Rankings are separate dated snapshots in `cbb_net_rankings`. NET rankings are generally not available at the start of November; the site must never carry over the previous season's values.

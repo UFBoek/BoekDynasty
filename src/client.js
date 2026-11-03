@@ -434,7 +434,10 @@
       body='<section class="panel setting-panel">'+panelHeading('Draft settings')
         +'<div class="settings-grid"><div class="form-row"><label for="rounds">Rounds per manager</label><input class="field" id="rounds" type="number" min="1" max="20" value="'+settings.rounds+'" '+(locked?'disabled':'')+'/></div>'
         +'<div class="settings-static"><span>Draft format</span><strong>Snake</strong><small>Status: '+escapeHTML(settings.draft_status)+'</small></div></div>'
-        +'<button class="btn" data-act="save-rounds" '+(locked?'disabled':'')+'>Save rounds</button></section>'
+        +'<button class="btn" data-act="save-rounds" '+(locked?'disabled':'')+'>Save rounds</button>'
+        +'<div class="form-row section-gap"><label for="clock-duration">Draft clock</label><select id="clock-duration" class="field">'+[[0,'Off'],[60,'1 minute'],[120,'2 minutes'],[180,'3 minutes'],[300,'5 minutes'],[600,'10 minutes'],[900,'15 minutes'],[1800,'30 minutes']].map(([seconds,label])=>'<option value="'+seconds+'" '+(settings.draft_clock_seconds===seconds?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'
+        +'<div class="button-row"><button class="btn secondary" data-act="save-clock" '+(!['pending','paused'].includes(settings.draft_status)?'disabled':'')+'>Save clock</button></div>'
+        +'<p class="hint section-gap">The countdown resets after each pick. Time running out does not automatically make a selection.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Draft order')
         +(rows||empty('Waiting for managers'))
         +(locked?'':'<div class="button-row section-gap"><button class="btn secondary" data-act="shuffle-draft" '+(members().length<2?'disabled':'')+'>Shuffle</button><button class="btn ghost" data-act="signup-draft">Signup order</button><button class="btn" data-act="save-draft-order" '+(members().length<2?'disabled':'')+'>Save order</button></div>')+'</section>'
@@ -500,9 +503,18 @@
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(act==='open-program'){
+      profileReturn=current==='program-detail'?profileReturn:current;
+      selectedProgramId=id;current='program-detail';render();window.scrollTo({top:0});return;
+    }
+    if(act==='open-manager'){
+      profileReturn=current==='manager-detail'?profileReturn:current;
+      selectedManagerId=id;current='manager-detail';render();window.scrollTo({top:0});return;
+    }
     if(act==='commish-section'){adminSection=id;render();return;}
     if(act==='load-programs'){programShown+=24;filterPrograms();return;}
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
+    if(act==='draft-round-change'){draftRoundView=id;render();return;}
     if(act==='move-draft'){
       const i=Number(button.dataset.index),j=i+Number(button.dataset.dir);
       if(i>=0&&i<draftOrderPreview.length&&j>=0&&j<draftOrderPreview.length){
@@ -522,7 +534,39 @@
     if(busy)return;
     busy=true;
     try{
-      if(act==='save-general'){
+      if(act==='save-clock'){
+        await api('admin/clock',{seconds:Number(v('#clock-duration'))});
+        notice('Draft clock saved.');
+      }else if(act==='save-waivers'){
+        await api('admin/waiver-settings',{enabled:!!document.querySelector('#waivers-enabled')?.checked});
+        notice('Waiver settings saved.');
+      }else if(act==='season-rollover'){
+        if(!window.confirm('Archive '+season()+' and start the next season? All teams keep the same programs. This cannot be undone.')){busy=false;return;}
+        const result=await api('admin/season/rollover',{});
+        selectedHistorySeason=result.archived;
+        notice('Archived '+result.archived+'. The new season is '+result.current_season+'.');
+      }else if(act==='season-champion'){
+        const select=[...document.querySelectorAll('.season-champion-select')].find(el=>el.dataset.season===id);
+        await api('admin/season/champion',{season:id,manager_id:select?.value||''});
+        notice('Archived champion updated.');
+      }else if(act==='waiver-claim'){
+        const programId=v('#waiver-program'),dropId=v('#waiver-drop');
+        if(!programId)throw new Error('Choose an available school.');
+        await api('waiver/claim',{program_id:programId,drop_program_id:dropId||null});
+        notice('Waiver request submitted.');
+      }else if(act==='waiver-cancel'){
+        await api('waiver/cancel',{claim_id:id});notice('Claim cancelled.');
+      }else if(act==='waiver-drop'){
+        const programId=v('#waiver-release');
+        if(!programId)throw new Error('Choose a school.');
+        const school=programs().find(p=>p.id===programId);
+        if(!window.confirm('Drop '+(school?.name||'this program')+' from your permanent roster?')){busy=false;return;}
+        await api('waiver/drop',{program_id:programId});notice('Program released.');
+      }else if(act==='waiver-review'){
+        if(!window.confirm((button.dataset.mode==='approve'?'Approve':'Deny')+' this waiver claim?')){busy=false;return;}
+        await api('admin/waiver/review',{claim_id:id,mode:button.dataset.mode});
+        notice('Waiver claim reviewed.');
+      }else if(act==='save-general'){
         await api('admin/general',{league_name:v('#league-name').trim(),max_managers:Number(v('#manager-limit')||league.settings.max_managers)});
         notice('General settings saved.');
       }else if(act==='save-scoring'){
@@ -621,6 +665,8 @@
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programShown=24;filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=24;filterPrograms();}
+    if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
+    if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{

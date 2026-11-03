@@ -207,30 +207,65 @@ const DATA_PIPELINE=(()=>{
     const found=await q(env,"SELECT snapshot_date,program_id,ap_rank FROM cbb_ap_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_ap_rankings WHERE season=?) ORDER BY ap_rank",season,season).all();
     return found.results||[];
   };
+  const parseOfficialAP=(payload)=>{
+    const rows=payload?.data||payload?.rankings||payload?.records;
+    if(!Array.isArray(rows))throw new Error('NCAA API did not provide a ranked AP poll table.');
+    const aliases={'southern cal':'30','southern california':'30','st john s':'2599',
+      'saint john s':'2599','connecticut':'41','miami fl':'2390','miami florida':'2390',
+      'michigan state':'127','texas tech':'2641','iowa state':'66'};
+    const normalizedName=v=>netKey(String(v||'').replace(/\s*\(\d+\)\s*$/,''));
+    const mapped=rows.slice(0,25).map((item,index)=>{
+      const rank=Number(item.RANK??item.rank??item.Rank);
+      const name=normalizedName(item.SCHOOL??item.school??item.team??item.Team??'');
+      const id=aliases[name]||netNames.get(name);
+      if(!id||!teamIds.has(id)||!Number.isInteger(rank)||rank<1||rank>25)
+        throw new Error('Unmatched NCAA AP school: '+name+' (#'+rank+')');
+      return {id,rank};
+    });
+    if(mapped.length!==25||new Set(mapped.map(x=>x.id)).size!==25||
+       new Set(mapped.map(x=>x.rank)).size!==25)
+      throw new Error('NCAA AP source returned fewer than 25 distinct ranked programs.');
+    return mapped;
+  };
   async function syncAPPoll(env,season,fetchFn=fetch){
     const day=localDay(),year=Number(season.slice(0,4))+1;
     const uri='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/rankings?groups=50&season='+year;
     const runId=crypto.randomUUID();
     await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'ap-poll',?,?,'espn-site-v2','running')",runId,season,day).run();
     try{
-      const res=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
-      if(!res.ok)throw new Error('ESPN AP poll HTTP '+res.status);
-      const payload=await res.json();
-      const candidates=payload.rankings||[];
-      const poll=candidates.find(p=>/\bAP\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
-      if(!poll||!Array.isArray(poll.ranks))throw new Error('Verified AP Top 25 not found in ESPN rankings feed.');
-      const declaredYear=Number(payload.season?.year||payload.season?.endYear||0);
-      if(declaredYear&&declaredYear!==year)throw new Error('ESPN AP rankings came from an unexpected season.');
-      const ranks=poll.ranks.map(row=>({id:String(row.team?.id||''),rank:Number(row.current)}))
-        .filter(row=>teamIds.has(row.id)&&Number.isInteger(row.rank)&&row.rank>=1&&row.rank<=25);
-      if(ranks.length!==25||new Set(ranks.map(x=>x.rank)).size!==25||new Set(ranks.map(x=>x.id)).size!==25)
-        throw new Error('AP poll is incomplete or does not match the verified school directory.');
+      let ranks=null,provider='',issues=[];
+      try{
+        const res=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+        if(!res.ok)throw new Error('ESPN AP poll HTTP '+res.status);
+        const payload=await res.json();
+        const candidates=payload.rankings||[];
+        const poll=candidates.find(p=>/\\bAP\\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
+        if(!poll||!Array.isArray(poll.ranks))throw new Error('AP Top 25 absent in ESPN response');
+        const declaredYear=Number(payload.season?.year||payload.season?.endYear||0);
+        if(declaredYear&&declaredYear!==year)throw new Error('ESPN AP poll is from the wrong season');
+        ranks=poll.ranks.map(row=>({id:String(row.team?.id||''),rank:Number(row.current)}))
+          .filter(row=>teamIds.has(row.id)&&Number.isInteger(row.rank)&&row.rank>=1&&row.rank<=25);
+        if(ranks.length!==25||new Set(ranks.map(x=>x.rank)).size!==25||new Set(ranks.map(x=>x.id)).size!==25)
+          throw new Error('ESPN AP poll incomplete');
+        provider='ESPN AP rankings';
+      }catch(e){issues.push(err(e));ranks=null;}
+      if(!ranks){
+        try{
+          const url='https://ncaa-api.henrygd.me/rankings/basketball-men/d1/di-mens-basketball-associated-press';
+          const res=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+          if(!res.ok)throw new Error('NCAA poll HTTP '+res.status);
+          const payload=await res.json();
+          ranks=parseOfficialAP(payload);
+          provider='NCAA Associated Press poll';
+        }catch(e){issues.push(err(e));}
+      }
+      if(!ranks)throw new Error('AP sources unavailable: '+issues.join(' | '));
       const previous=await q(env,"SELECT COUNT(*) AS n FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?",season,day).first();
       if(previous?.n===25){
         await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=0,finished_at=unixepoch() WHERE id=?",runId).run();
         return {date:day,count:25,duplicate:true};
       }
-      const ops=[q(env,'DELETE FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?',season,day),...ranks.map(x=>q(env,'INSERT INTO cbb_ap_rankings(season,snapshot_date,program_id,ap_rank) VALUES(?,?,?,?)',season,day,x.id,x.rank))];
+      const ops=[q(env,'DELETE FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?',season,day),...ranks.map(x=>q(env,'INSERT INTO cbb_ap_rankings(season,snapshot_date,program_id,ap_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,provider))];
       await env.DB.batch(ops);
       await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=25,finished_at=unixepoch() WHERE id=?",runId).run();
       return {date:day,count:25};
@@ -430,5 +465,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programGames,saveNet,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

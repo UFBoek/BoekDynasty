@@ -623,7 +623,7 @@ const DATA_PIPELINE=(()=>{
   async function backfillArchivedNet(env){
     const [ready,runs]=await Promise.all([
       q(env,"SELECT DISTINCT season FROM cbb_net_snapshots WHERE status='complete' AND stored_count>=350 AND season BETWEEN '2021-22' AND '2025-26'").all(),
-      q(env,"SELECT season,MAX(started_at) AS last_attempt FROM cbb_sync_runs WHERE job='historical-net-v3' GROUP BY season").all()
+      q(env,"SELECT season,MAX(started_at) AS last_attempt FROM cbb_sync_runs WHERE job='historical-net-v4' GROUP BY season").all()
     ]);
     const completed=new Set((ready.results||[]).map(r=>r.season));
     const lastTry=new Map((runs.results||[]).map(r=>[r.season,Number(r.last_attempt)]));

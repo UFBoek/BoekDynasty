@@ -143,6 +143,16 @@ npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/006_ap_top25.
 - **Deployment:** Apply `migrations/006_ap_top25.sql` before deploying. This only adds the AP ranking snapshot table.
 - **Regression tests:** `node --test tests/ui.test.mjs` and `node --test tests/results.test.mjs`.
 
+## November 2026 mobile, directory and history improvements
+
+- **Mobile navigation:** Seven compact accessible tabs, with Results on the bottom bar alongside League, My Team, Schools, Draft, Standings and More. Results is no longer hidden behind More on mobile.
+- **Programs directory:** Full-text school search, fast conference chips, conference dropdown, All/Available/Rostered/My Programs state filters, A–Z jump strip, sorting by name/conference/availability and compact school logo cards. Filter and sort choices persist while browsing school profiles.
+- **School profiles:** Small identity header, current owner, W–L, NET and earned scoring preview, plus selectable year cards from **2021–22 through the current season**. Each historical year shows calculated points only for available verified components; a dash means the year has not been imported. The game log and old transactions are collapsed by default for compact browsing. Current-year and prior-year totals are not shown as finalized fantasy scores when NET, tournament or awards data is missing.
+- **Scoring previews:** `GET /api/data/history?id=ESPN_ID` computes an auditably derived partial point total using the league's current scoring weights, recorded regular-season final wins, validated latest season NET quadrant information when available, and commissioner-verified postseason/conference achievements. It does not invent wins, NET, championship bonuses or exact missing totals. If there is no verified season data, it returns `null`, never zero.
+- **Historical backfill:** Each 15-minute live-game check attempts three missing historical scoreboard dates, newest first, working from 2025–26 backward to 2021–22. Checked date/source groups are retained in `cbb_game_coverage`; failures are audited in `cbb_sync_runs` with retry throttling. Commissioners may manually advance three dates at a time in Commissioner → Data. This pipeline is incremental, not an instant one-time historical load, and historical fantasy totals remain partial until full source and postseason coverage is verified.
+- **AP Top 25:** Seeded the **October 19, 2026 preseason Associated Press poll** from the official NCAA rankings page (`data/ap-polls/2026-preseason.json`) with 25 verified ESPN IDs into `cbb_ap_rankings`. Current Results Top 25 filtering immediately works, even if future ESPN poll access is blocked. Automatic refresh tries ESPN first, then the NCAA basketball men's Associated Press proxy, and refuses incomplete or mismatched school lists. Snapshot source/date are preserved. No AP Poll points are awarded in league scoring.
+- **My Team:** Compact identity card with real roster logos, progress bar toward the manager's permanent roster size, best-ball count, more helpful empty states and cleaner roster/trade/waiver sections.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:

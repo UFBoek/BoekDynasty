@@ -270,8 +270,7 @@ const DATA_PIPELINE=(()=>{
       await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=25,finished_at=unixepoch() WHERE id=?",runId).run();
       return {date:day,count:25};
     }catch(e){
-      const details=e?.unmatched?.length?' | unmatched='+JSON.stringify(e.unmatched).slice(0,8000):'';
-      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e)+details,runId).run().catch(()=>{});
+      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
       throw e;
     }
   }
@@ -598,7 +597,7 @@ const DATA_PIPELINE=(()=>{
     const year=Number(season.slice(0,4))+1;
     const url='https://www.warrennolan.com/basketball/'+year+'/net';
     const runId=crypto.randomUUID();
-    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-net-v2',?,?,'warrennolan-archive','running')",runId,season,year+'-04-15').run();
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'historical-net-v3',?,?,'warrennolan-archive','running')",runId,season,year+'-04-15').run();
     try{
       const response=await fetchFn(url,{headers:{Accept:'text/html'},signal:AbortSignal.timeout(15000)});
       if(!response.ok)throw new Error('Historical NET archive HTTP '+response.status);
@@ -608,14 +607,15 @@ const DATA_PIPELINE=(()=>{
       await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",parsed.records.length,parsed.records.length,result.duplicate?0:parsed.records.length,runId).run();
       return {season,...result,unmatched_count:parsed.unmatched.length};
     }catch(e){
-      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
+      const details=e?.unmatched?.length?' | unmatched='+JSON.stringify(e.unmatched).slice(0,8000):'';
+      await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e)+details,runId).run().catch(()=>{});
       throw e;
     }
   }
   async function backfillArchivedNet(env){
     const [ready,runs]=await Promise.all([
       q(env,"SELECT DISTINCT season FROM cbb_net_snapshots WHERE status='complete' AND stored_count>=350 AND season BETWEEN '2021-22' AND '2025-26'").all(),
-      q(env,"SELECT season,MAX(started_at) AS last_attempt FROM cbb_sync_runs WHERE job='historical-net-v2' GROUP BY season").all()
+      q(env,"SELECT season,MAX(started_at) AS last_attempt FROM cbb_sync_runs WHERE job='historical-net-v3' GROUP BY season").all()
     ]);
     const completed=new Set((ready.results||[]).map(r=>r.season));
     const lastTry=new Map((runs.results||[]).map(r=>[r.season,Number(r.last_attempt)]));

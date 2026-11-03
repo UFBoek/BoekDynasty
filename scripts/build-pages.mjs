@@ -5,7 +5,7 @@ const root = new URL('../', import.meta.url);
 const read = file => readFileSync(new URL(file, root), 'utf8');
 const target = resolve(new URL('../', import.meta.url).pathname, 'pages-dist');
 const basePath = '/BoekDynasty/';
-const apiBase = String(process.env.BOEK_API_BASE || '').replace(/\/$/, '');
+const apiBase = String(process.env.BOEK_API_BASE || 'https://hscgsaujazcyneykarai.supabase.co/functions/v1/boek-api').replace(/\/$/, '');
 
 if (!/^https:\/\/[^\s/?#]+(?:\/[^\s?#]*)?$/.test(apiBase)) {
   throw new Error('BOEK_API_BASE is required and must be a secure HTTPS API URL. Do not publish until the new backend is configured.');

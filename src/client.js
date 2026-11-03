@@ -36,7 +36,7 @@
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
-  let resultsSelectedDay='',resultsConference='all',resultsScope='all',resultsAP=[],resultsAPAsOf=null,resultsFetchedAt=0,resultsRequest=0;
+  let resultsSelectedDay='',resultsConference='all',resultsScope='all',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
   const fmt=(v)=>Number(v||0).toLocaleString('en-US');
@@ -211,8 +211,8 @@
       }
       if(outcomes[2].status==='fulfilled'){
         const ap=outcomes[2].value;
-        resultsAP=ap.teams||[];resultsAPAsOf=ap.as_of||null;
-      }else{resultsAP=[];resultsAPAsOf=null;}
+        resultsAP=ap.teams||[];resultsAPAsOf=ap.as_of||null;resultsAPSource=ap.source||'Associated Press';
+      }else{resultsAP=[];resultsAPAsOf=null;resultsAPSource='';}
     }catch(e){if(request===resultsRequest)resultsError=e.message;}
     finally{if(request===resultsRequest){resultsLoading=false;if(current==='results'||(current==='commissioner'&&adminSection==='data'))render();}}
   }
@@ -326,7 +326,7 @@
         '<div class="scoreboard-empty"><strong>'+(resultsLoading?'Loading game schedule…':'No games found')+'</strong><span>'+(resultsScope==='league'?'No games involving rostered programs match these filters.':'Try another date or a different conference. Some schedules may still be syncing.')+'</span>'
         +(me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this date</button>':'')+'</div>')
       +'<details class="scoreboard-source"><summary>Data sources & update status</summary><div class="scoreboard-source-details"><div><span>Game feed</span><strong>ESPN scoreboards</strong></div>'
-      +'<div><span>Ranked teams</span><strong>'+(hasPoll?'ESPN AP Top 25 · '+escapeHTML(resultsAPAsOf||''):'AP poll pending')+'</strong></div>'
+      +'<div><span>Ranked teams</span><strong>'+(hasPoll?'AP Top 25 · '+escapeHTML(resultsAPAsOf||''):'AP poll pending')+'</strong></div>'
       +'<div><span>Automatic updates</span><strong>'+(resultsStatus?.auto_enabled?'Enabled':'Disabled')+'</strong></div>'
       +'<div><span>Days missing verification</span><strong>'+String(resultsStatus?.coverage?.missing_dates??'—')+'</strong></div></div></details>'
       +'</section>';

@@ -1,0 +1,133 @@
+{
+  "season": "2026-27",
+  "poll": "Associated Press Top 25",
+  "date": "2026-10-19",
+  "source": "https://www.ncaa.com/rankings/basketball-men/d1/di-mens-basketball-associated-press",
+  "rankings": [
+    {
+      "rank": 1,
+      "program_id": "57",
+      "team": "Florida"
+    },
+    {
+      "rank": 2,
+      "program_id": "150",
+      "team": "Duke"
+    },
+    {
+      "rank": 3,
+      "program_id": "356",
+      "team": "Illinois"
+    },
+    {
+      "rank": 4,
+      "program_id": "41",
+      "team": "UConn"
+    },
+    {
+      "rank": 5,
+      "program_id": "12",
+      "team": "Arizona"
+    },
+    {
+      "rank": 6,
+      "program_id": "127",
+      "team": "Michigan State"
+    },
+    {
+      "rank": 7,
+      "program_id": "251",
+      "team": "Texas"
+    },
+    {
+      "rank": 8,
+      "program_id": "2633",
+      "team": "Tennessee"
+    },
+    {
+      "rank": 9,
+      "program_id": "258",
+      "team": "Virginia"
+    },
+    {
+      "rank": 10,
+      "program_id": "248",
+      "team": "Houston"
+    },
+    {
+      "rank": 11,
+      "program_id": "97",
+      "team": "Louisville"
+    },
+    {
+      "rank": 12,
+      "program_id": "8",
+      "team": "Arkansas"
+    },
+    {
+      "rank": 13,
+      "program_id": "2599",
+      "team": "St. John's"
+    },
+    {
+      "rank": 14,
+      "program_id": "2390",
+      "team": "Miami"
+    },
+    {
+      "rank": 15,
+      "program_id": "2250",
+      "team": "Gonzaga"
+    },
+    {
+      "rank": 16,
+      "program_id": "130",
+      "team": "Michigan"
+    },
+    {
+      "rank": 17,
+      "program_id": "2305",
+      "team": "Kansas"
+    },
+    {
+      "rank": 18,
+      "program_id": "66",
+      "team": "Iowa State"
+    },
+    {
+      "rank": 19,
+      "program_id": "2641",
+      "team": "Texas Tech"
+    },
+    {
+      "rank": 20,
+      "program_id": "333",
+      "team": "Alabama"
+    },
+    {
+      "rank": 21,
+      "program_id": "30",
+      "team": "USC"
+    },
+    {
+      "rank": 22,
+      "program_id": "26",
+      "team": "UCLA"
+    },
+    {
+      "rank": 23,
+      "program_id": "96",
+      "team": "Kentucky"
+    },
+    {
+      "rank": 24,
+      "program_id": "238",
+      "team": "Vanderbilt"
+    },
+    {
+      "rank": 25,
+      "program_id": "252",
+      "team": "BYU"
+    }
+  ]
+}

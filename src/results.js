@@ -97,6 +97,92 @@ const DATA_PIPELINE=(()=>{
     }
     return results;
   }
-  /* EXTRA_API */
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,parseEvent,fetchScoreboard,importDay,backfill /* EXTRA_EXPORTS */};
+  const status=async(env,season)=>{
+    const [games,runs,net,awards,opt]=await Promise.all([
+      q(env,"SELECT COUNT(*) AS n,SUM(CASE WHEN status='final' THEN 1 ELSE 0 END) AS final_count,MAX(updated_at) AS last_change FROM cbb_games WHERE season=?",season).first(),
+      q(env,'SELECT id,job,target_date,source,status,received,matched,changed,error_text,started_at,finished_at FROM cbb_sync_runs WHERE season=? ORDER BY started_at DESC LIMIT 20',season).all(),
+      q(env,"SELECT MAX(snapshot_date) AS day,COUNT(*) AS total FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_rankings WHERE season=?)",season,season).first(),
+      q(env,'SELECT COUNT(*) AS n FROM cbb_awards WHERE season=?',season).first(),
+      q(env,"SELECT value FROM settings WHERE key='results_auto_sync'").first()
+    ]);
+    return {season,game_count:games?.n||0,final_games:games?.final_count||0,last_game_change:games?.last_change||null,
+      net_date:net?.day||null,net_count:net?.total||0,awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',recent_runs:runs.results||[]};
+  };
+  const records=async(env,season)=>{
+    const rows=await q(env,`SELECT program_id,SUM(w) AS wins,SUM(1-w) AS losses,COUNT(*) AS played FROM (
+      SELECT home_id AS program_id,CASE WHEN home_score>away_score THEN 1 ELSE 0 END AS w
+      FROM cbb_games WHERE season=? AND status='final' AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score
+      UNION ALL
+      SELECT away_id AS program_id,CASE WHEN away_score>home_score THEN 1 ELSE 0 END AS w
+      FROM cbb_games WHERE season=? AND status='final' AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score
+    ) GROUP BY program_id`,season,season).all();
+    return rows.results||[];
+  };
+  const netRanks=async(env,season)=>{
+    const rows=await q(env,"SELECT program_id,net_rank,snapshot_date FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_rankings WHERE season=?)",season,season).all();
+    return rows.results||[];
+  };
+  const recentGames=async(env,season,limit=60)=>{
+    const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? ORDER BY game_date DESC,start_utc DESC LIMIT ?",season,Math.min(100,Math.max(1,limit))).all();
+    return rows.results||[];
+  };
+  const programGames=async(env,season,id)=>{
+    const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND (home_id=? OR away_id=?) ORDER BY game_date DESC,start_utc DESC LIMIT 70",season,id,id).all();
+    return rows.results||[];
+  };
+  async function saveNet(env,season,day,rows,source='NCAA NET / commissioner verified'){
+    if(!dayInSeason(season,day))throw new Error('Ranking snapshot date is outside the season.');
+    if(!Array.isArray(rows)||rows.length<250||rows.length>400)throw new Error('NET import requires 250–400 ranked D-I programs.');
+    const ids=new Set(),ranks=new Set();
+    const parsed=rows.map(x=>({id:String(x.program_id||x.team_id||''),rank:Number(x.net_rank??x.rank)}));
+    for(const x of parsed){
+      if(!teamIds.has(x.id)||!Number.isInteger(x.rank)||x.rank<1||x.rank>400||ids.has(x.id)||ranks.has(x.rank))
+        throw new Error('NET records must contain unique, known ESPN IDs and unique NET rankings.');
+      ids.add(x.id);ranks.add(x.rank);
+    }
+    if(!ranks.has(1))throw new Error('NET list is missing ranking #1.');
+    const old=await q(env,'SELECT COUNT(*) AS n FROM cbb_net_rankings WHERE season=? AND snapshot_date=?',season,day).first();
+    if(old?.n)return {date:day,count:old.n,duplicate:true};
+    for(let i=0;i<parsed.length;i+=60){
+      await env.DB.batch(parsed.slice(i,i+60).map(x=>q(env,'INSERT INTO cbb_net_rankings(season,snapshot_date,program_id,net_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,source)));
+    }
+    return {date:day,count:parsed.length};
+  }
+  const quadrant=(rank,site)=>{
+    if(!Number.isInteger(rank)||rank<1)return null;
+    const t=site==='home'?[30,75,160]:site==='away'?[75,135,240]:[50,100,200];
+    return rank<=t[0]?1:rank<=t[1]?2:rank<=t[2]?3:4;
+  };
+  const isQ1A=(rank,site)=>Number.isInteger(rank)&&rank>0&&rank<=(site==='home'?15:site==='away'?40:25);
+  async function seasonQuadrants(env,season){
+    const [games,rankings]=await Promise.all([
+      q(env,"SELECT home_id,away_id,home_score,away_score,neutral_site FROM cbb_games WHERE season=? AND status='final' AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score",season).all(),
+      netRanks(env,season)
+    ]);
+    const rankMap=new Map(rankings.map(x=>[x.program_id,Number(x.net_rank)])),out={};
+    for(const g of games.results||[]){
+      const win=g.home_score>g.away_score?g.home_id:g.away_id,opp=win===g.home_id?g.away_id:g.home_id;
+      const rank=rankMap.get(opp),site=g.neutral_site?'neutral':win===g.home_id?'home':'away',quad=quadrant(rank,site);
+      if(!quad||!teamIds.has(opp))continue;
+      const rec=out[win]||(out[win]={q1:0,q1a:0,q2:0,q3:0,q4:0});
+      rec['q'+quad]++;if(quad===1&&isQ1A(rank,site))rec.q1a++;
+    }
+    return {snapshot_date:rankings[0]?.snapshot_date||null,by_program:out};
+  }
+  async function scheduled(env,cron){
+    const pairs=(await q(env,"SELECT key,value FROM settings WHERE key IN ('current_season','results_auto_sync')").all()).results||[];
+    const settings=Object.fromEntries(pairs.map(x=>[x.key,x.value]));
+    if(settings.results_auto_sync==='0')return {skipped:'disabled'};
+    const day=localDay(),season=settings.current_season||seasonOf(day),month=Number(day.slice(5,7));
+    if(![11,12,1,2,3,4].includes(month)||!dayInSeason(season,day))return {skipped:'offseason'};
+    if(cron==='*/15 * * * *'){
+      const localHour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',hour12:false}).format(new Date()));
+      if(localHour>=3&&localHour<10)return {skipped:'outside-games-window'};
+      return importDay(env,season,day,{job:'live'});
+    }
+    if(cron==='15 10 * * *')return backfill(env,season,7);
+    return {skipped:'unknown-cron'};
+  }
+
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,parseEvent,fetchScoreboard,importDay,backfill ,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

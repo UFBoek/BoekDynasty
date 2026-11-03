@@ -97,6 +97,17 @@ const DATA_PIPELINE=(()=>{
     }
     return results;
   }
+  async function upcoming(env,season,days=3){
+    if(!Number.isInteger(days)||days<1||days>7)throw new Error('Upcoming window must be 1–7 days.');
+    const results=[],today=localDay();
+    for(let i=1;i<=days;i++){
+      const day=shiftDay(today,i);
+      if(!dayInSeason(season,day))continue;
+      try{results.push({ok:true,...await importDay(env,season,day,{job:'schedule'})});}
+      catch(e){results.push({date:day,ok:false,error:err(e)});}
+    }
+    return results;
+  }
   const status=async(env,season)=>{
     const [games,runs,net,awards,opt]=await Promise.all([
       q(env,"SELECT COUNT(*) AS n,SUM(CASE WHEN status='final' THEN 1 ELSE 0 END) AS final_count,MAX(updated_at) AS last_change FROM cbb_games WHERE season=?",season).first(),
@@ -182,7 +193,8 @@ const DATA_PIPELINE=(()=>{
     }
     if(cron==='15 10 * * *'){
       const reconciled=await backfill(env,season,7);
-      if(!env.NET_FEED_URL)return {games:reconciled,net:{skipped:'No verified NET feed connected'}};
+      const future=await upcoming(env,season,3);
+      if(!env.NET_FEED_URL)return {games:reconciled,upcoming:future,net:{skipped:'No verified NET feed connected'}};
       const id=crypto.randomUUID();
       await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,'configured-net-feed','running')",id,season,day).run();
       try{
@@ -193,14 +205,14 @@ const DATA_PIPELINE=(()=>{
         const snapshot=String(payload.date||day);
         const result=await saveNet(env,season,snapshot,payload.records,'configured-verified-net-feed');
         await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",result.count,result.count,result.duplicate?0:result.count,id).run();
-        return {games:reconciled,net:result};
+        return {games:reconciled,upcoming:future,net:result};
       }catch(e){
         await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),id).run().catch(()=>{});
-        return {games:reconciled,net:{error:err(e)}};
+        return {games:reconciled,upcoming:future,net:{error:err(e)}};
       }
     }
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,parseEvent,fetchScoreboard,importDay,backfill ,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,parseEvent,fetchScoreboard,importDay,backfill,upcoming,status,records,netRanks,recentGames,programGames,saveNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

@@ -153,6 +153,11 @@ export default (function makeWorker(){
           teams:poll.map(p=>({program_id:p.program_id,rank:p.ap_rank}))});
       }
       if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});
+      if(path==='data/history'){
+        const id=String(url.searchParams.get('id')||'');
+        if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
+        return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season));
+      }
       if(path==='data/program'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
@@ -347,6 +352,12 @@ export default (function makeWorker(){
       const settings=await getSettings(env);
       const result=await DATA_PIPELINE.syncAPPoll(env,settings.current_season);
       return response({ok:true,...result});
+    }
+    if(path==='admin/data/history-backfill'){
+      const days=Number(data.days||3);
+      if(!Number.isInteger(days)||days<1||days>4)return failure('Historical batch must be 1–4 dates.',400);
+      const result=await DATA_PIPELINE.backfillHistory(env,days);
+      return response({ok:result.results.every(x=>x.ok),...result});
     }
     if(path==='admin/data/upcoming'){
       const settings=await getSettings(env);

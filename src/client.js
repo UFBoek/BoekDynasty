@@ -498,6 +498,16 @@
     const emptyMessage=document.querySelector('#no-program-results');
     if(emptyMessage)emptyMessage.hidden=found!==0;
   }
+  function updateDraftClock(){
+    const el=document.querySelector('#draft-clock');
+    if(!el)return;
+    const deadline=Number(league?.settings?.draft_deadline||0);
+    if(!deadline||league.settings.draft_status!=='live'){el.textContent='OFF';return;}
+    const left=Math.max(0,deadline-Math.floor(Date.now()/1000));
+    if(!left){el.textContent='TIME UP';el.classList.add('expired');return;}
+    el.classList.remove('expired');
+    el.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
+  }
   function draftPage(){
     const settings=league.settings,fullOrder=order(),count=fullOrder.length;
     const total=draftTotal(),completed=picks().length;
@@ -1119,6 +1129,14 @@
     programShown=36;
     filterPrograms();
   });
-  setInterval(updateDraftClock,1000);
-  boot();
+  // Startup guard: a missing helper or failed initialization must not leave
+  // the loading placeholder on screen indefinitely.
+  const startupFailure=e=>{
+    console.error('Boek Dynasty startup failed',e);
+    root.innerHTML='<div class="auth-layout"><main class="auth-panel"><div class="auth-card"><div class="auth-section"><h1>Unable to open Boek Dynasty</h1><p class="auth-desc">The application encountered a startup error. Please reload to try again.</p><a class="btn" href="/">Reload site</a></div></div></main></div>';
+  };
+  try{
+    setInterval(updateDraftClock,1000);
+    Promise.resolve(boot()).catch(startupFailure);
+  }catch(e){startupFailure(e);}
 })();

@@ -167,17 +167,18 @@
   const draftIsLive=()=>league?.settings?.draft_status==='live';
   function navButton(id){
     const live=id==='draft'&&draftIsLive()||id==='results'&&liveResultsCount()>0;
-    return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(current===id?'active':'')+(live?' has-live':'')+'">'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>';
+    const active=current===id||current==='program-detail'&&id==='programs'||current==='manager-detail'&&id==='league';
+    return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(active?'active':'')+(live?' has-live':'')+'" '+(active?'aria-current="page"':'')+'>'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>';
   }
   function sidebar(){
-    return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">NAVIGATION</div><nav class="nav">'+['home','team','programs','draft','trades','league','results','scoring',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
+    return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">LEAGUE HUB</div><nav class="nav">'+['home','team','results','league','programs','draft'].map(navButton).join('')+'</nav><div class="nav-label nav-label-secondary">MANAGEMENT</div><nav class="nav">'+['trades','scoring',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
-    const tabs=['home','team','programs','draft','league','results','more'];
-    const mobileLabels={home:'League',team:'My Team',programs:'Schools',draft:'Draft',league:'Standings',results:'Results',more:'More'};
+    const tabs=['home','team','results','programs','draft','more'];
+    const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
     const activeMobile=(['trades','commissioner','waivers','history','scoring'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
     const liveGames=liveResultsCount(),liveDraft=draftIsLive();
     const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
@@ -339,7 +340,7 @@
   }
 
   function morePage(){
-    const links=[['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
+    const links=[['league','Standings','Season fantasy scores and manager rankings'],['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
     if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
     return heading('', 'More')
       +'<section class="panel more-menu">'+links.map(([id,title,description])=>

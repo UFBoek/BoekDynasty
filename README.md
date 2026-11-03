@@ -59,6 +59,19 @@ The original live ESPN Core conference endpoint returned HTTP 403 from Cloudflar
 
 Existing D1 deployments **must apply `migrations/002_commissioner_controls.sql` before deploying this version**. The migration creates default settings and replaces the old hard-coded 10-manager trigger with a configurable one. No managers, schools, picks, or trades are deleted.
 
+## Mobile layout
+
+The authenticated app has a dedicated responsive phone layout:
+- Five primary bottom tabs: Overview, Programs, Draft, Standings, and More. Trades, Commissioner (for authorized accounts), and sign-out are available through More. Desktop keeps the full sidebar.
+- On phones, school cards use a compact two-row layout, full-width filters and search, and incremental batches of 24 schools; all eligible schools remain searchable.
+- Draft view puts the actionable pick link above the board and displays the latest 12 picks with an option to expand; draft order appears ahead of picks on narrow screens.
+- Trade offers have larger checkbox targets, selection counts and a disabled-until-valid submit button.
+- Standings show the essential team/schools/points columns without mandatory horizontal scrolling. Commissioner pages display compact section navigation.
+- Safe-area-aware fixed navigation, 16px form inputs to prevent iOS focus zoom, 44px-or-larger touch targets, and keyboard-preserving refreshes.
+- Polling stays at roughly 12 seconds during a live draft; on mobile when the draft is not live it backs off to 30 seconds and skips inactive browser tabs. Commissioner editing is not interrupted by periodic refresh.
+
+Mobile markup and JavaScript were smoke-tested across multiple pages and manager roles. Visual testing on physical devices remains recommended.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:

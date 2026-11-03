@@ -7,3 +7,7 @@ workers_dev = true
 binding = "DB"
 database_name = "boek-dynasty-db"
 database_id = "301926bb-b803-4a11-ad1a-ff931ffaf72b"
+
+# 15-minute score refresh plus daily 7-day reconciliation (UTC).
+[triggers]
+crons = ["*/15 * * * *", "15 10 * * *"]

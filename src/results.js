@@ -399,6 +399,59 @@ const DATA_PIPELINE=(()=>{
     }
     return {requested:targets.length,results:imported};
   }
+  // Load March and April first so NCAA results and conference events appear
+  // while the full season-by-season reconciliation finishes in parallel.
+  async function priorityPostseason(env,limit=8){
+    const checkedRows=(await q(env,`SELECT season,game_date,source_group FROM cbb_game_coverage
+      WHERE season BETWEEN '2021-22' AND '2025-26' AND substr(game_date,6,2) IN ('03','04')`).all()).results||[];
+    const checked=new Set(checkedRows.map(x=>x.season+'|'+x.game_date+'|'+x.source_group));
+    const recentErrors=(await q(env,`SELECT season,target_date,COUNT(*) tries,MAX(started_at) last_try
+      FROM cbb_sync_runs WHERE job='postseason-priority' AND status='error' GROUP BY season,target_date`).all()).results||[];
+    const errors=new Map(recentErrors.map(x=>[x.season+'|'+x.target_date,x]));
+    const used=new Set(),targets=[],now=Math.floor(Date.now()/1000);
+    for(let step=0;step<limit;step++){
+      let selected=null;
+      for(let pass=0;pass<5&&!selected;pass++){
+        const y=[2025,2024,2023,2022,2021][(step+pass)%5];
+        const season=y+'-'+String((y+1)%100).padStart(2,'0');
+        for(let day=(y+1)+'-03-10';day<=(y+1)+'-04-10';day=shiftDay(day,1)){
+          const key=season+'|'+day;
+          if(used.has(key)||groupsForDay(day).every(g=>checked.has(key+'|'+g)))continue;
+          const failure=errors.get(key);
+          if(failure&&Number(failure.tries)>=3&&now-Number(failure.last_try)<86400)continue;
+          selected={season,day};used.add(key);break;
+        }
+      }
+      if(!selected)break;
+      targets.push(selected);
+    }
+    const rows=[];
+    for(const t of targets){
+      try{rows.push({ok:true,season:t.season,...await importDay(env,t.season,t.day,{job:'postseason-priority'})});}
+      catch(e){rows.push({ok:false,season:t.season,date:t.day,error:err(e)});}
+    }
+    return {requested:targets.length,results:rows};
+  }
+  // Only confirmed NCAA field members may be credited with 2026 postseason
+  // wins. Both teams must have a verified 2026 NCAA seed, preventing NIT or
+  // conference tournament matchups from being misclassified.
+  async function reconcileNCAA2026(env){
+    const result=await q(env,`INSERT OR IGNORE INTO cbb_ncaa_results
+      (season,winner_id,loser_id,day_num,opening_round,source_note)
+      SELECT g.season,
+        CASE WHEN g.home_score>g.away_score THEN g.home_id ELSE g.away_id END,
+        CASE WHEN g.home_score<g.away_score THEN g.home_id ELSE g.away_id END,
+        CAST(julianday(g.game_date)-julianday('2025-11-03') AS INTEGER),
+        CASE WHEN g.game_date<='2026-03-18' THEN 1 ELSE 0 END,
+        'Verified ESPN 2026 NCAA seeded-team tournament game https://www.espn.com/mens-college-basketball/'
+      FROM cbb_games g
+      JOIN cbb_awards a ON a.season=g.season AND a.program_id=g.home_id AND a.award_type='ncaa_seed'
+      JOIN cbb_awards b ON b.season=g.season AND b.program_id=g.away_id AND b.award_type='ncaa_seed'
+      WHERE g.season='2025-26' AND g.status='final'
+        AND g.game_date BETWEEN '2026-03-17' AND '2026-04-07'
+        AND g.home_score IS NOT NULL AND g.away_score IS NOT NULL AND g.home_score<>g.away_score`).run();
+    return {new_results:Number(result.meta?.changes||0)};
+  }
   async function historicalProgress(env){
     const [coverageRows,rankRows,awardRows]=(await Promise.all([
       q(env,`SELECT season,COUNT(DISTINCT game_date) AS checked_dates,
@@ -779,9 +832,11 @@ const DATA_PIPELINE=(()=>{
       // Eight ESPN scoreboard dates plus one throttled archived-NET attempt.
       // Each task is isolated so a blocked ranking source cannot stop games.
       const historical=await backfillHistory(env,8).catch(e=>({error:err(e)}));
+      const postseason=await priorityPostseason(env,8).catch(e=>({error:err(e)}));
+      const ncaa=await reconcileNCAA2026(env).catch(e=>({error:err(e)}));
       const archiveNet=await backfillArchivedNet(env).catch(e=>({error:err(e)}));
       const conference=await backfillHistoricalConferences(env).catch(e=>({error:err(e)}));
-      return {historical,archiveNet,conference};
+      return {historical,postseason,ncaa,archiveNet,conference};
     }
     if(cron==='45 9 * * *'){
       const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];
@@ -832,5 +887,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

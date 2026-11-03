@@ -27,7 +27,7 @@ client = client.replace("fetch('/api/'+path", "fetch(API_BASE+'/'+path");
 client = client.replace("credentials:'same-origin'", "credentials:'omit'");
 client = client.replace(
   "  const root=document.querySelector('#app');",
-  "  const root=document.querySelector('#app');\\n  const TOKEN_KEY='boek_dynasty_session';\\n  let bearerToken=localStorage.getItem(TOKEN_KEY)||'';"
+  "  const root=document.querySelector('#app');\n  const TOKEN_KEY='boek_dynasty_session';\n  let bearerToken=localStorage.getItem(TOKEN_KEY)||'';"
 );
 client = client.replace(
   "headers:body===undefined?{}:{'Content-Type':'application/json'}",
@@ -39,7 +39,7 @@ client = client.replace(
 );
 client = client.replace(
   "        me=res.user;await refresh();",
-  "        if(!res.token)throw new Error('Login succeeded without a session token.');\\n        bearerToken=res.token;localStorage.setItem(TOKEN_KEY,bearerToken);\\n        me=res.user;await refresh();"
+  "        if(!res.token)throw new Error('Login succeeded without a session token.');\n        bearerToken=res.token;localStorage.setItem(TOKEN_KEY,bearerToken);\n        me=res.user;await refresh();"
 );
 client = client.replace(
   "if(act==='logout'){await api('logout',{});me=null;",

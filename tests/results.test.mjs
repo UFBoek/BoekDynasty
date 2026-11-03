@@ -130,3 +130,47 @@ test('historical backfill advances all five seasons rather than starving older y
   assert.deepEqual(outcome.results.map(row=>row.season),['2025-26','2024-25','2023-24','2022-23','2021-22']);
   assert.ok(outcome.results.every(row=>row.ok));
 });
+
+test('quadrant locations use actual winner venue, not home label at neutral sites',()=>{
+  assert.equal(pipeline.venueFor(1,true),'neutral');
+  assert.equal(pipeline.venueFor(1,false),'neutral');
+  assert.equal(pipeline.venueFor(0,true),'home');
+  assert.equal(pipeline.venueFor(0,false),'away');
+  assert.equal(pipeline.quadrant(40,pipeline.venueFor(0,true)),2);
+  assert.equal(pipeline.quadrant(40,pipeline.venueFor(0,false)),1);
+  assert.equal(pipeline.quadrant(40,pipeline.venueFor(1,true)),1);
+  assert.equal(pipeline.isQ1A(40,pipeline.venueFor(0,false)),true);
+  assert.equal(pipeline.isQ1A(40,pipeline.venueFor(0,true)),false);
+});
+
+test('historical points stack seeds, conference titles, NCAA wins and First Four separately',async()=>{
+  const team='57',season='2024-25';
+  const games=[
+    {season,game_date:'2025-01-15',home_id:'57',away_id:'150',home_score:75,away_score:70,status:'final',season_type:2,tournament_tag:null,neutral_site:0},
+    {season,game_date:'2025-02-15',home_id:'248',away_id:'57',home_score:75,away_score:78,status:'final',season_type:2,tournament_tag:null,neutral_site:0},
+    {season,game_date:'2025-02-27',home_id:'57',away_id:'150',home_score:78,away_score:70,status:'final',season_type:2,tournament_tag:null,neutral_site:1},
+    {season,game_date:'2025-03-20',home_id:'57',away_id:'150',home_score:81,away_score:68,status:'final',season_type:3,tournament_tag:'ncaa',neutral_site:1}
+  ];
+  const awards=['conference_regular_champion','conference_tournament_champion','national_champion'].map(award_type=>({season,award_type,value:1})).concat([{season,award_type:'ncaa_seed',value:11}]);
+  const net=Array.from({length:350},(_,i)=>({season,program_id:String(1000+i),net_rank:i+1}));
+  net[0].program_id='150';net[0].net_rank=20;
+  net[1].program_id='248';net[1].net_rank=40;
+  const env={DB:{prepare(sql){return {bind(){return {all:async()=>({results:
+    sql.includes('FROM cbb_games WHERE')?games:
+    sql.includes('FROM cbb_ncaa_results WHERE')?[{season,opening_round:1},{season,opening_round:0},{season,opening_round:0}]:
+    sql.includes('FROM cbb_awards WHERE')?awards:
+    sql.includes('FROM cbb_net_rankings r JOIN')?net:[]})};}}}}};
+  const scoring={regular_win:1,quad_1_win:1.5,quad_1a_extra:1,quad_2_win:0.5,
+    conference_regular_title:8,conference_tournament_title:8,ncaa_seed_9_12:5,
+    ncaa_tournament_win:3,ncaa_opening_round_win:2,national_championship:15};
+  const report=await pipeline.programHistory(env,team,scoring,'2026-27');
+  const year=report.seasons.find(x=>x.season===season);
+  assert.equal(year.regular_wins,3);
+  assert.equal(year.q1,3);
+  assert.equal(year.q1a,1);
+  assert.equal(year.q2,0);
+  assert.equal(year.ncaa_wins,2);
+  assert.equal(year.opening_round_wins,1);
+  assert.equal(year.points,52.5);
+  assert.equal(year.status,'partial');
+});

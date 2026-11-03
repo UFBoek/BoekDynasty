@@ -105,16 +105,30 @@ The scoring **weights** may be configured separately, but this pipeline does **n
 **NET and quadrant metadata**
 - Rankings are separate dated snapshots in `cbb_net_rankings`. NET rankings are generally not available at the start of November; the site must never carry over the previous season's values.
 - Commissioners can import official NET snapshots as `ESPN_TEAM_ID,NET_RANK` CSV rows. Imports are rejected if dates/IDs/ranks are invalid, duplicate, or fewer than 250 Division I schools. Every snapshot has season/date/source provenance. A duplicate date is not overwritten silently.
-- Optional **verified provider integration**: set `NET_FEED_URL` as a Worker environment variable (or secret) to a trusted, authorized JSON endpoint returning `{"date":"2026-12-01","records":[{"program_id":"57","net_rank":4}, ...]}`. It is not set by default. The nightly job will then ingest and audit the feed. Only use feeds for which you have redistribution/access rights.
+- Optional **provider override**: set `NET_FEED_URL` as a Worker environment variable (or secret) to a trusted, authorized JSON endpoint returning `{"date":"2026-12-01","records":[{"program_id":"57","net_rank":4}, ...]}`. By default, after December 8 the nightly job attempts the NCAA ranking API proxy and audits it; setting NET_FEED_URL overrides that default. Only use feeds for which you have redistribution/access rights.
 - Provisional Q1/Q1A/Q2/Q3/Q4 wins are derived from finished games, venue and the **latest current-season NET snapshot**. This data will change as NET ranks change. Final quadrants should be settled against final NET at the end of the season.
 - Program profiles load current season W–L and game log on demand, plus NET and provisional quadrant counts. **Standings points remain pending** until an independently verified scoring calculation is implemented.
 - Commissioner-supported manual achievements (season champions, NCAA seed and wins, national champion and optional final KenPom ranking) go into `cbb_awards` with source references. These are factual inputs, not fantasy points.
 
 **Data migration and tests**
 
-Run `npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/004_cbb_results.sql` before deploying a Worker with `src/results.js`. Then run `node --test tests/results.test.mjs` to validate event normalization and quadrant boundaries. The migration is additive and preserves members, ownership, trades and draft history.
+Run `npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/004_cbb_results.sql
+npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/005_cbb_coverage.sql` before deploying a Worker with `src/results.js`. Then run `node --test tests/results.test.mjs` to validate event normalization and quadrant boundaries. The migration is additive and preserves members, ownership, trades and draft history.
 
 **Important limitations:** ESPN feed reachability from the actual Cloudflare Worker must be verified via **Commissioner → Data → Import date** or a real Cron run. No live scoreboard fetch has been confirmed just by deploying code. NCAA NET automatic ingestion requires an authorized NET feed; until one is connected, NET data must be imported by the commissioner. ESPN tournament annotations can be incomplete and should not be treated as authoritative bracket data.
+
+## Complete game and NET coverage checks (2026–27)
+
+- The scoreboard importer requests **all Division I games** from ESPN group 50, plus group 100 for NCAA Tournament games in March/April. Nightly reconciliation also checks group 55 (CBI) and group 56 (CIT). ESPN's CDN representation is the network fallback. A failed required group aborts that date rather than presenting an incomplete slate as complete. Results include unrecognized ESPN team IDs so newly eligible or non-Division-I opponents do not disappear.
+- The app stores each ESPN event once, keyed by provider game ID, and records both the score and the source group/venue. Each successful source/date/group is saved in `cbb_game_coverage`. The Results screen displays **verified dates** and **dates not verified**. The commissioner can manually repair four missing dates; nightly reconciliation also progressively repairs gaps.
+- Scores are retained for **all Division I programs**, including games where the team is not one of the league's 135 draft-eligible schools. `data/net-name-crosswalk-2027.json` maps all **365 verified ESPN schools** to their short NCAA-style name. A fixture with all 365 names passes the NET mapping test; this does not prove actual live NCAA naming parity until the first official 2026–27 release.
+- On and after **December 8, 2026**, the nightly job will **attempt** NCAA NET ingestion through the public open-source NCAA API proxy (`ncaa-api.henrygd.me`). It refuses ranking lists shorter than 350 schools, duplicate rankings/IDs, unrecognized names, or recognizably stale previous-season standings, and logs failures. Before December, the NCAA does not publish current-season NET; do not import prior-year ranks. Source availability and naming still require production verification.
+- NCAA NET source fields are retained in `cbb_net_details`, not just the ranking. A snapshot is only used by the site if `cbb_net_snapshots` says **complete** and both rankings and details passed row-count verification. Interrupted uploads cannot silently alter quadrant calculations.
+- The configured `NET_FEED_URL` may override the public NCAA proxy with a trusted authorized JSON provider. Commissioner NET uploads remain available. Source ranks are current-season-specific and NET-dependent quadrant wins are provisional until final rankings.
+
+**Apply** `migrations/005_cbb_coverage.sql` after 004 before deploying. The migration only adds audit, source-row, and snapshot-status tables.
+
+**Do not confuse scheduled collection with verified collection:** An ESPN or NCAA endpoint can return HTTP 403 or an unexpected response from Cloudflare. The live league should only be considered fully populated after import logs show genuine returned games, all required calendar dates verified, and a current-season NET snapshot with complete school coverage. The live 2026–27 NET feed is not available in early November.
 
 ## Publishing an update
 

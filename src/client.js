@@ -551,7 +551,7 @@
         const state=program?'selected':onClock?'on-clock':vacant?'vacant':'open';
         return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'" '+(vacant?'':'data-pick="'+overall+'"')+'>'
           +'<div class="draft-cell-meta"><span>'+(preview?'PROJ. ':'')+'#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON CLOCK</strong>':program?'<span class="draft-cell-done">PICKED</span>':'')+'</div>'
-          +(program?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(program.id)+'">'+img(program)+'<span title="'+escapeHTML(program.name)+'">'+escapeHTML(program.name)+'</span></button>'
+          +(program?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(program.id)+'" title="View '+escapeHTML(program.name)+'">'+img(program)+'<span class="draft-cell-team"><strong>'+escapeHTML(program.name)+'</strong><small>'+escapeHTML(conf(program.conference_id))+'</small></span></button>'
             :onClock?'<div class="draft-cell-open"><strong>'+escapeHTML(memberIndex.get(id)?.display_name||'Manager')+'</strong><small>Making selection</small></div>'
             :'<div class="draft-cell-placeholder">'+(vacant?'Awaiting manager':'Open pick')+'</div>')
           +'</div>';
@@ -614,7 +614,7 @@
       const give=items.filter(i=>i.trade_id===t.id&&i.from_manager_id===t.from_manager_id).map(i=>programs().find(p=>p.id===i.program_id)?.name||'Program');
       const receive=items.filter(i=>i.trade_id===t.id&&i.from_manager_id===t.to_manager_id).map(i=>programs().find(p=>p.id===i.program_id)?.name||'Program');
       const actions=t.status==='pending'&&league.settings.trading_enabled?(t.to_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept trade</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div>':t.from_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small ghost" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button></div>':''):'';
-      return '<div class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div><p><strong>Offering:</strong> '+escapeHTML(give.join(', '))+'</p><p><strong>Requesting:</strong> '+escapeHTML(receive.join(', '))+'</p>'+actions+'</div>';
+      return '<div class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div><div class="trade-exchange"><div class="trade-exchange-side"><span>OFFERING</span><strong>'+escapeHTML(give.join(', ')||'No programs')+'</strong></div><span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>REQUESTING</span><strong>'+escapeHTML(receive.join(', ')||'No programs')+'</strong></div></div>'+actions+'</div>';
     };
     return heading('', 'Trades')
       +(ready?'<section class="panel section-gap">'+panelHeading('Propose trade')+'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'+others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select></div><div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'+selections(mine,'trade-give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'+selections(theirs,'trade-receive')+'</div></div><div class="trade-submit"><div id="trade-selection-summary">Select schools from both teams</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></section>':
@@ -645,15 +645,17 @@
   function leaguePage(){
     const users=members();
     const rows=users.map((u,index)=>{
-      return '<tr class="standing-row"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
+      const schools=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
+      const schoolPreview=schools.length?'<span class="standings-mini-roster">'+schools.slice(0,5).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+(schools.length>5?'<span class="standings-roster-more">+'+(schools.length-5)+'</span>':'')+'</span>':'<span class="standings-roster-pending">Draft pending</span>';
+      return '<tr class="standing-row'+(u.id===me.id?' is-mine':'')+'"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
         +avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':'View team profile')+'</small></div></button></td>'
-        +'<td class="numerical"><span class="pending-score">—</span></td></tr>';
+        +'<td class="standing-school-cell">'+schoolPreview+'</td><td class="numerical"><span class="pending-score">—</span></td></tr>';
     }).join('');
     return heading('SEASON '+escapeHTML(season()),'Standings','Dynasty standings for the current season.')
       +'<section class="panel standings-panel">'
       +panelHeading('League standings','Best '+Number(league.settings.scoring?.best_programs||8)+' programs count toward each manager’s total')
       +'<div class="standings-notice">Fantasy points will appear when verified college basketball results are connected to scoring.</div>'
-      +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>MANAGER</th><th class="numerical">FANTASY POINTS</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>MANAGER</th><th>ROSTERED SCHOOLS</th><th class="numerical">FANTASY POINTS</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</section>';
   }
 

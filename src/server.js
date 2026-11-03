@@ -153,6 +153,7 @@ export default (function makeWorker(){
           teams:poll.map(p=>({program_id:p.program_id,rank:p.ap_rank}))});
       }
       if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});
+      if(path==='data/leaders')return response(await DATA_PIPELINE.historicalLeaders(env,settings.scoring,season));
       if(path==='data/history'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
@@ -358,6 +359,11 @@ export default (function makeWorker(){
       if(!Number.isInteger(days)||days<1||days>12)return failure('Historical batch must be 1–12 dates.',400);
       const result=await DATA_PIPELINE.backfillHistory(env,days);
       return response({ok:result.results.every(x=>x.ok),...result});
+    }
+    if(path==='admin/data/conference-titles'){
+      const selected=String(data.season||'');
+      if(!['2021-22','2022-23','2023-24','2024-25','2025-26'].includes(selected))return failure('Select an archived year.',400);
+      return response({ok:true,...await DATA_PIPELINE.syncHistoricalConference(env,selected)});
     }
     if(path==='admin/data/history-net'){
       const season=String(data.season||'');

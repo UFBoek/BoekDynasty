@@ -474,6 +474,8 @@
   function programProfilePage(){
     const p=programs().find(p=>p.id===selectedProgramId);
     if(!p)return heading('', 'Program unavailable')+profileBack();
+    const report=programResultCache[p.id]?.season===season()?programResultCache[p.id]:null;
+    const record=report?.record,quads=report?.quadrants;
     const owner=programOwned(p.id);
     const manager=members().find(m=>m.id===owner?.manager_id);
     const selection=picks().find(x=>x.program_id===p.id);
@@ -484,9 +486,13 @@
     const ownership=manager?'<button data-act="open-manager" data-id="'+escapeHTML(manager.id)+'" class="profile-link">'+escapeHTML(manager.display_name)+'</button>':'<span>Unrostered</span>';
     return profileBack()
       +'<div class="profile-hero">'+img(p)+'<div class="grow"><span class="eyebrow">'+escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1><div class="profile-subline">'+escapeHTML(season())+' college basketball program</div></div></div>'
-      +'<div class="profile-stats"><div><span>CURRENT OWNER</span><strong>'+ownership+'</strong></div><div><span>ORIGINAL PICK</span><strong>'+(selection?'#'+selection.overall+' · Rd '+selection.round:'Undrafted')+'</strong></div><div><span>RECORD</span><strong class="muted">Not connected</strong></div><div><span>FANTASY POINTS</span><strong class="muted">Pending</strong></div></div>'
+      +'<div class="profile-stats"><div><span>CURRENT OWNER</span><strong>'+ownership+'</strong></div><div><span>ORIGINAL PICK</span><strong>'+(selection?'#'+selection.overall+' · Rd '+selection.round:'Undrafted')+'</strong></div><div><span>RECORD</span><strong>'+(record?record.wins+'–'+record.losses:'Awaiting data')+'</strong></div><div><span>NET RANK</span><strong>'+(report?.net?'#'+report.net.net_rank:'Pending')+'</strong></div><div><span>FANTASY POINTS</span><strong class="muted">Pending</strong></div></div>'
       +'<div class="profile-panels"><section class="panel">'+panelHeading('Program details')+'<div class="profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div><div><span>Current season</span><strong>'+escapeHTML(season())+'</strong></div><div><span>Originally drafted by</span><strong>'+escapeHTML(pickedBy?.display_name||'Not drafted')+'</strong></div><div><span>Dynasty status</span><strong>'+(owner?'Rostered':'Available')+'</strong></div></div>'+(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
       +'<section class="panel">'+panelHeading('Season history')+(history.length?history.map(x=>{const u=members().find(m=>m.id===x.manager_id);return '<div class="history-row"><strong>'+escapeHTML(x.season)+'</strong><span>'+escapeHTML(u?.display_name||'Manager')+'</span></div>';}).join(''):empty('No archived seasons'))+'</section></div>'
+      +'<section class="panel section-gap">'+panelHeading('2026–27 results',report?.net_date?'NET snapshot '+escapeHTML(report.net_date):'NET pending')
+      +(report?.error?'<div class="notice">'+escapeHTML(report.error)+'</div>':report?.games?.length?'<div class="result-games">'+report.games.map(g=>resultGameRow(g,p.id)).join('')+'</div>':empty(report?'No games imported':'Loading game results'))
+      +(report?.net_date?'<div class="quad-summary"><span>Q1 <strong>'+(quads?.q1||0)+'</strong></span><span>Q1A <strong>'+(quads?.q1a||0)+'</strong></span><span>Q2 <strong>'+(quads?.q2||0)+'</strong></span></div><p class="hint">Quadrants are provisional and use the most recent available NET snapshot.</p>':'')
+      +'</section>'
       +'<section class="panel section-gap">'+panelHeading('Roster activity')+(activity.length||tradeHistory.length?activity.map(t=>'<div class="history-row"><strong>'+escapeHTML(t.action==='claim'?'Claimed':'Dropped')+'</strong><span>'+escapeHTML(t.season)+' · '+escapeHTML(members().find(m=>m.id===t.manager_id)?.display_name||'Manager')+'</span></div>').join('')+tradeHistory.map(t=>'<div class="history-row"><strong>Traded</strong><span>'+escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join(''):empty('No roster moves'))+'</section>';
   }
   function managerProfilePage(){

@@ -521,3 +521,41 @@
 .archive-schools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:15px 4px;color:#91a7c4;font-size:12px}
 .archive-schools button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-width:0}
 @media(max-width:620px){.archive-schools{grid-template-columns:1fr}}
+
+
+/* Results scoreboard, data health and commissioner ingestion. */
+.result-game-row{display:flex;align-items:center;gap:12px;justify-content:space-between;min-height:65px;padding:12px 3px;border-bottom:1px solid #2a3b53}
+.result-game-row:last-child{border-bottom:0}
+.result-game-row .grow{min-width:0;flex:1}
+.result-game-row strong{display:block;color:#e8eff9;font-size:13px;line-height:1.5;margin-top:5px;overflow-wrap:anywhere}
+.game-day{font-size:10px;color:#91a8c5;letter-spacing:.3px}
+.game-score{font-variant-numeric:tabular-nums;color:#eec58d;margin:0 6px;white-space:nowrap}
+.result-game-status{display:inline-flex;justify-content:center;align-items:center;min-width:53px;border-radius:7px;padding:7px 9px;background:#263951;border:1px solid #3b5068;color:#c2d4e9;font-size:10px;font-weight:750;flex-shrink:0;text-transform:uppercase}
+.result-game-status.live{background:#284735;color:#b1ebc3;border-color:#3c7651}
+.data-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.data-kpis>div{display:flex;flex-direction:column;gap:7px;border:1px solid #30455b;background:#0e1c2e;border-radius:10px;padding:13px;min-width:0}
+.data-kpis span{font-size:9px;letter-spacing:.5px;color:#96abc5;font-weight:800}
+.data-kpis strong{font-size:20px;color:#f1f5fb;overflow-wrap:anywhere}
+.data-error{border:1px solid #674b50;background:#38252e;color:#ffbac0;padding:12px 14px;border-radius:8px;overflow-wrap:anywhere;font-size:12px}
+.data-csv{font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1.5;font-size:13px;resize:vertical}
+.data-award>summary{cursor:pointer;min-height:44px;font-size:12px;color:#eec28c;font-weight:750;display:flex;align-items:center}
+.data-run{display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid #2c4057;padding:12px 2px}
+.data-run:last-child{border-bottom:0}
+.data-run>span{font-size:10px;color:#9fe5b7;font-weight:750;min-width:45px}
+.data-run>span.failed{color:#ffbabc}
+.data-run>div{min-width:0;flex:1}
+.data-run strong{display:block;font-size:12px}
+.data-run small{display:block;font-size:11px;color:#91a7c2;margin-top:4px;overflow-wrap:anywhere}
+.data-run small.data-error{border:0;background:transparent;padding:0;color:#ffafb1}
+.quad-summary{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:18px}
+.quad-summary span{background:#172a40;border:1px solid #36526d;border-radius:9px;padding:10px 14px;font-size:11px;color:#a8bed5}
+.quad-summary strong{font-size:17px;margin-left:6px;color:#f5c58a}
+@media(max-width:650px){
+  .data-kpis{gap:7px}
+  .data-kpis>div{padding:10px 8px}
+  .data-kpis strong{font-size:17px}
+  .data-kpis span{font-size:9px}
+  .result-game-row strong{font-size:12px}
+  .result-game-status{min-width:48px;font-size:9px}
+  .quad-summary span{padding:9px 10px}
+}

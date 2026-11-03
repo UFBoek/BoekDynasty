@@ -33,7 +33,7 @@
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
-  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',draftRoundView='all';
+  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let resultsSelectedDay='',resultsConference='all',resultsScope='all',resultsAP=[],resultsAPAsOf=null,resultsFetchedAt=0,resultsRequest=0;
@@ -219,9 +219,16 @@
   async function loadProgramResults(id){
     if(!me||(programResultCache[id]?.season===season()&&Date.now()-(programResultCache[id]?.loadedAt||0)<60000))return;
     try{
-      const data=await api('data/program?id='+encodeURIComponent(id));
-      programResultCache[id]={...data,loadedAt:Date.now()};
-    }catch(e){programResultCache[id]={season:season(),error:e.message};}
+      const [data,historical]=await Promise.allSettled([
+        api('data/program?id='+encodeURIComponent(id)),
+        api('data/history?id='+encodeURIComponent(id))
+      ]);
+      if(data.status!=='fulfilled')throw data.reason;
+      programResultCache[id]={...data.value,
+        history:historical.status==='fulfilled'?historical.value:null,
+        history_error:historical.status==='rejected'?historical.reason.message:'',
+        loadedAt:Date.now()};
+    }catch(e){programResultCache[id]={season:season(),error:e.message,loadedAt:Date.now()};}
     if(current==='program-detail'&&selectedProgramId===id)render();
   }
   const gameOutcome=(g,id)=>{
@@ -635,26 +642,59 @@
     const p=programs().find(p=>p.id===selectedProgramId);
     if(!p)return heading('', 'Program unavailable')+profileBack();
     const report=programResultCache[p.id]?.season===season()?programResultCache[p.id]:null;
-    const record=report?.record,quads=report?.quadrants;
-    const owner=programOwned(p.id);
-    const manager=members().find(m=>m.id===owner?.manager_id);
+    const record=report?.record;
+    const owner=programOwned(p.id),manager=members().find(m=>m.id===owner?.manager_id);
     const selection=picks().find(x=>x.program_id===p.id);
-    const pickedBy=members().find(m=>m.id===selection?.manager_id);
-    const history=(league.archived_rosters||[]).filter(x=>x.program_id===p.id).sort((a,b)=>b.season.localeCompare(a.season));
-    const activity=(league.roster_transactions||[]).filter(x=>x.program_id===p.id).slice(0,10);
+    const history=report?.history?.seasons||[];
+    const selected=selectedProgramSeason||season();
+    const selectedStats=history.find(x=>x.season===selected);
+    const currentStats=history.find(x=>x.season===season());
+    const activity=(league.roster_transactions||[]).filter(x=>x.program_id===p.id).slice(0,8);
     const tradeHistory=(league.trade_items||[]).filter(x=>x.program_id===p.id).filter(item=>(league.trades||[]).some(t=>t.id===item.trade_id&&t.status==='accepted'));
-    const ownership=manager?'<button data-act="open-manager" data-id="'+escapeHTML(manager.id)+'" class="profile-link">'+escapeHTML(manager.display_name)+'</button>':'<span>Unrostered</span>';
+    const ownedYears=(league.archived_rosters||[]).filter(x=>x.program_id===p.id);
+    const pointText=x=>x?.points===null||x?.points===undefined?'—':Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
+    const seasonRows=Array.from({length:Math.max(0,Number(season().slice(0,4))-2021+1)},(_,i)=>{
+      const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');
+      const row=history.find(item=>item.season===label);
+      return '<button class="program-season-card '+(selected===label?'active':'')+'" type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" aria-pressed="'+(selected===label)+'">'
+        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Partial points':row?.status==='complete'?'Final points':'Awaiting data')+'</small></button>';
+    }).join('');
+    const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='partial'?'Verified points so far, not the final season total':'Awaiting a verified historical import')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
+      +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
+      +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
+      +'<div><span>Q1 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q1:'NET pending')+'</strong></div>'
+      +'<div><span>Q2 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q2:'NET pending')+'</strong></div></div>'
+      +'<p class="hint">Historical point totals are calculated only from imported results, current scoring settings, and verified achievements. Missing NET or postseason data means the shown points are incomplete.</p></div>'
+      :'<div class="program-season-expanded"><p class="hint">Loading the program’s verified scoring history…</p></div>';
+    const currentPoints=currentStats?.points!==null&&currentStats?.points!==undefined?pointText(currentStats):'—';
+    const recordText=record?.played?record.wins+'–'+record.losses:'—';
+    const ownerButton=manager?'<button class="program-profile-owner-link" type="button" data-act="open-manager" data-id="'+escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' →</button>':'<span>Available to draft</span>';
+    const games=report?.games||[];
+    const gameHistory=games.length?games.slice().sort((a,b)=>b.game_date.localeCompare(a.game_date)).map(g=>resultGameRow(g,p.id)).join(''):empty('No game results yet','Recent games appear automatically as ESPN data arrives.');
     return profileBack()
-      +'<div class="profile-hero">'+img(p)+'<div class="grow"><span class="eyebrow">'+escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1><div class="profile-subline">'+escapeHTML(season())+' college basketball program</div></div></div>'
-      +'<div class="profile-stats"><div><span>CURRENT OWNER</span><strong>'+ownership+'</strong></div><div><span>ORIGINAL PICK</span><strong>'+(selection?'#'+selection.overall+' · Rd '+selection.round:'Undrafted')+'</strong></div><div><span>RECORD</span><strong>'+(record?record.wins+'–'+record.losses:'Awaiting data')+'</strong></div><div><span>NET RANK</span><strong>'+(report?.net?'#'+report.net.net_rank:'Pending')+'</strong></div><div><span>FANTASY POINTS</span><strong class="muted">Pending</strong></div></div>'
-      +'<div class="profile-panels"><section class="panel">'+panelHeading('Program details')+'<div class="profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div><div><span>Current season</span><strong>'+escapeHTML(season())+'</strong></div><div><span>Originally drafted by</span><strong>'+escapeHTML(pickedBy?.display_name||'Not drafted')+'</strong></div><div><span>Dynasty status</span><strong>'+(owner?'Rostered':'Available')+'</strong></div></div>'+(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
-      +'<section class="panel">'+panelHeading('Season history')+(history.length?history.map(x=>{const u=members().find(m=>m.id===x.manager_id);return '<div class="history-row"><strong>'+escapeHTML(x.season)+'</strong><span>'+escapeHTML(u?.display_name||'Manager')+'</span></div>';}).join(''):empty('No archived seasons'))+'</section></div>'
-      +'<section class="panel section-gap">'+panelHeading('2026–27 results',report?.net_date?'NET snapshot '+escapeHTML(report.net_date):'NET pending')
-      +(report?.error?'<div class="notice">'+escapeHTML(report.error)+'</div>':report?.games?.length?'<div class="result-games">'+report.games.slice().sort((x,y)=>(x.status==='final')-(y.status==='final')||((x.status==='final')?y.game_date.localeCompare(x.game_date):x.game_date.localeCompare(y.game_date))).map(g=>resultGameRow(g,p.id)).join('')+'</div>':empty(report?'No games imported':'Loading game results'))
-      +(report?.net_date?'<div class="quad-summary"><span>Q1 <strong>'+(quads?.q1||0)+'</strong></span><span>Q1A <strong>'+(quads?.q1a||0)+'</strong></span><span>Q2 <strong>'+(quads?.q2||0)+'</strong></span></div><p class="hint">Quadrants are provisional and use the most recent available NET snapshot.</p>':'')
-      +'</section>'
-      +(report?.awards?.length?'<section class="panel section-gap">'+panelHeading('Verified achievements')+report.awards.map(a=>'<div class="history-row"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+'</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</section>':'')
-      +'<section class="panel section-gap">'+panelHeading('Roster activity')+(activity.length||tradeHistory.length?activity.map(t=>'<div class="history-row"><strong>'+escapeHTML(t.action==='claim'?'Claimed':'Dropped')+'</strong><span>'+escapeHTML(t.season)+' · '+escapeHTML(members().find(m=>m.id===t.manager_id)?.display_name||'Manager')+'</span></div>').join('')+tradeHistory.map(t=>'<div class="history-row"><strong>Traded</strong><span>'+escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join(''):empty('No roster moves'))+'</section>';
+      +'<section class="program-profile-header">'+img(p)+'<div class="grow"><span class="eyebrow">'+escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1><p>Explore six seasons of results, achievements, and dynasty ownership.</p></div>'
+      +(owner?'<span class="program-profile-status rostered">Rostered</span>':'<span class="program-profile-status">Available</span>')+'</section>'
+      +'<div class="program-profile-summary"><div><span>CURRENT OWNER</span><strong>'+ownerButton+'</strong></div>'
+      +'<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+currentPoints+'</strong><small>'+(currentStats?.status==='partial'?'Verified components only':'Season scoring pending')+'</small></div>'
+      +'<div><span>SEASON RECORD</span><strong>'+recordText+'</strong></div>'
+      +'<div><span>NET RANK</span><strong>'+(report?.net?'#'+report.net.net_rank:'—')+'</strong></div></div>'
+      +'<section class="panel program-history-panel">'+panelHeading('Season-by-season performance','Select any season from 2021–22 onward')
+      +'<div class="program-season-strip">'+seasonRows+'</div>'+yearDetail+'</section>'
+      +'<div class="program-profile-bottom">'
+      +'<section class="panel">'+panelHeading('Program information')
+      +'<div class="profile-facts compact-profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div>'
+      +'<div><span>Original draft pick</span><strong>'+(selection?'#'+selection.overall+' · Round '+selection.round:'Undrafted')+'</strong></div>'
+      +'<div><span>Previous ownership</span><strong>'+(ownedYears.length?ownedYears.length+' archived seasons':'No archived seasons')+'</strong></div>'
+      +(report?.net_date?'<div><span>NET updated</span><strong>'+escapeHTML(report.net_date)+'</strong></div>':'')+'</div>'
+      +(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn small section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
+      +'<section class="panel program-profile-details">'+panelHeading('Game log','Current season · '+games.length+' games')
+      +'<details class="program-detail-disclosure"><summary>View all games <span>›</span></summary><div class="program-detail-entries">'+gameHistory+'</div></details></section></div>'
+      +(report?.awards?.length?'<section class="panel section-gap">'+panelHeading('Verified achievements')
+          +report.awards.map(a=>'<div class="history-row"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+'</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</section>':'')
+      +(activity.length||tradeHistory.length?'<details class="panel program-ownership-disclosure section-gap"><summary>Roster transactions & ownership history <span>'+String(activity.length+tradeHistory.length)+' entries</span></summary>'
+        +activity.map(t=>'<div class="history-row"><strong>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('')
+        +tradeHistory.map(t=>'<div class="history-row"><strong>Traded</strong><span>'+escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join('')+'</details>':'')
+      +(report?.history_error?'<p class="hint section-gap">'+escapeHTML(report.history_error)+'</p>':'');
   }
   function managerProfilePage(){
     const u=members().find(m=>m.id===selectedManagerId);
@@ -829,9 +869,10 @@
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(act==='program-season'){selectedProgramSeason=id;render();return;}
     if(act==='open-program'){
       programBackPage=current==='program-detail'?programBackPage:current;
-      selectedProgramId=id;current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
+      selectedProgramId=id;selectedProgramSeason=season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
       managerBackPage=current==='manager-detail'?managerBackPage:current;

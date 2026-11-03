@@ -239,7 +239,7 @@ const DATA_PIPELINE=(()=>{
         if(!res.ok)throw new Error('ESPN AP poll HTTP '+res.status);
         const payload=await res.json();
         const candidates=payload.rankings||[];
-        const poll=candidates.find(p=>/\\bAP\\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
+        const poll=candidates.find(p=>/\bAP\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
         if(!poll||!Array.isArray(poll.ranks))throw new Error('AP Top 25 absent in ESPN response');
         const declaredYear=Number(payload.season?.year||payload.season?.endYear||0);
         if(declaredYear&&declaredYear!==year)throw new Error('ESPN AP poll is from the wrong season');

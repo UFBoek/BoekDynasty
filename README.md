@@ -10,11 +10,11 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 
 ## Features
 
-- **Up to 10 managers**, including the commissioner; a database trigger enforces the cap.
+- **Configurable manager cap (2–20)**, including the commissioner; D1 validates capacity at registration with a settings-driven database trigger.
 - One-time commissioner setup code, then single-use invitation links valid for 7 days.
 - Each manager creates a team with a username, team name, and password.
 - Passwords hashed with PBKDF2-SHA256 using Cloudflare-compatible 100,000 iterations; 90-day HttpOnly, Secure, SameSite cookies renew on use.
-- Commissioner chooses Division I conferences and draft rounds (1–20).
+- Commissioner settings are organized into General, Draft, Programs, Members, and Trades. The commissioner can rename the league, set the manager cap (2–20), configure conferences and draft rounds (1–20), reorder/shuffle draft positions before the draft, manage invitations, and enable/disable trading.
 - College basketball conference membership from a verified 2026–27 ESPN standings snapshot (via SportsDataverse), bundled with the app; manual program entry if a school is missing.
 - Initial snake-format draft, with exclusive ownership, turn checks, pause/resume and pre-completion commissioner reset.
 - **Permanent rosters:** draft selections remain immutable draft history, while `program_owners` tracks the current owner from year to year.
@@ -49,6 +49,16 @@ Production has **zero npm dependencies**: Cloudflare Workers serve the backend a
 
 The original live ESPN Core conference endpoint returned HTTP 403 from Cloudflare in November 2026. The bundled `data/programs-2027.json` file replaces that dependency. It was extracted from SportsDataverse's `raw/mbb/espn_standings_2027.json.gz`, a 2026–27 ESPN standings snapshot containing 365 unique ESPN team IDs across 32 conferences. `admin/sync` now loads locally bundled records, not external network feeds. The first production import loaded 135 schools from the commissioner's then-current 10 selected conferences. This dataset is season-specific and must be refreshed and verified before a later season.
 
+## Commissioner settings
+
+- **General:** League name (3–40 characters); manager limit (2–20) as long as it is not lower than the current registered manager count. Changing the cap is blocked after the draft starts.
+- **Draft:** Rounds per manager, save/shuffle/manually arrange draft order before the draft, and start/pause/reset controls. Server-side selection order uses the persisted order. The draft order is locked once the draft starts.
+- **Programs:** Eligible conferences, import from the verified bundled 2026–27 directory, and add missing programs.
+- **Members:** See registered managers and issue single-use seven-day invitations. Both invites and registration honor the configured manager cap.
+- **Trades:** Enable/disable new trade proposals and acceptance after the initial draft. Disabling trading retains the history and existing accepted ownership; existing offers can still be cancelled or declined.
+
+Existing D1 deployments **must apply `migrations/002_commissioner_controls.sql` before deploying this version**. The migration creates default settings and replaces the old hard-coded 10-manager trigger with a configurable one. No managers, schools, picks, or trades are deleted.
+
 ## Publishing an update
 
 From this repository, with Node.js installed:
@@ -62,6 +72,7 @@ npx wrangler deploy
 
 ```sh
 npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/001_program_ownership_trades.sql
+npx wrangler d1 execute boek-dynasty-db --remote --file=migrations/002_commissioner_controls.sql
 node scripts/build.mjs
 npx wrangler deploy
 ```

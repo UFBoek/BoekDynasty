@@ -509,3 +509,15 @@
  .team-program-link{min-height:62px}
 }
 @media(max-width:370px){.bottom button span{font-size:8px}.team-permanence{display:none}}
+
+
+.archived-roster{border-bottom:1px solid #2d4058}
+.archived-roster:last-child{border-bottom:0}
+.archived-roster summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 2px;cursor:pointer;list-style:none}
+.archived-roster summary::-webkit-details-marker{display:none}
+.archived-roster summary strong{font-size:12px;color:#f0c487}
+.archived-roster summary span{font-size:11px;color:#91a7c4;text-align:right}
+.archived-roster[open] summary{border-bottom:1px solid #2b415c}
+.archive-schools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:15px 4px;color:#91a7c4;font-size:12px}
+.archive-schools button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-width:0}
+@media(max-width:620px){.archive-schools{grid-template-columns:1fr}}

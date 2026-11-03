@@ -298,7 +298,7 @@
     const subtitle='All Division I games · '+escapeHTML(season());
     return heading('COLLEGE BASKETBALL','Scores & Results','Browse schedules, live games and final scores by day, conference or AP Top 25.')
       +'<section class="scoreboard-shell">'
-      +'<div class="scoreboard-utility"><div><span class="scoreboard-live-dot"></span><strong>'+all.length+'</strong> games <span class="scoreboard-utility-divider">/</span> <strong>'+live+'</strong> live <span class="scoreboard-utility-divider">/</span> <strong>'+finals+'</strong> final</div>'
+      +'<div class="scoreboard-utility"><div><span class="scoreboard-live-dot '+(live?'active':'')+'"></span><strong>'+all.length+'</strong> games <span class="scoreboard-utility-divider">/</span> <strong>'+live+'</strong> live <span class="scoreboard-utility-divider">/</span> <strong>'+finals+'</strong> final</div>'
       +'<div class="scoreboard-utility-actions">'+(resultsLoading?'<span class="scoreboard-updating">Updating…</span>':'')+'<button type="button" class="btn small secondary" data-act="refresh-results">↻ Refresh</button></div></div>'
       +'<div class="scoreboard-calendar"><button class="scoreboard-calendar-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
       +'<div class="scoreboard-days">'+activeDatePills+'</div>'

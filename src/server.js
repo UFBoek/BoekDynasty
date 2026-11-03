@@ -144,15 +144,16 @@ export default (function makeWorker(){
       if(path==='data/program'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!await q(env,'SELECT id FROM programs WHERE id=?',id).first())return failure('Program not found.',404);
-        const [games,ranks,allRecords,awards]=await Promise.all([
+        const [games,ranks,allRecords,awards,quads]=await Promise.all([
           DATA_PIPELINE.programGames(env,season,id),
           DATA_PIPELINE.netRanks(env,season),
           DATA_PIPELINE.records(env,season),
-          q(env,'SELECT award_type,value,source_note FROM cbb_awards WHERE season=? AND program_id=?',season,id).all()
+          q(env,'SELECT award_type,value,source_note FROM cbb_awards WHERE season=? AND program_id=?',season,id).all(),
+          DATA_PIPELINE.seasonQuadrants(env,season)
         ]);
         return response({season,id,games,record:allRecords.find(x=>x.program_id===id)||{wins:0,losses:0,played:0},
           net:ranks.find(x=>x.program_id===id)||null,net_date:ranks[0]?.snapshot_date||null,
-          awards:awards.results||[]});
+          quadrants:quads.by_program[id]||null,awards:awards.results||[]});
       }
       return failure('Not found.',404);
     }
@@ -343,7 +344,10 @@ export default (function makeWorker(){
     }
     if(path==='admin/data/net'){
       const settings=await getSettings(env),day=String(data.date||'');
-      const result=await DATA_PIPELINE.saveNet(env,settings.current_season,day,data.records);
+      const records=typeof data.csv==='string'?data.csv.split(/\r?\n/).map(line=>line.trim()).filter(line=>/^\d+[\s,;\t]+\d+$/.test(line)).map(line=>{
+        const pieces=line.split(/[\s,;\t]+/);return {program_id:pieces[0],net_rank:Number(pieces[1])};
+      }):data.records;
+      const result=await DATA_PIPELINE.saveNet(env,settings.current_season,day,records);
       return response({ok:true,...result});
     }
     if(path==='admin/data/award'){

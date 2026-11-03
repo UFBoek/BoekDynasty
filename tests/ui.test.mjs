@@ -7,6 +7,7 @@ const injection=`  return {
  page:page=>{current=page;render();return root.innerHTML;},
  section:section=>{adminSection=section;return commissionerPage();},
  mode:mode=>{draftRoundView=mode;},
+ schools:(mode,data)=>{programMode=mode;schoolLeaders=data;leaderSeason='all';},
  results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
  filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;}
 };
@@ -83,4 +84,34 @@ test('program draft, results and standings expose honest contextual visual data'
  assert.match(app.page('results'),/scoreboard-roster-tag is-personal/);
  league.ownership=[];
  league.picks=[];
+});
+
+test('Schools directory uses pills, not conference and sorting dropdowns',()=>{
+  app.schools('directory',null);
+  const html=app.page('programs');
+  assert.match(html,/data-act="school-mode"/);
+  assert.match(html,/data-id="leaders"/);
+  assert.match(html,/data-act="directory-conference"/);
+  assert.match(html,/data-act="directory-sort"/);
+  assert.doesNotMatch(html,/id="program-conference"/);
+  assert.doesNotMatch(html,/id="directory-sort"/);
+});
+test('Historical Leaders compares school points by season with a searchable table',()=>{
+  app.schools('leaders',{seasons:['2021-22','2022-23'],directory:programs,
+    rows:[{season:'2021-22',program_id:'57',points:24.5},{season:'2022-23',program_id:'57',points:32},
+      {season:'2022-23',program_id:'58',points:17.5}]});
+  const html=app.page('programs');
+  assert.match(html,/Historical point leaders/);
+  assert.match(html,/id="leader-search"/);
+  assert.match(html,/data-act="leaders-season"/);
+  assert.match(html,/Florida basketball/);
+  assert.match(html,/56.5/);
+  assert.match(html,/school-leader-table/);
+  app.schools('directory',null);
+});
+test('Results exposes touch-friendly conference buttons, not a select menu',()=>{
+  const html=app.page('results');
+  assert.match(html,/class="scoreboard-conference-strip"/);
+  assert.match(html,/data-act="results-conference"/);
+  assert.doesNotMatch(html,/id="scoreboard-conference"/);
 });

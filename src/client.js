@@ -8,12 +8,13 @@
       draft:'<path d="M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01"/>',
       league:'<path d="M4 20h16M7 17v-5h3v5m2 0V5h3v12m2 0V9h3v8"/>',
       trades:'<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
+      scoring:'<path d="M4 4h16v16H4zM8 10h8M8 14h5"/>',
       commissioner:'<path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="5"/>',
       more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
   };
-  const names={home:'Overview',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',commissioner:'Commissioner',more:'More',waivers:'Waivers',history:'Dynasty history','program-detail':'Program','manager-detail':'Manager'};
+  const names={home:'Overview',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',more:'More',waivers:'Waivers',history:'Dynasty history','program-detail':'Program','manager-detail':'Manager'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -162,18 +163,18 @@
     return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(current===id?'active':'')+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>';
   }
   function sidebar(){
-    return '<aside class="sidebar"><div class="brand"><div class="brand-icon">★</div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">NAVIGATION</div><nav class="nav">'+['home','programs','draft','trades','league',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
+    return '<aside class="sidebar"><div class="brand"><div class="brand-icon">★</div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">NAVIGATION</div><nav class="nav">'+['home','programs','draft','trades','league','scoring',...(me.role='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','programs','draft','league','more'];
-    const activeMobile=(['trades','commissioner','waivers','history'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>').join('')+'</nav>';
+    const activeMobile=(['trades','commissioner','waivers','history','scoring'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span><div class="top-right"><span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+'">'+iconSVG(id)+'<span>'+names[id]+'</span></button>').join('')+'</nav>';
   }
   function morePage(){
-    const links=[['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
+    const links=[['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
     if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
     return heading('', 'More')
       +'<section class="panel more-menu">'+links.map(([id,title,description])=>
@@ -309,6 +310,27 @@
         '<section class="panel section-gap">'+empty(league.settings.trading_enabled?'Trading unavailable':'Trading disabled',league.settings.trading_enabled?'Trading opens after the initial draft.':'The commissioner has disabled new trades.')+'</section>')
       +'<section class="panel section-gap">'+panelHeading('Trade history')+(offers.length?offers.map(card).join(''):empty('No trades yet',''))+'</section>';
   }
+
+  const scoringGroups=[
+    ['Regular season',[['regular_win','Regular-season win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win bonus'],['quad_1a_extra','Extra Quad 1A win bonus']]],
+    ['Conference championships',[['conference_regular_title','Regular-season champion'],['conference_tournament_title','Tournament champion']]],
+    ['NCAA appearance by seed',[['ncaa_seed_1_4','Seeds 1–4'],['ncaa_seed_5_8','Seeds 5–8'],['ncaa_seed_9_12','Seeds 9–12'],['ncaa_seed_13_16','Seeds 13–16']]],
+    ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]]
+  ];
+  const scoreRules=()=>league?.settings?.scoring||{};
+  function scoringPage(){
+    const r=scoreRules(),count=Number(r.best_programs||8);
+    return heading('', 'Scoring')
+      +'<section class="panel scoring-lead"><div><span class="eyebrow">SEASON-LONG BEST BALL</span><h2>Best '+count+' programs count</h2><p>Every program remains owned year after year. Only the highest-scoring '+count+' programs on each roster contribute to the annual standings.</p></div><strong>'+count+'</strong></section>'
+      +'<div class="scoring-grid">'+scoringGroups.map(([title,fields])=>'<section class="panel scoring-panel">'+panelHeading(escapeHTML(title))
+      +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')+'</section>').join('')+'</div>'
+      +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
+      +'<p>Q1A wins earn both the Quad 1 bonus and the additional Quad 1A bonus. Quadrants use final NET classifications.</p>'
+      +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins.</p>'
+      +'<p>Regular-season win points exclude conference and NCAA tournament games. There is no AP Poll or KenPom bonus.</p>'
+      +'<p class="muted">Verified game results have not yet been integrated; standings cannot calculate actual points until they are.</p></section>';
+  }
+
   function leaguePage(){
     const users=members(),tracked=owners();
     const rows=users.map(u=>{
@@ -319,7 +341,7 @@
     return heading('', 'Standings')
       +'<div class="standings-summary"><div><span>SEASON</span><strong>'+escapeHTML(season())+'</strong></div><div><span>MANAGERS</span><strong>'+users.length+'</strong></div><div><span>ROSTERED SCHOOLS</span><strong>'+tracked.length+'</strong></div><div><span>DRAFT PICKS</span><strong>'+picks().length+'</strong></div></div>'
       +'<section class="panel standings-panel">'+panelHeading('League standings','Season-long points')
-      +'<div class="standings-notice">Scoring is not configured yet. Rankings and points will appear when the scoring system is enabled.</div>'
+      +'<div class="standings-notice">Scoring rules are configured. Verified program results are not connected yet, so standings points are not available.</div>'
       +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>TEAM</th><th class="numerical">SCHOOLS</th><th class="numerical">POINTS</th><th>ROSTER PREVIEW</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</section>';
   }
@@ -389,7 +411,7 @@
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League settings'],['draft','Draft','Order and controls'],['programs','Programs','Eligible schools'],['members','Members','Managers and invites'],['trades','Trades','Trade permissions']];
+    const sections=[['general','General','League settings'],['draft','Draft','Order and controls'],['programs','Programs','Eligible schools'],['members','Members','Managers and invites'],['scoring','Scoring','Points and best ball'],['trades','Trades','Trade permissions']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -439,6 +461,14 @@
         +'<p class="hint">Each invite link expires after 7 days and works once.</p>'
         +'<div class="button-row section-gap"><button class="btn" data-act="invite" '+(members().length>=cap||settings.draft_status!=='pending'?'disabled':'')+'>Generate invite</button></div>'
         +(inviteLink?'<div class="invite-result section-gap"><span>'+escapeHTML(inviteLink)+'</span><button class="btn small secondary" data-act="copy-invite">Copy</button></div>':'')+'</section>';
+    }else if(adminSection==='scoring'){
+      const r=scoreRules();
+      body='<section class="panel setting-panel">'+panelHeading('Scoring settings')
+        +'<div class="form-row"><label for="score-best_programs">Best-ball counting programs</label><input id="score-best_programs" class="field" type="number" min="1" max="20" step="1" value="'+Number(r.best_programs||8)+'"/></div>'
+        +scoringGroups.map(([title,fields])=>'<div class="section-gap"><h3 class="subhead">'+escapeHTML(title)+'</h3><div class="settings-grid">'
+        +fields.map(([key,label])=>'<div class="form-row"><label for="score-'+key+'">'+escapeHTML(label)+'</label><input class="field" id="score-'+key+'" type="number" min="0" max="100" step="0.25" value="'+Number(r[key]||0)+'"/></div>').join('')+'</div></div>').join('')
+        +'<p class="settings-hint">Q1A stacks with Q1. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-scoring">Save scoring</button><button class="btn secondary" data-act="tab" data-id="scoring">View rules</button></div></section>';
     }else if(adminSection==='trades'){
       body='<section class="panel setting-panel">'+panelHeading('Trading')
         +'<label class="settings-toggle" for="trading-enabled"><div><strong>Allow program trades</strong><span>Managers can propose and accept trades after the initial draft.</span></div><input id="trading-enabled" type="checkbox" '+(settings.trading_enabled?'checked':'')+'/></label>'
@@ -474,6 +504,11 @@
       if(act==='save-general'){
         await api('admin/general',{league_name:v('#league-name').trim(),max_managers:Number(v('#manager-limit')||league.settings.max_managers)});
         notice('General settings saved.');
+      }else if(act==='save-scoring'){
+        const scoring={};
+        for(const key of Object.keys(scoreRules()))scoring[key]=Number(v('#score-'+key));
+        await api('admin/scoring-settings',{scoring});
+        notice('Scoring rules saved.');
       }else if(act==='save-trades'){
         await api('admin/trade-settings',{trading_enabled:!!document.querySelector('#trading-enabled')?.checked});
         notice('Trading settings saved.');

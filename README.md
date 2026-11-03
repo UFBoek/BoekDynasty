@@ -26,6 +26,12 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 
 Treat Boek Dynasty as a functional league application, not a marketing landing page. Keep authentication compact and league pages focused on the status, programs, owners, picks, trades and actions users actually need. Avoid oversized promotional headlines, motivational slogans, filler descriptions and repetitive instructions. Use short, informative labels; add help text only when a rule, error or action needs explanation.
 
+## League display and program imports
+
+The navigation uses **Standings** for the league standings table. Scores remain unranked until the season-long points system is configured; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
+
+When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the existing ESPN-based admin endpoint, in small batches. Once the imports finish, the program directory shows schools and logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
+
 ## Architecture
 
 Production has **zero npm dependencies**: Cloudflare Workers serve the backend and web app, Cloudflare D1 stores league data. The ESPN team directory is an unofficial external source whose membership should be reviewed before drafting.

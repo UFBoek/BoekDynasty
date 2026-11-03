@@ -1,0 +1,5628 @@
+{
+  "version": 1,
+  "source_seasons": [
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "unmapped_external": [
+    {
+      "year": "2025",
+      "category": "seed",
+      "team": "St Francis PA"
+    },
+    {
+      "year": "2025",
+      "category": "conference_tournament",
+      "team": "St Francis PA"
+    }
+  ],
+  "awards": [
+    {
+      "season": "2021-22",
+      "id": "239",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "96",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2509",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "26",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2608",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "251",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "93",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "153",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "269",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2539",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "259",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "84",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2751",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2006",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "43",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2612",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2450",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2250",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "150",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2641",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "8",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "41",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "333",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "127",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "68",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "235",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2166",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "87",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "164",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "166",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "261",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "147",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2239",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2247",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2305",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "275",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2507",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2294",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "99",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "30",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "21",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "156",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2390",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "66",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "257",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2571",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2142",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "55",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "357",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2640",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "12",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "222",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2633",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "356",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "248",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "36",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "194",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2550",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2628",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2350",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "130",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "5",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "236",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2344",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "48",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2803",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2750",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2509",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "269",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2306",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2633",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "150",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "96",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "127",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "235",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2226",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "30",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2507",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "198",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "309",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "147",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "261",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "161",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2640",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "333",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "12",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "239",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "258",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "21",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "156",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "142",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "120",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "277",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "328",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "152",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "232",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "231",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2540",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "163",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2546",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "357",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "248",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "251",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2752",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "84",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2390",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "66",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "245",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2294",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "213",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "344",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "221",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2181",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2309",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "338",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2142",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "94",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2305",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "26",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2250",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "41",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2608",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2628",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "77",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "8",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "356",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "68",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "9",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2440",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2670",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "314",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2253",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2427",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "47",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "41",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "66",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "356",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "21",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "252",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "265",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2226",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "77",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2181",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2184",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "5",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "43",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2413",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2571",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "56",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "153",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "12",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "239",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "333",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2608",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "228",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2168",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "344",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "127",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2440",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "167",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2253",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "232",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2142",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "299",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "47",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2681",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2509",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2633",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "156",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2305",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2250",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2579",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "251",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "328",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2628",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "36",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "258",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2483",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2377",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2535",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2006",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2612",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2755",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "147",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "248",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "269",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "96",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "150",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "275",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2641",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "57",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "158",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "245",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "68",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "38",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "152",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "256",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "261",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2473",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "98",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2344",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "150",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "333",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "275",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "12",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2483",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "252",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2608",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "344",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "239",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "238",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2670",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2335",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2006",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "149",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2523",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "44",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "116",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "248",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2633",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "96",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2509",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "228",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "356",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "26",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2250",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "61",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "328",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "251",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2752",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2377",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2272",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2653",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2747",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2565",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "127",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "66",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "245",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "130",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "145",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "269",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "97",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "156",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "167",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "153",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "21",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "28",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "43",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "288",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2803",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2011",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "kaggle:1384",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "57",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2599",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2641",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "120",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "235",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "142",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2305",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "41",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "201",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "8",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2181",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "36",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2253",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "350",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2437",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2450",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "150",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "41",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "127",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2305",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2599",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "97",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "26",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "194",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2628",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2116",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "58",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2460",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2856",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "155",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "231",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2561",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "130",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "66",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "258",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "333",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2641",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2633",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "96",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "61",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "139",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2541",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "193",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2006",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2275",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2750",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2634",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2378",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "57",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "248",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "356",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "158",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "238",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "153",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2608",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "228",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2294",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "245",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2670",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2377",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2653",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "219",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "70",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2504",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "12",
+      "type": "ncaa_seed",
+      "value": 1,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2509",
+      "type": "ncaa_seed",
+      "value": 2,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2250",
+      "type": "ncaa_seed",
+      "value": 3,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "8",
+      "type": "ncaa_seed",
+      "value": 4,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "275",
+      "type": "ncaa_seed",
+      "value": 5,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "252",
+      "type": "ncaa_seed",
+      "value": 6,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2390",
+      "type": "ncaa_seed",
+      "value": 7,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "222",
+      "type": "ncaa_seed",
+      "value": 8,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "328",
+      "type": "ncaa_seed",
+      "value": 9,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "142",
+      "type": "ncaa_seed",
+      "value": 10,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "251",
+      "type": "ncaa_seed",
+      "value": 11,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2272",
+      "type": "ncaa_seed",
+      "value": 12,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "62",
+      "type": "ncaa_seed",
+      "value": 13,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "338",
+      "type": "ncaa_seed",
+      "value": 14,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2511",
+      "type": "ncaa_seed",
+      "value": 15,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "112358",
+      "type": "ncaa_seed",
+      "value": 16,
+      "source": "March Machine Learning Mania NCAA Tournament seeds https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2803",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania nec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2142",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania patriot conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "91",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_sun conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2750",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania horizon conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2344",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_south conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "93",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ovc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2247",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sun_belt conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2350",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mvc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2250",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wcc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "236",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southern conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2571",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania summit conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "48",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania caa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "261",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "259",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania acc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2239",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_west conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2612",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania maac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "5",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania cusa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "166",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2640",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania swac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "222",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_east conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2450",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania meac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "147",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_sky conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "68",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mwc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "357",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southland conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "257",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2633",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2294",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "12",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania pac_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2305",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "2006",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "248",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "id": "43",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ivy conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "338",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_sun conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2142",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania patriot conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "309",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sun_belt conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "94",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania horizon conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2427",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_south conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2546",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ovc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2771",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania nec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2181",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mvc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2250",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wcc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "231",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southern conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "232",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania caa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "198",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania summit conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "261",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "147",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_sky conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "357",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southland conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "150",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania acc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2540",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_west conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2253",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2670",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "314",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania maac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "12",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania pac_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "21",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mwc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "269",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_east conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2640",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania swac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "47",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania meac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2226",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania cusa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "333",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2509",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "251",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "2309",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "235",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "id": "163",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ivy conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "56",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_sun conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2473",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania horizon conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "256",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sun_belt conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2142",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania patriot conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2681",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania nec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2413",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ovc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2344",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_south conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2181",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mvc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2608",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wcc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2535",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southern conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "232",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania caa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2571",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania summit conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "261",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "147",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_sky conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2377",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southland conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "152",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania acc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2612",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania maac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "66",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "98",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania cusa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2184",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2755",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania swac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "167",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mwc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "299",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_west conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "356",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "47",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania meac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "41",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_east conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2253",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2483",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania pac_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "5",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "2006",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "id": "43",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ivy conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "288",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_sun conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "44",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania patriot conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2523",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania horizon conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2653",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sun_belt conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "kaggle:1384",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania nec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2272",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_south conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2437",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania summit conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2565",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ovc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2181",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mvc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2250",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wcc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "350",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania caa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2747",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southern conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2803",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "149",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_sky conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2377",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania southland conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "150",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania acc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "248",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_twelve conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2011",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania swac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2335",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania cusa conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "116",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania maac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2253",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania wac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "57",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania sec conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2599",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_east conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "28",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_west conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "235",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania aac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2670",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania a_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "130",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania big_ten conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "36",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mwc conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2450",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania meac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "2006",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania mac conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "id": "43",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "March Machine Learning Mania ivy conference final https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2025-26",
+      "id": "2378",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "58",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2670",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "150",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2511",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "12",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2599",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "70",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2272",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2509",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "62",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2275",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "338",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2750",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "219",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2561",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2006",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "47",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2460",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "328",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "112358",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2634",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2329",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "8",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "231",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2377",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2504",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2449",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2653",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2250",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    },
+    {
+      "season": "2025-26",
+      "id": "2856",
+      "type": "conference_tournament_champion",
+      "value": 1,
+      "source": "2026 conference tournament champions https://www.cbssports.com/college-basketball/news/college-basketball-conference-tournaments-2026-schedule-results-automatic-bids-march-madness/"
+    }
+  ],
+  "tournament_games": [
+    {
+      "season": "2021-22",
+      "winner_id": "84",
+      "loser_id": "2751",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2640",
+      "loser_id": "357",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "87",
+      "loser_id": "164",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2750",
+      "loser_id": "2803",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "8",
+      "loser_id": "261",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "239",
+      "loser_id": "2450",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "156",
+      "loser_id": "21",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2250",
+      "loser_id": "2247",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2305",
+      "loser_id": "2640",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "235",
+      "loser_id": "68",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "130",
+      "loser_id": "36",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "93",
+      "loser_id": "2539",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "166",
+      "loser_id": "41",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "153",
+      "loser_id": "269",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2507",
+      "loser_id": "2571",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "257",
+      "loser_id": "2294",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2608",
+      "loser_id": "84",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2612",
+      "loser_id": "96",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2633",
+      "loser_id": "2344",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "26",
+      "loser_id": "2006",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "12",
+      "loser_id": "2750",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2",
+      "loser_id": "55",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "150",
+      "loser_id": "2239",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "248",
+      "loser_id": "5",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "356",
+      "loser_id": "236",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "66",
+      "loser_id": "99",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2390",
+      "loser_id": "30",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "127",
+      "loser_id": "2166",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "87",
+      "loser_id": "333",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "194",
+      "loser_id": "2350",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2509",
+      "loser_id": "43",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2628",
+      "loser_id": "2550",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "251",
+      "loser_id": "259",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2641",
+      "loser_id": "147",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "222",
+      "loser_id": "48",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "275",
+      "loser_id": "2142",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "8",
+      "loser_id": "166",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2250",
+      "loser_id": "235",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2305",
+      "loser_id": "156",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "130",
+      "loser_id": "2633",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "153",
+      "loser_id": "239",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2507",
+      "loser_id": "257",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2612",
+      "loser_id": "93",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "26",
+      "loser_id": "2608",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "12",
+      "loser_id": "2628",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "150",
+      "loser_id": "127",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "248",
+      "loser_id": "356",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "66",
+      "loser_id": "275",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2390",
+      "loser_id": "2",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2509",
+      "loser_id": "251",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2641",
+      "loser_id": "87",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "222",
+      "loser_id": "194",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "8",
+      "loser_id": "2250",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "150",
+      "loser_id": "2641",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "248",
+      "loser_id": "12",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "222",
+      "loser_id": "130",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2305",
+      "loser_id": "2507",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2390",
+      "loser_id": "66",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "153",
+      "loser_id": "26",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2612",
+      "loser_id": "2509",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "150",
+      "loser_id": "8",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "222",
+      "loser_id": "248",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2305",
+      "loser_id": "2390",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "153",
+      "loser_id": "2612",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2305",
+      "loser_id": "222",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "153",
+      "loser_id": "150",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2021-22",
+      "winner_id": "2305",
+      "loser_id": "153",
+      "day_num": 154,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "221",
+      "loser_id": "344",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "357",
+      "loser_id": "2546",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "9",
+      "loser_id": "2440",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "161",
+      "loser_id": "2640",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "333",
+      "loser_id": "357",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "8",
+      "loser_id": "356",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2",
+      "loser_id": "2294",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "150",
+      "loser_id": "198",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "231",
+      "loser_id": "258",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "248",
+      "loser_id": "94",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2305",
+      "loser_id": "47",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "120",
+      "loser_id": "277",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "142",
+      "loser_id": "328",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "77",
+      "loser_id": "68",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "213",
+      "loser_id": "245",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "163",
+      "loser_id": "12",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "21",
+      "loser_id": "232",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2633",
+      "loser_id": "309",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "251",
+      "loser_id": "2142",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "26",
+      "loser_id": "2427",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "239",
+      "loser_id": "2540",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "41",
+      "loser_id": "314",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "156",
+      "loser_id": "152",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "161",
+      "loser_id": "2509",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2226",
+      "loser_id": "235",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2250",
+      "loser_id": "2253",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "84",
+      "loser_id": "2309",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2306",
+      "loser_id": "147",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "96",
+      "loser_id": "2507",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "269",
+      "loser_id": "261",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2390",
+      "loser_id": "2181",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "127",
+      "loser_id": "30",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "221",
+      "loser_id": "66",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2608",
+      "loser_id": "2670",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2628",
+      "loser_id": "9",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2752",
+      "loser_id": "338",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "333",
+      "loser_id": "120",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "8",
+      "loser_id": "2305",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "248",
+      "loser_id": "2",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "163",
+      "loser_id": "142",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "21",
+      "loser_id": "231",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2633",
+      "loser_id": "150",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "251",
+      "loser_id": "213",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "26",
+      "loser_id": "77",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "41",
+      "loser_id": "2608",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "156",
+      "loser_id": "239",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2226",
+      "loser_id": "161",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2250",
+      "loser_id": "2628",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2306",
+      "loser_id": "96",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2390",
+      "loser_id": "84",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "127",
+      "loser_id": "269",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2752",
+      "loser_id": "221",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "41",
+      "loser_id": "8",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2226",
+      "loser_id": "2633",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2250",
+      "loser_id": "26",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2306",
+      "loser_id": "127",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "156",
+      "loser_id": "163",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2390",
+      "loser_id": "248",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "21",
+      "loser_id": "333",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "251",
+      "loser_id": "2752",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "41",
+      "loser_id": "2250",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2226",
+      "loser_id": "2306",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "2390",
+      "loser_id": "251",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "21",
+      "loser_id": "156",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "41",
+      "loser_id": "2390",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "21",
+      "loser_id": "2226",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2022-23",
+      "winner_id": "41",
+      "loser_id": "21",
+      "day_num": 154,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "36",
+      "loser_id": "258",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2681",
+      "loser_id": "47",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "38",
+      "loser_id": "68",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2755",
+      "loser_id": "147",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "12",
+      "loser_id": "299",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "156",
+      "loser_id": "2006",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2168",
+      "loser_id": "2440",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2184",
+      "loser_id": "252",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2250",
+      "loser_id": "2377",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "356",
+      "loser_id": "2413",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "66",
+      "loser_id": "2571",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2305",
+      "loser_id": "2535",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "127",
+      "loser_id": "344",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "152",
+      "loser_id": "2641",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "153",
+      "loser_id": "2681",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2473",
+      "loser_id": "96",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2483",
+      "loser_id": "2579",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2633",
+      "loser_id": "2612",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "251",
+      "loser_id": "36",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "265",
+      "loser_id": "2181",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "333",
+      "loser_id": "232",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "239",
+      "loser_id": "2142",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "228",
+      "loser_id": "167",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "38",
+      "loser_id": "57",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "41",
+      "loser_id": "56",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "150",
+      "loser_id": "261",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2253",
+      "loser_id": "2608",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "248",
+      "loser_id": "2344",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "256",
+      "loser_id": "275",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "269",
+      "loser_id": "98",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "77",
+      "loser_id": "2226",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2509",
+      "loser_id": "2755",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "21",
+      "loser_id": "5",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "245",
+      "loser_id": "158",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "328",
+      "loser_id": "2628",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "43",
+      "loser_id": "2",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "12",
+      "loser_id": "2168",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "156",
+      "loser_id": "2483",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2250",
+      "loser_id": "2305",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "356",
+      "loser_id": "2184",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "66",
+      "loser_id": "265",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "152",
+      "loser_id": "2473",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "153",
+      "loser_id": "127",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2633",
+      "loser_id": "251",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "333",
+      "loser_id": "2253",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "228",
+      "loser_id": "239",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "41",
+      "loser_id": "77",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "150",
+      "loser_id": "256",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "248",
+      "loser_id": "245",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "269",
+      "loser_id": "38",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2509",
+      "loser_id": "328",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "21",
+      "loser_id": "43",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "333",
+      "loser_id": "153",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "228",
+      "loser_id": "12",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "41",
+      "loser_id": "21",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "356",
+      "loser_id": "66",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "150",
+      "loser_id": "248",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "152",
+      "loser_id": "269",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2509",
+      "loser_id": "2250",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2633",
+      "loser_id": "156",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "333",
+      "loser_id": "228",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "41",
+      "loser_id": "356",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "152",
+      "loser_id": "150",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2509",
+      "loser_id": "2633",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "41",
+      "loser_id": "333",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "2509",
+      "loser_id": "152",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2023-24",
+      "winner_id": "41",
+      "loser_id": "2509",
+      "day_num": 154,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2011",
+      "loser_id": "kaggle:1384",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "153",
+      "loser_id": "21",
+      "day_num": 134,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "116",
+      "loser_id": "44",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2752",
+      "loser_id": "251",
+      "day_num": 135,
+      "opening_round": 1,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "8",
+      "loser_id": "2305",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2",
+      "loser_id": "2011",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "252",
+      "loser_id": "2670",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "156",
+      "loser_id": "97",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2181",
+      "loser_id": "142",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2250",
+      "loser_id": "61",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "248",
+      "loser_id": "2565",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2377",
+      "loser_id": "228",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "130",
+      "loser_id": "28",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2509",
+      "loser_id": "2272",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2599",
+      "loser_id": "2437",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2633",
+      "loser_id": "2747",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "245",
+      "loser_id": "43",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2641",
+      "loser_id": "350",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "26",
+      "loser_id": "328",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "275",
+      "loser_id": "149",
+      "day_num": 136,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "333",
+      "loser_id": "2523",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "12",
+      "loser_id": "2006",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "239",
+      "loser_id": "344",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "36",
+      "loser_id": "235",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "41",
+      "loser_id": "201",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "150",
+      "loser_id": "116",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "57",
+      "loser_id": "2450",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "356",
+      "loser_id": "2752",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "66",
+      "loser_id": "288",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "96",
+      "loser_id": "2653",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "120",
+      "loser_id": "2253",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "127",
+      "loser_id": "2803",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "145",
+      "loser_id": "153",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "167",
+      "loser_id": "269",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2483",
+      "loser_id": "2335",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2608",
+      "loser_id": "238",
+      "day_num": 137,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "8",
+      "loser_id": "2599",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2",
+      "loser_id": "156",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "252",
+      "loser_id": "275",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "248",
+      "loser_id": "2250",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "130",
+      "loser_id": "245",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2509",
+      "loser_id": "2377",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2633",
+      "loser_id": "26",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2641",
+      "loser_id": "2181",
+      "day_num": 138,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "333",
+      "loser_id": "2608",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "12",
+      "loser_id": "2483",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "150",
+      "loser_id": "239",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "57",
+      "loser_id": "41",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "96",
+      "loser_id": "356",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "120",
+      "loser_id": "36",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "127",
+      "loser_id": "167",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "145",
+      "loser_id": "66",
+      "day_num": 139,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "333",
+      "loser_id": "252",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "150",
+      "loser_id": "12",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "57",
+      "loser_id": "120",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2641",
+      "loser_id": "8",
+      "day_num": 143,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2",
+      "loser_id": "130",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "248",
+      "loser_id": "2509",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "127",
+      "loser_id": "145",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2633",
+      "loser_id": "96",
+      "day_num": 144,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "150",
+      "loser_id": "333",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "57",
+      "loser_id": "2641",
+      "day_num": 145,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "2",
+      "loser_id": "127",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "248",
+      "loser_id": "2633",
+      "day_num": 146,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "57",
+      "loser_id": "2",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "248",
+      "loser_id": "150",
+      "day_num": 152,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    },
+    {
+      "season": "2024-25",
+      "winner_id": "57",
+      "loser_id": "248",
+      "day_num": 154,
+      "opening_round": 0,
+      "source_note": "March Machine Learning Mania NCAA game results https://github.com/JChamberlain85/2026-March-Madness"
+    }
+  ]
+}

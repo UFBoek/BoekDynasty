@@ -2060,16 +2060,48 @@
         +'<button class="btn danger" data-act="reset" '+(settings.draft_status==='finished'?'disabled':'')+'>Reset picks</button>'
         +'</div></section>';
     }else if(adminSection==='programs'){
-      const confs=conferenceGroups.map(group=>'<h3 class="subhead section-gap">'+group.name+'</h3><div class="conf-grid">'+group.ids.map(id=>
-        '<label class="conf-item"><input type="checkbox" name="conference" value="'+id+'" '+(activeConfs().includes(id)?'checked':'')+' '+(locked?'disabled':'')+'/><span>'+escapeHTML(conf(id))+'</span><small class="muted">'+programs().filter(p=>p.conference_id===id).length+'</small></label>'
-      ).join('')+'</div>').join('');
-      body='<section class="panel setting-panel">'+panelHeading('Eligible conferences')+confs
-        +'<div class="button-row section-gap"><button class="btn" data-act="save-confs" '+(locked?'disabled':'')+'>Save conferences</button><button class="btn secondary" data-act="sync" '+(locked||syncActive?'disabled':'')+'>'+(syncActive?'Importing...':'Import schools')+'</button></div>'
-        +(importError?'<p class="notice section-gap">'+escapeHTML(importError)+'</p>':'')+'</section>'
-        +'<section class="panel setting-panel section-gap">'+panelHeading('Add a school')+'<form data-form="program">'
-        +input('Program name','name','text','School name')+input('Abbreviation','abbr','text','e.g. UF')
-        +'<div class="form-row"><label for="conference_id">Conference</label><select class="field" id="conference_id" name="conference_id">'+activeConfs().map(id=>'<option value="'+id+'">'+escapeHTML(conf(id))+'</option>').join('')+'</select></div>'
-        +'<button class="btn secondary" type="submit" '+(locked?'disabled':'')+'>Add school</button></form></section>';
+      initPoolDraft();
+      const total=programs().length,selected=poolDraftSchools.size,required=members().length*Number(settings.rounds);
+      const conferenceRows=conferenceGroups.map(group=>'<div class="pool-conference-group"><h3>'+escapeHTML(group.name)+'</h3>'+
+        group.ids.map(id=>{
+          const all=programs().filter(p=>String(p.conference_id)===id);
+          const count=all.filter(p=>poolDraftSchools.has(String(p.id))).length;
+          const active=poolDraftConfs.has(id);
+          return '<button type="button" class="pool-conference '+(active?'is-selected':'')+'" data-act="pool-conf" data-id="'+id+'" aria-pressed="'+active+'" '+(locked?'disabled':'')+'>'
+            +'<span class="pool-check" aria-hidden="true">'+(active?'✓':'')+'</span><span class="pool-conf-name">'+escapeHTML(conf(id))+'</span>'
+            +'<span class="pool-conf-count">'+count+'/'+all.length+'</span></button>';
+        }).join('')+'</div>').join('');
+      const filterOptions=[...new Set(programs().map(p=>String(p.conference_id)))].sort((a,b)=>conf(a).localeCompare(conf(b)))
+        .map(id=>'<option value="'+id+'" '+(poolConferenceFilter===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
+      const scopeButtons=[['all','All schools'],['included','Included'],['excluded','Not included']]
+        .map(([id,label])=>'<button type="button" data-act="pool-scope" data-id="'+id+'" class="'+(poolScope===id?'active':'')+'" aria-pressed="'+(poolScope===id)+'">'+label+'</button>').join('');
+      body='<div class="pool-intro"><div><span class="pool-kicker">DRAFT POOL BUILDER</span><h2>Choose eligible programs</h2>'
+        +'<p>Start with conferences, then fine-tune individual schools. Changes affect the draft pool, school directory, and historical rankings.</p></div>'
+        +'<div class="pool-stat"><strong>'+selected+'</strong><span>of '+total+' programs selected</span></div></div>'
+        +(locked?'<div class="pool-lock-note">The inaugural draft has started. Program eligibility is locked to protect existing picks and dynasty rosters.</div>':'')
+        +'<div class="pool-editor">'
+        +'<section class="panel pool-conferences">'+panelHeading('Conferences','Select an entire conference with one click')
+        +'<div class="pool-quick-actions"><button type="button" class="btn small secondary" data-act="pool-major" '+(locked?'disabled':'')+'>Major conferences</button>'
+        +'<button type="button" class="btn small ghost" data-act="pool-all-confs" '+(locked?'disabled':'')+'>Select all</button></div>'
+        +conferenceRows+'</section>'
+        +'<section class="panel pool-schools">'+panelHeading('Individual schools','Override conference selections one school at a time')
+        +'<div class="pool-search-tools"><label class="pool-search"><span aria-hidden="true">⌕</span><input type="search" id="pool-search" value="'+escapeHTML(poolQuery)+'" placeholder="Search any Division I school..." autocomplete="off" aria-label="Find a school" /></label>'
+        +'<select id="pool-conf-filter" class="field" aria-label="Filter schools by conference"><option value="all">All conferences</option>'+filterOptions+'</select></div>'
+        +'<div class="pool-scope" role="group" aria-label="Program selection filter">'+scopeButtons+'</div>'
+        +(!locked?'<div class="pool-bulk"><span>Matching schools</span><button type="button" data-act="pool-add-visible">Include all</button><button type="button" data-act="pool-remove-visible">Exclude all</button></div>':'')
+        +'<div class="pool-school-list '+(locked?'is-locked':'')+'" id="pool-school-results">'+poolSchoolRows()+'</div></section></div>'
+        +'<div class="pool-footer"><div><strong id="pool-selected-count">'+selected+' selected</strong><small id="pool-save-state">'+(poolDirty?'Unsaved changes':'All changes saved')+'</small>'
+        +(selected<required?'<small class="pool-warning">Need at least '+required+' programs for a full '+settings.rounds+'-round draft.</small>':'')+'</div>'
+        +'<div class="pool-footer-actions"><button type="button" class="btn ghost" data-act="pool-reset" '+(locked||!poolDirty?'disabled':'')+'>Reset</button>'
+        +'<button type="button" class="btn" data-act="save-pool" '+(locked||!poolDirty?'disabled':'')+'>Save eligible programs</button></div></div>'
+        +(importError?'<p class="notice section-gap">'+escapeHTML(importError)+'</p>':'')
+        +'<details class="panel pool-advanced"><summary>Advanced: add a custom school or resync conference data</summary><div class="pool-advanced-content">'
+        +'<p>All '+total+' verified 2026–27 schools are already listed above. Only use these tools for corrections or new schools.</p>'
+        +'<form data-form="program">'+input('Program name','name','text','School name')+input('Abbreviation','abbr','text','e.g. UF')
+        +'<div class="form-row"><label for="conference_id">Conference</label><select class="field" id="conference_id" name="conference_id">'
+        +Object.keys(conferenceNames).sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>'<option value="'+id+'">'+escapeHTML(conf(id))+'</option>').join('')+'</select></div>'
+        +'<button class="btn secondary" type="submit" '+(locked?'disabled':'')+'>Add custom school</button></form>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="sync" '+(locked||syncActive?'disabled':'')+'>Resync enabled conferences</button></div></div></details>';
     }else if(adminSection==='data'){
       const runs=resultsStatus?.recent_runs||[];
       const latest=runs.find(x=>x.status==='ok');

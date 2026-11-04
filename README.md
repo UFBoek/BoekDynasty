@@ -2,6 +2,11 @@
 
 Permanent fantasy college basketball dynasty league starting in the **2026–27 season**. Managers draft **NCAA programs**, not individual athletes, and **keep those programs across future seasons** unless traded. Season-long scoring weights are configured, with **best 12 programs counting** per manager. Historical game results from 2021–22 onward, NET rankings, NCAA tournament awards, and live scoreboard updates are stored in Supabase.
 
+
+### Remember this device (iPhone and desktop)
+
+Login, join and commissioner setup now offer a checked **Remember this device** option. When enabled, the same-origin Cloudflare Worker sets a host-only `__Host-boek_remember` cookie with `Secure; HttpOnly; SameSite=Lax; Path=/` and a 90-day maximum age. It forwards the cookie credential as a bearer token to the existing Supabase Edge Function (the token is never sent to Supabase in the browser's Cookie header). The server session expires after 90 days; login/reload does not extend that expiry. The JavaScript client does not store remembered session tokens in `localStorage`. If unchecked, the browser stores the token only in `sessionStorage`, the server expires that session after 24 hours, and a previous remembered cookie is cleared. Logout deletes the server session and expires the cookie. This is designed to avoid Safari's purging of script-writeable storage while keeping PWA and Safari cookie jars separate; sign in once in each context. Old `localStorage` session tokens are still read during migration and cleared on a new login/logout.
+
 ## Live app
 
 https://boek-dynasty.fig-league-archive.workers.dev/

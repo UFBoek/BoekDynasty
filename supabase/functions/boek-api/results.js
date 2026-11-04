@@ -183,16 +183,19 @@ export const DATA_PIPELINE=(()=>{
     return result;
   }
   const status=async(env,season)=>{
-    const [games,runs,net,awards,opt,health]=await Promise.all([
+    const [games,runs,net,awards,opt,health,rankings]=await Promise.all([
       q(env,"SELECT COUNT(*) AS n,SUM(CASE WHEN status='final' THEN 1 ELSE 0 END) AS final_count,MAX(updated_at) AS last_change FROM cbb_games WHERE season=?",season).first(),
       q(env,'SELECT id,job,target_date,source,status,received,matched,changed,error_text,started_at,finished_at FROM cbb_sync_runs WHERE season=? ORDER BY started_at DESC LIMIT 20',season).all(),
       q(env,"SELECT snapshot_date AS day,stored_count AS total FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1",season).first(),
       q(env,'SELECT COUNT(*) AS n FROM cbb_awards WHERE season=?',season).first(),
       q(env,"SELECT value FROM settings WHERE key='results_auto_sync'").first(),
-      coverage(env,season)
+      coverage(env,season),
+      activeRankings(env,season)
     ]);
     return {season,game_count:games?.n||0,final_games:games?.final_count||0,last_game_change:games?.last_change||null,
-      net_date:net?.day||null,net_count:net?.total||0,awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',coverage:health,historical:await historicalProgress(env),recent_runs:runs.results||[]};
+      net_date:net?.day||null,net_count:net?.total||0,
+      quadrant_source:rankings.source,quadrant_date:rankings.snapshot_date,quadrant_provisional:rankings.provisional,
+      awards_count:awards?.n||0,auto_enabled:opt?.value!=='0',coverage:health,historical:await historicalProgress(env),recent_runs:runs.results||[]};
   };
   const records=async(env,season)=>{
     const rows=await q(env,`SELECT program_id,SUM(w) AS wins,SUM(1-w) AS losses,COUNT(*) AS played FROM (
@@ -367,17 +370,19 @@ export const DATA_PIPELINE=(()=>{
         quad_by_type:t?.quad_by_type||null,
         ncaa_wins:t?.ncaa_wins||0,opening_round_wins:t?.opening_round_wins||0,
         seed:t?.seed||0,net_verified:!!t?.net_verified,
+        quadrant_source:t?.quadrant_source||'pending',quadrant_provisional:!!t?.quadrant_provisional,
         rank:isEligible?(t?.rank??null):null,
         rank_total:isEligible?scores.rank_total:null,
         rank_tied:isEligible?!!t?.rank_tied:false,
         breakdown:t?.breakdown||[],
         note:state==='complete'?'Final points, including all applicable tournament NET bonuses.':
+          t?.quadrant_provisional?'Provisional Q1/Q1A/Q2 points use Bart Torvik T-Rank until NCAA NET is published.':
           state==='partial'?'Live fantasy scoring; points will update as games and awards are verified.':
           'No verified games or scoring awards for this program and season.'
       });
     }
     return {program_id:String(id),current_season:currentSeason,seasons:periods,
-      source:'ESPN final scores and venues, season-end NET, NCAA bracket, verified conference titles',
+      source:'ESPN final scores and venues, NCAA NET where available (otherwise current-season preliminary T-Rank), NCAA bracket, verified conference titles',
       archive_complete:scores.archive_complete,complete:scores.archive_complete};
   }
   // Fair, idempotent historical backfill: each pass advances across every

@@ -169,6 +169,15 @@ export default (function makeWorker(){
       const auth=await getUser(request,env);
       if(!auth)return failure('Sign in required.',401);
       const settings=await getSettings(env),season=settings.current_season;
+      if(path==='data/integrity'){
+        if(auth.user.role!=='commissioner')return failure('Commissioner access required.',403);
+        const [scans,revisions]=await Promise.all([
+          q(env,'SELECT id,scanned_at,season,severity,critical_count,warning_count,metrics,issues FROM cbb_integrity_runs ORDER BY scanned_at DESC LIMIT 12').all(),
+          q(env,'SELECT id,changed_at,actor_id,previous_rules,new_rules FROM cbb_scoring_revisions ORDER BY changed_at DESC LIMIT 10').all()
+        ]);
+        const history=scans.results||[];
+        return response({latest:history[0]||null,history,revisions:revisions.results||[]});
+      }
       if(path==='data/status')return response(await DATA_PIPELINE.status(env,season));
       if(path==='data/records')return response({season,records:await DATA_PIPELINE.records(env,season)});
       if(path==='data/standings'){
@@ -542,6 +551,34 @@ export default (function makeWorker(){
         display_name:target.display_name,temporary_password:temporaryPassword});
     }
 
+    if(path==='admin/data/integrity-scan'){
+      const scanned=await q(env,'SELECT public.cbb_run_integrity_scan() AS report').first();
+      return response({ok:true,report:scanned?.report||null});
+    }
+    if(path==='admin/data/repair-interrupted'){
+      const recovered=await DATA_PIPELINE.repairInterrupted(env,2);
+      const scanned=await q(env,'SELECT public.cbb_run_integrity_scan() AS report').first();
+      return response({ok:recovered.results.every(x=>x.ok),...recovered,report:scanned?.report||null});
+    }
+    if(path==='admin/data/verify-scoring'){
+      const settings=await getSettings(env);
+      // All standings and program profiles use this one scoring engine, not
+      // separately cached or persisted per-page point calculations.
+      const report=await DATA_PIPELINE.historicalLeaders(env,settings.scoring,settings.current_season,settings);
+      const seen=new Set(),invalid=[];
+      for(const row of report.rows){
+        const key=row.season+'|'+row.program_id;
+        const points=Number(row.points);
+        if(seen.has(key)||!Number.isFinite(points)||points<0)
+          invalid.push({season:row.season,program_id:row.program_id,issue:seen.has(key)?'duplicate':'invalid points'});
+        seen.add(key);
+      }
+      return response({ok:invalid.length===0,valid:invalid.length===0,
+        program_seasons:report.rows.length,unique_program_seasons:seen.size,
+        verified_seasons:report.verified_seasons,
+        quadrant_source:report.quadrant_source,quadrant_provisional:report.quadrant_provisional,
+        invalid:invalid.slice(0,25),note:'Scores are computed on demand from verified records and the current scoring configuration.'});
+    }
     if(path==='admin/data/sync'){
       const settings=await getSettings(env),day=String(data.date||DATA_PIPELINE.localDay());
       if(!DATA_PIPELINE.dayInSeason(settings.current_season,day))return failure('Choose a date in the current season.',400);
@@ -669,7 +706,10 @@ export default (function makeWorker(){
       if(!Number.isInteger(count)||count<1||count>Number(settings.rounds))
         return failure('Best-ball programs must be between 1 and the draft rounds ('+settings.rounds+').',400);
       const updated={...settings.scoring,best_programs:count};
-      await setSetting(env,'scoring_rules',JSON.stringify(updated));
+      await env.DB.batch([
+        q(env,"INSERT INTO settings(key,value) VALUES('scoring_rules',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",JSON.stringify(updated)),
+        q(env,'INSERT INTO cbb_scoring_revisions(actor_id,previous_rules,new_rules) VALUES(?,?,?)',user.id,JSON.stringify(settings.scoring),JSON.stringify(updated))
+      ]);
       return response({ok:true,best_programs:count});
     }
     if(path==='admin/scoring-settings'){
@@ -689,7 +729,10 @@ export default (function makeWorker(){
         next[key]=value;
       }
       if(Object.keys(input).some(key=>!Object.prototype.hasOwnProperty.call(DEFAULT_SCORING,key)))return failure('Unsupported scoring rule.',400);
-      await setSetting(env,'scoring_rules',JSON.stringify(next));
+      await env.DB.batch([
+        q(env,"INSERT INTO settings(key,value) VALUES('scoring_rules',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",JSON.stringify(next)),
+        q(env,'INSERT INTO cbb_scoring_revisions(actor_id,previous_rules,new_rules) VALUES(?,?,?)',user.id,JSON.stringify(scoringSettings.scoring),JSON.stringify(next))
+      ]);
       return response({ok:true,scoring:next});
     }
     if(path==='admin/trade-settings'){

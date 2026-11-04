@@ -498,7 +498,7 @@
         +'</tr>';
     }).join('');
     return '<section class="panel school-leaders-shell">'+panelHeading('Historical point leaders','All '+rows.length+' Division I programs · 2021–22 to '+escapeHTML(season()))
-      +'<p class="school-leaders-note">Points use verified games, final NET rankings, NCAA seeds, tournament wins and confirmed titles. Historical totals remain provisional while game coverage is being completed.</p>'
+      +'<p class="school-leaders-note">'+(all.archive_complete?'The 2021–22 through 2025–26 archives are verified and fully scored. Current-season totals update live.':'Historical scores use verified games, final NET rankings, NCAA seeds, tournament wins and confirmed titles. Remaining unverified seasons may change.')+'</p>'
       +nav
       +'<div class="school-leader-tools"><label class="directory-search"><span aria-hidden="true">⌕</span><input id="leader-search" class="field" type="search" value="'+escapeHTML(leaderQuery)+'" placeholder="Find a team in the rankings..." aria-label="Search school leaders" autocomplete="off"/></label><span id="leader-count">'+rows.length+' schools</span></div>'
       +'<div class="school-leader-table-wrap"><table class="school-leader-table"><thead><tr><th>#</th><th>PROGRAM</th><th>'+(period==='all'?'TOTAL':escapeHTML(period))+'</th>'+headerYears+'</tr></thead><tbody>'+body+'</tbody></table></div></section>';
@@ -737,15 +737,15 @@
       const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');
       const row=history.find(item=>item.season===label);
       return '<button class="program-season-card '+(selected===label?'active':'')+'" type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" aria-pressed="'+(selected===label)+'">'
-        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Partial points':row?.status==='complete'?'Final points':'Awaiting data')+'</small>'
+        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Live points':row?.status==='complete'?'Final points':row?.status==='not_applicable'?'No D-I record':'Awaiting data')+'</small>'
         +'<span class="program-season-meter" aria-hidden="true"><i style="width:'+(row?.points!==null&&row?.points!==undefined&&Number.isFinite(Number(row.points))?Math.min(100,Math.max(0,100*Number(row.points)/maxKnownPoints)):0)+'%"></i></span></button>';
     }).join('');
-    const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='partial'?'Verified points so far, not the final season total':'Awaiting a verified historical import')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
+    const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='complete'?'Final points from verified archived results':selectedStats.status==='partial'?'Live season points, subject to updates':selectedStats.status==='not_applicable'?'No recorded Division I season':'Awaiting verified results')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
       +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
       +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
       +'<div><span>Q1 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q1:'NET pending')+'</strong></div>'
       +'<div><span>Q2 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q2:'NET pending')+'</strong></div></div>'
-      +'<p class="hint">Historical point totals are calculated only from imported results, current scoring settings, and verified achievements. Missing NET or postseason data means the shown points are incomplete.</p></div>'
+      +'<p class="hint">'+(selectedStats.status==='complete'?'This archived season is fully scored using verified results, final NET, tournament games and championships.':'Current-season totals update as games, rankings and awards become available.')+'</p></div>'
       :'<div class="program-season-expanded"><p class="hint">Loading the program’s verified scoring history…</p></div>';
     const currentPoints=currentStats?.points!==null&&currentStats?.points!==undefined?pointText(currentStats):'—';
     const recordText=record?.played?record.wins+'–'+record.losses:'—';

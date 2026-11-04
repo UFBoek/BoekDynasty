@@ -4947,3 +4947,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(max-width:355px){
  .topbar .chip{display:none}
 }
+
+/* Individual NCAA seed award ladder. */
+.scoring-panel-seeding{grid-column:1/-1}
+.seed-scale-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px 22px}
+.seed-scale-grid .score-row{min-height:39px;padding:8px 0}
+.seed-scale-grid .score-row span{font-size:12px}
+.seed-scale-grid .score-row strong{font-variant-numeric:tabular-nums}
+@media(max-width:670px){.seed-scale-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}}

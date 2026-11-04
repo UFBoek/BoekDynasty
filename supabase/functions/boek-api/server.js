@@ -9,13 +9,22 @@ export default (function makeWorker(){
   const SESSION_SECONDS=90*24*60*60;
   const BROWSER_SESSION_SECONDS=24*60*60;
   const ENCODER=new TextEncoder();
-  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"conference_tournament_win":2,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_win":2.5,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_at_large_bid":5,"ncaa_upset_per_seed":1,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
+  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"conference_tournament_win":2,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_win":2.5,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1":14,"ncaa_seed_2":13,"ncaa_seed_3":12,"ncaa_seed_4":11,"ncaa_seed_5":10,"ncaa_seed_6":9,"ncaa_seed_7":8,"ncaa_seed_8":7,"ncaa_seed_9":6,"ncaa_seed_10":5,"ncaa_seed_11":5,"ncaa_seed_12":5,"ncaa_seed_13":5,"ncaa_seed_14":5,"ncaa_seed_15":5,"ncaa_seed_16":5,"ncaa_tournament_win":3,"ncaa_at_large_bid":5,"ncaa_upset_per_seed":1,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
   function scoringFrom(raw){
     let data={};try{data=JSON.parse(raw||'{}');}catch{}
     if(!data||typeof data!=='object'||Array.isArray(data))data={};
     // Read legacy settings without changing historical totals: old Q1A was Q1 + an extra point.
     if(data.quad_1a_win===undefined&&typeof data.quad_1a_extra==='number')
       data.quad_1a_win=Number(data.quad_1_win??DEFAULT_SCORING.quad_1_win)+data.quad_1a_extra;
+    // Preserve league-specific legacy bucket weights until commissioners migrate
+    // their scoring configuration to individual NCAA seed lines.
+    for(let seed=1;seed<=16;seed++){
+      const key='ncaa_seed_'+seed;
+      if(data[key]!==undefined)continue;
+      const legacy=seed<=4?'ncaa_seed_1_4':seed<=8?'ncaa_seed_5_8':
+        seed<=12?'ncaa_seed_9_12':'ncaa_seed_13_16';
+      if(typeof data[legacy]==='number')data[key]=data[legacy];
+    }
     const result={...DEFAULT_SCORING};
     for(const key of Object.keys(result)){
       const value=data[key];

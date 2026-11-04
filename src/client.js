@@ -1042,7 +1042,7 @@
       +'<div><strong>'+(draftLive?escapeHTML(next?.display_name||'Waiting for manager'):draftDone?'All picks are in':status==='paused'?'Waiting for commissioner':'Awaiting draft start')+'</strong>'
       +'<span>'+(draftLive?'Round '+roundLabel+' · Overall pick #'+activePick:
          draftDone?completed+' programs selected':completed+' of '+plannedTotal+' projected selections')+'</span></div></div>'
-      +'</div><div class="draft-live-right"><div class="draft-live-stat"><span>ON DECK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong><small>'+(nextMine?'Your next selection':'No picks remaining')+'</small></div>'
+      +'</div><div class="draft-live-right"><div class="draft-live-stat"><span>'+(yourTurn?'YOUR PICK':'YOUR NEXT PICK')+'</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong><small>'+(nextMine?(yourTurn?'Make your selection now':'Your next selection'):'No picks remaining')+'</small></div>'
       +'<div class="draft-live-stat"><span>PROGRESS</span><strong>'+completed+' <em>/ '+plannedTotal+'</em></strong><small>'+Math.max(0,plannedTotal-completed)+' picks remaining</small></div>'
       +clock
       +'<button type="button" class="draft-live-cta" data-act="draft-jump-pool">'+(yourTurn?'Choose your program':'Browse available programs')+' <span>›</span></button></div>'

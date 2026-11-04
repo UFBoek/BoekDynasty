@@ -169,16 +169,17 @@ export default (function makeWorker(){
             counted_programs:counted.length,rostered_programs:schools.length};
         }).sort((a,b)=>b.points-a.points||a.display_name.localeCompare(b.display_name));
         return response({season,best_programs:best,as_of:timestamp(),standings,
-          program_points:programPoints,net_verified:history.rows.some(r=>r.season===season&&r.net_verified)});
+          program_points:programPoints,net_verified:history.quadrant_source==='net',
+          quadrant_source:history.quadrant_source,quadrant_provisional:history.quadrant_provisional});
       }
 
       if(path==='data/games'){
         const day=String(url.searchParams.get('date')||DATA_PIPELINE.localDay());
         if(!DATA_PIPELINE.dayInSeason(season,day))return failure('Select a date in the current basketball season.',400);
         const confMap=new Map(PROGRAM_DIRECTORY.map(row=>[String(row[0]),String(row[3])]));
-        const [gamesByDay,netRankings,recordsResult]=await Promise.all([
+        const [gamesByDay,ranking,recordsResult]=await Promise.all([
           DATA_PIPELINE.gamesByDate(env,season,day),
-          DATA_PIPELINE.netRanks(env,season),
+          DATA_PIPELINE.activeRankings(env,season),
           q(env,`SELECT program_id,SUM(w) AS wins,COUNT(*)-SUM(w) AS losses
             FROM (
               SELECT home_id AS program_id,CASE WHEN home_score>away_score THEN 1 ELSE 0 END AS w
@@ -192,7 +193,7 @@ export default (function makeWorker(){
         ]);
         const records=Object.fromEntries((recordsResult.results||[])
           .map(r=>[String(r.program_id),{wins:Number(r.wins)||0,losses:Number(r.losses)||0}]));
-        const net=Object.fromEntries(netRankings.map(r=>[String(r.program_id),Number(r.net_rank)]));
+        const net=Object.fromEntries(ranking.rows.map(r=>[String(r.program_id),Number(r.net_rank)]));
         const venue=(g,isHome)=>g.neutral_site?'neutral':isHome?'home':'away';
         const quad=(rank,site)=>DATA_PIPELINE.quadrant(rank,site);
         const games=gamesByDay.map(g=>{
@@ -211,10 +212,14 @@ export default (function makeWorker(){
             away_q1a:DATA_PIPELINE.isQ1A(homeNet,awaySite)
           };
         });
-        return response({season,date:day,games,net_date:netRankings[0]?.snapshot_date||null,
+        return response({season,date:day,games,
+          net_date:ranking.source==='net'?ranking.snapshot_date:null,
+          ranking_date:ranking.snapshot_date,ranking_source:ranking.source,
+          quadrant_provisional:ranking.provisional,
           record_note:'Records include final games through the selected date.',
-          quadrant_note:netRankings.length?'Quadrants use the latest official NET snapshot and the team’s actual home, away or neutral venue.':
-            'NET quadrants will appear when current-season rankings become available.'});
+          quadrant_note:ranking.source==='net'?'Quadrants use the latest official NCAA NET and the actual home, away or neutral venue.':
+            ranking.source==='torvik'?'Provisional quadrants and fantasy bonuses use Bart Torvik T-Rank until complete NCAA NET rankings become available. All bonuses will be recalculated from official NET.':
+            'Quadrants are pending until a complete T-Rank or official NCAA NET ranking feed becomes available.'});
       }
       if(path==='data/rankings'){
         const poll=await DATA_PIPELINE.apPoll(env,season);
@@ -233,13 +238,14 @@ export default (function makeWorker(){
         if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
         const [games,ranks,allRecords,awards,quads]=await Promise.all([
           DATA_PIPELINE.programGames(env,season,id),
-          DATA_PIPELINE.netRanks(env,season),
+          DATA_PIPELINE.activeRankings(env,season),
           DATA_PIPELINE.records(env,season),
           q(env,'SELECT award_type,value,source_note FROM cbb_awards WHERE season=? AND program_id=?',season,id).all(),
           DATA_PIPELINE.seasonQuadrants(env,season)
         ]);
         return response({season,id,games,record:allRecords.find(x=>x.program_id===id)||{wins:0,losses:0,played:0},
-          net:ranks.find(x=>x.program_id===id)||null,net_date:ranks[0]?.snapshot_date||null,
+          net:ranks.rows.find(x=>x.program_id===id)||null,net_date:ranks.source==='net'?ranks.snapshot_date:null,
+          ranking_date:ranks.snapshot_date,ranking_source:ranks.source,quadrant_provisional:ranks.provisional,
           quadrants:quads.by_program[id]||null,awards:awards.results||[]});
       }
       return failure('Not found.',404);
@@ -469,6 +475,11 @@ export default (function makeWorker(){
       const settings=await getSettings(env),day=String(data.date||DATA_PIPELINE.localDay());
       if(!DATA_PIPELINE.dayInSeason(settings.current_season,day))return failure('Choose a date in the current season.',400);
       const result=await DATA_PIPELINE.importDay(env,settings.current_season,day,{job:'manual'});
+      return response({ok:true,...result});
+    }
+    if(path==='admin/data/torvik-refresh'){
+      const settings=await getSettings(env);
+      const result=await DATA_PIPELINE.syncPreliminaryTorvik(env,settings.current_season);
       return response({ok:true,...result});
     }
     if(path==='admin/data/ap-refresh'){

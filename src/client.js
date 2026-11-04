@@ -1147,7 +1147,7 @@
           +(p?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
             +'<span class="draft-cell-logo">'+img(p)+'</span><span class="draft-cell-team"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
             :onClock?'<button type="button" class="draft-cell-open '+(mine?'take-pick':'')+'" data-act="draft-jump-pool">'
-              +'<strong>'+(mine?'Your pick is live':'Awaiting pick')+'</strong><small>'+(mine?'Choose a school ›':escapeHTML(memberIndex.get(id)?.display_name||'Manager')+' is selecting')+'</small></button>'
+              +'<strong>'+(mine?'Your pick is live':'Awaiting pick')+'</strong><small>'+(mine?'Choose a school ›':escapeHTML(managerIndex.get(id)?.display_name||'Manager')+' is selecting')+'</small></button>'
             :'<div class="draft-cell-placeholder">'+(vacant?'Open seat':'AVAILABLE PICK')+'</div>')
           +'</div>';
       }).join('');

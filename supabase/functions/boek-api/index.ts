@@ -66,6 +66,7 @@ Deno.serve(async (request)=>{
       else if(kind==='recent')result=eligible?await DATA_PIPELINE.backfill(env,season,4):{skipped:'offseason'};
       else if(kind==='upcoming')result=eligible?await DATA_PIPELINE.upcoming(env,season,3):{skipped:'offseason'};
       else if(kind==='ap')result=eligible?await DATA_PIPELINE.syncAPPoll(env,season):{skipped:'offseason'};
+       else if(kind==='torvik')result=eligible?await DATA_PIPELINE.syncPreliminaryTorvik(env,season):{skipped:'offseason'};
       else if(kind==='net'){
         if(!eligible||today<season.slice(0,4)+'-12-08')result={skipped:'NET not released'};
         else{const feed=await DATA_PIPELINE.fetchOfficialNet(today,season);result=feed.skipped?feed:await DATA_PIPELINE.saveNet(env,season,feed.date,feed.records,feed.source);}

@@ -80,6 +80,7 @@
   let appError='';
   let globalSearchOpen=false,globalSearchQuery='',pendingUiRefresh=false;
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
+  let integritySnapshot=null,integrityLoading=false,integrityError='',integrityFetchedAt=0,scoringAudit=null;
   let programScheduleCache={},programScheduleLoading={},programScheduleError={},programScheduleView='all';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
   let resultsLoadedDay='';
@@ -514,6 +515,7 @@
     if(current==='commissioner'&&!isAdmin)current='home';
     pingActivity();
     if(current==='commissioner'&&adminSection==='activity'&&!activityLoading&&(!activityFetchedAt||Date.now()-activityFetchedAt>60000))loadActivity();
+    if(current==='commissioner'&&adminSection==='data'&&!integrityLoading&&(!integrityFetchedAt||Date.now()-integrityFetchedAt>60000))loadIntegrity();
     const tabs=['home','team','results','programs','draft','more'];
     const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
     const activeMobile=(['trades','commissioner','waivers','history','scoring','settings'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
@@ -567,6 +569,14 @@
       overviewGamesLoading=false;
       if(current==='home')render();
     }
+  }
+  async function loadIntegrity(force=false){
+    if(!me||me.role!=='commissioner'||integrityLoading)return;
+    if(!force&&integrityFetchedAt&&Date.now()-integrityFetchedAt<60000)return;
+    integrityLoading=true;integrityError='';
+    try{integritySnapshot=await api('data/integrity');integrityFetchedAt=Date.now();}
+    catch(e){integrityError=String(e.message||e);integrityFetchedAt=Date.now();}
+    finally{integrityLoading=false;if(current==='commissioner'&&adminSection==='data')render();}
   }
   async function loadResults(){
     if(!me)return;
@@ -2222,6 +2232,29 @@
           :'<section class="panel">'+empty('Waivers are closed',league.settings.draft_status==='finished'?'The commissioner has not enabled waivers.':'Waivers begin after the inaugural draft.')+'</section>')
       +'<section class="panel section-gap">'+panelHeading('Your claims')+(claims.length?claims.map(c=>{const p=programs().find(p=>p.id===c.program_id);return '<div class="history-row"><div><strong>'+escapeHTML(p?.name||'Program')+'</strong><small>'+escapeHTML(c.status)+'</small></div>'+(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>';}).join(''):empty('No waiver claims'))+'</section>';
   }
+  function backendHealthPanel(){
+    const scan=integritySnapshot?.latest,metrics=scan?.metrics||{},issues=scan?.issues||[];
+    const label=scan?.severity||'pending',at=scan?.scanned_at?new Date(scan.scanned_at).toLocaleString():'Not yet scanned';
+    const issueRows=issues.map(x=>'<div class="data-run"><span class="failed">'+Number(x.count||0)+'</span><div><strong>'+escapeHTML(x.message||x.code)+'</strong><small>'+escapeHTML(x.code||'')+'</small></div></div>').join('');
+    const revisionRows=(integritySnapshot?.revisions||[]).slice(0,6).map(x=>{
+      const manager=members().find(u=>u.id===x.actor_id);
+      return '<div class="data-run"><span>RULES</span><div><strong>'+escapeHTML(manager?.display_name||'Commissioner')+'</strong><small>'+escapeHTML(new Date(x.changed_at).toLocaleString())+' · Revision #'+Number(x.id||0)+'</small></div></div>';
+    }).join('');
+    const scanRows=(integritySnapshot?.history||[]).slice(0,6).map(x=>'<div class="data-run"><span>'+escapeHTML(x.severity)+'</span><div><strong>'+escapeHTML(new Date(x.scanned_at).toLocaleString())+'</strong><small>'+Number(x.critical_count||0)+' critical · '+Number(x.warning_count||0)+' warnings</small></div></div>').join('');
+    const score=scoringAudit?'<p class="hint section-gap">'+(scoringAudit.valid?'Scoring verification passed':'Scoring exceptions detected')+' · '+Number(scoringAudit.program_seasons||0)+' program-seasons checked · '+(scoringAudit.invalid||[]).length+' invalid entries.</p>':'';
+    return '<section class="panel setting-panel backend-center">'+panelHeading('Backend control center','Hourly integrity checks · commissioner only')+
+      '<div class="backend-summary"><div><span class="backend-severity '+escapeHTML(label)+'">'+escapeHTML(label.toUpperCase())+'</span><p class="hint">Last scan: '+escapeHTML(at)+'</p></div>'+
+      '<div class="backend-severity-metrics"><strong>'+Number(scan?.critical_count||0)+'</strong><small>Critical</small><strong>'+Number(scan?.warning_count||0)+'</strong><small>Warnings</small></div></div>'+
+      '<div class="data-kpis"><div><span>ALL GAMES</span><strong>'+Number(metrics.game_count||0).toLocaleString()+'</strong></div><div><span>STALLED JOBS</span><strong>'+Number(metrics.stalled_jobs||0)+'</strong></div><div><span>FAILED / 24H</span><strong>'+Number(metrics.failed_24h||0)+'</strong></div></div>'+
+      (integrityError?'<p class="data-error section-gap">'+escapeHTML(integrityError)+'</p>':'')+
+      (issueRows?'<div class="backend-issues section-gap">'+issueRows+'</div>':'<p class="hint section-gap">No outstanding integrity exceptions.</p>')+
+      '<div class="button-row section-gap"><button class="btn" data-act="data-integrity-scan">Run integrity scan</button><button class="btn secondary" data-act="data-repair-interrupted">Retry interrupted imports</button><button class="btn secondary" data-act="data-verify-scoring">Verify scoring totals</button></div>'+
+      '<p class="hint section-gap">Scans do not modify game scores. Recovery retries up to two dates, with cooldowns and logged outcomes. Scoring verification recalculates using the shared scoring engine and never changes rules.</p>'+
+      score+
+      '<details class="section-gap"><summary>Scan history</summary>'+(scanRows||'<p class="hint">No scans.</p>')+'</details>'+
+      '<details class="section-gap"><summary>Scoring rule changes</summary>'+(revisionRows||'<p class="hint">No revisions recorded yet.</p>')+'</details>'+
+      '</section>';
+  }
   function commissionerPage(){
     if(me.role!=='commissioner')return '';
     const settings=league.settings;
@@ -2319,7 +2352,7 @@
       const awardOptions=[['conference_regular_champion','Conference regular-season champion'],['conference_tournament_champion','Conference tournament champion'],['ncaa_seed','NCAA Tournament seed'],['ncaa_wins','NCAA Tournament wins'],['national_champion','National champion'],['kenpom_final_rank','Final KenPom rank']];
       const archivedYears=resultsStatus?.historical||[];
       const historicalRows=archivedYears.map(h=>'<div class="data-run"><span>'+escapeHTML(h.season)+'</span><div><strong>'+Number(h.checked_dates||0)+' dates checked</strong><small>'+Number(h.primary_events||0)+' ESPN games · '+(h.net_teams>=350?'NET verified ('+h.net_teams+' teams)':'NET missing')+' · '+Number(h.award_count||0)+' achievements</small></div></div>').join('');
-      body='<section class="panel setting-panel">'+panelHeading('Results pipeline','ESPN scoreboards · current season')
+      body=backendHealthPanel()+'<section class="panel setting-panel section-gap">'+panelHeading('Results pipeline','ESPN scoreboards · current season')
         +'<div class="data-kpis"><div><span>GAMES</span><strong>'+Number(resultsStatus?.game_count||0)+'</strong></div><div><span>VERIFIED DAYS</span><strong>'+(coverage?coverage.checked_dates:'—')+'</strong></div><div><span>MISSING DAYS</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div></div>'
         +(resultsError?'<p class="notice section-gap">'+escapeHTML(resultsError)+'</p>':'')
         +(failure?'<p class="data-error section-gap">Latest error: '+escapeHTML(failure.error_text)+'</p>':'')
@@ -2486,7 +2519,7 @@
       if(adminSection==='programs'&&id!=='programs'&&poolDirty&&!window.confirm('Leave without saving your program selections?'))return;
       if(adminSection==='programs'&&id!=='programs')resetPoolDraft();
       if(id!==adminSection)passwordResetReceipt=null;
-      adminSection=id;render();if(id==='data')loadResults();if(id==='activity')loadActivity();return;
+      adminSection=id;render();if(id==='data'){loadResults();loadIntegrity();}if(id==='activity')loadActivity();return;
     }
     if(act==='pool-conf'||act==='pool-major'||act==='pool-all-confs'){
       initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
@@ -2593,7 +2626,21 @@
         notice('Imported '+result.matched+' games from '+result.date+'.');
         await loadResults();busy=false;return;
       }
-      if(act==='data-sync'){
+      if(act==='data-integrity-scan'){
+        const result=await api('admin/data/integrity-scan',{});
+        notice('Scan complete · '+Number(result.report?.critical_count||0)+' critical, '+Number(result.report?.warning_count||0)+' warnings.');
+        await loadIntegrity(true);
+      }else if(act==='data-repair-interrupted'){
+        if(!window.confirm('Retry up to two interrupted ESPN import dates and keep an audit trail?')){busy=false;return;}
+        const result=await api('admin/data/repair-interrupted',{});
+        const failed=(result.results||[]).filter(x=>!x.ok);
+        notice('Retried '+Number(result.attempted||0)+' dates'+(failed.length?' · '+failed.length+' errors':''),failed.length>0);
+        await Promise.all([loadResults(),loadIntegrity(true)]);
+      }else if(act==='data-verify-scoring'){
+        scoringAudit=await api('admin/data/verify-scoring',{});
+        notice(scoringAudit.valid?'Scoring verification passed.':'Scoring verification found exceptions.',!scoringAudit.valid);
+        render();
+      }else if(act==='data-sync'){
         const data=await api('admin/data/sync',{date:v('#data-date')});
         notice('Imported '+data.matched+' games · '+data.changed+' updated.');
         await loadResults();
@@ -2633,7 +2680,7 @@
       }else if(act==='data-net-fetch'){
         const outcome=await api('admin/data/net-auto',{});
         notice('Saved '+outcome.count+' NCAA NET records.');await loadResults();
-      }else if(act==='data-health-refresh'){await loadResults();notice('Data status refreshed.');
+      }else if(act==='data-health-refresh'){await Promise.all([loadResults(),loadIntegrity(true)]);notice('Data status refreshed.');
       }else if(act==='data-auto-save'){
         await api('admin/data/auto',{enabled:!!document.querySelector('#data-auto')?.checked});
         notice('Automatic collection setting saved.');await loadResults();

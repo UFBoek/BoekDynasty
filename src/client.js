@@ -67,6 +67,7 @@
   let ratingConference='all',ratingOwnership='all',ratingShown=40;
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let programBackScroll=0,managerBackScroll=0;
+  let programProfileTab='overview';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
   let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftCompareExpanded=false,draftQueueDragging='';
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
@@ -1765,98 +1766,164 @@
       ' Bonus points are earned only for wins.</p></section>';
   }
   function programProfilePage(){
-    const p=programs().find(p=>p.id===selectedProgramId)||(schoolLeaders?.directory||[]).find(p=>p.id===selectedProgramId);
+    const p=programs().find(x=>String(x.id)===String(selectedProgramId))||
+      (schoolLeaders?.directory||[]).find(x=>String(x.id)===String(selectedProgramId));
     if(!p)return heading('', 'Program unavailable')+profileBack();
+
     const report=programResultCache[p.id]?.season===season()?programResultCache[p.id]:null;
-    const record=report?.record;
-    const owner=programOwned(p.id),manager=members().find(m=>m.id===owner?.manager_id);
-    const selection=picks().find(x=>x.program_id===p.id);
     const history=report?.history?.seasons||[];
     const selected=selectedProgramSeason||season();
     const selectedStats=history.find(x=>x.season===selected);
     const currentStats=history.find(x=>x.season===season());
+    const owner=programOwned(p.id);
+    const manager=members().find(m=>m.id===owner?.manager_id);
+    const selection=picks().find(x=>x.program_id===p.id);
+    const games=(report?.games||[]).slice().sort((a,b)=>String(b.game_date).localeCompare(String(a.game_date)));
     const activity=(league.roster_transactions||[]).filter(x=>x.program_id===p.id).slice(0,8);
-    const tradeHistory=(league.trade_items||[]).filter(x=>x.program_id===p.id).filter(item=>(league.trades||[]).some(t=>t.id===item.trade_id&&t.status==='accepted'));
-    const ownedYears=(league.archived_rosters||[]).filter(x=>x.program_id===p.id);
-    const pointText=x=>x?.points===null||x?.points===undefined?'—':Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
-    const maxKnownPoints=Math.max(1,...history.filter(item=>item.points!==null&&item.points!==undefined&&Number.isFinite(Number(item.points))).map(item=>Math.max(0,Number(item.points))));
-    const rankLabel=row=>row?.rank!==null&&row?.rank!==undefined&&Number(row.rank)>0&&Number(row?.rank_total)>0&&row?.status!=='not_applicable'
-      ?(row.rank_tied?'T-':'')+'#'+Number(row.rank)+' / '+Number(row.rank_total):'Unranked';
-    const rankPercent=selectedStats?.rank>0&&selectedStats?.rank_total>0
-      ?Math.max(1,Math.ceil(Number(selectedStats.rank)*100/Number(selectedStats.rank_total))):null;
-    const seasonRows=Array.from({length:Math.max(0,Number(season().slice(0,4))-2021+1)},(_,i)=>{
-      const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');
-      const row=history.find(item=>item.season===label);
-      return '<button class="program-season-card '+(selected===label?'active':'')+'" type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" aria-pressed="'+(selected===label)+'">'
-        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small class="program-season-ranking">'+escapeHTML(rankLabel(row))+'</small><small>'+(row?.status==='partial'?'Live points':row?.status==='complete'?'Final points':row?.status==='not_applicable'?'No D-I record':'Awaiting data')+'</small>'
-        +'<span class="program-season-meter" aria-hidden="true"><i style="width:'+(row?.points!==null&&row?.points!==undefined&&Number.isFinite(Number(row.points))?Math.min(100,Math.max(0,100*Number(row.points)/maxKnownPoints)):0)+'%"></i></span></button>';
-    }).join('');
-    const breakdown=selectedStats?.breakdown||[];
-    const scoreDetails=breakdown.length
-      ?'<section class="school-score-detail"><div class="school-score-detail-head"><div><span class="eyebrow">FANTASY SCORING</span><h3>Where every point came from</h3><p>Win bonuses stack with the game win points. Quadrant bonuses also count in the NCAA and conference tournaments.</p></div><strong>'+pointText(selectedStats)+' pts</strong></div>'
-        +'<div class="school-score-components">'+breakdown.map(part=>
-          '<div class="school-score-part '+(part.points?'earned':'no-points')+'"><div><strong>'+escapeHTML(part.label)+'</strong><small>'
-            +Number(part.count||0)+' × '+Number(part.rate||0).toLocaleString('en-US',{maximumFractionDigits:2})+' points</small></div>'
-            +'<b>'+(Number(part.points||0)>0?'+':'')+Number(part.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</b></div>'
-        ).join('')+'</div>'
-        +'<div class="school-score-total"><strong>Total fantasy points</strong><strong>'+pointText(selectedStats)+'</strong></div>'
-        +(selectedStats.quad_by_type?'<div class="school-score-quad-context">Quadrant wins by stage: Regular season '+Number(selectedStats.quad_by_type.regular?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.regular?.q2||0)+' Q2 · Conference tournament '+Number(selectedStats.quad_by_type.conference?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.conference?.q2||0)+' Q2 · NCAA Tournament '+Number(selectedStats.quad_by_type.ncaa?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.ncaa?.q2||0)+' Q2</div>':'')
-        +'</section>':'<div class="school-score-empty">No scoring components recorded for this year yet.</div>';
-    const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='complete'?'Final points from verified archived results':selectedStats.status==='partial'?'Live season points, subject to updates':selectedStats.status==='not_applicable'?'No recorded Division I season':'Awaiting verified results')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
-      +'<div class="program-season-rank-hero rank-profile-hero"><span>LEAGUE SEASON RANK</span><strong>'+escapeHTML(rankLabel(selectedStats))+'</strong>'
-      +(rankPercent!==null?'<div class="rank-profile-percentile"><span>TOP '+rankPercent+'%</span><div class="rank-profile-track" aria-label="Percentile in eligible programs"><i style="width:'+Math.max(1,100-rankPercent)+'%"></i></div></div>':'<small>Compared against eligible programs this season</small>')
-      +'<button class="rank-profile-link" type="button" data-act="view-historical-rank" data-season="'+escapeHTML(selected)+'">View full standings ›</button></div>'
-      +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
-      +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
-      +'<div><span>Q1 wins'+(selectedStats.quadrant_provisional?' (prelim)':'')+'</span><strong>'+(selectedStats.quadrant_source!=='pending'?selectedStats.q1:'Pending')+'</strong></div>'
-      +'<div><span>Q2 wins'+(selectedStats.quadrant_provisional?' (prelim)':'')+'</span><strong>'+(selectedStats.quadrant_source!=='pending'?selectedStats.q2:'Pending')+'</strong></div></div>'
-      +scoreDetails+'<p class="hint">'+(selectedStats.status==='complete'?'Final totals use all verified regular-season, conference tournament and NCAA Tournament results, with final NET bonuses.':'Current-season totals update as games, rankings and awards become available.')+'</p></div>'
-      :'<div class="program-season-expanded"><p class="hint">Loading the program’s verified scoring history…</p></div>';
-    const currentPoints=currentStats?.points!==null&&currentStats?.points!==undefined?pointText(currentStats):'—';
-    const metricsYear=ratingYear(selected),metrics=ratingOf(p,metricsYear);
-    const decimal=(n,d=1)=>n===null||n===undefined?'—':Number(n).toFixed(d);
-    const analyticsContent=metrics?'<div class="program-metric-grid">'
-      +'<div><span>NATIONAL T-RANK</span><strong>#'+metrics.rank+'</strong></div>'
-      +'<div><span>BARTHAG</span><strong>'+decimal(metrics.barthag,3)+'</strong></div>'
-      +'<div><span>ADJUSTED OFFENSE</span><strong>'+decimal(metrics.adj_o)+'</strong><small>'+(metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Pts / 100 poss')+'</small></div>'
-      +'<div><span>ADJUSTED DEFENSE</span><strong>'+decimal(metrics.adj_d)+'</strong><small>'+(metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Pts / 100 poss')+'</small></div>'
-      +'<div><span>WINS ABOVE BUBBLE</span><strong>'+decimal(metrics.wab)+'</strong></div>'
-      +'<div><span>ADJUSTED TEMPO</span><strong>'+decimal(metrics.tempo)+'</strong></div></div>'
-      :'<p class="hint">'+escapeHTML(ratingError[metricsYear]||(ratingLoading[metricsYear]?'Loading public T-Rank ratings…':'No verified T-Rank match for this season.'))+'</p>';
-    const analytics='<section class="panel program-analytics-panel">'+panelHeading('Power ratings · '+escapeHTML(selected),'Bart Torvik T-Rank · provisional Q1/Q1A/Q2 source before NCAA NET')
-      +analyticsContent
-      +'<div class="rank-season-jump">'+ratingExternalLinks(metricsYear)+'<button type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+'">Compare all schools in T-Rank ›</button></div></section>';
+    const trades=(league.trade_items||[]).filter(x=>x.program_id===p.id).filter(item=>
+      (league.trades||[]).some(t=>t.id===item.trade_id&&t.status==='accepted'));
+    const points=x=>x?.points===null||x?.points===undefined?'—':
+      Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
+    const rank=x=>x?.rank>0&&x?.rank_total>0&&x?.status!=='not_applicable'
+      ?(x.rank_tied?'T-':'')+'#'+Number(x.rank)+' / '+Number(x.rank_total):'—';
+    const record=x=>x?.games>0?x.wins+'–'+x.losses:'—';
+    const labelStat=(name,value)=>'<div class="pp-mini-stat"><span>'+escapeHTML(name)+'</span><strong>'+
+      escapeHTML(value)+'</strong></div>';
+    const rankValue=report?.net?.net_rank?'#'+report.net.net_rank:'—';
+    const currentRecord=report?.record?.played?report.record.wins+'–'+report.record.losses:record(currentStats);
+    const ratingLabel=report?.ranking_source==='torvik'?'T-Rank (prelim)':'NET rank';
+    const state=programProfileTab==='schedule'||programProfileTab==='history'||programProfileTab==='ratings'
+      ?programProfileTab:'overview';
+    const tabs=[['overview','Overview'],['schedule','Schedule'],['history','History'],['ratings','Ratings']];
+    const tabNav='<nav id="program-profile-navigation" class="pp-tabs" role="tablist" aria-label="Program profile sections">'+
+      tabs.map(([id,name])=>'<button type="button" role="tab" id="pp-tab-'+id+'" aria-controls="pp-content" aria-selected="'+
+      (state===id)+'" class="'+(state===id?'active':'')+'" data-act="program-profile-tab" data-id="'+id+'">'+
+      name+'</button>').join('')+'</nav>';
 
-    const recordText=record?.played?record.wins+'–'+record.losses:'—';
-    const ownerButton=manager?'<button class="program-profile-owner-link" type="button" data-act="open-manager" data-id="'+escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' →</button>':'<span>Available to draft</span>';
-    const games=report?.games||[];
-    const gameHistory=games.length?games.slice().sort((a,b)=>b.game_date.localeCompare(a.game_date)).map(g=>resultGameRow(g,p.id)).join(''):empty('No game results yet','Recent games appear automatically as ESPN data arrives.');
-    return profileBack()
-      +'<section class="program-profile-header">'+img(p)+'<div class="grow"><span class="eyebrow">'+escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1><p>Explore six seasons of results, achievements, and dynasty ownership.</p></div>'
-      +(owner?'<span class="program-profile-status rostered">Rostered</span>':'<span class="program-profile-status">Available</span>')+'</section>'
-      +'<div class="program-profile-summary"><div><span>CURRENT OWNER</span><strong>'+ownerButton+'</strong></div>'
-      +'<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+currentPoints+'</strong><small>'+(currentStats?.status==='partial'?'Verified components only':'Season scoring pending')+'</small></div>'
-      +'<div><span>SEASON RECORD</span><strong>'+recordText+'</strong></div>'
-      +'<div><span>'+(report?.ranking_source==='torvik'?'T-RANK (PRELIM)':'NET RANK')+'</span><strong>'+(report?.net?'#'+report.net.net_rank:'—')+'</strong></div></div>'
-      +programSeasonSchedule(p)
-      +analytics
-       +'<section class="panel program-history-panel">'+panelHeading('Season-by-season performance','Select any season from 2021–22 onward')
-      +'<div class="program-season-strip">'+seasonRows+'</div>'+yearDetail+'</section>'
-      +'<div class="program-profile-bottom">'
-      +'<section class="panel">'+panelHeading('Program information')
-      +'<div class="profile-facts compact-profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div>'
-      +'<div><span>Original draft pick</span><strong>'+(selection?'#'+selection.overall+' · Round '+selection.round:'Undrafted')+'</strong></div>'
-      +'<div><span>Previous ownership</span><strong>'+(ownedYears.length?ownedYears.length+' archived seasons':'No archived seasons')+'</strong></div>'
-      +(report?.ranking_date?'<div><span>'+(report.ranking_source==='torvik'?'T-Rank imported':'NET updated')+'</span><strong>'+escapeHTML(report.ranking_date)+'</strong></div>':'')+'</div>'
-      +(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn small section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
-      +'<section class="panel program-profile-details">'+panelHeading('Game log','Current season · '+games.length+' games')
-      +'<details class="program-detail-disclosure"><summary>View all games <span>›</span></summary><div class="program-detail-entries">'+gameHistory+'</div></details></section></div>'
-      +(report?.awards?.length?'<section class="panel section-gap">'+panelHeading('Verified achievements')
-          +report.awards.map(a=>'<div class="history-row"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+'</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</section>':'')
-      +(activity.length||tradeHistory.length?'<details class="panel program-ownership-disclosure section-gap"><summary>Roster transactions & ownership history <span>'+String(activity.length+tradeHistory.length)+' entries</span></summary>'
-        +activity.map(t=>'<div class="history-row"><strong>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('')
-        +tradeHistory.map(t=>'<div class="history-row"><strong>Traded</strong><span>'+escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join('')+'</details>':'')
-      +(report?.history_error?'<p class="hint section-gap">'+escapeHTML(report.history_error)+'</p>':'');
+    const earned=(currentStats?.breakdown||[]).filter(item=>Number(item.points||0)>0);
+    const shortBreakdown=earned.length?earned.slice(0,6).map(item=>
+      '<div class="pp-breakdown-row"><span>'+escapeHTML(item.label)+'</span><strong>+'+
+      Number(item.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join(''):
+      '<p class="pp-empty-copy">No fantasy points have been recorded yet.</p>';
+    const recent=games.length?games.slice(0,5).map(g=>resultGameRow(g,p.id)).join(''):
+      '<p class="pp-empty-copy">Results will appear here when games are completed.</p>';
+
+    const overview='<div class="pp-overview-grid">'+
+      '<section class="panel pp-section pp-scoring"><div class="pp-section-head"><div><h2>Fantasy scoring</h2>'+
+      '<p>'+escapeHTML(season())+' season · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
+      '<strong class="pp-section-points">'+points(currentStats)+' <small>pts</small></strong></div>'+
+      '<div class="pp-fact-strip">'+
+      labelStat('Regular wins',currentStats?.games?currentStats.regular_wins:'—')+
+      labelStat('Q1 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1??'—')+
+      labelStat('Q2 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q2??'—')+
+      '</div><div class="pp-list-title">POINTS BY CATEGORY</div><div class="pp-breakdown">'+shortBreakdown+'</div>'+
+      '<button type="button" class="pp-text-action" data-act="program-show-history">Full scoring breakdown <span aria-hidden="true">›</span></button>'+
+      '</section>'+
+      '<section class="panel pp-section pp-recent"><div class="pp-section-head"><div><h2>Recent results</h2><p>Latest completed and recorded games</p></div>'+
+      '<button type="button" class="pp-text-action" data-act="program-profile-tab" data-id="schedule">All games ›</button></div>'+
+      '<div class="pp-recent-list">'+recent+'</div></section></div>'+
+      '<div class="pp-overview-foot"><span>'+escapeHTML(conf(p.conference_id))+'</span>'+
+      '<span>'+(selection?'Draft pick #'+selection.overall+' · Round '+selection.round:'Undrafted')+'</span>'+
+      (report?.ranking_date?'<span>'+escapeHTML(ratingLabel)+' updated '+escapeHTML(report.ranking_date)+'</span>':'')+
+      '</div>';
+
+    const firstYear=Number(season().slice(0,4));
+    const rows=Array.from({length:Math.max(1,firstYear-2021+1)},(_,i)=>{
+      const year=firstYear-i,yearLabel=year+'-'+String((year+1)%100).padStart(2,'0');
+      const data=history.find(x=>x.season===yearLabel);
+      const chosen=selected===yearLabel;
+      return '<button type="button" class="pp-history-row'+(chosen?' active':'')+'" data-act="program-season" data-id="'+
+        escapeHTML(yearLabel)+'" aria-pressed="'+chosen+'" aria-label="View '+escapeHTML(yearLabel)+' season">'+
+        '<strong>'+escapeHTML(yearLabel)+'</strong><span class="pp-history-record">'+escapeHTML(record(data))+'</span>'+
+        '<span class="pp-history-rank">'+escapeHTML(rank(data))+'</span><strong class="pp-history-points">'+
+        points(data)+' <small>pts</small></strong></button>';
+    }).join('');
+    const items=selectedStats?.breakdown||[];
+    const fullBreakdown=items.length?items.map(item=>
+      '<div class="pp-breakdown-row"><span><strong>'+escapeHTML(item.label)+'</strong>'+
+      '<small>'+Number(item.count||0)+' × '+Number(item.rate||0).toLocaleString('en-US',{maximumFractionDigits:2})+' pts</small></span>'+
+      '<strong class="'+(Number(item.points||0)>0?'is-earned':'')+'">'+
+      (Number(item.points||0)>0?'+':'')+Number(item.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+
+      '</strong></div>').join(''):'<p class="pp-empty-copy">No scoring details are available for this season yet.</p>';
+    const historyDetail='<section class="panel pp-section pp-history-detail"><div class="pp-section-head">'+
+      '<div><h2>'+escapeHTML(selected)+' breakdown</h2><p>'+
+      (selectedStats?.status==='complete'?'Final verified results':selectedStats?.status==='partial'?'Live totals may change':'Recorded fantasy scoring')+
+      '</p></div><strong class="pp-section-points">'+points(selectedStats)+' <small>pts</small></strong></div>'+
+      '<div class="pp-history-compact"><span>National league rank <strong>'+escapeHTML(rank(selectedStats))+'</strong></span>'+
+      '<button type="button" class="pp-text-action" data-act="view-historical-rank" data-season="'+escapeHTML(selected)+
+      '">View rankings ›</button></div>'+
+      '<div class="pp-fact-strip pp-fact-four">'+
+      labelStat('W–L',record(selectedStats))+
+      labelStat('Regular wins',selectedStats?.games?selectedStats.regular_wins:'—')+
+      labelStat('Q1 wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q1??'—')+
+      labelStat('Q2 wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q2??'—')+
+      '</div><div class="pp-list-title">COMPLETE POINT BREAKDOWN</div><div class="pp-breakdown pp-breakdown-full">'+
+      fullBreakdown+'</div>'+
+      (selectedStats?.quadrant_provisional?'<p class="pp-data-note">Quadrant totals are provisional pending official NCAA NET rankings.</p>':'')+
+      '</section>';
+    const transactions=activity.map(t=>'<div class="pp-history-event"><strong>'+
+      escapeHTML(t.action==='claim'?'Acquired':'Released')+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('')+
+      trades.map(t=>'<div class="pp-history-event"><strong>Traded</strong><span>'+
+      escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+
+      escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join('');
+    const extra='<div class="pp-history-extra">'+
+      (report?.awards?.length?'<details class="panel pp-disclosure"><summary>Verified achievements <span>'+report.awards.length+' ›</span></summary>'+
+      report.awards.map(a=>'<div class="pp-history-event"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+
+      '</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</details>':'')+
+      (transactions?'<details class="panel pp-disclosure"><summary>Ownership & transactions <span>'+
+      (activity.length+trades.length)+' ›</span></summary>'+transactions+'</details>':'')+
+      '</div>';
+    const historical='<section class="panel pp-section pp-history-list"><div class="pp-section-head"><div>'+
+      '<h2>Season history</h2><p>Select a year to see its complete scoring details</p></div></div>'+
+      '<div class="pp-history-head"><span>SEASON</span><span class="pp-history-record">RECORD</span>'+
+      '<span class="pp-history-rank">RANK</span><span>POINTS</span></div>'+
+      '<div class="pp-history-rows">'+rows+'</div></section>'+historyDetail+extra+
+      (report?.history_error?'<p class="pp-data-note">'+escapeHTML(report.history_error)+'</p>':'');
+
+    const metricsYear=ratingYear(selected),metrics=ratingOf(p,metricsYear);
+    const decimal=(value,d=1)=>value===null||value===undefined?'—':Number(value).toFixed(d);
+    const ratingCard=(title,value,note='')=>'<div class="pp-rating-card"><span>'+escapeHTML(title)+'</span>'+
+      '<strong>'+escapeHTML(value)+'</strong>'+(note?'<small>'+escapeHTML(note)+'</small>':'')+'</div>';
+    const ratings='<section class="panel pp-section pp-ratings"><div class="pp-section-head"><div>'+
+      '<h2>Power ratings</h2><p>Bart Torvik T-Rank · '+escapeHTML(selected)+'</p></div></div>'+
+      '<div class="pp-rating-seasons">'+Array.from({length:Math.max(1,firstYear-2021+1)},(_,i)=>{
+        const year=firstYear-i,label=year+'-'+String((year+1)%100).padStart(2,'0');
+        return '<button type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" class="'+
+          (label===selected?'active':'')+'" aria-pressed="'+(label===selected)+'">'+escapeHTML(label)+'</button>';
+      }).join('')+'</div>'+
+      (metrics?'<div class="pp-ratings-grid">'+
+        ratingCard('National T-Rank','#'+metrics.rank)+
+        ratingCard('Barthag',decimal(metrics.barthag,3))+
+        ratingCard('Adjusted offense',decimal(metrics.adj_o),metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Points / 100 possessions')+
+        ratingCard('Adjusted defense',decimal(metrics.adj_d),metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Points / 100 possessions')+
+        ratingCard('Wins above bubble',decimal(metrics.wab))+
+        ratingCard('Adjusted tempo',decimal(metrics.tempo))+
+        '</div>':'<p class="pp-empty-copy">'+escapeHTML(ratingError[metricsYear]||
+          (ratingLoading[metricsYear]?'Loading verified T-Rank ratings…':'No verified T-Rank data for this season.'))+'</p>')+
+      '<div class="pp-rating-links">'+ratingExternalLinks(metricsYear)+
+      '<button class="pp-text-action" type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+
+      '">Compare all programs ›</button></div></section>';
+
+    const panel=state==='schedule'?programSeasonSchedule(p):
+      state==='history'?historical:state==='ratings'?ratings:overview;
+    const ownerMarkup=manager?'<button type="button" class="program-profile-owner-link" data-act="open-manager" data-id="'+
+      escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' ›</button>':
+      '<span>Unowned</span>';
+    return '<div class="pp-page">'+profileBack()+
+      '<header class="pp-hero">'+
+      '<div class="pp-identity">'+img(p)+'<div class="pp-identity-text"><span class="pp-conference">'+
+      escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1>'+
+      '<div class="pp-owner">Dynasty owner: '+ownerMarkup+'</div></div></div>'+
+      '<span class="pp-status '+(owner?'is-rostered':'is-available')+'">'+
+      (owner?'Rostered':'Available')+'</span></header>'+
+      '<div class="pp-statbar">'+
+      '<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+points(currentStats)+'</strong></div>'+
+      '<div><span>PROGRAM RANK</span><strong>'+escapeHTML(rank(currentStats))+'</strong></div>'+
+      '<div><span>SEASON RECORD</span><strong>'+escapeHTML(currentRecord)+'</strong></div>'+
+      '<div><span>'+escapeHTML(ratingLabel.toUpperCase())+'</span><strong>'+escapeHTML(rankValue)+'</strong></div>'+
+      '</div>'+tabNav+
+      '<main id="pp-content" class="pp-content" role="tabpanel" aria-labelledby="pp-tab-'+state+'">'+panel+'</main>'+
+      '</div>';
   }
   function managerProfilePage(){
     const u=members().find(m=>m.id===selectedManagerId);
@@ -2064,6 +2131,8 @@
       if(id==='programs'&&current!=='programs')ratingSeason=season();
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
     }
+    if(act==='program-profile-tab'){programProfileTab=id;render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
+    if(act==='program-show-history'){selectedProgramSeason=season();programProfileTab='history';render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
     if(act==='schedule-view'){programScheduleView=id;render();return;}
     if(act==='schedule-retry'){loadProgramSchedule(id,true);return;}
@@ -2092,7 +2161,7 @@
     if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
-      if(String(selectedProgramId)!==String(id))programScheduleView='all';
+      if(String(selectedProgramId)!==String(id)){programScheduleView='all';programProfileTab='overview';}
       selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
         programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();
       loadProgramResults(id);loadProgramSchedule(id);window.scrollTo({top:0});return;

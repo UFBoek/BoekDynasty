@@ -40,6 +40,14 @@ The navigation uses **League Overview** for a league-wide dashboard and **My Tea
 
 When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the bundled verified program directory, in small batches. Once the imports finish, the program directory shows schools and their ESPN CDN logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
 
+## Free power ratings (informational)
+
+The **Schools → Power ratings** tab provides season-selectable Bart Torvik T-Rank team rankings for 2021–22 through 2026–27, including adjusted offensive/defensive efficiency, Barthag, WAB and tempo. Each program's profile shows the same metrics for the selected season. These are **third-party advanced metrics only** and never affect fantasy scoring, NET quadrants, program ownership or draft logic.
+
+The public, no-key Torvik `{year}_team_results.csv` files are fetched by the Supabase Edge Function at `GET /functions/v1/boek-api/data/ratings?year=2026` (and proxied via the Cloudflare Worker as `/api/data/ratings?year=2026`). `supabase/functions/boek-api/ratings.js` validates the CSV schema, ensures full Division I coverage, and caches responses for 6 hours (current season) or 24 hours (past seasons) per warm function instance. Failed or incomplete imports show an explicit unavailable state; no synthetic data is substituted. ESPN program-name crosswalks are conservative and may leave some schools unmatched.
+
+EvanMiya and KenPom are available as **external links only**. Their paid/restricted API or bulk exports are not scraped, redistributed, or presented as integrated numerical ratings. A public download URL is not a blanket redistribution license; confirm provider permissions before expanding public redistribution or high-frequency automation. The site does not require any paid analytics subscription.
+
 ## Architecture
 
 The site is backed by **Supabase PostgreSQL** and its Edge Function API. All sources and deployment builds are in this GitHub repository. The existing Cloudflare Worker now serves only static assets and proxies authenticated API calls to Supabase; it does not use D1. The 2026–27 program directory remains bundled from the SportsDataverse ESPN standings snapshot; review school membership before drafting.

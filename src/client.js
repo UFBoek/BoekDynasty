@@ -808,7 +808,7 @@
       +'<button class="rank-mobile-main" type="button" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
       +'<span class="rank-mobile-index">'+(r?'#'+r.rank:'—')+'</span>'+img(p)
       +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
-      +'<span class="rank-mobile-primary"><strong>'+dec(r?.barthag,3)+'</strong><small>BARTHAG</small></span><span class="rank-mobile-chevron">›</span></button>'
+      +'<span class="rank-mobile-primary"><strong>'+featureValue({r})+'</strong><small>'+escapeHTML((sortNames[ratingSort]||'Overall').toUpperCase())+'</small></span><span class="rank-mobile-chevron">›</span></button>'
       +'<div class="rank-mobile-metrics"><div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
       +'<div><span>DEFENSE</span><strong>'+dec(r?.adj_d)+'</strong></div>'
       +'<div><span>WAB</span><strong>'+dec(r?.wab)+'</strong></div>'
@@ -1026,13 +1026,14 @@
     const users=members().slice();
     if(scoring)users.sort((a,b)=>(scoreIndex.get(b.id)?.points||0)-(scoreIndex.get(a.id)?.points||0)||a.display_name.localeCompare(b.display_name));
     const fmtPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
-    const rows=users.map(u=>{
+    const rows=users.map((u,index)=>{
       const manager=scoreIndex.get(u.id);
       const schools=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
       const schoolPreview=schools.length?'<span class="standings-mini-roster">'+schools.slice(0,5).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+(schools.length>5?'<span class="standings-roster-more">+'+(schools.length-5)+'</span>':'')+'</span>':'<span class="standings-roster-pending">Draft pending</span>';
       const points=manager&&schools.length?'<strong>'+fmtPoints(manager.points)+'</strong><small class="muted"> · '+manager.counted_programs+' counting</small>':
         schools.length?'<span class="pending-score">Loading</span>':'<span class="pending-score">—</span>';
       return '<tr class="standing-row'+(u.id===me.id?' is-mine':'')+'"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
+        +(scoring&&owners().length?'<span class="standings-position-index">#'+String(1+users.findIndex(x=>Number(scoreIndex.get(x.id)?.points||0)===Number(scoreIndex.get(u.id)?.points||0)))+'</span>':'')
         +avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':'View team profile')+'</small></div></button></td>'
         +'<td class="standing-school-cell">'+schoolPreview+'</td><td class="numerical">'+points+'</td></tr>';
     }).join('');
@@ -1069,6 +1070,8 @@
     const maxKnownPoints=Math.max(1,...history.filter(item=>item.points!==null&&item.points!==undefined&&Number.isFinite(Number(item.points))).map(item=>Math.max(0,Number(item.points))));
     const rankLabel=row=>row?.rank!==null&&row?.rank!==undefined&&Number(row.rank)>0&&Number(row?.rank_total)>0&&row?.status!=='not_applicable'
       ?(row.rank_tied?'T-':'')+'#'+Number(row.rank)+' / '+Number(row.rank_total):'Unranked';
+    const rankPercent=selectedStats?.rank>0&&selectedStats?.rank_total>0
+      ?Math.max(1,Math.ceil(Number(selectedStats.rank)*100/Number(selectedStats.rank_total))):null;
     const seasonRows=Array.from({length:Math.max(0,Number(season().slice(0,4))-2021+1)},(_,i)=>{
       const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');
       const row=history.find(item=>item.season===label);
@@ -1088,7 +1091,9 @@
         +(selectedStats.quad_by_type?'<div class="school-score-quad-context">Quadrant wins by stage: Regular season '+Number(selectedStats.quad_by_type.regular?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.regular?.q2||0)+' Q2 · Conference tournament '+Number(selectedStats.quad_by_type.conference?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.conference?.q2||0)+' Q2 · NCAA Tournament '+Number(selectedStats.quad_by_type.ncaa?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.ncaa?.q2||0)+' Q2</div>':'')
         +'</section>':'<div class="school-score-empty">No scoring components recorded for this year yet.</div>';
     const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='complete'?'Final points from verified archived results':selectedStats.status==='partial'?'Live season points, subject to updates':selectedStats.status==='not_applicable'?'No recorded Division I season':'Awaiting verified results')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
-      +'<div class="program-season-rank-hero"><span>LEAGUE SEASON RANK</span><strong>'+escapeHTML(rankLabel(selectedStats))+'</strong><small>Against all eligible programs in this season</small></div>'
+      +'<div class="program-season-rank-hero rank-profile-hero"><span>LEAGUE SEASON RANK</span><strong>'+escapeHTML(rankLabel(selectedStats))+'</strong>'
+      +(rankPercent!==null?'<div class="rank-profile-percentile"><span>TOP '+rankPercent+'%</span><div class="rank-profile-track" aria-label="Percentile in eligible programs"><i style="width:'+Math.max(1,100-rankPercent)+'%"></i></div></div>':'<small>Compared against eligible programs this season</small>')
+      +'<button class="rank-profile-link" type="button" data-act="view-historical-rank" data-season="'+escapeHTML(selected)+'">View full standings ›</button></div>'
       +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
       +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
       +'<div><span>Q1 wins'+(selectedStats.quadrant_provisional?' (prelim)':'')+'</span><strong>'+(selectedStats.quadrant_source!=='pending'?selectedStats.q1:'Pending')+'</strong></div>'
@@ -1107,7 +1112,8 @@
       +'<div><span>ADJUSTED TEMPO</span><strong>'+decimal(metrics.tempo)+'</strong></div></div>'
       :'<p class="hint">'+escapeHTML(ratingError[metricsYear]||(ratingLoading[metricsYear]?'Loading public T-Rank ratings…':'No verified T-Rank match for this season.'))+'</p>';
     const analytics='<section class="panel program-analytics-panel">'+panelHeading('Power ratings · '+escapeHTML(selected),'Bart Torvik T-Rank · provisional Q1/Q1A/Q2 source before NCAA NET')
-      +analyticsContent+ratingExternalLinks()+'</section>';
+      +analyticsContent
+      +'<div class="rank-season-jump">'+ratingExternalLinks()+'<button type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+'">Compare all schools in T-Rank ›</button></div></section>';
 
     const recordText=record?.played?record.wins+'–'+record.losses:'—';
     const ownerButton=manager?'<button class="program-profile-owner-link" type="button" data-act="open-manager" data-id="'+escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' →</button>':'<span>Available to draft</span>';
@@ -1327,6 +1333,13 @@
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
+    if(act==='view-ratings'){
+      ratingSeason=button.dataset.season||season();programMode='ratings';current='programs';render();window.scrollTo({top:0});return;
+    }
+    if(act==='view-historical-rank'){
+      leaderSeason=button.dataset.season||season();programMode='leaders';current='programs';render();
+      if(!schoolLeaders)loadSchoolLeaders();window.scrollTo({top:0});return;
+    }
     if(act==='rating-season'){ratingSeason=(Number(id)-1)+'-'+String(Number(id)%100).padStart(2,'0');ratingShown=40;render();return;}
     if(act==='rating-sort'){ratingSort=id;ratingShown=40;render();return;}
     if(act==='ratings-refresh'){delete ratingError[Number(id)];delete ratingCache[Number(id)];loadRatings(Number(id),true);render();return;}

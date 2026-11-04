@@ -312,10 +312,13 @@ export const DATA_PIPELINE=(()=>{
   }
   // Historical dynasty score: verified final archive and live current-season preview.
   // commissioner achievement inputs. Never equate an unimported season with zero.
-  async function programHistory(env,id,scoring,currentSeason){
+  async function programHistory(env,id,scoring,currentSeason,eligibleConferences=null){
     // Use the identical point calculation and component detail as Historical
     // Leaders and manager standings, preventing divergent seed or quad totals.
-    const scores=await historicalLeaders(env,scoring,currentSeason);
+    const isEligible=Array.isArray(eligibleConferences)&&PROGRAM_DIRECTORY.some(p=>
+      String(p[0])===String(id)&&eligibleConferences.map(String).includes(String(p[3])));
+    const scores=await historicalLeaders(env,scoring,currentSeason,
+      isEligible?eligibleConferences:null);
     const totals=new Map(scores.rows.filter(x=>x.program_id===String(id)).map(x=>[x.season,x]));
     const games=(await q(env,`SELECT season,home_id,away_id,home_score,away_score,status
       FROM cbb_games WHERE (home_id=? OR away_id=?) AND season BETWEEN '2021-22' AND ?`,id,id,currentSeason).all()).results||[];
@@ -339,6 +342,9 @@ export const DATA_PIPELINE=(()=>{
         quad_by_type:t?.quad_by_type||null,
         ncaa_wins:t?.ncaa_wins||0,opening_round_wins:t?.opening_round_wins||0,
         seed:t?.seed||0,net_verified:!!t?.net_verified,
+        rank:isEligible?(t?.rank??null):null,
+        rank_total:isEligible?scores.rank_total:null,
+        rank_tied:isEligible?!!t?.rank_tied:false,
         breakdown:t?.breakdown||[],
         note:state==='complete'?'Final points, including all applicable tournament NET bonuses.':
           state==='partial'?'Live fantasy scoring; points will update as games and awards are verified.':
@@ -856,10 +862,35 @@ export const DATA_PIPELINE=(()=>{
       .map(p=>({id:String(p[0]),name:String(p[1]),abbr:String(p[2]),
         conference_id:String(p[3]),logo:'https://a.espncdn.com/i/teamlogos/ncaa/500/'+p[0]+'.png'}));
     const ids=new Set(directory.map(p=>p.id));
+    const rankedRows=[...table.values()].filter(x=>ids.has(x.program_id));
+    // Competition ranks (1, 2, 2, 4): ties share a rank, and every
+    // currently eligible program counts in the denominator, even if it had
+    // no games in one of the archived seasons.
+    const numberEligible=directory.length;
+    for(let y=2021;y<=Number(currentSeason.slice(0,4));y++){
+      const seasonKey=y+'-'+String((y+1)%100).padStart(2,'0');
+      const yearly=directory.map(p=>({
+        id:p.id,name:p.name,
+        points:table.get(seasonKey+'|'+p.id)?.points||0
+      })).sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name));
+      const occurrences=new Map();
+      for(const entry of yearly)occurrences.set(entry.points,(occurrences.get(entry.points)||0)+1);
+      let prior=null,place=0;
+      for(let i=0;i<yearly.length;i++){
+        const entry=yearly[i];
+        if(entry.points!==prior){place=i+1;prior=entry.points;}
+        const scored=table.get(seasonKey+'|'+entry.id);
+        if(scored){
+          scored.rank=place;
+          scored.rank_total=numberEligible;
+          scored.rank_tied=(occurrences.get(entry.points)||0)>1;
+        }
+      }
+    }
     const verifiedArchives=await verifiedArchiveSeasons(env),archiveComplete=verifiedArchives.size===5;
     return {seasons:Array.from({length:Number(currentSeason.slice(0,4))-2021+1},(_,i)=>{
         const y=2021+i;return y+'-'+String((y+1)%100).padStart(2,'0');
-      }),directory,rows:[...table.values()].filter(x=>ids.has(x.program_id)),
+      }),directory,rank_total:numberEligible,rows:rankedRows,
       complete:archiveComplete,archive_complete:archiveComplete,verified_seasons:[...verifiedArchives].sort(),
       note:archiveComplete?'Five archived seasons verified; current-season totals update with new results.':
         'Some archived data remains unverified; historical totals may change.'};

@@ -610,87 +610,210 @@
     catch(e){schoolLeadersError=e.message;}
     finally{schoolLeadersLoading=false;if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}}
   }
+
+  // Ranked views share one compact, accessible filter and paging behavior.
+  const rankingNumber=(value,places=0)=>value===null||value===undefined||!Number.isFinite(Number(value))?'—':
+    Number(value).toLocaleString('en-US',{minimumFractionDigits:places,maximumFractionDigits:places});
+  const rankingSearchText=p=>(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase();
+  function rankingEligible(p,conference,scope){
+    if(conference!=='all'&&String(p.conference_id)!==String(conference))return false;
+    const owned=programOwned(p.id);
+    if(scope==='available')return !owned;
+    if(scope==='owned')return !!owned;
+    if(scope==='mine')return String(owned?.manager_id||'')===String(me?.id||'');
+    return true;
+  }
+  function rankingSeasonNav(pairs,action,active,label){
+    return '<div class="rank-periods" role="group" aria-label="'+escapeHTML(label)+'">'
+      +pairs.map(([id,text])=>'<button type="button" data-act="'+action+'" data-id="'+escapeHTML(id)+'" class="'+(String(active)===String(id)?'active':'')+'" aria-pressed="'+(String(active)===String(id))+'">'+escapeHTML(text)+'</button>').join('')+'</div>';
+  }
+  function rankingTools(kind,query,conference,scope){
+    const prefix=kind==='leaders'?'leader':'rating';
+    const scopeButtons=[['all','All'],['mine','My roster'],['owned','Rostered'],['available','Available']]
+      .map(([id,label])=>'<button type="button" data-act="'+prefix+'-scope" data-id="'+id+'" class="'+(scope===id?'active':'')+'" aria-pressed="'+(scope===id)+'">'+label+'</button>').join('');
+    const conferences=activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b)))
+      .map(id=>'<option value="'+escapeHTML(id)+'" '+(String(conference)===String(id)?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
+    return '<div class="rank-tools" role="search">'
+      +'<label class="rank-search"><span class="rank-search-icon" aria-hidden="true">⌕</span><input id="'+prefix+'-search" type="search" value="'+escapeHTML(query)+'" placeholder="Search schools..." autocomplete="off" aria-label="Search ranked schools" /></label>'
+      +'<label class="rank-conference-select"><span class="sr-only">Conference</span><select id="'+prefix+'-conference" aria-label="Filter by conference"><option value="all">All conferences</option>'+conferences+'</select></label>'
+      +'<div class="rank-scope" role="group" aria-label="Filter by roster status">'+scopeButtons+'</div>'
+      +'</div>';
+  }
+  function rankingFeatured(rows,kind,label,valueOf){
+    if(!rows.length)return '';
+    return '<div class="rank-featured" data-featured="'+kind+'">'
+      +'<div class="rank-featured-label"><span>LEADING PROGRAMS</span><small>'+escapeHTML(label)+'</small></div>'
+      +'<div class="rank-featured-grid">'+rows.slice(0,3).map((row,index)=>{
+        const p=row.p,value=valueOf(row);
+        return '<button type="button" class="rank-featured-card" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
+          +'<span class="rank-featured-position">'+String(index+1).padStart(2,'0')+'</span>'
+          +img(p)
+          +'<span class="rank-featured-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+          +'<span class="rank-featured-stat"><strong>'+escapeHTML(value)+'</strong><small>'+escapeHTML(label)+'</small></span>'
+          +'</button>';
+      }).join('')+'</div></div>';
+  }
+  function filterRankingDisplay(kind){
+    const isLeader=kind==='leaders',query=(isLeader?leaderQuery:ratingQuery).trim().toLowerCase();
+    const limit=isLeader?leaderShown:ratingShown;
+    let found=0,visible=0;
+    const visibility=new Map();
+    root.querySelectorAll('.rank-data-row[data-ranking="'+kind+'"]').forEach(row=>{
+      const match=row.dataset.search.includes(query);
+      if(match)found++;
+      const show=match&&found<=limit;
+      if(show)visible++;
+      visibility.set(row.dataset.program,show);
+      row.hidden=!show;
+    });
+    root.querySelectorAll('.rank-mobile-row[data-ranking="'+kind+'"]').forEach(row=>{
+      row.hidden=!visibility.get(row.dataset.program);
+    });
+    const count=root.querySelector('#'+(isLeader?'leader':'rating')+'-count');
+    if(count)count.textContent=found>visible?visible+' of '+found+' schools':found+' '+(found===1?'school':'schools');
+    const more=root.querySelector('#'+(isLeader?'leader':'rating')+'-more');
+    if(more){more.hidden=found<=limit;const detail=more.querySelector('small');if(detail)detail.textContent=(found-visible)+' more';}
+    const emptyBlock=root.querySelector('#'+(isLeader?'leader':'rating')+'-empty');
+    if(emptyBlock)emptyBlock.hidden=found>0;
+    const featured=root.querySelector('[data-featured="'+kind+'"]');
+    if(featured)featured.hidden=!!query;
+  }
   function schoolLeadersPage(){
     const all=schoolLeaders,years=all?.seasons||[];
     const period=leaderSeason==='all'?'all':years.includes(leaderSeason)?leaderSeason:'all';
-    const nav='<div class="school-leaders-seasons" role="group" aria-label="Select scoring season">'
-      +[['all','All seasons'],...years.slice().reverse().map(y=>[y,y])].map(([id,label])=>'<button type="button" data-act="leaders-season" data-id="'+id+'" class="'+(period===id?'active':'')+'" aria-pressed="'+(period===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
-    if(!all)return '<section class="panel school-leaders-shell">'+panelHeading('Historical points','Eligible league conferences from 2021–22 onward')+nav
-      +(schoolLeadersError?empty('Unable to load rankings',escapeHTML(schoolLeadersError)):empty('Loading school leaderboards','Calculating historical scores, seeds, championships and quadrant wins.'))+'</section>';
+    const seasonNav=rankingSeasonNav([['all','All-time'],...years.slice().reverse().map(y=>[y,y])],'leaders-season',period,'Fantasy scoring season');
+    const header='<div class="rank-heading"><div><span class="rank-kicker">PROGRAM RANKINGS · DYNASTY POINTS</span><h2>Historical leaders</h2>'
+      +'<p>Compare every eligible program across seasons, from 2021–22 onward.</p></div>'
+      +'<div class="rank-heading-mark"><span>VIEWING</span><strong>'+escapeHTML(period==='all'?'All-time':period)+'</strong><small>Fantasy points</small></div></div>';
+    if(!all)return '<section class="panel ranking-dashboard school-leaders-shell">'+header+seasonNav
+      +(schoolLeadersError?empty('Rankings unavailable',escapeHTML(schoolLeadersError))+'<button class="btn secondary small" data-act="leaders-retry">Try again</button>'
+        :empty('Preparing historical rankings','Collecting school records and scoring totals.'))+'</section>';
     const byId=new Map();
     for(const item of all.rows||[]){
-      const id=String(item.program_id),map=byId.get(id)||new Map();
-      map.set(item.season,item);byId.set(id,map);
+      const id=String(item.program_id),history=byId.get(id)||new Map();
+      history.set(item.season,item);byId.set(id,history);
     }
-    const rows=(all.directory||[]).map(p=>{
+    const entries=(all.directory||[]).filter(p=>rankingEligible(p,leaderConference,leaderOwnership)).map(p=>{
       const history=byId.get(String(p.id))||new Map();
       const values=years.map(y=>history.get(y)?.points??null);
-      const known=values.filter(v=>v!==null);
-      const total=known.length?known.reduce((sum,val)=>sum+Number(val),0):null;
-      const selected=period==='all'?total:history.get(period)?.points??null;
-      return {p,history,values,selected,total};
-    }).sort((a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
-    const score=value=>value===null||value===undefined?'—':Number(value).toLocaleString('en-US',{maximumFractionDigits:2});
-    const headerYears=years.map(y=>'<th class="school-leader-year">'+escapeHTML(y.slice(2))+'</th>').join('');
-    const body=rows.map((row,index)=>{
-      const p=row.p;return '<tr class="school-leader-row" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'
-        +'<td class="school-leader-rank">'+(index+1)+'</td>'
-        +'<td><button class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
-        +'<td class="school-leader-points">'+score(row.selected)+'</td>'
-        +row.values.map((v,i)=>'<td class="school-leader-year '+(period===years[i]?'selected':'')+'">'+score(v)+'</td>').join('')
+      const known=values.filter(x=>x!==null);
+      const total=known.length?known.reduce((sum,x)=>sum+Number(x),0):null;
+      return {p,history,values,total,selected:period==='all'?total:(history.get(period)?.points??null)};
+    });
+    const byPoints=entries.slice().sort((a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
+    let previous,rank=0;
+    const ranks=new Map();
+    byPoints.forEach((row,i)=>{
+      if(row.selected!==previous){rank=i+1;previous=row.selected;}
+      ranks.set(String(row.p.id),rank);
+    });
+    const rows=(leaderOrder==='name'?entries.sort((a,b)=>a.p.name.localeCompare(b.p.name)):byPoints);
+    const leading=byPoints.filter(row=>row.selected!==null).slice(0,3);
+    const format=value=>rankingNumber(value,2).replace(/\.00$/,'');
+    const previewYears=[...new Set([...(period==='all'?[]:[period]),...years.slice(-3).reverse()])].slice(0,4);
+    const thYears=years.slice().map(y=>'<th class="rank-year-cell '+(period===y?'active':'')+'"><button type="button" data-act="leaders-season" data-id="'+escapeHTML(y)+'" title="Rank by '+escapeHTML(y)+'">'+escapeHTML(y.slice(2))+'</button></th>').join('');
+    const table=rows.map(row=>{
+      const p=row.p,rank=ranks.get(String(p.id)),rankText=row.selected===null?'—':(byPoints.some(x=>x!==row&&x.selected===row.selected)?'T-':'')+'#'+rank;
+      return '<tr class="rank-data-row school-leader-row" data-ranking="leaders" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
+        +'<td class="rank-position-cell"><span class="rank-position '+(rank<=3?'is-top':'')+'">'+rankText+'</span></td>'
+        +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
+        +'<td class="school-leader-points"><strong>'+format(row.selected)+'</strong><small>PTS</small></td>'
+        +row.values.map((x,i)=>'<td class="rank-year-cell '+(years[i]===period?'active':'')+'">'+format(x)+'</td>').join('')
         +'</tr>';
     }).join('');
-    return '<section class="panel school-leaders-shell">'+panelHeading('Historical point leaders',rows.length+' eligible league programs · 2021–22 to '+escapeHTML(season()))
-      +'<p class="school-leaders-note">'+(all.archive_complete?'Historical scores include only schools from the league’s eligible conferences. Five archived seasons are verified; current-season totals update live.':'Scores include only the league’s eligible conferences. Remaining unverified seasons may change.')+'</p>'
-      +nav
-      +'<div class="school-leader-tools"><label class="directory-search"><span aria-hidden="true">⌕</span><input id="leader-search" class="field" type="search" value="'+escapeHTML(leaderQuery)+'" placeholder="Find a team in the rankings..." aria-label="Search school leaders" autocomplete="off"/></label><span id="leader-count">'+rows.length+' schools</span></div>'
-      +'<div class="school-leader-table-wrap"><table class="school-leader-table"><thead><tr><th>#</th><th>PROGRAM</th><th>'+(period==='all'?'TOTAL':escapeHTML(period))+'</th>'+headerYears+'</tr></thead><tbody>'+body+'</tbody></table></div></section>';
+    const cards=rows.map(row=>{
+      const p=row.p,rank=ranks.get(String(p.id)),value=format(row.selected);
+      return '<article class="rank-mobile-row" data-ranking="leaders" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
+        +'<button class="rank-mobile-main" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
+        +'<span class="rank-mobile-index">'+(row.selected===null?'—':'#'+rank)+'</span>'+img(p)
+        +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<span class="rank-mobile-primary"><strong>'+value+'</strong><small>PTS</small></span><span class="rank-mobile-chevron">›</span></button>'
+        +'<div class="rank-mini-years">'+previewYears.map(y=>'<div class="'+(y===period?'active':'')+'"><span>'+escapeHTML(y.slice(2))+'</span><strong>'+format(row.history.get(y)?.points??null)+'</strong></div>').join('')+'</div></article>';
+    }).join('');
+    const notes=all.archive_complete?'Archived seasons are verified. Current-season totals are live and may change.':
+      'Scores reflect available verified results; unfinished historical imports may change totals.';
+    return '<section class="panel ranking-dashboard school-leaders-shell">'+header+seasonNav
+      +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+(period===season()?'LIVE SEASON':'SEASON RECORDS')+'</span><span>'+entries.length+' eligible schools in this view</span><span>Ranked by '+(period==='all'?'career total':period+' points')+'</span></div>'
+      +rankingFeatured(leading,'leaders','fantasy pts',row=>format(row.selected))
+      +rankingTools('leaders',leaderQuery,leaderConference,leaderOwnership)
+      +'<div class="rank-toolbar-bottom"><div class="rank-order" role="group" aria-label="Sort historical leaderboard">'
+      +[['points','Most points'],['name','A–Z']].map(([id,label])=>'<button type="button" data-act="leaders-sort" data-id="'+id+'" class="'+(leaderOrder===id?'active':'')+'">'+label+'</button>').join('')+'</div>'
+      +'<span class="rank-count" id="leader-count">'+entries.length+' schools</span></div>'
+      +'<div class="rank-table-container school-leader-table-wrap"><table class="school-leader-table rank-table">'
+      +'<thead><tr><th class="rank-position-cell">RANK</th><th class="rank-school-cell">SCHOOL</th><th class="rank-primary-head">'+escapeHTML(period==='all'?'CAREER PTS':'SEASON PTS')+'</th>'+thYears+'</tr></thead><tbody>'+table+'</tbody></table></div>'
+      +'<div class="rank-mobile-list">'+cards+'</div>'
+      +'<div id="leader-empty" class="rank-empty" hidden>No schools match your search. Try a different name or conference.</div>'
+      +'<div class="rank-load"><button id="leader-more" type="button" data-act="leaders-more" class="rank-load-button" hidden>Show more schools <small></small></button></div>'
+      +'<div class="rank-footnote">'+escapeHTML(notes)+' <button type="button" data-act="school-mode" data-id="ratings">Compare power ratings ›</button></div></section>';
   }
-  function filterSchoolLeaders(){
-    const query=leaderQuery.toLowerCase().trim();let visible=0;
-    document.querySelectorAll('.school-leader-row').forEach(row=>{
-      const match=row.dataset.search.includes(query);row.hidden=!match;if(match)visible++;
-    });
-    const counter=document.querySelector('#leader-count');
-    if(counter)counter.textContent=visible+' '+(visible===1?'school':'schools');
-  }
+  function filterSchoolLeaders(){filterRankingDisplay('leaders');}
   function ratingsPage(){
     const year=ratingYear(ratingSeason||season()),data=ratingCache[year];
     const years=Array.from({length:6},(_,i)=>ratingYear(season())-i).filter(y=>y>=2022&&y<=2027);
-    const seasons='<div class="school-leaders-seasons rating-seasons" role="group" aria-label="T-Rank season">'
-      +years.map(y=>'<button type="button" data-act="rating-season" data-id="'+y+'" class="'+(year===y?'active':'')+'">'+(y-1)+'-'+String(y%100).padStart(2,'0')+'</button>').join('')+'</div>';
-    const header='<div class="rating-intro"><div><h3>Bart Torvik T-Rank</h3><p>National power ratings. Used for provisional quadrant bonuses until official NCAA NET becomes available.</p></div>'+ratingExternalLinks()+'</div>';
-    if(!data)return '<section class="panel ratings-shell">'+header+seasons
-      +(ratingError[year]?empty('Ratings unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Retry</button>'
-        :empty('Loading ratings','Retrieving '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-Rank ratings.'))+'</section>';
-    const eligible=programs().filter(p=>activeConfs().includes(p.conference_id));
-    const metrics={rank:(a,b)=>(a.r?.rank??999)-(b.r?.rank??999),
+    const seasons=rankingSeasonNav(years.map(y=>[String(y),(y-1)+'-'+String(y%100).padStart(2,'0')]),'rating-season',String(year),'T-Rank season');
+    const isCurrent=year===ratingYear(season());
+    const heading='<div class="rank-heading"><div><span class="rank-kicker">PROGRAM RANKINGS · ADVANCED ANALYTICS</span><h2>Power ratings</h2>'
+      +'<p>Explore Bart Torvik’s national efficiency rankings, offense, defense and team strength.</p></div>'
+      +'<div class="rank-heading-mark"><span>VIEWING</span><strong>'+(year-1)+'-'+String(year%100).padStart(2,'0')+'</strong><small>T-Rank season</small></div></div>';
+    const source='<div class="rank-source-line"><span class="rank-source-mark"><i></i> '+(isCurrent?'PRELIMINARY QUADRANTS':'ARCHIVED RATING')+'</span>'
+      +'<span>'+(isCurrent?'T-Rank is used for provisional Q1/Q1A/Q2 bonuses until official NCAA NET is available.':'Historical T-Rank is for comparison; verified NCAA NET determines archived fantasy scores.')+'</span></div>';
+    if(!data)return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
+      +(ratingError[year]?empty('T-Rank unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Try again</button>'
+        :empty('Loading power ratings','Retrieving published national rankings and efficiency numbers.'))+'</section>';
+    const metrics={
+      rank:(a,b)=>(a.r?.rank??999)-(b.r?.rank??999),
       offense:(a,b)=>(a.r?.adj_o_rank??999)-(b.r?.adj_o_rank??999),
       defense:(a,b)=>(a.r?.adj_d_rank??999)-(b.r?.adj_d_rank??999),
       power:(a,b)=>(b.r?.barthag??-1)-(a.r?.barthag??-1),
-      wab:(a,b)=>(b.r?.wab??-999)-(a.r?.wab??-999)};
-    const rows=eligible.map(p=>({p,r:ratingOf(p,year)})).sort((a,b)=>(metrics[ratingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
-    const matched=rows.filter(x=>x.r).length;
-    const dec=(value,places=1)=>value===null||value===undefined?'—':Number(value).toFixed(places);
-    const sort=[['rank','T-Rank'],['offense','Offense'],['defense','Defense'],['power','Power'],['wab','WAB']].map(([id,label])=>
-      '<button type="button" data-act="rating-sort" data-id="'+id+'" class="'+(ratingSort===id?'active':'')+'">'+label+'</button>').join('');
-    const cells=rows.map(({p,r})=>'<tr class="rating-school-row" data-search="'+escapeHTML((p.name+' '+conf(p.conference_id)).toLowerCase())+'">'
-      +'<td class="rating-rank">'+(r?'#'+r.rank:'—')+'</td>'
-      +'<td><button class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
-      +'<td>'+dec(r?.barthag,3)+'</td><td>'+dec(r?.adj_o)+'<small>'+(r?.adj_o_rank?' #'+r.adj_o_rank:'')+'</small></td>'
-      +'<td>'+dec(r?.adj_d)+'<small>'+(r?.adj_d_rank?' #'+r.adj_d_rank:'')+'</small></td>'
-      +'<td>'+dec(r?.wab)+'</td><td>'+dec(r?.tempo)+'</td></tr>').join('');
-    return '<section class="panel ratings-shell">'+header+seasons
-      +'<div class="rating-controls"><label class="directory-search"><span aria-hidden="true">⌕</span><input id="rating-search" type="search" class="field" placeholder="Find a school..." value="'+escapeHTML(ratingQuery)+'" autocomplete="off"/></label><div class="directory-sort-tabs">'+sort+'</div></div>'
-      +'<p class="rating-coverage"><span id="rating-count">'+matched+' matched schools</span> / '+eligible.length+' eligible · National rank · Fetched '+escapeHTML(new Date(data.fetched_at).toLocaleDateString())+'</p>'
-      +'<div class="ratings-table-wrap"><table class="ratings-table"><thead><tr><th>T-RANK</th><th>SCHOOL</th><th>BARTHAG</th><th>ADJ. OFF.</th><th>ADJ. DEF.</th><th>WAB</th><th>TEMPO</th></tr></thead><tbody>'+cells+'</tbody></table></div>'
-      +'<p class="hint">Offense and defense use points per 100 possessions (lower is better on defense). Unmatched schools show a dash rather than an estimated rating.</p></section>';
+      wab:(a,b)=>(b.r?.wab??-999)-(a.r?.wab??-999),
+      tempo:(a,b)=>(b.r?.tempo??-1)-(a.r?.tempo??-1)
+    };
+    const sortNames={rank:'Overall rank',offense:'Offensive efficiency',defense:'Defensive efficiency',power:'Barthag',wab:'Wins above bubble',tempo:'Adjusted tempo'};
+    const entries=programs().filter(p=>activeConfs().includes(p.conference_id)&&rankingEligible(p,ratingConference,ratingOwnership))
+      .map(p=>({p,r:ratingOf(p,year)}));
+    const rows=entries.sort((a,b)=>(metrics[ratingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
+    const valid=rows.filter(row=>row.r),dec=(x,n=1)=>rankingNumber(x,n);
+    const featureValue=row=>ratingSort==='offense'?dec(row.r?.adj_o):ratingSort==='defense'?dec(row.r?.adj_d):
+      ratingSort==='power'?dec(row.r?.barthag,3):ratingSort==='wab'?dec(row.r?.wab):
+      ratingSort==='tempo'?dec(row.r?.tempo):'#'+(row.r?.rank??'—');
+    const metricOptions=[['rank','Overall'],['offense','Offense'],['defense','Defense'],['power','Barthag'],['wab','WAB'],['tempo','Tempo']];
+    const sortTabs=metricOptions.map(([id,label])=>'<button type="button" data-act="rating-sort" data-id="'+id+'" aria-pressed="'+(ratingSort===id)+'" class="'+(ratingSort===id?'active':'')+'">'+label+'</button>').join('');
+    const table=rows.map(({p,r})=>
+      '<tr class="rank-data-row rating-school-row" data-ranking="ratings" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
+      +'<td class="rank-position-cell"><span class="rank-position '+(r?.rank<=25?'is-top':'')+'">'+(r?'#'+r.rank:'—')+'</span></td>'
+      +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
+      +'<td class="rating-power"><strong>'+dec(r?.barthag,3)+'</strong></td>'
+      +'<td class="rating-numeric"><strong>'+dec(r?.adj_o)+'</strong><small>'+(r?.adj_o_rank?'#'+r.adj_o_rank+' nationally':'—')+'</small></td>'
+      +'<td class="rating-numeric"><strong>'+dec(r?.adj_d)+'</strong><small>'+(r?.adj_d_rank?'#'+r.adj_d_rank+' nationally':'—')+'</small></td>'
+      +'<td class="rating-numeric">'+dec(r?.wab)+'</td><td class="rating-numeric">'+dec(r?.tempo)+'</td></tr>').join('');
+    const cards=rows.map(({p,r})=>
+      '<article class="rank-mobile-row" data-ranking="ratings" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
+      +'<button class="rank-mobile-main" type="button" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
+      +'<span class="rank-mobile-index">'+(r?'#'+r.rank:'—')+'</span>'+img(p)
+      +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+      +'<span class="rank-mobile-primary"><strong>'+dec(r?.barthag,3)+'</strong><small>BARTHAG</small></span><span class="rank-mobile-chevron">›</span></button>'
+      +'<div class="rank-mobile-metrics"><div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
+      +'<div><span>DEFENSE</span><strong>'+dec(r?.adj_d)+'</strong></div>'
+      +'<div><span>WAB</span><strong>'+dec(r?.wab)+'</strong></div>'
+      +'<div><span>TEMPO</span><strong>'+dec(r?.tempo)+'</strong></div></div></article>').join('');
+    return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
+      +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+escapeHTML(data.source||'BART TORVIK')+'</span><span>'+valid.length+' matched / '+entries.length+' eligible</span>'
+      +'<span>Refreshed '+escapeHTML(new Date(data.fetched_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</span></div>'
+      +rankingFeatured(valid.slice(0,3),'ratings',sortNames[ratingSort]||'National T-Rank',featureValue)
+      +rankingTools('ratings',ratingQuery,ratingConference,ratingOwnership)
+      +'<div class="rank-toolbar-bottom"><div class="rank-order rank-rating-order" role="group" aria-label="Sort power ratings">'+sortTabs+'</div>'
+      +'<span class="rank-count" id="rating-count">'+entries.length+' schools</span></div>'
+      +'<div class="rank-table-container ratings-table-wrap"><table class="ratings-table rank-table"><thead><tr><th class="rank-position-cell">NATL RANK</th><th class="rank-school-cell">SCHOOL</th>'
+      +'<th title="Probability-based power rating">BARTHAG</th><th title="Adjusted points scored per 100 possessions">OFFENSE</th>'
+      +'<th title="Adjusted points allowed per 100 possessions, lower is better">DEFENSE</th><th title="Wins above bubble">WAB</th>'
+      +'<th title="Adjusted possessions per game">TEMPO</th></tr></thead><tbody>'+table+'</tbody></table></div>'
+      +'<div class="rank-mobile-list">'+cards+'</div>'
+      +'<div id="rating-empty" class="rank-empty" hidden>No schools match your filters. Try a different search or conference.</div>'
+      +'<div class="rank-load"><button id="rating-more" type="button" data-act="ratings-more" class="rank-load-button" hidden>Show more schools <small></small></button></div>'
+      +'<div class="rank-footnote"><span><strong>Reading the stats:</strong> Higher Barthag and offense are better. Lower defensive efficiency is better. The rank shown is national, even when sorted by another metric.</span>'
+      +ratingExternalLinks()+'</div></section>';
   }
-  function filterRatings(){
-    let count=0;const query=ratingQuery.toLowerCase().trim();
-    root.querySelectorAll('.rating-school-row').forEach(row=>{const shown=row.dataset.search.includes(query);row.hidden=!shown;if(shown)count++;});
-    const label=root.querySelector('#rating-count');if(label)label.textContent=count+' schools';
-  }
+  function filterRatings(){filterRankingDisplay('ratings');}
   function programsPage(){
     const nav='<div class="school-view-tabs" role="group" aria-label="Schools sections">'
       +[['directory','School directory'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';

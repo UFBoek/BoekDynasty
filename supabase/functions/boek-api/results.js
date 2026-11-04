@@ -508,6 +508,52 @@ export const DATA_PIPELINE=(()=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND (home_id=? OR away_id=?) ORDER BY game_date DESC,start_utc DESC LIMIT 70",season,id,id).all();
     return rows.results||[];
   };
+
+  async function publishedTeamSchedule(env,season,id,fetchFn=fetch){
+    const imported=await programGames(env,season,id);
+    const byId=new Map(imported.map(g=>[String(g.game_id),{...g,origin:'database'}]));
+    const year=Number(season.slice(0,4))+1;
+    const uri='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/'+encodeURIComponent(String(id))+'/schedule?season='+year;
+    let fetched=0,error='';
+    try{
+      const response=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+      if(!response.ok)throw Error('ESPN schedule HTTP '+response.status);
+      const payload=await response.json();
+      if(!Array.isArray(payload?.events))throw Error('ESPN schedule did not return events.');
+      const reportedYear=Number(payload.season?.year||payload.season?.endYear||0);
+      if(reportedYear&&reportedYear!==year)throw Error('ESPN schedule season mismatch.');
+      for(const ev of payload.events){
+        const utc=ev?.date||ev?.competitions?.[0]?.date;
+        if(!utc||Number.isNaN(new Date(utc).getTime()))continue;
+        const parsed=parseEvent(ev,localDay(new Date(utc)),season);
+        if(!parsed)continue;
+        const row=parsed.row;
+        if(String(row[4])!==String(id)&&String(row[5])!==String(id))continue;
+        const game={game_id:row[0],game_date:row[2],start_utc:row[3],home_id:row[4],
+          away_id:row[5],home_name:row[6],away_name:row[7],home_score:row[8],away_score:row[9],
+          status:row[10],status_detail:row[11],neutral_site:row[12],conference_game:row[13],
+          season_type:row[14],tournament_tag:row[16],origin:'ESPN published schedule'};
+        const prior=byId.get(String(game.game_id));
+        if(!prior||(prior.status!=='final'&&prior.status!=='live'))byId.set(String(game.game_id),game);
+        fetched++;
+      }
+    }catch(e){error=err(e);}
+    const ranking=await activeRankings(env,season);
+    const ranks=new Map(ranking.rows.map(x=>[String(x.program_id),Number(x.net_rank)]));
+    const games=[...byId.values()]
+      .filter(g=>String(g.home_id)===String(id)||String(g.away_id)===String(id))
+      .sort((a,b)=>String(a.game_date).localeCompare(String(b.game_date))||
+        String(a.start_utc||'').localeCompare(String(b.start_utc||'')))
+      .map(g=>{
+        const home=String(g.home_id)===String(id),opponent_id=String(home?g.away_id:g.home_id);
+        const rank=ranks.get(opponent_id),venue=Number(g.neutral_site)===1?'neutral':home?'home':'away';
+        return {...g,opponent_id,opponent_name:home?g.away_name:g.home_name,venue,
+          opponent_rank:Number.isInteger(rank)?rank:null,quad:quadrant(rank,venue),q1a:isQ1A(rank,venue)};
+      });
+    return {season,id,games,total_games:games.length,published_games:fetched,
+      source:fetched?'ESPN published schedule':'Imported game database',source_error:error,
+      rankings_source:ranking.source,rankings_date:ranking.snapshot_date,provisional:ranking.provisional};
+  }
   const netKey=value=>String(value||'')
     .normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
     .replace(/&/g,' and ').replace(/\bsaint\b|\bstate\b|\bst(?=\.|\b)/g,'st')
@@ -1035,5 +1081,5 @@ export const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,publishedTeamSchedule,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

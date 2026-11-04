@@ -119,7 +119,7 @@ test('individual mid-majors receive NCAA upset and at-large eligibility, excludi
     ['777','Sample Ivy','IVY','12'],
     ['999','Sample Pac-12','P12','21']
   ];
-  const eligible=new Function('PROGRAM_DIRECTORY',results.slice(start,end)+'\\nreturn isBonusEligible;')(selected);
+  const eligible=new Function('PROGRAM_DIRECTORY',results.slice(start,end)+String.fromCharCode(10)+'return isBonusEligible;')(selected);
   assert.equal(eligible('2272'),true,'High Point qualifies despite the Big South not being selected');
   assert.equal(eligible('310'),true,'Existing non-Power conferences qualify');
   assert.equal(eligible('777'),true,'Future individually added Ivy programs qualify');
@@ -128,6 +128,6 @@ test('individual mid-majors receive NCAA upset and at-large eligibility, excludi
   assert.equal(eligible('57'),false,'SEC schools are excluded');
   assert.equal(eligible('99'),false,'ACC schools are excluded');
   assert.equal(eligible('00000'),false,'Unknown programs do not qualify');
-  assert.match(results,/isBonusEligible\\(row\\.program_id\\)/);
-  assert.match(results,/isBonusEligible\\(t\\.program_id\\)/);
+  assert.ok(results.includes('isBonusEligible(row.program_id)'));
+  assert.ok(results.includes('isBonusEligible(t.program_id)'));
 });

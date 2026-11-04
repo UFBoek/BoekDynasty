@@ -43,7 +43,7 @@
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
   let resultsLoadedDay='';
-  let resultsSearch='',resultsShown=40,resultsNetDate=null,resultsRecordNote='',resultsQuadNote='';
+  let resultsSearch='',resultsShown=40,resultsNetDate=null,resultsRecordNote='',resultsQuadNote='',resultsRankingSource='pending',resultsRankingDate=null;
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
   const fmt=(v)=>Number(v||0).toLocaleString('en-US');
@@ -92,7 +92,7 @@
     return parsed;
   }
 
-  // T-Rank is an informational comparison, never an input to fantasy points or NET quadrants.
+  // T-Rank is informational in analytics and provisional for fantasy scoring until official NET arrives.
   const ratingYear=(label)=>Number(String(label||season()).slice(0,4))+1;
   const ratingName=(raw)=>String(raw||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
     .replace(/&/g,' and ').replace(/\bsaint\b/g,'st').replace(/\bstate\b/g,'st')
@@ -280,6 +280,8 @@
         resultsGames=outcomes[1].value.games||[];
         resultsLoadedDay=day;
         resultsNetDate=outcomes[1].value.net_date||null;
+        resultsRankingSource=outcomes[1].value.ranking_source||'pending';
+        resultsRankingDate=outcomes[1].value.ranking_date||null;
         resultsRecordNote=outcomes[1].value.record_note||'Records through the selected date.';
         resultsQuadNote=outcomes[1].value.quadrant_note||'NET quadrants update with verified rankings.';
         resultsSeason=season();resultsFetchedAt=Date.now();
@@ -327,12 +329,12 @@
     return /^\d+$/.test(String(id||''))?'<img class="program-logo" src="https://a.espncdn.com/i/teamlogos/ncaa/500/'+id+'.png" loading="lazy" alt=""/>':'<span class="program-logo program-initial">NCAA</span>';
   };
   const scoreboardRank=(id,map)=>map.has(String(id))?'<span class="scoreboard-rank">'+map.get(String(id))+'</span>':'';
-  const dailyNetLabel=(rank)=>rank===null||rank===undefined?'NET pending':'NET #'+Number(rank);
+  const dailyNetLabel=(rank)=>rank===null||rank===undefined?(resultsRankingSource==='torvik'?'T-Rank pending':'NET pending'):(resultsRankingSource==='torvik'?'T-Rank #':'NET #')+Number(rank);
   const dailyRecord=(record)=>record?Number(record.wins||0)+'–'+Number(record.losses||0):'0–0';
   const dailyQuad=(quad,q1a)=>{
     if(!Number.isInteger(quad)||quad<1||quad>4)
-      return '<span class="daily-quad pending" title="Official NET ranking not yet available">NET pending</span>';
-    return '<span class="daily-quad q'+quad+'" title="Quadrant '+quad+(q1a?', including the additional Q1A bonus':'')+'">'+
+      return '<span class="daily-quad pending" title="No complete current-season ranking source">Q pending</span>';
+    return '<span class="daily-quad q'+quad+(resultsRankingSource==='torvik'?' preliminary':'')+'" title="'+(resultsRankingSource==='torvik'?'Provisional T-Rank ':'Official NET ')+'Quadrant '+quad+(q1a?', including the additional Q1A bonus':'')+'">'+
       'Q'+quad+(q1a?'<small>A</small>':'')+'</span>';
   };
   const dailyGameCard=(g,pollRanks)=>{
@@ -413,8 +415,7 @@
     const totalLive=list.filter(g=>g.status==='live').length;
     const conferenceOptions=[...enrolled].sort((a,b)=>conf(a).localeCompare(conf(b)));
     const pollAvailable=resultsAP.length===25;
-    const note=resultsNetDate?'Quadrants use official NET as of '+resultsNetDate+'. A Q1A game is also Q1.':
-      'NET quadrants are pending until the current-season rankings are released.';
+    const note=resultsQuadNote||'Rankings update as sources become available.';
     return heading('COLLEGE BASKETBALL','Daily Results','Every team’s record, game quadrant and score, all in one easy-to-scan view.')
       +'<section class="daily-results">'
       +'<div class="daily-toolbar"><div class="daily-toolbar-left"><span class="daily-status-dot '+(totalLive?'active':'')+'"></span><strong>'+
@@ -440,7 +441,7 @@
           (resultsScope==='mine'?'Draft a school to see its matchups here.':'Try another date, conference or school search.')+'</p>'+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
-      +'<div class="daily-footer-info"><span><strong>W–L</strong> Updated through the selected date</span><span><strong>Q</strong> NET quadrant from each school’s perspective</span><span>'+escapeHTML(note)+'</span></div>'
+      +'<div class="daily-footer-info"><span><strong>W–L</strong> Updated through the selected date</span><span><strong>Q</strong> '+(resultsRankingSource==='torvik'?'Preliminary T-Rank':'NCAA NET')+' quadrant from each school’s perspective</span><span>'+escapeHTML(note)+'</span></div>'
       +'</section>';
   }
 
@@ -898,7 +899,8 @@
     const note=standingsError?'Unable to refresh standings: '+escapeHTML(standingsError):
       !scoring?'Calculating the current fantasy scores from verified games and awards...':
       !owners().length?'Managers earn points after drafting their schools.':
-      !scoring.net_verified?'Live fantasy scores. NET quadrant bonuses will begin once current-season NET rankings are available.':
+      scoring.quadrant_source==='torvik'?'Live fantasy points include provisional Q1/Q1A/Q2 bonuses using Bart Torvik T-Rank. NCAA NET will replace these calculations automatically.':
+      scoring.quadrant_source==='pending'?'Live fantasy scores. Quadrant bonuses begin once complete T-Rank or NCAA NET rankings are available.':
       'Live scores reflect regular-season wins, NET quadrant bonuses and confirmed postseason awards.';
     return heading('SEASON '+escapeHTML(season()),'Standings','Dynasty standings for the current season.')
       +'<section class="panel standings-panel">'
@@ -949,8 +951,8 @@
       +'<div class="program-season-rank-hero"><span>LEAGUE SEASON RANK</span><strong>'+escapeHTML(rankLabel(selectedStats))+'</strong><small>Against all eligible programs in this season</small></div>'
       +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
       +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
-      +'<div><span>Q1 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q1:'NET pending')+'</strong></div>'
-      +'<div><span>Q2 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q2:'NET pending')+'</strong></div></div>'
+      +'<div><span>Q1 wins'+(selectedStats.quadrant_provisional?' (prelim)':'')+'</span><strong>'+(selectedStats.quadrant_source!=='pending'?selectedStats.q1:'Pending')+'</strong></div>'
+      +'<div><span>Q2 wins'+(selectedStats.quadrant_provisional?' (prelim)':'')+'</span><strong>'+(selectedStats.quadrant_source!=='pending'?selectedStats.q2:'Pending')+'</strong></div></div>'
       +scoreDetails+'<p class="hint">'+(selectedStats.status==='complete'?'Final totals use all verified regular-season, conference tournament and NCAA Tournament results, with final NET bonuses.':'Current-season totals update as games, rankings and awards become available.')+'</p></div>'
       :'<div class="program-season-expanded"><p class="hint">Loading the program’s verified scoring history…</p></div>';
     const currentPoints=currentStats?.points!==null&&currentStats?.points!==undefined?pointText(currentStats):'—';
@@ -977,7 +979,7 @@
       +'<div class="program-profile-summary"><div><span>CURRENT OWNER</span><strong>'+ownerButton+'</strong></div>'
       +'<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+currentPoints+'</strong><small>'+(currentStats?.status==='partial'?'Verified components only':'Season scoring pending')+'</small></div>'
       +'<div><span>SEASON RECORD</span><strong>'+recordText+'</strong></div>'
-      +'<div><span>NET RANK</span><strong>'+(report?.net?'#'+report.net.net_rank:'—')+'</strong></div></div>'
+      +'<div><span>'+(report?.ranking_source==='torvik'?'T-RANK (PRELIM)':'NET RANK')+'</span><strong>'+(report?.net?'#'+report.net.net_rank:'—')+'</strong></div></div>'
       +analytics
        +'<section class="panel program-history-panel">'+panelHeading('Season-by-season performance','Select any season from 2021–22 onward')
       +'<div class="program-season-strip">'+seasonRows+'</div>'+yearDetail+'</section>'
@@ -986,7 +988,7 @@
       +'<div class="profile-facts compact-profile-facts"><div><span>Conference</span><strong>'+escapeHTML(conf(p.conference_id))+'</strong></div>'
       +'<div><span>Original draft pick</span><strong>'+(selection?'#'+selection.overall+' · Round '+selection.round:'Undrafted')+'</strong></div>'
       +'<div><span>Previous ownership</span><strong>'+(ownedYears.length?ownedYears.length+' archived seasons':'No archived seasons')+'</strong></div>'
-      +(report?.net_date?'<div><span>NET updated</span><strong>'+escapeHTML(report.net_date)+'</strong></div>':'')+'</div>'
+      +(report?.ranking_date?'<div><span>'+(report.ranking_source==='torvik'?'T-Rank imported':'NET updated')+'</span><strong>'+escapeHTML(report.ranking_date)+'</strong></div>':'')+'</div>'
       +(league.settings.waivers_enabled&&league.settings.draft_status==='finished'&&!owner?'<button class="btn small section-gap" data-act="tab" data-id="waivers">Request on waivers</button>':'')+'</section>'
       +'<section class="panel program-profile-details">'+panelHeading('Game log','Current season · '+games.length+' games')
       +'<details class="program-detail-disclosure"><summary>View all games <span>›</span></summary><div class="program-detail-entries">'+gameHistory+'</div></details></section></div>'

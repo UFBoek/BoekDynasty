@@ -56,6 +56,7 @@
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
+  let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='';
   let avatarDraft=null;
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
@@ -297,6 +298,9 @@
   function render(){
     if(!me||!league)return renderAuth();
     if((current==='league'||current==='team')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    // The overview previews today's games without requiring a visit to Results.
+    if(current==='home'&&!overviewGamesLoading&&
+      (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
     if(current==='program-detail')loadRatings(ratingYear(selectedProgramSeason||season()));
     if(current==='draft')loadRatings(ratingYear(season()));
@@ -333,6 +337,26 @@
   };
   const formatResultsDay=(day,parts={weekday:'short',month:'short',day:'numeric'})=>
     new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',...parts});
+  async function loadOverviewGames(){
+    if(!me||overviewGamesLoading)return;
+    const today=resultsToday();
+    if(overviewGamesDay===today&&Date.now()-overviewGamesFetchedAt<90000)return;
+    overviewGamesLoading=true;
+    try{
+      const response=await api('data/games?date='+encodeURIComponent(today));
+      if(today!==resultsToday())return; // Ignore a request that crossed midnight ET.
+      overviewGames=Array.isArray(response.games)?response.games:[];
+      overviewGamesDay=today;
+      overviewGamesError='';
+    }catch(e){
+      overviewGamesDay=today;
+      overviewGamesError='Today’s games are temporarily unavailable.';
+    }finally{
+      overviewGamesFetchedAt=Date.now();
+      overviewGamesLoading=false;
+      if(current==='home')render();
+    }
+  }
   async function loadResults(){
     if(!me)return;
     const request=++resultsRequest;
@@ -565,6 +589,54 @@
       +'<section class="panel more-account section-gap"><div>'+avatar(me)+'<div class="grow"><strong>'+escapeHTML(me.display_name)+'</strong><small>'+escapeHTML(me.username)+'</small></div></div><button class="btn secondary" data-act="logout">Sign out</button></section>';
   }
 
+  function overviewScoreboard(){
+    const today=resultsToday(),isReady=overviewGamesDay===today;
+    const eligible=new Set(activeConfs().map(String));
+    const mine=new Set(owners().filter(o=>o.manager_id===me.id).map(o=>String(o.program_id)));
+    const games=(isReady?overviewGames:[]).filter(g=>
+      eligible.has(String(g.home_conference_id))||eligible.has(String(g.away_conference_id))||
+      mine.has(String(g.home_id))||mine.has(String(g.away_id)));
+    const statusPriority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
+    const isMine=g=>mine.has(String(g.home_id))||mine.has(String(g.away_id));
+    games.sort((a,b)=>Number(isMine(b))-Number(isMine(a))||
+      (statusPriority[a.status]??5)-(statusPriority[b.status]??5)||
+      String(a.start_utc||'').localeCompare(String(b.start_utc||'')));
+    const fixtures=games.slice(0,6);
+    const formatTime=g=>{
+      if(g.status==='live')return 'LIVE';
+      if(g.status==='final')return 'FINAL';
+      if(g.status==='postponed')return 'POSTPONED';
+      if(g.status==='cancelled')return 'CANCELLED';
+      return g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{
+        timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'TIME TBD';
+    };
+    const school=(id,name,score,hasScore)=>
+      '<span class="overview-game-school">'+scoreboardLogo(id)+
+      '<strong>'+escapeHTML(name||'Unknown school')+'</strong>'+
+      '<b>'+((hasScore&&score!==null&&score!==undefined)?escapeHTML(String(score)):'–')+'</b></span>';
+    const cards=fixtures.map(g=>{
+      const hasScore=g.status==='final'||g.status==='live';
+      return '<button type="button" class="overview-game-card'+(g.status==='live'?' is-live':'')+
+        (isMine(g)?' is-mine':'')+'" data-act="overview-today-results" aria-label="Open today’s results for '+
+        escapeHTML((g.away_name||'Away')+' at '+(g.home_name||'Home'))+'">'+
+        '<span class="overview-game-heading"><span class="overview-game-status">'+
+        (g.status==='live'?'<i aria-hidden="true"></i>':'')+escapeHTML(formatTime(g))+'</span>'+
+        (isMine(g)?'<span class="overview-game-my-tag">MY ROSTER</span>':'')+'</span>'+
+        school(g.away_id,g.away_name,g.away_score,hasScore)+
+        school(g.home_id,g.home_name,g.home_score,hasScore)+
+        '<span class="overview-game-link">View game day <span aria-hidden="true">›</span></span></button>';
+    }).join('');
+    const count=games.length;
+    const body=overviewGamesLoading&&!isReady?
+      '<div class="overview-games-placeholder">Loading today’s matchups…</div>':
+      overviewGamesError&&!isReady?'<div class="overview-games-placeholder">'+escapeHTML(overviewGamesError)+'</div>':
+      fixtures.length?'<div class="overview-game-grid">'+cards+'</div>':
+      '<div class="overview-games-placeholder">No league-school games scheduled today. Browse the full scoreboard for other matchups.</div>';
+    return '<section class="panel overview-scoreboard">'+
+      panelHeading('Today’s games',formatResultsDay(today,{weekday:'long',month:'short',day:'numeric'})+
+      (count?' · '+count+' league matchups':''),'<button class="btn small ghost" type="button" data-act="overview-today-results">Full scoreboard</button>')+
+      body+'</section>';
+  }
   function overview(){
     const users=members(),status=league.settings.draft_status;
     const programName=id=>programs().find(p=>p.id===id)?.name||'Program';
@@ -595,6 +667,7 @@
     return heading('THE LEAGUE','League Overview')
       +'<div class="overview-status overview-status-hub"><span class="overview-status-dot '+(status==='live'?'live':'')+'"></span><span class="overview-status-copy"><span class="overview-hub-kicker">'+escapeHTML(season())+' SEASON · LEAGUE STATUS</span><strong>'+(status==='live'?'Draft in progress':status==='finished'?'Inaugural draft complete':status==='paused'?'Draft paused':'Draft preparations')+'</strong><small>'+(status==='live'&&nextManager()?'On the clock: '+escapeHTML(nextManager().display_name):'Permanent program ownership')+'</small></span><div class="overview-hub-actions"><button class="btn small secondary" data-act="tab" data-id="draft">Draft room '+iconSVG('draft')+'</button><button class="btn small ghost" data-act="tab" data-id="results">Results '+iconSVG('results')+'</button></div></div>'
       +(syncActive?'<div class="standings-notice">Importing selected conferences...</div>':'')
+      +overviewScoreboard()
       +'<div class="overview-community-intro"><div><span class="eyebrow">YOUR LEAGUE</span><h2>'+users.length+' of '+Number(league.settings.max_managers)+' managers</h2><p>See every roster and follow the inaugural season as it unfolds.</p></div><button class="btn small secondary" data-act="tab" data-id="league">View standings</button></div>'
       +'<section class="panel overview-teams-panel">'+panelHeading('League teams','Every manager, every owned school','<button class="btn small ghost" data-act="tab" data-id="league">Standings</button>')+'<div class="league-teams-grid">'+(teamCards||empty('Awaiting managers'))+'</div></section>'
       +'<section class="panel section-gap overview-activity-panel">'+panelHeading('League activity','Recent moves and selections')
@@ -640,11 +713,12 @@
       +'<div class="team-hero-schools">'+(owned.length?owned.slice(0,9).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):'<span class="team-draft-prompt">Waiting for your first selection</span>')+'</div></div>'
       +'<div class="team-stats team-stats-refined"><div class="team-stat"><span>ROSTER</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong><div class="team-roster-progress"><i style="width:'+Math.min(100,100*owned.length/Math.max(1,Number(league.settings.rounds)))+'%"></i></div></div>'
       +'<div class="team-stat"><span>COUNTING PROGRAMS</span><strong>Best '+bestCount+'</strong><small>Season-long best ball</small></div>'
-      +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div></div>'
+      +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div>'
+      +'<div class="team-stat team-season-score"><span>SEASON POINTS</span><strong>'+(standingsData?.season===season()?Number(standingsData.standings?.find(x=>x.manager_id===me.id)?.points||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—')+'</strong><small>Best '+bestCount+' programs</small></div></div>'
       +'<div class="team-actions"><button class="btn" data-act="tab" data-id="settings">Edit team profile</button><button class="btn" data-act="tab" data-id="trades">Propose trade</button><button class="btn secondary" data-act="tab" data-id="waivers">Waivers</button><button class="btn secondary" data-act="tab" data-id="programs">Browse programs</button></div>'
       +'<div class="team-layout"><section class="panel team-roster-panel">'+panelHeading('Your programs',owned.length+' permanently owned schools','<button class="btn small ghost" data-act="tab" data-id="programs">Browse schools</button>')
       +(owned.length?'<div class="team-program-grid">'+roster+'</div>':empty('Your roster is ready to build','Once the draft begins, your selected schools will appear here with their logos and season records.'))
-      +(owned.length?'<p class="team-footnote">'+(standingsData?.season===season()?'Current season fantasy total (best '+bestCount+'): '+Number(standingsData.standings?.find(x=>x.manager_id===me.id)?.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+' points':'Loading current fantasy points...')+'</p>':'')+'</section>'
+      +(owned.length&&!standingsData?'<p class="team-footnote">Season points appear above once live standings finish loading.</p>':'')+'</section>'
       +'<div class="team-aside"><section class="panel team-offers-panel">'+panelHeading('Your trades',offers.filter(t=>t.status==='pending').length+' pending · '+allOffers.length+' total')
       +(offers.length?offerCards:empty('No trades yet','Proposals and completed deals will appear here.'))
       +'<div class="team-panel-footer"><button class="btn secondary small" data-act="tab" data-id="trades">View all trades</button></div></section>'
@@ -1711,6 +1785,10 @@
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
+    if(act==='overview-today-results'){
+      resultsSelectedDay=resultsToday();resultsScope='league';resultsSearch='';resultsShown=40;
+      current='results';render();loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
+    }
     if(act==='tab'){
       if(id==='programs'&&current!=='programs')ratingSeason=season();
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;

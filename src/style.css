@@ -4071,3 +4071,47 @@ button.daily-team-line:hover{background:#f4f8fc}
  .draft-queue-shortcut{padding:8px 10px}
  .draft-pool-subbar:has(.draft-queue-shortcut) #draft-pool-count{display:none}
 }
+
+
+/* Useful live activity on the league overview, without a full scoreboard feed. */
+.overview-scoreboard{margin:15px 0 17px;padding:18px 19px;background:linear-gradient(120deg,#fff,#f5f9ff)}
+.overview-scoreboard .panel-head{align-items:center;gap:10px;margin-bottom:13px}
+.overview-scoreboard .panel-head h2{font-size:16px}
+.overview-scoreboard .panel-head p{font-size:11px}
+.overview-scoreboard .panel-head .btn{white-space:nowrap}
+.overview-game-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.overview-game-card{display:flex;flex-direction:column;gap:7px;min-width:0;min-height:157px;padding:11px 12px;
+ background:#fff;border:1px solid #e0e9f3;border-radius:12px;color:#1a3857;text-align:left;
+ transition:border-color .15s,box-shadow .15s,transform .15s}
+.overview-game-card:hover{border-color:#a8c7e6;box-shadow:0 6px 20px #244f8014;transform:translateY(-1px)}
+.overview-game-card.is-mine{border-color:#91bee7;background:linear-gradient(120deg,#f4f9ff,#fff)}
+.overview-game-card.is-live{border-color:#ebb08e}
+.overview-game-heading{display:flex;justify-content:space-between;align-items:center;gap:7px;min-height:18px;margin-bottom:1px}
+.overview-game-status{font-size:10px;font-weight:900;letter-spacing:.5px;color:#657c93;display:flex;align-items:center;gap:6px}
+.overview-game-card.is-live .overview-game-status{color:#c65329}
+.overview-game-status i{width:7px;height:7px;background:#e16c38;border-radius:50%;box-shadow:0 0 0 3px #fbe6dd}
+.overview-game-my-tag{font-size:8px;letter-spacing:.6px;color:#22669d;background:#e8f3ff;padding:4px 6px;border-radius:5px;font-weight:900}
+.overview-game-school{display:flex;align-items:center;gap:8px;min-width:0;min-height:32px}
+.overview-game-school .program-logo{width:29px;height:29px;flex:0 0 29px;padding:3px;border-radius:7px}
+.overview-game-school strong{font-size:11.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.overview-game-school b{font-size:15px;font-variant-numeric:tabular-nums;min-width:19px;text-align:right;color:#1b3858}
+.overview-game-link{margin-top:auto;display:flex;justify-content:space-between;padding-top:7px;border-top:1px solid #edf1f6;
+ font-size:9.5px;font-weight:850;color:#547fa8}
+.overview-games-placeholder{font-size:12px;color:#70839a;padding:16px;background:#f7faff;border:1px dashed #d6e3f2;border-radius:10px}
+.team-stats-refined{grid-template-columns:repeat(4,minmax(0,1fr))}
+.team-season-score{background:linear-gradient(145deg,#f0f7ff,#fff)!important;border-color:#c8dfef!important}
+.team-season-score strong{font-variant-numeric:tabular-nums}
+@media(max-width:1050px){.overview-game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.team-stats-refined{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:570px){
+ .overview-scoreboard{padding:13px 12px;margin:12px 0 16px}
+ .overview-scoreboard .panel-head h2{font-size:14px}
+ .overview-scoreboard .panel-head p{font-size:10px}
+ .overview-scoreboard .panel-head .btn{font-size:10px;padding:8px}
+ .overview-game-grid{grid-template-columns:1fr;gap:7px}
+ .overview-game-card{min-height:0;padding:9px 11px;gap:4px}
+ .overview-game-school{min-height:29px}
+ .overview-game-link{margin-top:4px;padding-top:6px}
+ .team-stats-refined{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){.overview-game-card{transition:none}.overview-game-card:hover{transform:none}}

@@ -239,3 +239,8 @@ If recreating D1: `npx wrangler d1 execute boek-dynasty-db --remote --file=schem
 ## Not yet implemented
 
 Real live game results and scoring ingestion, year-end roster snapshots / season rollover UI, account recovery, email verification, advanced commissioner reorder/shuffle tools, draft-pick trading and free agency. The initial goal is a usable shared fantasy league shell, account management, eligible program selection and drafting.
+
+
+### Daily overview and quick season score (November 2026)
+
+League Overview now shows a compact, automatically refreshed daily scoreboard for eligible programs, prioritizing a manager’s own matchups and highlighting live scores. Each card opens the full Results view for today. The preview uses the existing public game endpoint and does not modify scoring. My Team shows current season fantasy points in the top four-stat grid instead of burying the total below the roster.

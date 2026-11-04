@@ -856,8 +856,9 @@ export const DATA_PIPELINE=(()=>{
         }
       }
     }
-    // Withhold at-large bonuses until all conference auto-bid winners are verified.
-    // Historical seasons have 31 or 32 tournament champions in the official archive.
+    // Withhold at-large bonuses until every conference auto-bid winner is verified.
+    // Pac-12 temporarily lacked an automatic bid in 2024-25 and 2025-26.
+    const expectedTournamentTitles=season=>['2024-25','2025-26'].includes(season)?31:32;
     const tournamentTitlesBySeason=new Map();
     for(const award of awards){
       if(award.award_type==='conference_tournament_champion'&&Number(award.value)>0)
@@ -900,7 +901,7 @@ export const DATA_PIPELINE=(()=>{
       const tournaments=Number(a.conference_tournament_champion)>0?1:0;
       const champion=Number(a.national_champion)>0?1:0;
       const atLargeBid=seed>0&&!tournaments&&
-        (tournamentTitlesBySeason.get(t.season)||0)>=31&&
+        (tournamentTitlesBySeason.get(t.season)||0)>=expectedTournamentTitles(t.season)&&
         AT_LARGE_ELIGIBLE_CONFERENCES.has(programConference.get(t.program_id));
       const components=[
         {key:'regular_win',label:'Regular-season victories',count:t.regular_wins,rate:wt('regular_win')},

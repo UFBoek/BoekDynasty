@@ -58,6 +58,43 @@ Deno.serve(async (request)=>{
         else{const feed=await DATA_PIPELINE.fetchOfficialNet(today,season);result=feed.skipped?feed:await DATA_PIPELINE.saveNet(env,season,feed.date,feed.records,feed.source);}
       }
       else if(kind==='history')result=await DATA_PIPELINE.backfillHistory(env,4);
+      else if(kind==='history-range'){
+        // Partition historical coverage into disjoint, short windows. Existing
+        // coverage is checked before each import, so retries are idempotent.
+        const archived=['2021-22','2022-23','2023-24','2024-25','2025-26'];
+        const targetSeason=String(body?.season||'');
+        const first=String(body?.start||''),last=String(body?.end||'');
+        const from=Date.parse(first+'T12:00:00Z'),to=Date.parse(last+'T12:00:00Z');
+        const span=(to-from)/86400000;
+        if(!archived.includes(targetSeason)||!DATA_PIPELINE.dayInSeason(targetSeason,first)||
+          !DATA_PIPELINE.dayInSeason(targetSeason,last)||
+          first<targetSeason.slice(0,4)+'-11-01'||
+          last>(Number(targetSeason.slice(0,4))+1)+'-04-15'||
+          !Number.isInteger(span)||span<0||span>15)
+          return Response.json({error:'Invalid historical import range (maximum 16 dates).'},{status:400,headers:cors});
+        const coverage=(await db.prepare('SELECT game_date,source_group FROM cbb_game_coverage WHERE season=? AND game_date BETWEEN ? AND ?')
+          .bind(targetSeason,first,last).all()).results||[];
+        const scanned=new Map();
+        for(const item of coverage){
+          const set=scanned.get(item.game_date)||new Set();
+          set.add(Number(item.source_group));
+          scanned.set(item.game_date,set);
+        }
+        const rows=[];let skipped=0,changed=0,failed=0;
+        for(let date=first;date<=last;date=DATA_PIPELINE.shiftDay(date,1)){
+          const expected=DATA_PIPELINE.groupsForDay(date);
+          if(expected.every(group=>scanned.get(date)?.has(group))){skipped++;continue;}
+          try{
+            const done=await DATA_PIPELINE.importDay(env,targetSeason,date,{job:'historical-audit'});
+            changed+=Number(done.changed||0);
+            rows.push({date,ok:true,received:done.received,changed:done.changed});
+          }catch(error){
+            failed++;
+            rows.push({date,ok:false,error:String(error?.message||error).slice(0,180)});
+          }
+        }
+        result={season:targetSeason,start:first,end:last,skipped,processed:rows.length,changed,failed,days:rows};
+      }
       else if(kind==='postseason')result=await DATA_PIPELINE.priorityPostseason(env,2);
       else if(kind==='ncaa')result=await DATA_PIPELINE.reconcileNCAA2026(env);
       else if(kind==='titles')result=await DATA_PIPELINE.backfillHistoricalConferences(env);

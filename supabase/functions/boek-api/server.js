@@ -8,7 +8,7 @@ export default (function makeWorker(){
   const COOKIE='boek_session';
   const SESSION_SECONDS=90*24*60*60;
   const ENCODER=new TextEncoder();
-  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_extra":1,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
+  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"conference_tournament_win":2,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_extra":1,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
   function scoringFrom(raw){
     let data={};try{data=JSON.parse(raw||'{}');}catch{}
     if(!data||typeof data!=='object'||Array.isArray(data))data={};
@@ -53,9 +53,9 @@ export default (function makeWorker(){
     let token=supplied;
     try{if(!supplied)token=decodeURIComponent(part.substring(COOKIE.length+1));}catch{return null;}
     if(!token||token.length<25||token.length>256)return null;
-    const entry=await q(env,'SELECT s.token_hash,s.expires_at,u.id,u.username,u.display_name,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?',await hash(token),timestamp()).first();
+    const entry=await q(env,'SELECT s.token_hash,s.expires_at,u.id,u.username,u.display_name,u.role,u.avatar_data,u.accent_color,u.favorite_program_id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?',await hash(token),timestamp()).first();
     if(!entry)return null;
-    return {user:{id:entry.id,username:entry.username,display_name:entry.display_name,role:entry.role},session:entry,token};
+    return {user:{id:entry.id,username:entry.username,display_name:entry.display_name,role:entry.role,avatar_data:entry.avatar_data,accent_color:entry.accent_color,favorite_program_id:entry.favorite_program_id},session:entry,token};
   }
   async function remember(env,userId){
     const token=rand(32);
@@ -98,7 +98,7 @@ export default (function makeWorker(){
   };
   async function getState(env,user){
     const [users,teams,picks,ownership,trades,tradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves]=await Promise.all([
-      q(env,"SELECT id,username,display_name,role,created_at FROM users ORDER BY created_at,rowid").all(),
+      q(env,"SELECT id,username,display_name,role,created_at,avatar_data,accent_color,favorite_program_id FROM users ORDER BY created_at,id").all(),
       q(env,'SELECT id,name,abbr,conference_id,logo FROM programs ORDER BY name').all(),
       q(env,'SELECT overall,round,manager_id,program_id,picked_at FROM picks ORDER BY overall').all(),
       q(env,'SELECT program_id,manager_id,acquired_at FROM program_owners').all(),
@@ -118,7 +118,7 @@ export default (function makeWorker(){
   function parseBody(req){
     if(!(req.headers.get('Content-Type')||'').toLowerCase().includes('application/json'))throw new Error('JSON request required.');
     const size=Number(req.headers.get('Content-Length')||0);
-    if(size>20000)throw new Error('Request too large.');
+    if(size>110000)throw new Error('Request too large.');
     return req.json();
   }
   async function handleApi(request,env,url){
@@ -186,7 +186,7 @@ export default (function makeWorker(){
           teams:poll.map(p=>({program_id:p.program_id,rank:p.ap_rank}))});
       }
       if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});
-      if(path==='data/leaders')return response(await DATA_PIPELINE.historicalLeaders(env,settings.scoring,season));
+      if(path==='data/leaders')return response(await DATA_PIPELINE.historicalLeaders(env,settings.scoring,season,settings.conferences));
       if(path==='data/history'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
@@ -258,6 +258,59 @@ export default (function makeWorker(){
     const auth=await getUser(request,env);
     if(!auth)return failure('Sign in required.',401);
     const user=auth.user;
+    if(path==='account/profile'){
+      const current=await q(env,'SELECT username,display_name,avatar_data,accent_color,favorite_program_id FROM users WHERE id=?',user.id).first();
+      if(!current)return failure('Account not found.',404);
+      const username=String(data.username??current.username).trim().toLowerCase();
+      const display_name=String(data.display_name??current.display_name).trim();
+      if(!/^[a-z0-9_]{3,24}$/.test(username))return failure('Username must be 3–24 letters, numbers or underscores.');
+      if(display_name.length<2||display_name.length>40)return failure('Team name must be 2–40 characters.');
+      const reserved=await q(env,'SELECT id FROM users WHERE lower(username)=? AND id<>?',username,user.id).first();
+      if(reserved)return failure('That username is already taken.',409);
+      const colors=['#D9611E','#164E8F','#1F8A70','#7C3AED','#D9468F','#B45309','#0F766E','#334155'];
+      const accent_color=String(data.accent_color??current.accent_color??'#D9611E').toUpperCase();
+      if(!colors.includes(accent_color))return failure('Choose one of the available team colors.');
+      const favorite_program_id=data.favorite_program_id===undefined?current.favorite_program_id:
+        String(data.favorite_program_id||'').trim()||null;
+      if(favorite_program_id){
+        const match=PROGRAM_DIRECTORY.find(p=>String(p[0])===favorite_program_id);
+        const settings=await getSettings(env);
+        if(!match||!settings.conferences.includes(String(match[3])))
+          return failure('Favorite school must be eligible in this league.');
+      }
+      let avatar_data=data.avatar_data===undefined?current.avatar_data:String(data.avatar_data||'')||null;
+      if(avatar_data){
+        if(avatar_data.length>85000)return failure('Profile picture is too large. Use an image smaller than 60 KB.');
+        const match=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(avatar_data);
+        if(!match)return failure('Profile photo must be a JPEG, PNG or WebP image.');
+        let bytes;
+        try{bytes=Uint8Array.from(atob(match[2]),ch=>ch.charCodeAt(0));}
+        catch{return failure('The profile picture could not be decoded.');}
+        if(bytes.length<24||bytes.length>62000)return failure('Profile photo must be smaller than 60 KB.');
+        const valid=match[1]==='jpeg'?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:
+          match[1]==='png'?bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71:
+          bytes[0]===82&&bytes[1]===73&&bytes[2]===70&&bytes[3]===70&&
+          bytes[8]===87&&bytes[9]===69&&bytes[10]===66&&bytes[11]===80;
+        if(!valid)return failure('Invalid profile picture format.');
+      }
+      await q(env,'UPDATE users SET username=?,display_name=?,avatar_data=?,accent_color=?,favorite_program_id=? WHERE id=?',
+        username,display_name,avatar_data,accent_color,favorite_program_id,user.id).run();
+      return response({ok:true,user:{...user,username,display_name,avatar_data,accent_color,favorite_program_id}});
+    }
+    if(path==='account/password'){
+      const current_password=String(data.current_password||''),new_password=String(data.new_password||'');
+      if(new_password.length<8||new_password.length>128)return failure('New password must be 8–128 characters.');
+      if(!current_password)return failure('Enter your current password.');
+      if(current_password===new_password)return failure('Choose a different new password.');
+      const entry=await q(env,'SELECT password_hash,salt FROM users WHERE id=?',user.id).first();
+      if(!entry||await hashPassword(current_password,entry.salt)!==entry.password_hash)
+        return failure('Current password is incorrect.',403);
+      const salt=rand(18),passwordHash=await hashPassword(new_password,salt);
+      await q(env,'UPDATE users SET salt=?,password_hash=? WHERE id=?',salt,passwordHash,user.id).run();
+      // Preserve the current session but invalidate any others.
+      await q(env,'DELETE FROM sessions WHERE user_id=? AND token_hash<>?',user.id,auth.session.token_hash).run();
+      return response({ok:true});
+    }
     if(path==='draft/pick'){
       const settings=await getSettings(env);
       if(settings.draft_status!=='live')return failure('The draft is not live.',409);

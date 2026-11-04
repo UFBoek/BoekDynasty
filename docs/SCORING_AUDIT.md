@@ -18,13 +18,13 @@ This audit covers five completed NCAA men's basketball seasons (2021–22 throug
 | NCAA seed 9–12 | +5 | Same |
 | NCAA seed 13–16 | +4 | Same |
 | NCAA Tournament victory | +3 | One of the 63 main-bracket games per completed season |
-| Multi-Bid & Mid-Major at-large selection | +5 | Seeded in NCAA Tournament without winning its conference tournament; awarded after all conference auto-bid champions are verified (32 except 2024–25 and 2025–26, which have 31); does not apply to Pac-12 |
-| Eligible NCAA upset seed line | +1 per line, no cap | NCAA win over a better seed; current Multi-Bid & Mid-Major conference group or Pac-12; winner seed minus opponent seed |
+| Eligible NCAA at-large selection | +5 | Multi-Bid & Mid-Major and Pac-12, excluding Gonzaga; seeded in NCAA Tournament without winning its conference tournament; awarded after all conference auto-bid champions are verified (32 except 2024–25 and 2025–26, which have 31) |
+| Eligible NCAA upset seed line | +1 per line, no cap | NCAA win over a better seed; current Multi-Bid & Mid-Major conference group or Pac-12, excluding Gonzaga; winner seed minus opponent seed |
 | First Four victory | +2 | One of four First Four games per completed season |
 | National championship | +15 | Confirmed champion award; stacks with its final-game victory |
 | Manager season total | Best **12** programs | Sort current owned programs by fantasy points, count the best 12 |
 
-At-large bid bonuses stack with NCAA seed and win points, but are not awarded to conference tournament automatic qualifiers. They only apply to the Multi-Bid & Mid-Major conference group. No KenPom or AP Poll fantasy bonus is configured. NCAA upset points stack with the main-bracket/First Four win points and quadrant bonuses. Only verified NCAA games with both bracket seeds known can earn the seed-difference bonus.
+At-large bid bonuses stack with NCAA seed and win points, but are not awarded to conference tournament automatic qualifiers. They apply to the Multi-Bid & Mid-Major and Pac-12 conference groups, excluding Gonzaga. No KenPom or AP Poll fantasy bonus is configured. NCAA upset points stack with the main-bracket/First Four win points and quadrant bonuses. Only verified NCAA games with both bracket seeds known can earn the seed-difference bonus.
 
 For Q1, opponents are NET 1–30 at home, 1–50 neutral, or 1–75 away. For Q2, opponents are 31–75 home, 51–100 neutral, or 76–135 away. Extra Q1A is opponent NET 1–15 home, 1–25 neutral, or 1–40 away. Quadrant bonuses are applied to **regular-season, conference tournament, NCAA main-bracket, and First Four wins**. The base win point for the relevant type of game is additional to Q1/Q1A/Q2 bonuses.
 

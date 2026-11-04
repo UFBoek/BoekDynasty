@@ -5,9 +5,12 @@ export const DATA_PIPELINE=(()=>{
   const teamIds=new Set(PROGRAM_DIRECTORY.map(x=>String(x[0])));
   // Matches the commissioner's MULTI-BID & MID-MAJOR group, plus the Pac-12.
   const UPSET_ELIGIBLE_CONFERENCES=new Set(['3','62','44','18','29','11','14','45','9','10','21']);
-  // The NCAA at-large award applies to the Multi-Bid & Mid-Major group only.
-  const AT_LARGE_ELIGIBLE_CONFERENCES=new Set(['3','62','44','18','29','11','14','45','9','10']);
+  // Both awards also include the Pac-12; Gonzaga (ESPN 2250) is excluded from both.
+  const AT_LARGE_ELIGIBLE_CONFERENCES=new Set(UPSET_ELIGIBLE_CONFERENCES);
+  const INELIGIBLE_BONUS_PROGRAMS=new Set(['2250']);
   const programConference=new Map(PROGRAM_DIRECTORY.map(x=>[String(x[0]),String(x[3])]));
+  const isBonusEligible=(id,conferences)=>!INELIGIBLE_BONUS_PROGRAMS.has(String(id))&&
+    conferences.has(programConference.get(String(id)));
   const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);
   const err=e=>String(e?.message||e||'Unknown error').slice(0,300).replace(/[\r\n]/g,' ');
   const validDate=d=>/^20\d\d-\d\d-\d\d$/.test(d)&&!isNaN(Date.parse(d+'T12:00:00Z'))&&new Date(d+'T12:00:00Z').toISOString().startsWith(d);
@@ -880,7 +883,7 @@ export const DATA_PIPELINE=(()=>{
       else if(kind==='conference')t.conference_tournament_wins+=n;
       else if(kind==='first_four')t.opening_round_wins+=n;
       else if(kind==='ncaa')t.ncaa_wins+=n;
-      if(UPSET_ELIGIBLE_CONFERENCES.has(programConference.get(String(row.program_id)))){
+      if(isBonusEligible(row.program_id,UPSET_ELIGIBLE_CONFERENCES)){
         t.upset_seed_lines+=Number(row.upset_seed_lines)||0;
         t.upset_wins+=Number(row.upset_wins)||0;
       }
@@ -902,7 +905,7 @@ export const DATA_PIPELINE=(()=>{
       const champion=Number(a.national_champion)>0?1:0;
       const atLargeBid=seed>0&&!tournaments&&
         (tournamentTitlesBySeason.get(t.season)||0)>=expectedTournamentTitles(t.season)&&
-        AT_LARGE_ELIGIBLE_CONFERENCES.has(programConference.get(t.program_id));
+        isBonusEligible(t.program_id,AT_LARGE_ELIGIBLE_CONFERENCES);
       const components=[
         {key:'regular_win',label:'Regular-season victories',count:t.regular_wins,rate:wt('regular_win')},
         {key:'conference_tournament_win',label:'Conference tournament victories',count:t.conference_tournament_wins,rate:wt('conference_tournament_win')},

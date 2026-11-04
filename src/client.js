@@ -440,6 +440,11 @@
       'Q'+quad+(q1a?'<small>A</small>':'')+'</span>';
   };
   // Pure matchers: shared eligibility logic for scoreboard scopes and status toggles.
+  const activeDraftQueueIds=()=>{
+    const drafted=new Set([...owners().map(o=>String(o.program_id)),
+      ...picks().map(p=>String(p.program_id))]);
+    return new Set(draftWatchlist.map(String).filter(id=>!drafted.has(id)));
+  };
   const matchScoreboardScope=(g,scope,enrolled,owned,watched,pollRanks)=>{
     const home=String(g.home_id),away=String(g.away_id);
     if(scope==='mine')return owned.has(home)||owned.has(away);
@@ -478,7 +483,7 @@
     const winner=finished&&g.home_score!==null&&g.away_score!==null;
     const rostered=owners().filter(o=>String(o.program_id)===String(g.home_id)||String(o.program_id)===String(g.away_id));
     const mine=rostered.some(o=>o.manager_id===me?.id);
-    const watched=!mine&&draftWatchlist.some(id=>String(id)===String(g.home_id)||String(id)===String(g.away_id));
+    const watched=!mine&&isScoreboardMatch(g,activeDraftQueueIds());
     const selectedLeague=rostered.length>0;
     const isNeutral=Number(g.neutral_site)===1;
     const at= isNeutral?'Neutral site':'At '+escapeHTML(g.home_name||'home school');
@@ -501,8 +506,7 @@
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
     const enrolled=new Set(activeConfs().map(String));
     const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
-    const watched=new Set(draftWatchlist.map(String).filter(id=>!programOwned(id)&&
-      !picks().some(p=>String(p.program_id)===id)));
+    const watched=activeDraftQueueIds();
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
     const scopeButton=(id,label)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
       '" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
@@ -632,7 +636,7 @@
     const today=resultsToday(),isReady=overviewGamesDay===today;
     const eligible=new Set(activeConfs().map(String));
     const mine=new Set(owners().filter(o=>o.manager_id===me.id).map(o=>String(o.program_id)));
-    const watched=new Set(draftWatchlist.map(String));
+    const watched=activeDraftQueueIds();
     const games=(isReady?overviewGames:[]).filter(g=>
       eligible.has(String(g.home_conference_id))||eligible.has(String(g.away_conference_id))||
       mine.has(String(g.home_id))||mine.has(String(g.away_id)));

@@ -29,12 +29,7 @@ jobs:
           node --check src/client.js
           node scripts/build-worker-proxy.mjs
           node --check dist/worker-proxy.js
-          node --test tests/account-management.test.mjs tests/activity-monitor.test.mjs tests/client-startup.test.mjs tests/draft-queue.test.mjs tests/program-profile.test.mjs tests/results.test.mjs
-      # Existing scoring and legacy UI tests need separate reconciliation; do not prevent
-      # deployment of independently validated UI and authentication fixes.
-      - name: Full regression suite (nonblocking; failures remain visible in Actions)
-        continue-on-error: true
-        run: node --test tests/*.test.mjs
+          node --test tests/*.test.mjs
       - name: Build frontend
         env:
           BOEK_API_BASE: ${{ vars.BOEK_API_BASE }}

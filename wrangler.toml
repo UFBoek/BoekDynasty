@@ -1,13 +1,9 @@
 name = "boek-dynasty"
-main = "dist/worker.js"
-compatibility_date = "2026-10-01"
+main = "dist/worker-proxy.js"
+compatibility_date = "2026-11-03"
 workers_dev = true
 
-[[d1_databases]]
-binding = "DB"
-database_name = "boek-dynasty-db"
-database_id = "301926bb-b803-4a11-ad1a-ff931ffaf72b"
-
-# Live score updates and daily reconciliation only; historical bulk backfills are paused while migrating off D1.
+# No D1 binding. GitHub-hosted source, Supabase PostgreSQL backend.
+# Live results and archive backfills run through Supabase pg_cron instead.
 [triggers]
-crons = ["*/15 * * * *", "15 10 * * *"]
+crons = []

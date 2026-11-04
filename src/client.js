@@ -60,6 +60,8 @@
   let avatarDraft=null;
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
+  let poolDraftConfs=null,poolDraftSchools=null,poolDirty=false;
+  let poolQuery='',poolConferenceFilter='all',poolScope='all',poolShown=70;
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
   let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
@@ -85,6 +87,52 @@
   const programs=()=>league?.programs||[];
   const members=()=>league?.users||[];
   const activeConfs=()=>league?.settings?.conferences||[];
+  const includedSchools=()=>league?.settings?.included_programs||[];
+  const excludedSchools=()=>league?.settings?.excluded_programs||[];
+  const programEligible=p=>!!p&&!excludedSchools().includes(String(p.id))&&
+    (activeConfs().includes(String(p.conference_id))||includedSchools().includes(String(p.id)));
+  const eligiblePrograms=()=>programs().filter(programEligible);
+  const eligibleConferenceIds=()=>[...new Set(eligiblePrograms().map(p=>String(p.conference_id)))];
+  function initPoolDraft(){
+    if(poolDraftConfs!==null&&poolDraftSchools!==null)return;
+    poolDraftConfs=new Set(activeConfs().map(String));
+    poolDraftSchools=new Set(eligiblePrograms().map(p=>String(p.id)));
+    poolDirty=false;
+  }
+  function resetPoolDraft(){
+    poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;
+    initPoolDraft();
+  }
+  const poolVisible=()=>{
+    initPoolDraft();
+    const search=poolQuery.trim().toLowerCase();
+    return programs().filter(p=>
+      (poolConferenceFilter==='all'||String(p.conference_id)===poolConferenceFilter)&&
+      (poolScope==='all'||(poolScope==='included')===poolDraftSchools.has(String(p.id)))&&
+      (!search||(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase().includes(search))
+    ).sort((a,b)=>a.name.localeCompare(b.name));
+  };
+  function poolSchoolRows(){
+    const matching=poolVisible();
+    const rows=matching.slice(0,poolShown).map(p=>{
+      const selected=poolDraftSchools.has(String(p.id));
+      return '<button type="button" class="pool-school '+(selected?'is-selected':'')+'" data-act="pool-school" data-id="'+escapeHTML(p.id)+'" aria-pressed="'+selected+'">'
+        +'<span class="pool-check" aria-hidden="true">'+(selected?'✓':'')+'</span>'+img(p)
+        +'<span class="pool-school-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<span class="pool-school-status">'+(selected?'Included':'Not included')+'</span></button>';
+    }).join('');
+    return (rows||empty('No matching schools','Try changing the search or filters.'))
+      +(matching.length>poolShown?'<button class="btn secondary pool-load" type="button" data-act="pool-more">Show more · '+(matching.length-poolShown)+' remaining</button>':'')
+      +'<p class="pool-list-count">Showing '+Math.min(matching.length,poolShown)+' of '+matching.length+' matching programs</p>';
+  }
+  function updatePoolList(){
+    const list=root.querySelector('#pool-school-results');
+    if(list)list.innerHTML=poolSchoolRows();
+    const counter=root.querySelector('#pool-selected-count');
+    if(counter)counter.textContent=poolDraftSchools.size+' selected';
+    const state=root.querySelector('#pool-save-state');
+    if(state)state.textContent=poolDirty?'Unsaved changes':'All changes saved';
+  }
   const picks=()=>league?.picks||[];
   const owners=()=>league?.ownership||[];
   const programOwned=(id)=>owners().find(p=>p.program_id===id);
@@ -548,7 +596,7 @@
   function resultsPage(){
     const day=resultsSelectedDay||resultsToday();
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
-    const enrolled=new Set(activeConfs().map(String));
+    const enrolled=new Set(eligibleConferenceIds().map(String));
     const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
     const watched=activeDraftQueueIds();
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
@@ -636,7 +684,7 @@
     const accent=me.accent_color||'#D9611E';
     const selectedAvatar=avatarDraft===null?me.avatar_data:avatarDraft;
     const favorite=String(me.favorite_program_id||'');
-    const eligible=programs().filter(p=>activeConfs().includes(String(p.conference_id)))
+    const eligible=eligiblePrograms()
       .sort((a,b)=>a.name.localeCompare(b.name));
     const colors=teamAccentChoices.map(([hex,label])=>
       '<label class="settings-color-option" title="'+label+'"><input type="radio" name="accent_color" value="'+hex+'" '+(accent.toUpperCase()===hex?'checked':'')+'/><span class="settings-color-dot" style="background:'+hex+'"></span><small>'+label+'</small></label>'
@@ -678,11 +726,11 @@
 
   function overviewScoreboard(){
     const today=resultsToday(),isReady=overviewGamesDay===today;
-    const eligible=new Set(activeConfs().map(String));
+    const eligible=new Set(eligiblePrograms().map(p=>String(p.id)));
     const mine=new Set(owners().filter(o=>o.manager_id===me.id).map(o=>String(o.program_id)));
     const watched=activeDraftQueueIds();
     const games=(isReady?overviewGames:[]).filter(g=>
-      eligible.has(String(g.home_conference_id))||eligible.has(String(g.away_conference_id))||
+      eligible.has(String(g.home_id))||eligible.has(String(g.away_id))||
       mine.has(String(g.home_id))||mine.has(String(g.away_id)));
     const statusPriority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
     const isMine=g=>mine.has(String(g.home_id))||mine.has(String(g.away_id));
@@ -875,7 +923,7 @@
     const prefix=kind==='leaders'?'leader':'rating';
     const scopeButtons=[['all','All'],['mine','My roster'],['owned','Rostered'],['available','Available']]
       .map(([id,label])=>'<button type="button" data-act="'+prefix+'-scope" data-id="'+id+'" class="'+(scope===id?'active':'')+'" aria-pressed="'+(scope===id)+'">'+label+'</button>').join('');
-    const conferences=activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b)))
+    const conferences=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)))
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(String(conference)===String(id)?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     return '<div class="rank-tools" role="search">'
       +'<label class="rank-search"><span class="rank-search-icon" aria-hidden="true">⌕</span><input id="'+prefix+'-search" type="search" value="'+escapeHTML(query)+'" placeholder="Search schools..." autocomplete="off" aria-label="Search ranked schools" /></label>'
@@ -1012,7 +1060,7 @@
       tempo:(a,b)=>(b.r?.tempo??-1)-(a.r?.tempo??-1)
     };
     const sortNames={rank:'Overall rank',offense:'Offensive efficiency',defense:'Defensive efficiency',power:'Barthag',wab:'Wins above bubble',tempo:'Adjusted tempo'};
-    const entries=programs().filter(p=>activeConfs().includes(p.conference_id)&&rankingEligible(p,ratingConference,ratingOwnership))
+    const entries=eligiblePrograms().filter(p=>rankingEligible(p,ratingConference,ratingOwnership))
       .map(p=>({p,r:ratingOf(p,year)}));
     const rows=entries.sort((a,b)=>(metrics[ratingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
     const valid=rows.filter(row=>row.r),dec=(x,n=1)=>rankingNumber(x,n);
@@ -1062,7 +1110,7 @@
       +[['directory','School directory'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
     if(programMode==='leaders')return heading('COLLEGE BASKETBALL','Schools','Browse programs or compare historical fantasy scoring across all Division I schools.')+nav+schoolLeadersPage();
     if(programMode==='ratings')return heading('COLLEGE BASKETBALL','Schools','Compare eligible programs using T-Rank efficiency ratings.')+nav+ratingsPage();
-    const eligible=programs().filter(p=>activeConfs().includes(p.conference_id));
+    const eligible=eligiblePrograms();
     const available=eligible.filter(p=>!programOwned(p.id)).length;
     const sorters={
       name:(a,b)=>a.name.localeCompare(b.name),
@@ -1071,7 +1119,7 @@
     };
     eligible.sort(sorters[programSort]||sorters.name);
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
-    const conferenceChips=chip('all','All conferences')+activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
+    const conferenceChips=chip('all','All conferences')+eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
     const sortButtons=[['name','A–Z'],['conference','Conference'],['availability','Available first']]
@@ -1335,7 +1383,7 @@
   }
   function draftAvailable(){
     const drafted=new Set(picks().map(p=>String(p.program_id)));
-    return programs().filter(p=>activeConfs().includes(String(p.conference_id))&&!drafted.has(String(p.id))&&!programOwned(p.id));
+    return eligiblePrograms().filter(p=>!drafted.has(String(p.id))&&!programOwned(p.id));
   }
   function filterDraftPool(){
     if(current!=='draft')return;
@@ -1433,11 +1481,11 @@
       +'<div class="draft-pick-ticker-scroll">'+(upNext||'<span class="draft-no-upcoming">Draft order will appear here when the draft opens.</span>')+'</div></div>';
     const ready=status==='pending'?'<div class="draft-readiness draft-readiness-v2">'
       +'<span class="'+(managerCount>=2?'good':'')+'">'+(managerCount>=2?'✓':'○')+' '+managerCount+' managers registered</span>'
-      +'<span class="'+(programs().filter(p=>activeConfs().includes(String(p.conference_id))).length>=total?'good':'')+'">'
-      +(programs().filter(p=>activeConfs().includes(String(p.conference_id))).length>=total?'✓':'○')
-      +' '+programs().filter(p=>activeConfs().includes(String(p.conference_id))).length+' eligible programs</span>'
+      +'<span class="'+(eligiblePrograms().length>=total?'good':'')+'">'
+      +(eligiblePrograms().length>=total?'✓':'○')
+      +' '+eligiblePrograms().length+' eligible programs</span>'
       +'<strong>'+(managerCount>=2&&available.length>=total?'Ready for commissioner to start':'Waiting for draft setup')+'</strong></div>':'';
-    const confOptions=activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b)))
+    const confOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)))
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(draftConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     const sortButton=(id,label)=>'<button type="button" data-act="draft-pool-sort" data-id="'+id+'" aria-pressed="'+(draftSort===id)+'" class="'+(draftSort===id?'active':'')+'">'+label+'</button>';
     const queueLabel=usedQueue.length?usedQueue.length+' in priority order':'Queue is empty';
@@ -1956,7 +2004,7 @@
   }
   function waiversPage(){
     const enabled=league.settings.waivers_enabled&&league.settings.draft_status==='finished';
-    const eligible=programs().filter(p=>activeConfs().includes(p.conference_id)&&!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
+    const eligible=eligiblePrograms().filter(p=>!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
     const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
     const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
     const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
@@ -1972,7 +2020,7 @@
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League settings'],['draft','Draft','Order and controls'],['programs','Programs','Eligible schools'],['data','Data','Scores and rankings'],['members','Members','Managers and invites'],['scoring','Scoring','Points and best ball'],['trades','Trades','Trade permissions'],['waivers','Waivers','Claims and review'],['seasons','Seasons','History and rollover']];
+    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','People & invites'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -2027,7 +2075,7 @@
       const latest=runs.find(x=>x.status==='ok');
       const failure=runs.find(x=>x.status==='error');
       const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'}),coverage=resultsStatus?.coverage;
-      const progOptions=programs().filter(p=>activeConfs().includes(p.conference_id)).sort((a,b)=>a.name.localeCompare(b.name))
+      const progOptions=eligiblePrograms().sort((a,b)=>a.name.localeCompare(b.name))
         .map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
       const awardOptions=[['conference_regular_champion','Conference regular-season champion'],['conference_tournament_champion','Conference tournament champion'],['ncaa_seed','NCAA Tournament seed'],['ncaa_wins','NCAA Tournament wins'],['national_champion','National champion'],['kenpom_final_rank','Final KenPom rank']];
       const archivedYears=resultsStatus?.historical||[];

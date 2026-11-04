@@ -2088,10 +2088,15 @@
     const records=(league.season_records||[]).filter(x=>x.manager_id===u.id).sort((a,b)=>b.season.localeCompare(a.season));
     const titles=(league.archives||[]).filter(x=>x.champion_manager_id===u.id).length;
     const favorite=programs().find(p=>String(p.id)===String(u.favorite_program_id||''));
+    const scoring=standingsData?.season===season()?standingsData:null;
+    const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(u.id));
+    const livePoints=managerScore&&roster.length?Number(managerScore.points||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—';
+    const ranking=(scoring?.standings||[]).slice().sort((a,b)=>Number(b.points||0)-Number(a.points||0));
+    const liveRank=managerScore&&roster.length?'#'+(1+ranking.findIndex(x=>Number(x.points||0)===Number(managerScore.points||0))):'—';
     const rows=roster.map(p=>'<button class="profile-roster-row" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span>›</span></button>').join('');
     return profileBack()+'<div class="profile-hero manager-hero">'+avatar(u)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h1>'+escapeHTML(u.display_name)+'</h1><div class="profile-subline">@'+escapeHTML(u.username)+(u.id===me.id?' · Your team':'')+(favorite?' · Favorite: '+escapeHTML(favorite.name):'')+'</div></div></div>'
-      +'<div class="profile-stats"><div><span>OWNED PROGRAMS</span><strong>'+roster.length+'</strong></div><div><span>LEAGUE TITLES</span><strong>'+titles+'</strong></div><div><span>CURRENT POINTS</span><strong class="muted">Pending</strong></div></div>'
-      +'<div class="profile-panels"><section class="panel">'+panelHeading('Current roster')+(rows||empty('No programs owned'))+'</section><section class="panel">'+panelHeading('Dynasty seasons')+(records.length?records.map(x=>{const saved=(league.archived_rosters||[]).filter(a=>a.season===x.season&&a.manager_id===u.id);return '<details class="archived-roster"><summary><strong>'+escapeHTML(x.season)+'</strong><span>'+x.programs_count+' schools · Points pending</span></summary><div class="archive-schools">'+(saved.map(a=>{const p=programs().find(p=>p.id===a.program_id);return p?'<button class="table-user" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button>':'';}).join('')||'No programs archived')+'</div></details>';}).join(''):empty('No archived seasons'))+'</section></div>';
+      +'<div class="profile-stats"><div><span>OWNED PROGRAMS</span><strong>'+roster.length+'</strong></div><div><span>SEASON POINTS</span><strong>'+livePoints+'</strong></div><div><span>LEAGUE RANK</span><strong>'+liveRank+'</strong></div><div><span>LEAGUE TITLES</span><strong>'+titles+'</strong></div></div>'
+      +'<div class="profile-panels"><section class="panel">'+panelHeading('Current roster',roster.length+' permanently owned program'+(roster.length===1?'':'s'))+(rows||empty('No programs owned'))+'</section><section class="panel">'+panelHeading('Dynasty seasons')+(records.length?records.map(x=>{const saved=(league.archived_rosters||[]).filter(a=>a.season===x.season&&a.manager_id===u.id);return '<details class="archived-roster"><summary><strong>'+escapeHTML(x.season)+'</strong><span>'+x.programs_count+' schools · '+(x.fantasy_points==null?'Score unavailable':Number(x.fantasy_points).toLocaleString('en-US',{maximumFractionDigits:2})+' pts')+'</span></summary><div class="archive-schools">'+(saved.map(a=>{const p=programs().find(p=>p.id===a.program_id);return p?'<button class="table-user" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button>':'';}).join('')||'No programs archived')+'</div></details>';}).join(''):empty('No archived seasons'))+'</section></div>';
   }
   function historyPage(){
     const archives=league.archives||[];
@@ -2100,7 +2105,7 @@
     const entries=chosen?(league.season_records||[]).filter(r=>r.season===chosen.season):[];
     const historyRows=entries.map(r=>{
       const m=members().find(u=>u.id===r.manager_id);
-      return '<button class="history-team" data-act="open-manager" data-id="'+escapeHTML(r.manager_id)+'"><strong>'+escapeHTML(m?.display_name||'Manager')+'</strong><span>'+r.programs_count+' programs</span><span>'+(r.fantasy_points===null?'Points pending':r.fantasy_points.toFixed(1))+'</span></button>';
+      return '<button class="history-team" data-act="open-manager" data-id="'+escapeHTML(r.manager_id)+'"><strong>'+escapeHTML(m?.display_name||'Manager')+'</strong><span>'+r.programs_count+' programs</span><span>'+(r.fantasy_points==null?'Score unavailable':Number(r.fantasy_points).toLocaleString('en-US',{maximumFractionDigits:2})+' pts')+'</span></button>';
     }).join('');
     return heading('', 'Dynasty history')
       +'<div class="archive-intro">Program ownership carries into every new season. Archived rosters stay available for historical reference.</div>'

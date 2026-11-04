@@ -133,6 +133,12 @@
     const state=root.querySelector('#pool-save-state');
     if(state)state.textContent=poolDirty?'Unsaved changes':'All changes saved';
   }
+  function renderPoolPreservingScroll(){
+    const previous=root.querySelector('#pool-school-results')?.scrollTop||0;
+    render();
+    const next=root.querySelector('#pool-school-results');
+    if(next)next.scrollTop=previous;
+  }
   const picks=()=>league?.picks||[];
   const owners=()=>league?.ownership||[];
   const programOwned=(id)=>owners().find(p=>p.program_id===id);
@@ -635,7 +641,7 @@
       '" class="'+(resultsStatusFilter===id?'active':'')+'" aria-pressed="'+(resultsStatusFilter===id)+'">'+
       label+(count!==undefined?'<span>'+count+'</span>':'')+'</button>';
     const clearable=resultsScope!=='league'||resultsStatusFilter!=='all'||resultsConference!=='all'||!!query;
-    const conferenceOptions=[...enrolled].sort((a,b)=>conf(a).localeCompare(conf(b)));
+    const conferenceOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)));
     const pollAvailable=resultsAP.length===25;
     const note=resultsQuadNote||'Rankings update as sources become available.';
     return heading('COLLEGE BASKETBALL','Daily Results','Every team’s record, game quadrant and score, all in one easy-to-scan view.')
@@ -2274,7 +2280,7 @@
     if(act==='pool-school'){
       initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
       if(poolDraftSchools.has(id))poolDraftSchools.delete(id);else poolDraftSchools.add(id);
-      poolDirty=true;render();return;
+      poolDirty=true;renderPoolPreservingScroll();return;
     }
     if(act==='pool-scope'){poolScope=id;poolShown=70;render();return;}
     if(act==='pool-more'){poolShown+=70;updatePoolList();return;}
@@ -2500,7 +2506,7 @@
         const excluded=programs().filter(p=>!poolDraftSchools.has(String(p.id))&&poolDraftConfs.has(String(p.conference_id))).map(p=>String(p.id));
         await api('admin/settings',{conferences,included_programs:included,excluded_programs:excluded,rounds:league.settings.rounds});
         poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;
-        schoolLeaders=null;standingsFetchedAt=0;notice('Eligible program pool saved.');
+        schoolLeaders=null;programResultCache={};standingsFetchedAt=0;notice('Eligible program pool saved.');
       }else if(act==='invite'){
         const r=await api('admin/invite',{});
         inviteLink=location.origin+'/?invite='+encodeURIComponent(r.code);

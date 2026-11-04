@@ -347,7 +347,7 @@ export const DATA_PIPELINE=(()=>{
       const label=y+'-'+String((y+1)%100).padStart(2,'0');
       const seasonGames=games.filter(g=>g.season===label);
       const completed=seasonGames.filter(g=>g.status==='final'&&
-        g.home_score!==null&&g.away_score!==null);
+        g.home_score!==null&&g.away_score!==null&&g.home_score!==g.away_score);
       const wins=completed.filter(g=>{
         const home=String(g.home_id)===String(id);
         return home?g.home_score>g.away_score:g.away_score>g.home_score;

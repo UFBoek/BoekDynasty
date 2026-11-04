@@ -23,6 +23,13 @@ export default (function makeWorker(){
   }
 
   const confIds=new Set(['1','2','3','4','5','6','7','8','9','10','11','12','13','14','16','18','19','20','21','22','23','24','25','26','27','28','29','30','44','45','46','62']);
+  const eligibleProgram=(program,settings)=>{
+    if(!program)return false;
+    const id=String(Array.isArray(program)?program[0]:program.id);
+    const conference=String(Array.isArray(program)?program[3]:program.conference_id);
+    return !settings.excluded_programs.includes(id)&&
+      (settings.conferences.includes(conference)||settings.included_programs.includes(id));
+  };
   const timestamp=()=>Math.floor(Date.now()/1000);
   const rand=(length=24)=>{
     const bytes=crypto.getRandomValues(new Uint8Array(length));
@@ -84,7 +91,7 @@ export default (function makeWorker(){
   async function getSettings(env){
     const result=(await q(env,'SELECT key,value FROM settings').all()).results||[];
     const map=Object.fromEntries(result.map(x=>[x.key,x.value]));
-    return {conferences:JSON.parse(map.conferences||'[]'),rounds:Number(map.rounds||8),draft_status:map.draft_status||'pending',current_season:map.current_season||'2026-27',
+    return {conferences:JSON.parse(map.conferences||'[]'),included_programs:JSON.parse(map.included_programs||'[]'),excluded_programs:JSON.parse(map.excluded_programs||'[]'),rounds:Number(map.rounds||8),draft_status:map.draft_status||'pending',current_season:map.current_season||'2026-27',
       league_name:map.league_name||'Boek Dynasty',max_managers:Number(map.max_managers||10),
       trading_enabled:map.trading_enabled!=='0',draft_order:JSON.parse(map.draft_order||'[]'),
       draft_clock_seconds:Number(map.draft_clock_seconds||0),draft_deadline:Number(map.draft_deadline||0),
@@ -232,11 +239,11 @@ export default (function makeWorker(){
           teams:poll.map(p=>({program_id:p.program_id,rank:p.ap_rank}))});
       }
       if(path==='data/quad')return response({season,...await DATA_PIPELINE.seasonQuadrants(env,season)});
-      if(path==='data/leaders')return response(await DATA_PIPELINE.historicalLeaders(env,settings.scoring,season,settings.conferences));
+      if(path==='data/leaders')return response(await DATA_PIPELINE.historicalLeaders(env,settings.scoring,season,settings));
       if(path==='data/history'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
-        return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season,settings.conferences));
+        return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season,settings));
       }
       if(path==='data/schedule'){
         const id=String(url.searchParams.get('id')||'');
@@ -350,7 +357,7 @@ export default (function makeWorker(){
       if(favorite_program_id){
         const match=PROGRAM_DIRECTORY.find(p=>String(p[0])===favorite_program_id);
         const settings=await getSettings(env);
-        if(!match||!settings.conferences.includes(String(match[3])))
+        if(!match||!eligibleProgram(match,settings))
           return failure('Favorite school must be eligible in this league.');
       }
       let avatar_data=data.avatar_data===undefined?current.avatar_data:String(data.avatar_data||'')||null;
@@ -397,7 +404,7 @@ export default (function makeWorker(){
       if(user.id!==up)return failure('It is not your turn to draft.',403);
       const programId=String(data.program_id||'');
       const selected=(await q(env,'SELECT conference_id FROM programs WHERE id=?',programId).first());
-      if(!selected || !settings.conferences.includes(selected.conference_id))return failure('This program is not eligible.',400);
+      if(!eligibleProgram({id:programId,conference_id:selected?.conference_id},settings))return failure('This program is not eligible.',400);
       await q(env,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',count+1,roundIndex+1,user.id,programId).run();
       if(count+1===users.length*settings.rounds){
         await env.DB.batch([q(env,"UPDATE settings SET value='finished' WHERE key='draft_status'"),q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")]);
@@ -474,7 +481,7 @@ export default (function makeWorker(){
       const programId=String(data.program_id||''),dropId=String(data.drop_program_id||'');
       if(!programId||programId.length>120||dropId.length>120||programId===dropId)return failure('Choose a valid unrostered school.',400);
       const school=await q(env,'SELECT id,conference_id FROM programs WHERE id=?',programId).first();
-      if(!school||!settings.conferences.includes(school.conference_id))return failure('This school is not eligible for waivers.',400);
+      if(!eligibleProgram({id:programId,conference_id:school?.conference_id},settings))return failure('This school is not eligible for waivers.',400);
       if(await q(env,'SELECT 1 FROM program_owners WHERE program_id=?',programId).first())return failure('This school is already rostered.',409);
       if(dropId&&!await q(env,'SELECT 1 FROM program_owners WHERE program_id=? AND manager_id=?',dropId,user.id).first())return failure('You do not own the school selected to drop.',409);
       const owned=(await q(env,'SELECT count(*) AS n FROM program_owners WHERE manager_id=?',user.id).first()).n;
@@ -674,21 +681,35 @@ export default (function makeWorker(){
       const picksCount=(await q(env,'SELECT count(*) AS total FROM picks').first()).total;
       const settings=await getSettings(env);
       if(picksCount>0||settings.draft_status!=='pending')return failure('Cannot edit the draft pool after the draft begins.',409);
-      const conferences=data.conferences;
-      const rounds=Number(data.rounds);
-      if(!Array.isArray(conferences)||conferences.length===0||conferences.some(c=>!confIds.has(String(c))))return failure('Select valid conferences.',400);
+      const conferences=Array.isArray(data.conferences)?[...new Set(data.conferences.map(String))]:settings.conferences;
+      const included=Array.isArray(data.included_programs)?[...new Set(data.included_programs.map(String))]:settings.included_programs;
+      const excluded=Array.isArray(data.excluded_programs)?[...new Set(data.excluded_programs.map(String))]:settings.excluded_programs;
+      const rounds=data.rounds===undefined?settings.rounds:Number(data.rounds);
+      if(conferences.some(c=>!confIds.has(c)))return failure('Choose valid conferences.',400);
       if(!Number.isInteger(rounds)||rounds<1||rounds>20)return failure('Rounds must be between 1 and 20.',400);
-      await setSetting(env,'conferences',JSON.stringify([...new Set(conferences.map(String))]));
-      await setSetting(env,'rounds',rounds);
-      return response({ok:true});
+      const directory=(await q(env,'SELECT id,conference_id FROM programs').all()).results||[];
+      const validIds=new Set(directory.map(p=>String(p.id)));
+      if(included.length>500||excluded.length>500||[...included,...excluded].some(id=>!validIds.has(id))||
+        included.some(id=>excluded.includes(id)))return failure('Choose valid school selections.',400);
+      const selection={conferences,included_programs:included,excluded_programs:excluded};
+      const eligible=directory.filter(p=>eligibleProgram(p,selection)).length;
+      if(!eligible)return failure('Select at least one eligible school.',400);
+      await env.DB.batch([
+        q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','conferences',JSON.stringify(conferences)),
+        q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','included_programs',JSON.stringify(included)),
+        q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','excluded_programs',JSON.stringify(excluded)),
+        q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','rounds',String(rounds))
+      ]);
+      return response({ok:true,eligible});
     }
     if(path==='admin/program'){
       const settings=await getSettings(env);
       if(settings.draft_status!=='pending')return failure('Cannot add programs after the draft starts.',409);
       const name=String(data.name||'').trim(),abbr=String(data.abbr||'').trim().slice(0,10),confId=String(data.conference_id||'');
-      if(name.length<2||name.length>90||!settings.conferences.includes(confId))return failure('Enter a program name and an eligible conference.',400);
+      if(name.length<2||name.length>90||!confIds.has(confId))return failure('Enter a program name and a valid conference.',400);
       const id='manual-'+crypto.randomUUID();
       await q(env,'INSERT INTO programs(id,name,abbr,conference_id,logo) VALUES(?,?,?,?,NULL)',id,name,abbr,confId).run();
+      if(!settings.conferences.includes(confId))await setSetting(env,'included_programs',JSON.stringify([...new Set([...settings.included_programs,id])]));
       return response({ok:true,id});
     }
     if(path==='admin/sync'){
@@ -809,9 +830,9 @@ export default (function makeWorker(){
         if(!['pending','paused'].includes(settings.draft_status))return failure('Draft cannot start from its current state.',409);
         const users=(await q(env,'SELECT count(*) AS n FROM users').first()).n;
         if(users<2)return failure('At least two managers must join before drafting.',409);
-        const placeholders=settings.conferences.map(()=>'?').join(',');
-        const count=await q(env,'SELECT count(*) AS n FROM programs WHERE conference_id IN ('+placeholders+')',...settings.conferences).first();
-        if(count.n<users*settings.rounds)return failure('Not enough eligible programs for all draft rounds. Import more schools or reduce rounds.',409);
+        const allPrograms=(await q(env,'SELECT id,conference_id FROM programs').all()).results||[];
+        const eligibleCount=allPrograms.filter(p=>eligibleProgram(p,settings)).length;
+        if(eligibleCount<users*settings.rounds)return failure('Not enough eligible programs for all draft rounds. Import more schools or reduce rounds.',409);
         await env.DB.batch([
           q(env,"UPDATE settings SET value='live' WHERE key='draft_status'"),
           q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",String(settings.draft_clock_seconds>0?timestamp()+settings.draft_clock_seconds:0))

@@ -38,6 +38,8 @@
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
   let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
+  let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
+  let ratingConference='all',ratingOwnership='all',ratingShown=40;
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
@@ -102,8 +104,21 @@
     'cal golden bears':'california','miami hurricanes':'miami fl','miami redhawks':'miami oh',
     'lsu tigers':'lsu','uc irvine anteaters':'uc irvine','uc santa barbara gauchos':'uc santa barbara',
     'uc davis aggies':'uc davis','uc riverside highlanders':'uc riverside',
-    'unc asheville bulldogs':'unc asheville','nc st wolfpack':'nc st',
-    'utep miners':'utep','utsa roadrunners':'utsa','fgcu eagles':'fgcu'
+    'unc asheville bulldogs':'unc asheville','nc st wolfpack':'n c st',
+    'utep miners':'utep','utsa roadrunners':'utsa','fgcu eagles':'fgcu',
+    'ualbany great danes':'albany','sam houston bearkats':'sam houston st',
+    'pennsylvania quakers':'penn','uic flames':'illinois chicago',
+    'long island sharks':'liu','long island sharks':'liu',
+    'ut martin skyhawks':'tennessee martin','loyola maryland greyhounds':'loyola md',
+    'mcneese cowboys':'mcneese st','nicholls colonels':'nicholls st',
+    'se louisiana lions':'southeastern louisiana','grambling tigers':'grambling st',
+    'app st mountaineers':'appalachian st','ul monroe warhawks':'louisiana monroe',
+    'hawai i rainbow warriors':'hawaii','iu indianapolis jaguars':'iu indy',
+    'omaha mavericks':'nebraska omaha',
+    'california baptist lancers':'cal baptist','south carolina upstate spartans':'usc upstate',
+    'kansas city roos':'umkc','florida international panthers':'fiu',
+    'lsu new orleans privateers':'new orleans',
+    'texas a and m corpus christi islanders':'texas a and m corpus chris'
   };
   function ratingOf(program,year){
     const entries=ratingCache[year]?.teams;
@@ -111,7 +126,7 @@
     const key=ratingName(program.name),explicit=ratingAliases[key]||'';
     if(explicit){
       const found=entries.find(x=>ratingName(x.team)===explicit);
-      if(found)return found;
+      return found||null;
     }
     // ESPN uses mascot-inclusive names; Torvik uses institution names.
     // Longest unique prefix wins (Michigan State before Michigan).
@@ -251,6 +266,8 @@
     const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
       liveGames?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="results"><span class="topbar-event-dot" aria-hidden="true"></span><span>'+liveGames+' live game'+(liveGames===1?'':'s')+'</span></button>':'';
     root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
+    if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
+    if(current==='programs'&&programMode==='ratings')filterRatings();
   }
 
   const resultsToday=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
@@ -1310,15 +1327,22 @@
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
-    if(act==='rating-season'){ratingSeason=(Number(id)-1)+'-'+String(Number(id)%100).padStart(2,'0');render();filterRatings();return;}
-    if(act==='rating-sort'){ratingSort=id;render();filterRatings();return;}
+    if(act==='rating-season'){ratingSeason=(Number(id)-1)+'-'+String(Number(id)%100).padStart(2,'0');ratingShown=40;render();return;}
+    if(act==='rating-sort'){ratingSort=id;ratingShown=40;render();return;}
     if(act==='ratings-refresh'){delete ratingError[Number(id)];delete ratingCache[Number(id)];loadRatings(Number(id),true);render();return;}
-    if(act==='school-mode'){programMode=id;render();if(id==='leaders'){if(!schoolLeaders)loadSchoolLeaders();else filterSchoolLeaders();}else if(id==='ratings')filterRatings();else filterPrograms();return;}
-    if(act==='leaders-season'){leaderSeason=id;render();filterSchoolLeaders();return;}
+    if(act==='school-mode'){programMode=id;render();if(id==='leaders'&&!schoolLeaders)loadSchoolLeaders();else if(id==='directory')filterPrograms();return;}
+    if(act==='leaders-season'){leaderSeason=id;leaderShown=40;render();return;}
+    if(act==='leaders-retry'){schoolLeaders=null;schoolLeadersError='';loadSchoolLeaders();return;}
+    if(act==='leaders-more'){leaderShown+=40;filterSchoolLeaders();return;}
+    if(act==='ratings-more'){ratingShown+=40;filterRatings();return;}
+    if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
+    if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
+    if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
     if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       programBackPage=current==='program-detail'?programBackPage:current;
-      selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
+      selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
+        programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
       managerBackPage=current==='manager-detail'?managerBackPage:current;
@@ -1602,6 +1626,8 @@
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
     if(e.target?.id==='directory-sort'){programSort=e.target.value;programShown=36;render();filterPrograms();}
+    if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
+    if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
     if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
     if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
@@ -1618,8 +1644,8 @@
       if(field){field.focus({preventScroll:true});if(caret!==null)field.setSelectionRange(caret,caret);}
       return;
     }
-    if(e.target?.id==='leader-search'){leaderQuery=e.target.value;filterSchoolLeaders();return;}
-    if(e.target?.id==='rating-search'){ratingQuery=e.target.value;filterRatings();return;}
+    if(e.target?.id==='leader-search'){leaderQuery=e.target.value;leaderShown=40;filterSchoolLeaders();return;}
+    if(e.target?.id==='rating-search'){ratingQuery=e.target.value;ratingShown=40;filterRatings();return;}
     if(e.target?.id!=='program-search')return;
     programQuery=e.target.value;
     programShown=36;

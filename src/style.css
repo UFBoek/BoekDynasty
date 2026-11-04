@@ -3380,3 +3380,238 @@ button.daily-team-line:hover{background:#f4f8fc}
    but must be visibly distinguished from NCAA NET classification. */
 .daily-quad.preliminary{border-style:dashed!important;outline:1px dashed rgba(191,104,29,.35);outline-offset:1px}
 .daily-footer-info{line-height:1.5}
+
+
+/* 2026 ranking dashboard refresh: restrained editorial typography, compact controls,
+   fixed point-of-reference columns, and native mobile ranking cards. */
+.ranking-dashboard{padding:0!important;overflow:hidden;border:1px solid #e3eaf2;
+  border-radius:18px;background:#fff;box-shadow:0 10px 35px rgba(21,47,83,.045)}
+.rank-heading{padding:23px 25px 20px;display:flex;align-items:center;justify-content:space-between;gap:18px;
+  background:linear-gradient(112deg,#fff 42%,#f6f9fd 100%);border-bottom:1px solid #e8edf4}
+.rank-heading>div:first-child{min-width:0}
+.rank-kicker{display:block;font-size:10px;letter-spacing:1.25px;font-weight:850;color:#bd5c20;margin-bottom:6px}
+.rank-heading h2{font-size:24px;line-height:1.15;letter-spacing:-.9px;font-weight:850;color:#1a324f}
+.rank-heading p{font-size:12px;color:#60748c;margin-top:7px;line-height:1.5;max-width:66ch}
+.rank-heading-mark{border:1px solid #e3e9f2;background:rgba(255,255,255,.92);border-radius:13px;
+  padding:11px 16px;display:flex;flex-direction:column;gap:2px;min-width:130px;flex:0 0 auto;text-align:right}
+.rank-heading-mark span{font-size:8px;color:#8190a4;font-weight:850;letter-spacing:1.1px}
+.rank-heading-mark strong{font-size:19px;letter-spacing:-.5px;color:#214a77;white-space:nowrap}
+.rank-heading-mark small{font-size:10px;color:#8697a9;font-weight:650}
+.rank-periods{padding:13px 22px 10px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
+.rank-periods button{appearance:none;border:1px solid #e1e7f0;border-radius:9px;background:#f8fafc;
+  flex:0 0 auto;min-height:36px;padding:8px 13px;color:#61748e;font-size:11px;font-weight:800;
+  cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.rank-periods button:hover{background:#f0f5fc;border-color:#b9d0e8;color:#315786}
+.rank-periods button.active{background:#174b80;border-color:#174b80;color:#fff;box-shadow:0 3px 8px #164a7a1a}
+.rank-summary-line{padding:0 23px 12px;display:flex;align-items:center;flex-wrap:wrap;gap:7px 16px;
+  color:#73869e;font-size:10px;font-weight:650}
+.rank-summary-line>span:not(:first-child):before{content:"•";margin-right:14px;color:#bbc8d6}
+.rank-data-indicator{color:#45627f!important;font-size:10px;font-weight:850}
+.rank-data-indicator i{display:inline-block;width:7px;height:7px;background:#d66824;border-radius:50%;margin-right:5px}
+.rank-source-line{margin:1px 23px 14px;padding:10px 12px;border:1px solid #e4eaf2;border-radius:10px;
+  display:flex;align-items:center;gap:10px;background:#f7f9fc;color:#67809a;font-size:10.5px;line-height:1.45}
+.rank-source-mark{font-size:9px;font-weight:850;letter-spacing:.5px;color:#a95b2b;white-space:nowrap}
+.rank-source-mark i{width:7px;height:7px;display:inline-block;background:#d67230;border-radius:50%;margin-right:4px}
+.rank-featured{padding:0 23px 16px}
+.rank-featured[hidden]{display:none!important}
+.rank-featured-label{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.rank-featured-label>span{font-size:9.5px;color:#5e7691;font-weight:850;letter-spacing:.95px}
+.rank-featured-label>small{font-size:10px;color:#9aabbc}
+.rank-featured-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.rank-featured-card{min-width:0;display:flex;align-items:center;text-align:left;gap:8px;
+  background:linear-gradient(135deg,#fff,#f8fafc);border:1px solid #e4eaf2;border-radius:12px;
+  padding:12px;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s,transform .15s}
+.rank-featured-card:hover{background:#f2f7fd;border-color:#bdcfe4;box-shadow:0 5px 16px #28446412;transform:translateY(-1px)}
+.rank-featured-card .program-logo{width:35px;height:35px;flex:0 0 35px;object-fit:contain}
+.rank-featured-position{font-size:16px;line-height:1;font-weight:900;color:#bc6027;letter-spacing:-.5px;min-width:24px}
+.rank-featured-identity{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px}
+.rank-featured-identity strong{font-size:11px;font-weight:850;color:#1f3d5b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-featured-identity small{font-size:9px;color:#8192a5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-featured-stat{text-align:right;flex:0 0 auto}
+.rank-featured-stat strong{font-size:16px;color:#214c80;font-weight:900;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.rank-featured-stat small{display:block;font-size:8.5px;color:#90a0b0;white-space:nowrap;margin-top:2px}
+.rank-tools{display:flex;align-items:center;gap:8px;padding:14px 23px 11px;flex-wrap:wrap;
+  background:#fafbfd;border-top:1px solid #ecf1f6}
+.rank-search{position:relative;flex:1 1 210px;min-width:175px}
+.rank-search-icon{position:absolute;left:12px;top:50%;transform:translateY(-53%);font-size:23px;line-height:1;color:#91a2b5;pointer-events:none}
+.rank-search input{width:100%;height:40px;border:1px solid #dce5ef;border-radius:10px;padding:8px 14px 8px 37px;
+  background:#fff;color:#244260;outline:0;font-size:12px;min-width:0}
+.rank-search input:focus{border-color:#8eb4dd;box-shadow:0 0 0 3px #2f6ba51b}
+.rank-search input::placeholder{color:#9aa9bb}
+.rank-conference-select{flex:0 1 175px;min-width:135px}
+.rank-conference-select select{width:100%;height:40px;border:1px solid #dce5ef;border-radius:10px;background:#fff;
+  color:#375673;padding:7px 10px;font-size:11.5px;font-weight:700}
+.rank-scope{display:flex;gap:4px;border:1px solid #e0e9f2;border-radius:10px;padding:4px;background:#f0f4f9;max-width:100%;overflow-x:auto}
+.rank-scope button{appearance:none;border:0;border-radius:7px;padding:7px 10px;background:transparent;color:#71839a;
+  cursor:pointer;font-size:10.5px;font-weight:800;white-space:nowrap;min-height:29px}
+.rank-scope button:hover{background:#e8f0fa;color:#2b578a}
+.rank-scope button.active{background:#fff;color:#174f88;box-shadow:0 1px 5px #25456819}
+.rank-toolbar-bottom{padding:0 23px 13px;background:#fafbfd;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.rank-order{display:flex;align-items:center;gap:5px;overflow-x:auto;scrollbar-width:thin;max-width:100%}
+.rank-order button{appearance:none;border:1px solid #e0e6ef;border-radius:7px;background:#fff;color:#7b8fa4;
+  padding:7px 10px;white-space:nowrap;font-size:10.5px;font-weight:750;cursor:pointer}
+.rank-order button.active{border-color:#b2cee8;background:#eaf4ff;color:#164e85}
+.rank-order button:hover{color:#164f89;border-color:#aac6e1}
+.rank-count{font-size:10px;font-weight:850;color:#6c8097;font-variant-numeric:tabular-nums}
+.rank-table-container{max-height:68vh;overflow:auto;overscroll-behavior:contain;border-radius:0;
+  border:0;border-top:1px solid #e6edf6;border-bottom:1px solid #e6edf6;scrollbar-width:thin}
+.rank-table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+.school-leader-table.rank-table{min-width:890px}
+.ratings-table.rank-table{min-width:850px}
+.rank-table th{position:sticky!important;top:0!important;z-index:3;background:#eff4fa!important;
+  padding:12px 10px!important;color:#71859e!important;text-align:left;font-size:10px!important;
+  letter-spacing:.45px;font-weight:850;white-space:nowrap;box-shadow:0 1px 0 #dce6f1}
+.rank-table th.rank-position-cell{left:0;z-index:6}
+.rank-table th.rank-school-cell{left:66px;z-index:6}
+.rank-table td{border-bottom:1px solid #edf1f6!important;padding:11px 10px!important;
+  font-size:11px;color:#425f7e;background:#fff;vertical-align:middle;white-space:nowrap}
+.rank-table tbody tr:nth-child(even) td{background:#fbfcfe}
+.rank-table tbody tr:hover td{background:#f2f7fe!important}
+.rank-table .rank-position-cell{width:66px;min-width:66px;max-width:66px}
+.rank-table td.rank-position-cell{position:sticky;left:0;z-index:2}
+.rank-table .rank-school-cell{width:255px;min-width:255px;max-width:255px}
+.rank-table td.rank-school-cell{position:sticky;left:66px;z-index:2;border-right:1px solid #edf1f6}
+.rank-position{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;min-width:40px;
+  border-radius:7px;background:#f2f5f9;color:#5a728e;font-size:11px;font-weight:900}
+.rank-position.is-top{color:#ad5a26;background:#fff1e7}
+.rank-table .school-leader-school{min-width:0;max-width:235px;width:100%;gap:9px}
+.rank-table .school-leader-school .program-logo{width:32px;height:32px;flex:0 0 32px}
+.rank-table .school-leader-school strong{font-size:12px;color:#294867;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:185px}
+.rank-table .school-leader-school small{font-size:10px;color:#8c9db0}
+.rank-table .school-leader-points{min-width:100px!important;color:#1d4c80;text-align:left!important}
+.rank-table .school-leader-points strong{font-size:15px;font-weight:900;color:#1d4c80}
+.rank-table .school-leader-points small{font-size:8px;color:#9faebe;margin-left:5px}
+.rank-table .rank-year-cell{text-align:right!important;min-width:74px;color:#71859e}
+.rank-table th.rank-year-cell button{appearance:none;background:transparent;border:0;color:inherit;font-size:inherit;
+  font-weight:inherit;padding:0;cursor:pointer}
+.rank-table th.rank-year-cell button:hover{color:#bc5d25;text-decoration:underline}
+.rank-table td.rank-year-cell.active{background:#eaf3ff!important;color:#174e8c;font-weight:850}
+.rank-table th.rank-year-cell.active{background:#dfecfa!important;color:#174e8c!important}
+.rank-table td.rating-power strong{font-size:14px;color:#1a568d;font-weight:900}
+.rank-table td.rating-numeric{font-variant-numeric:tabular-nums}
+.rank-table td.rating-numeric strong{font-size:12px;color:#334f6b;font-weight:850}
+.rank-table td.rating-numeric small{display:block;color:#93a3b5;font-size:9px;line-height:1.2;margin-top:3px}
+.rank-data-row[hidden]{display:none!important}
+.rank-mobile-list{display:none}
+.rank-mobile-row[hidden]{display:none!important}
+.rank-empty{margin:14px 23px;padding:20px;text-align:center;background:#f6f9fc;border:1px dashed #cfdceb;
+  border-radius:12px;color:#71859d;font-size:12px}
+.rank-empty[hidden]{display:none!important}
+.rank-load{padding:11px 23px 0;display:flex;justify-content:center}
+.rank-load-button{width:100%;max-width:330px;background:#f5f9fd;color:#205687;border:1px solid #cddfec;
+  border-radius:10px;min-height:40px;padding:9px 15px;font-weight:850;font-size:11px;cursor:pointer}
+.rank-load-button:hover{background:#eaf3fc;border-color:#9ebfde}
+.rank-load-button small{color:#8297ad;margin-left:6px;font-size:10px;font-weight:700}
+.rank-load-button[hidden]{display:none!important}
+.rank-footnote{padding:15px 23px 17px;color:#788da5;font-size:10.5px;line-height:1.55;
+  display:flex;justify-content:space-between;gap:12px 25px;flex-wrap:wrap}
+.rank-footnote strong{color:#4f6a86}
+.rank-footnote button{border:0;background:transparent;padding:0;font-weight:850;color:#b75a22;cursor:pointer}
+.rank-footnote button:hover{text-decoration:underline}
+.rank-footnote .rating-source-links{margin-left:auto}
+.rank-footnote .rating-source-links a{padding:5px 8px;font-size:9.5px}
+.rank-season-jump{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:12px 0 0}
+.rank-season-jump button{appearance:none;display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;background:#f0f6fc;border:1px solid #caddea;color:#205282;border-radius:9px;
+  padding:8px 11px;font-size:11px;font-weight:850;cursor:pointer}
+.rank-season-jump button:hover{border-color:#9dbfda;background:#e5f0fc}
+.program-season-rank-hero.rank-profile-hero{gap:10px 18px;background:linear-gradient(120deg,#f0f6ff,#fff);
+  border:1px solid #d7e6f5;border-radius:12px;padding:15px 18px}
+.program-season-rank-hero.rank-profile-hero strong{font-size:23px;letter-spacing:-.65px}
+.rank-profile-percentile{display:flex;align-items:center;gap:8px;margin-left:auto;min-width:110px}
+.rank-profile-percentile span{font-size:10px;color:#647c97;font-weight:850;white-space:nowrap}
+.rank-profile-track{width:86px;height:5px;background:#d7e3f0;border-radius:99px;overflow:hidden}
+.rank-profile-track i{height:100%;display:block;border-radius:99px;background:#d36b2c}
+.rank-profile-hero .rank-profile-link{border:1px solid #bcd3ea;background:#fff;color:#16518a;
+  border-radius:8px;padding:7px 10px;font-size:10px;font-weight:850;white-space:nowrap}
+.rank-profile-hero .rank-profile-link:hover{background:#eaf3ff}
+.program-analytics-panel .rank-season-jump{margin-top:13px;padding-top:11px;border-top:1px solid #e9eff5}
+@media(min-width:1000px){
+ .rank-featured-card{padding:13px}
+}
+@media(max-width:1150px){
+ .rank-featured-grid{gap:7px}
+ .rank-featured-card{padding:9px;gap:6px}
+ .rank-featured-card .program-logo{width:28px;height:28px;flex:0 0 28px}
+ .rank-featured-stat strong{font-size:14px}
+ .rank-featured-position{font-size:14px;min-width:20px}
+ .rank-featured-identity strong{font-size:10px}
+ .rank-heading{padding:20px}
+ .rank-tools,.rank-toolbar-bottom{padding-left:17px;padding-right:17px}
+ .rank-featured{padding-left:17px;padding-right:17px}
+}
+@media(max-width:850px){
+ .rank-heading{padding:18px}
+ .rank-heading h2{font-size:21px}
+ .rank-featured-grid{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:4px;scroll-snap-type:x proximity}
+ .rank-featured-card{flex:0 0 min(265px,76vw);scroll-snap-align:start}
+ .rank-periods{padding:12px 14px 9px}
+ .rank-summary-line{padding:0 14px 13px}
+ .rank-featured{padding:0 14px 13px}
+ .rank-source-line{margin:1px 14px 13px}
+ .rank-tools{padding:12px 14px 10px;gap:7px}
+ .rank-toolbar-bottom{padding:0 14px 12px}
+ .rank-table-container{display:none!important}
+ .rank-mobile-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;
+   padding:12px 14px 4px;border-top:1px solid #e7edf5}
+ .rank-mobile-row{background:#fff;border:1px solid #dfe7f0;border-radius:12px;min-width:0;overflow:hidden;
+   box-shadow:0 2px 7px rgba(25,51,83,.035)}
+ .rank-mobile-row:hover{border-color:#b4cde7}
+ .rank-mobile-main{display:flex;align-items:center;width:100%;text-align:left;gap:7px;
+   border:0;background:transparent;padding:11px 10px 8px;cursor:pointer;min-width:0}
+ .rank-mobile-main .program-logo{width:33px;height:33px;flex:0 0 33px;object-fit:contain}
+ .rank-mobile-index{display:inline-flex;justify-content:center;align-items:center;flex:0 0 35px;
+   min-width:35px;background:#f5f7fa;color:#bd632c;border-radius:7px;padding:5px 2px;
+   font-weight:900;font-size:11px;font-variant-numeric:tabular-nums}
+ .rank-mobile-name{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+ .rank-mobile-name strong{font-size:11.5px;font-weight:850;color:#234363;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .rank-mobile-name small{font-size:9.5px;color:#93a3b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .rank-mobile-primary{text-align:right;flex:0 0 auto;min-width:43px}
+ .rank-mobile-primary strong{display:block;font-variant-numeric:tabular-nums;font-size:14px;
+   font-weight:900;color:#1d548d;line-height:1.2}
+ .rank-mobile-primary small{font-size:8px;font-weight:800;color:#a0afbe;letter-spacing:.3px}
+ .rank-mobile-chevron{font-size:19px;color:#a6b7c9;margin-left:0}
+ .rank-mini-years,.rank-mobile-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+   gap:0;background:#f8fafd;border-top:1px solid #edf1f7;padding:8px 4px}
+ .rank-mini-years>div,.rank-mobile-metrics>div{display:flex;flex-direction:column;gap:3px;align-items:center;
+   justify-content:center;border-right:1px solid #e9edf4;min-width:0}
+ .rank-mini-years>div:last-child,.rank-mobile-metrics>div:last-child{border-right:0}
+ .rank-mini-years span,.rank-mobile-metrics span{font-size:8px;letter-spacing:.25px;color:#91a2b5;font-weight:800}
+ .rank-mini-years strong,.rank-mobile-metrics strong{font-size:11px;color:#506e8f;
+   font-weight:850;font-variant-numeric:tabular-nums}
+ .rank-mini-years>div.active span,.rank-mini-years>div.active strong{color:#1d5893}
+ .rank-load{padding:10px 14px 2px}
+ .rank-footnote{padding:14px;gap:8px}
+}
+@media(max-width:600px){
+ .rank-heading{align-items:flex-start;gap:8px;padding:16px 13px}
+ .rank-kicker{font-size:8.5px}
+ .rank-heading h2{font-size:20px}
+ .rank-heading p{font-size:11px;line-height:1.4}
+ .rank-heading-mark{min-width:86px;padding:9px 10px;text-align:right}
+ .rank-heading-mark strong{font-size:14px}
+ .rank-heading-mark small{font-size:8px}
+ .rank-periods button{font-size:10px;padding:8px 11px;min-height:33px}
+ .rank-source-line{flex-wrap:wrap;gap:5px}
+ .rank-summary-line{gap:3px 10px;font-size:9px}
+ .rank-summary-line>span:not(:first-child):before{margin-right:8px}
+ .rank-tools .rank-search{flex:1 1 100%}
+ .rank-tools .rank-conference-select{flex:1 1 120px}
+ .rank-tools .rank-scope{flex:1 1 100%;justify-content:space-between}
+ .rank-tools .rank-scope button{flex:1 0 auto;font-size:10px;padding:7px 5px}
+ .rank-mobile-list{grid-template-columns:minmax(0,1fr);gap:7px;padding:10px}
+ .rank-mobile-main{padding:10px 12px 7px;gap:9px}
+ .rank-mobile-name strong{font-size:12.5px}
+ .rank-mobile-name small{font-size:10px}
+ .rank-mobile-primary strong{font-size:16px}
+ .rank-mobile-primary{min-width:60px}
+ .rank-mobile-index{font-size:12px}
+ .rank-featured-card{flex-basis:min(260px,81vw)}
+ .rank-footnote .rating-source-links{margin-left:0}
+ .rank-profile-percentile{margin-left:0;width:100%}
+ .rank-profile-hero .rank-profile-link{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .rank-featured-card{transition:none!important;transform:none!important}
+}

@@ -3,6 +3,9 @@ import {getTorvikRatings,mapTorvikToProgramRanks} from './ratings.js';
 /* ESPNs site-v2 scoreboard is the primary game source. No scoring is computed here. */
 export const DATA_PIPELINE=(()=>{
   const teamIds=new Set(PROGRAM_DIRECTORY.map(x=>String(x[0])));
+  // Matches the commissioner's MULTI-BID & MID-MAJOR group, plus the Pac-12.
+  const UPSET_ELIGIBLE_CONFERENCES=new Set(['3','62','44','18','29','11','14','45','9','10','21']);
+  const programConference=new Map(PROGRAM_DIRECTORY.map(x=>[String(x[0]),String(x[3])]));
   const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);
   const err=e=>String(e?.message||e||'Unknown error').slice(0,300).replace(/[\r\n]/g,' ');
   const validDate=d=>/^20\d\d-\d\d-\d\d$/.test(d)&&!isNaN(Date.parse(d+'T12:00:00Z'))&&new Date(d+'T12:00:00Z').toISOString().startsWith(d);
@@ -369,6 +372,7 @@ export const DATA_PIPELINE=(()=>{
         q1:t?.q1||0,q1a:t?.q1a||0,q2:t?.q2||0,
         quad_by_type:t?.quad_by_type||null,
         ncaa_wins:t?.ncaa_wins||0,opening_round_wins:t?.opening_round_wins||0,
+        upset_wins:t?.upset_wins||0,upset_seed_lines:t?.upset_seed_lines||0,
         seed:t?.seed||0,net_verified:!!t?.net_verified,
         quadrant_source:t?.quadrant_source||'pending',quadrant_provisional:!!t?.quadrant_provisional,
         rank:isEligible?(t?.rank??null):null,
@@ -814,15 +818,23 @@ export const DATA_PIPELINE=(()=>{
         FROM victories v
       ), classified AS (
         SELECT c.*,r.net_rank,
+          winner_seed.value AS winner_seed,loser_seed.value AS loser_seed,
           CASE WHEN c.neutral_site=1 THEN 50 WHEN c.at_home=1 THEN 30 ELSE 75 END q1max,
           CASE WHEN c.neutral_site=1 THEN 25 WHEN c.at_home=1 THEN 15 ELSE 40 END q1amax,
           CASE WHEN c.neutral_site=1 THEN 100 WHEN c.at_home=1 THEN 75 ELSE 135 END q2max
         FROM categorized c LEFT JOIN ranks r ON r.season=c.season AND r.program_id=c.opponent_id
+        LEFT JOIN cbb_awards winner_seed ON winner_seed.season=c.season
+          AND winner_seed.program_id=c.program_id AND winner_seed.award_type='ncaa_seed'
+        LEFT JOIN cbb_awards loser_seed ON loser_seed.season=c.season
+          AND loser_seed.program_id=c.opponent_id AND loser_seed.award_type='ncaa_seed'
       )
       SELECT season,program_id,kind,COUNT(*) wins,
         COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1max) q1,
         COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1amax) q1a,
-        COUNT(*) FILTER(WHERE net_rank>q1max AND net_rank<=q2max) q2
+        COUNT(*) FILTER(WHERE net_rank>q1max AND net_rank<=q2max) q2,
+        COALESCE(SUM(CASE WHEN kind IN ('ncaa','first_four') AND winner_seed>loser_seed
+          THEN winner_seed-loser_seed ELSE 0 END),0) upset_seed_lines,
+        COUNT(*) FILTER(WHERE kind IN ('ncaa','first_four') AND winner_seed>loser_seed) upset_wins
       FROM classified GROUP BY season,program_id,kind`,currentSeason,currentSeason,currentSeason).all()).results||[];
     const [awards,nets,preliminary]=(await Promise.all([
       q(env,"SELECT season,program_id,award_type,value FROM cbb_awards WHERE season BETWEEN '2021-22' AND ?",currentSeason).all(),
@@ -846,7 +858,7 @@ export const DATA_PIPELINE=(()=>{
       const key=season+'|'+String(id);
       if(!table.has(key))table.set(key,{
         season,program_id:String(id),regular_wins:0,conference_tournament_wins:0,
-        ncaa_wins:0,opening_round_wins:0,q1:0,q1a:0,q2:0,
+        ncaa_wins:0,opening_round_wins:0,upset_seed_lines:0,upset_wins:0,q1:0,q1a:0,q2:0,
         quad_by_type:{regular:{q1:0,q1a:0,q2:0},conference:{q1:0,q1a:0,q2:0},
           ncaa:{q1:0,q1a:0,q2:0}},awards:{}
       });
@@ -858,6 +870,10 @@ export const DATA_PIPELINE=(()=>{
       else if(kind==='conference')t.conference_tournament_wins+=n;
       else if(kind==='first_four')t.opening_round_wins+=n;
       else if(kind==='ncaa')t.ncaa_wins+=n;
+      if(UPSET_ELIGIBLE_CONFERENCES.has(programConference.get(String(row.program_id)))){
+        t.upset_seed_lines+=Number(row.upset_seed_lines)||0;
+        t.upset_wins+=Number(row.upset_wins)||0;
+      }
       const q1=Number(row.q1)||0,q1a=Number(row.q1a)||0,q2=Number(row.q2)||0;
       t.q1+=q1;t.q1a+=q1a;t.q2+=q2;
       const group=kind==='regular'?'regular':kind==='conference'?'conference':'ncaa';
@@ -884,6 +900,7 @@ export const DATA_PIPELINE=(()=>{
         {key:'conference_tournament_title',label:'Conference tournament championship',count:tournaments,rate:wt('conference_tournament_title')},
         {key:'ncaa_seed',label:seed?'NCAA Tournament seed #'+seed:'NCAA Tournament seeding',count:seed?1:0,rate:seedPoints},
         {key:'ncaa_tournament_win',label:'NCAA Tournament main-bracket wins',count:t.ncaa_wins,rate:wt('ncaa_tournament_win')},
+        {key:'ncaa_upset_per_seed',label:'NCAA upset bonus (seed-line difference)',count:t.upset_seed_lines,rate:wt('ncaa_upset_per_seed')},
         {key:'ncaa_opening_round_win',label:'NCAA First Four wins',count:t.opening_round_wins,rate:wt('ncaa_opening_round_win')},
         {key:'national_championship',label:'National championship',count:champion,rate:wt('national_championship')}
       ];

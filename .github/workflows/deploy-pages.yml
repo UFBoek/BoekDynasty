@@ -24,6 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate app and queue sync
+        run: |
+          node --check src/client.js
+          node --test tests/draft-queue.test.mjs tests/client-startup.test.mjs
       - name: Build frontend
         env:
           BOEK_API_BASE: ${{ vars.BOEK_API_BASE }}

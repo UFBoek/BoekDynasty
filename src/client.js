@@ -37,6 +37,7 @@
       scoring:'<path d="M4 4h16v16H4zM8 10h8M8 14h5"/>',
       commissioner:'<path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="5"/>',
       settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.5 1.5 0 0 0 .3 1.7l.1.1-1.8 1.8-.1-.1a1.5 1.5 0 0 0-1.7-.3l-.2.1a1.5 1.5 0 0 0-.9 1.4V20H9v-.3a1.5 1.5 0 0 0-.9-1.4l-.2-.1a1.5 1.5 0 0 0-1.7.3l-.1.1-1.8-1.8.1-.1A1.5 1.5 0 0 0 4.7 15l-.1-.2a1.5 1.5 0 0 0-1.4-.9H3v-3.8h.2a1.5 1.5 0 0 0 1.4-.9l.1-.2a1.5 1.5 0 0 0-.3-1.7l-.1-.1 1.8-1.8.1.1a1.5 1.5 0 0 0 1.7.3l.2-.1A1.5 1.5 0 0 0 9 4.3V4h6v.3a1.5 1.5 0 0 0 .9 1.4l.2.1a1.5 1.5 0 0 0 1.7-.3l.1-.1 1.8 1.8-.1.1a1.5 1.5 0 0 0-.3 1.7l.1.2a1.5 1.5 0 0 0 1.4.9h.2v3.8h-.2a1.5 1.5 0 0 0-1.4.9Z"/>' ,
+      search:'<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/>',
       more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
@@ -74,6 +75,7 @@
   let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftCompareExpanded=false,draftQueueDragging='';
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
+  let globalSearchOpen=false,globalSearchQuery='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let programScheduleCache={},programScheduleLoading={},programScheduleError={},programScheduleView='all';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
@@ -346,6 +348,41 @@
     resultsGames.filter(g=>g.status==='live').length:
     overviewGamesDay===resultsToday()?overviewGames.filter(g=>g.status==='live').length:0;
   const draftIsLive=()=>league?.settings?.draft_status==='live';
+  const globalPages=[
+    ['home','League Overview','Scores, rosters and league activity'],['team','My Team','My roster and transactions'],
+    ['results','Results','Daily scores and schedules'],['programs','Schools','Directory and historical scoring'],
+    ['draft','Draft Room','Draft board and priority queue'],['league','Standings','Season fantasy rankings'],
+    ['trades','Trades','Offers and completed trades'],['scoring','Scoring Rules','How points are calculated'],
+    ['settings','My Settings','Profile and account preferences']
+  ];
+  function globalSearchResults(){
+    const q=globalSearchQuery.trim().toLowerCase();
+    const pages=globalPages.filter(([id,title,desc])=>q?(title+' '+desc).toLowerCase().includes(q):['home','team','results','programs','draft'].includes(id)).slice(0,6);
+    const people=members().filter(u=>q?(u.display_name+' '+(u.username||'')).toLowerCase().includes(q):u.id===me?.id).slice(0,4);
+    const mine=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
+    const schools=programs().filter(p=>q?(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase().includes(q):mine.has(String(p.id)))
+      .sort((a,b)=>Number(mine.has(String(b.id)))-Number(mine.has(String(a.id)))||
+        Number(programEligible(b))-Number(programEligible(a))||a.name.localeCompare(b.name)).slice(0,8);
+    const group=(title,rows)=>rows.length?'<div class="global-search-section"><h3>'+title+'</h3>'+rows.join('')+'</div>':'';
+    const pageRows=pages.map(([id,title,desc])=>'<button class="global-search-result" type="button" data-act="tab" data-id="'+id+'"><span class="global-search-result-icon">'+iconSVG(id)+'</span><span class="grow"><strong>'+escapeHTML(title)+'</strong><small>'+escapeHTML(desc)+'</small></span><span class="global-search-arrow">↵</span></button>');
+    const peopleRows=people.map(u=>'<button class="global-search-result" type="button" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+avatar(u)+'<span class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>League manager'+(u.id===me.id?' · You':'')+'</small></span><span class="global-search-arrow">›</span></button>');
+    const schoolRows=schools.map(p=>{
+      const owned=programOwned(p.id),manager=members().find(u=>u.id===owned?.manager_id);
+      const label=(owned?(manager?.display_name||'Rostered')+' · ':'')+conf(p.conference_id)+(!programEligible(p)?' · Outside draft pool':'');
+      return '<button class="global-search-result" type="button" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(label)+'</small></span><span class="global-search-arrow">›</span></button>';
+    });
+    return group('PAGES',pageRows)+group('MANAGERS',peopleRows)+group('SCHOOLS',schoolRows)||
+      '<div class="global-search-empty"><strong>No results</strong><p>Try a school, manager, or page name.</p></div>';
+  }
+  const globalSearchDialog=()=>'<div class="global-search-layer"><button class="global-search-backdrop" type="button" data-act="search-close" aria-label="Close search"></button>'
+    +'<section class="global-search-dialog" role="dialog" aria-modal="true" aria-labelledby="global-search-heading"><div class="global-search-head"><h2 id="global-search-heading">Search the league</h2><button type="button" class="global-search-close" data-act="search-close" aria-label="Close search">×</button></div>'
+    +'<label class="global-search-input-wrap">'+iconSVG('search')+'<input id="global-search-input" type="search" autocomplete="off" spellcheck="false" aria-label="Search the league" placeholder="Find a school, manager, or page..." value="'+escapeHTML(globalSearchQuery)+'"/></label>'
+    +'<div id="global-search-list" class="global-search-list">'+globalSearchResults()+'</div><div class="global-search-foot"><span>Enter to open</span><span><kbd>Esc</kbd> to close</span></div></section></div>';
+  function toggleGlobalSearch(open){
+    globalSearchOpen=open;if(open)globalSearchQuery='';
+    render();
+    if(open)root.querySelector('#global-search-input')?.focus({preventScroll:true});
+  }
   function navButton(id){
     const live=id==='draft'&&draftIsLive()||id==='results'&&liveResultsCount()>0;
     const active=current===id||current==='program-detail'&&id==='programs'||current==='manager-detail'&&id==='league';

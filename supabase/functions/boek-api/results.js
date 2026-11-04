@@ -95,7 +95,7 @@ export const DATA_PIPELINE=(()=>{
     await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,?,?,?,?,'running')",id,job,season,day,'espn-scoreboard').run();
     let received=0,matched=0,changed=0;
     try{
-      const feed=options.payload?{events:options.payload.events,host:'manual',sources:[]} :await fetchScoreboard(day,options.fetchFn,options.includeSecondary===true);
+      const feed=options.payload?{events:options.payload.events,host:options.payload.host||'manual',sources:options.payload.sources||[]} :await fetchScoreboard(day,options.fetchFn,options.includeSecondary===true);
       if(!Array.isArray(feed.events)||feed.events.length>=500)throw new Error('Invalid or oversized scoreboard.');
       received=feed.events.length;
       const rows=feed.events.map(x=>parseEvent(x,day,season)).filter(Boolean);matched=rows.length;

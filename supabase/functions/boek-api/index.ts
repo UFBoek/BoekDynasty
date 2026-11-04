@@ -158,6 +158,46 @@ Deno.serve(async (request)=>{
           withWins:leaders.rows.filter(x=>x.regular_wins>0).length,
           pointsNonzero:leaders.rows.filter(x=>x.points>0).length};
       }
+      else if(kind==='verify-scoring'){
+        const settingsRows=(await db.prepare("SELECT key,value FROM settings WHERE key IN ('scoring_rules','conferences')").all()).results||[];
+        const prefs=Object.fromEntries(settingsRows.map(x=>[x.key,x.value]));
+        const rules=JSON.parse(prefs.scoring_rules||'{}');
+        const allowed=JSON.parse(prefs.conferences||'[]');
+        const all=await DATA_PIPELINE.historicalLeaders(env,rules,season);
+        const filtered=await DATA_PIPELINE.historicalLeaders(env,rules,season,allowed);
+        const invalid=all.rows.filter(row=>{
+          const sum=(row.breakdown||[]).reduce((total,part)=>total+part.points,0);
+          return Math.abs(sum-row.points)>0.001||row.q1a>row.q1;
+        });
+        const outside=filtered.directory.filter(x=>!allowed.includes(x.conference_id));
+        const sampleID='57';
+        const profile=await DATA_PIPELINE.programHistory(env,sampleID,rules,season);
+        const sourceMap=new Map(all.rows.filter(x=>x.program_id===sampleID).map(x=>[x.season,x]));
+        const profileDeltas=profile.seasons.filter(x=>sourceMap.has(x.season))
+          .filter(x=>Math.abs((x.points||0)-(sourceMap.get(x.season).points||0))>0.001);
+        if(invalid.length||outside.length||profileDeltas.length)
+          throw new Error('Historical scoring audit failed: '+invalid.length+' points, '+
+            outside.length+' conferences, '+profileDeltas.length+' profile mismatches');
+        const bySeason={};
+        for(const row of all.rows){
+          const key=row.season,summary=bySeason[key]||(bySeason[key]={
+            programs:0,regularWins:0,conferenceWins:0,ncaaWins:0,firstFourWins:0,
+            quad1:0,quad1a:0,quad2:0,totalPoints:0
+          });
+          summary.programs++;summary.regularWins+=row.regular_wins;
+          summary.conferenceWins+=row.conference_tournament_wins;
+          summary.ncaaWins+=row.ncaa_wins;summary.firstFourWins+=row.opening_round_wins;
+          summary.quad1+=row.q1;summary.quad1a+=row.q1a;summary.quad2+=row.q2;
+          summary.totalPoints+=row.points;
+        }
+        result={rules,eligiblePrograms:filtered.directory.length,
+          eligibleSchoolSeasons:filtered.rows.length,scoredSchoolSeasons:all.rows.length,
+          brokenRows:invalid.length,profileMismatches:profileDeltas.length,
+          excludedConferences:outside.length,bySeason,
+          sample:profile.seasons.filter(x=>x.season==='2024-25').map(x=>({
+            season:x.season,points:x.points,breakdown:x.breakdown
+          }))};
+      }
       else if(kind==='verify-quads'){
         const quads=await DATA_PIPELINE.seasonQuadrants(env,season);
         result={season,netSnapshot:quads.snapshot_date,

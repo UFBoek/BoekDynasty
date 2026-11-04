@@ -151,7 +151,7 @@
       if(!Array.isArray(payload.teams)||payload.teams.length<330)throw Error('Published ratings are incomplete.');
       ratingCache[year]=payload;
     }catch(e){ratingError[year]=e.message;}
-    finally{delete ratingLoading[year];if(current==='programs'&&programMode==='ratings'||current==='program-detail')render();}
+    finally{delete ratingLoading[year];if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft')render();}
   }
   const ratingExternalLinks=()=>'<div class="rating-source-links">'
     +'<a href="https://barttorvik.com/" target="_blank" rel="noopener noreferrer">Bart Torvik ↗</a>'
@@ -259,6 +259,7 @@
     if((current==='league'||current==='team')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
     if(current==='program-detail')loadRatings(ratingYear(selectedProgramSeason||season()));
+    if(current==='draft')loadRatings(ratingYear(season()));
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','team','results','programs','draft','more'];
@@ -267,9 +268,16 @@
     const liveGames=liveResultsCount(),liveDraft=draftIsLive();
     const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
       liveGames?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="results"><span class="topbar-event-dot" aria-hidden="true"></span><span>'+liveGames+' live game'+(liveGames===1?'':'s')+'</span></button>':'';
+    const oldDraftBoard=current==='draft'?root.querySelector('.draft-board-scroll'):null;
+    const draftBoardPosition=oldDraftBoard?[oldDraftBoard.scrollLeft,oldDraftBoard.scrollTop]:null;
     root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
+    if(current==='draft'){
+      filterDraftPool();
+      const draftBoard=root.querySelector('.draft-board-scroll');
+      if(draftBoard&&draftBoardPosition){draftBoard.scrollLeft=draftBoardPosition[0];draftBoard.scrollTop=draftBoardPosition[1];}
+    }
   }
 
   const resultsToday=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
@@ -1573,6 +1581,26 @@
     if(act==='directory-conference'){programConference=id;programLetter='all';programShown=36;render();filterPrograms();return;}
     if(act==='directory-ownership'){programOwnership=id;programShown=36;render();filterPrograms();return;}
     if(act==='directory-letter'){programLetter=id;programShown=36;render();filterPrograms();return;}
+    if(act==='draft-pool-sort'){draftSort=id;draftShown=30;render();return;}
+    if(act==='draft-pool-scope'){draftScope=id;draftShown=30;render();root.querySelector('#draft-pool-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(act==='draft-pool-more'){draftShown+=30;filterDraftPool();return;}
+    if(act==='draft-jump-pool'){root.querySelector('#draft-pool-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(act==='draft-follow-live'){draftRoundView='current';render();root.querySelector('#draft-board-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(act==='draft-select'){
+      if(!draftAvailable().some(p=>String(p.id)===String(id))){notice('That program is no longer available.',true);await refresh(true);return;}
+      draftSelectedProgram=String(id);render();
+      if(!(window.matchMedia?.('(max-width:850px)').matches))root.querySelector('.draft-pick-desk')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+      return;
+    }
+    if(act==='draft-clear-selection'){draftSelectedProgram='';render();return;}
+    if(act==='draft-queue-toggle'){
+      prepareDraftQueue();
+      const programId=String(id),index=draftWatchlist.indexOf(programId);
+      if(index>=0)draftWatchlist.splice(index,1);
+      else if(draftAvailable().some(p=>String(p.id)===programId))draftWatchlist.unshift(programId);
+      draftWatchlist=draftWatchlist.slice(0,120);
+      storeDraftQueue();render();return;
+    }
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
     if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();return;}
     if(act==='results-date'){resultsSelectedDay=button.dataset.date;resultsShown=40;loadResults();return;}
@@ -1753,9 +1781,20 @@
       }else if(act==='reset'){
         if(!window.confirm('Permanently erase every draft pick? This cannot be undone.')){busy=false;return;}
         await api('admin/draft-control',{mode:'reset'});notice('Draft picks reset.');
+      }else if(act==='draft-confirm'){
+        const programId=String(id),school=draftAvailable().find(p=>String(p.id)===programId);
+        if(draftSelectedProgram!==programId||!school)throw Error('Select an available program again.');
+        if(!isMyTurn())throw Error('It is not currently your draft pick. Refresh the draft room.');
+        await api('draft/pick',{program_id:programId});
+        draftSelectedProgram='';
+        draftWatchlist=draftWatchlist.filter(saved=>saved!==programId);
+        storeDraftQueue();
+        notice('Pick confirmed: '+school.name+' is yours.');
+        current='draft';
       }else if(act==='pick'){
         if(!window.confirm('Draft this program? The selection is permanent until commissioner reset.')){busy=false;return;}
         await api('draft/pick',{program_id:id});notice('Program drafted successfully.');
+        draftSelectedProgram='';
         current='draft';
       }else if(act==='sync'){
         const selected=[...document.querySelectorAll('input[name="conference"]:checked')].map(x=>x.value);
@@ -1778,6 +1817,11 @@
   root.addEventListener('click',e=>{
     const b=e.target.closest('[data-act]');
     if(b)action(b);
+  });
+  root.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&draftSelectedProgram&&current==='draft'){
+      draftSelectedProgram='';render();
+    }
   });
   root.addEventListener('submit',async e=>{
     const form=e.target.closest('form[data-form]');
@@ -1850,6 +1894,7 @@
     if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
     if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
+    if(e.target?.id==='draft-pool-conference'){draftConference=e.target.value;draftShown=30;filterDraftPool();}
     if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
     if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;resultsShown=40;loadResults();}
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
@@ -1866,6 +1911,7 @@
     }
     if(e.target?.id==='leader-search'){leaderQuery=e.target.value;leaderShown=40;filterSchoolLeaders();return;}
     if(e.target?.id==='rating-search'){ratingQuery=e.target.value;ratingShown=40;filterRatings();return;}
+    if(e.target?.id==='draft-pool-search'){draftQuery=e.target.value;draftShown=30;filterDraftPool();return;}
     if(e.target?.id!=='program-search')return;
     programQuery=e.target.value;
     programShown=36;

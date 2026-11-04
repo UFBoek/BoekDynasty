@@ -382,7 +382,7 @@
     const draftBoardPosition=oldDraftBoard?[oldDraftBoard.scrollLeft,oldDraftBoard.scrollTop]:null;
     const oldQueueList=current==='draft'?root.querySelector('.draft-queue-list'):null;
     const queueScrollPosition=oldQueueList?.scrollTop||0;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
     if(current==='draft'){
@@ -720,15 +720,20 @@
       +'</div>';
   }
   function morePage(){
-    const links=[['settings','My Settings','Change team name, username, photo, colors and password'],['league','Standings','Season fantasy scores and manager rankings'],['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
-    if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
-    return heading('', 'More')
-      +'<section class="panel more-menu">'+links.map(([id,title,description])=>
-        '<button type="button" class="more-menu-item" data-act="tab" data-id="'+id+'"><span class="more-menu-icon">'+iconSVG(id)+'</span><span class="grow"><strong>'+title+'</strong><small>'+description+'</small></span><span class="more-chevron">›</span></button>'
-      ).join('')+'</section>'
-      +'<section class="panel more-account section-gap"><div>'+avatar(me)+'<div class="grow"><strong>'+escapeHTML(me.display_name)+'</strong><small>'+escapeHTML(me.username)+'</small></div></div><button class="btn secondary" data-act="logout">Sign out</button></section>';
+    const groups=[
+      ['Your account',[['settings','Profile & settings','Team name, photo, colors and password']]],
+      ['League information',[['league','Standings','Current fantasy scores'],['scoring','Scoring rules','Point values explained'],['history','Dynasty history','Past seasons and champions']]],
+      ['League tools',[['trades','Trades','Offers and completed deals'],['waivers','Waivers','Claim or release programs'],['results','Daily results','Scores and schedules']]]
+    ];
+    if(me.role==='commissioner')groups.push(['Administration',[['commissioner','Commissioner settings','League setup and manager controls']]]);
+    return heading('ACCOUNT & TOOLS','More','Find league information and account controls.')
+      +'<div class="more-groups">'+groups.map(([group,items])=>
+        '<section class="panel more-menu more-menu-section"><h2 class="more-group-title">'+escapeHTML(group)+'</h2>'
+        +items.map(([id,title,description])=>
+          '<button type="button" class="more-menu-item" data-act="tab" data-id="'+id+'"><span class="more-menu-icon">'+iconSVG(id)+'</span><span class="grow"><strong>'+escapeHTML(title)+'</strong><small>'+escapeHTML(description)+'</small></span><span class="more-chevron">›</span></button>'
+        ).join('')+'</section>').join('')+'</div>'
+      +'<section class="panel more-account section-gap"><div>'+avatar(me)+'<div class="grow"><strong>'+escapeHTML(me.display_name)+'</strong><small>@'+escapeHTML(me.username)+'</small></div></div><button class="btn secondary" data-act="logout">Sign out</button></section>';
   }
-
   function overviewScoreboard(){
     const today=resultsToday(),isReady=overviewGamesDay===today;
     const eligible=new Set(eligiblePrograms().map(p=>String(p.id)));
@@ -843,7 +848,7 @@
           +'<span class="overview-standing-rank">'+(index+1)+'</span>'+avatar(u)
           +'<strong>'+escapeHTML(u.display_name)+'</strong><span>'+scoreText(score)+'</span></button>').join('')+'</div>'
         +'<div class="overview-aside-note">Best '+Number(league.settings.scoring?.best_programs||8)+' programs count each season.</div></section>'
-      :'<section class="panel overview-quick-panel">'+panelHeading('Your next step','Get ready for the season')
+      :'<section class="panel overview-quick-panel">'+panelHeading('Quick access',state==='pending'?'Prepare for the season':'Your league tools')
         +'<div class="overview-next-step"><span class="overview-next-step-icon">'+iconSVG(nextAction.page)+'</span>'
         +'<strong>'+escapeHTML(nextAction.label)+'</strong><p>'+escapeHTML(nextAction.description)+'</p>'
         +'<button type="button" class="btn" data-act="tab" data-id="'+nextAction.page+'">Continue <span aria-hidden="true">›</span></button></div>'

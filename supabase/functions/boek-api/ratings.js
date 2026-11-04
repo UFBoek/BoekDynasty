@@ -65,7 +65,11 @@ export function parseTorvikCsv(raw, year) {
   }).filter(Boolean);
   if (teams.length < 330 || teams.length > 400 || new Set(teams.map(x=>x.team.toLowerCase())).size !== teams.length)
     throw new Error('Torvik returned an incomplete or duplicate ratings table.');
-  return {source:'Bart Torvik T-Rank',season:year,source_url:'https://barttorvik.com/',fetched_at:new Date().toISOString(),teams};
+  // Torvik numbers files by END year. 2027 means the 2026-27 season.
+  const label=(year-1)+'-'+String(year%100).padStart(2,'0');
+  return {source:'Bart Torvik T-Rank',season:year,season_label:label,
+    source_url:'https://barttorvik.com/'+year+'_team_results.csv',
+    fetched_at:new Date().toISOString(),teams};
 }
 export async function getTorvikRatings(year) {
   if (!Number.isInteger(year) || year < 2022 || year > 2027)

@@ -18,7 +18,7 @@ This audit covers five completed NCAA men's basketball seasons (2021–22 throug
 | NCAA seed 9–12 | +5 | Same |
 | NCAA seed 13–16 | +4 | Same |
 | NCAA Tournament victory | +3 | One of the 63 main-bracket games per completed season |
-| Multi-Bid & Mid-Major at-large selection | +5 | Seeded in NCAA Tournament without winning its conference tournament; awarded after conference auto-bid champions are verified (31+ titles); does not apply to Pac-12 |
+| Multi-Bid & Mid-Major at-large selection | +5 | Seeded in NCAA Tournament without winning its conference tournament; awarded after all conference auto-bid champions are verified (32 except 2024–25 and 2025–26, which have 31); does not apply to Pac-12 |
 | Eligible NCAA upset seed line | +1 per line, no cap | NCAA win over a better seed; current Multi-Bid & Mid-Major conference group or Pac-12; winner seed minus opponent seed |
 | First Four victory | +2 | One of four First Four games per completed season |
 | National championship | +15 | Confirmed champion award; stacks with its final-game victory |

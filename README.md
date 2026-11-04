@@ -259,3 +259,8 @@ The draft room loads the same verified school-leader point history used on schoo
 ### Daily Results — draft watchlist and game status filters (November 2026)
 
 Results supports a **My queue** scope, tracking games involving available schools in the manager's saved draft queue before the inaugural draft. Queue games are visually distinguished from owned-roster games on the daily scoreboard and on League Overview. A **Track games** shortcut in the draft queue opens today's matching results. Results also has All / Live / Upcoming / Final status filtering with counts and a clear-filters action, with mobile-friendly controls. The topbar's live indicator no longer treats a historical scoreboard as today's live games. This feature changes neither actual picks nor fantasy scoring.
+
+
+### Published full-season program schedules and quadrant value
+
+School profiles load each team's available 2026–27 ESPN team schedule via an authenticated backend endpoint, merged with previously imported verified results. The profile shows announced future fixtures and completed games, with All / Upcoming / Completed views, local Eastern dates/times, opponents, venue and provisional/current quadrant win-bonus significance. Unannounced games are never fabricated; an explicit warning appears if ESPN is temporarily unavailable and only the imported daily scoreboards are shown. Daily Results and League Overview cards show each school's potential Q1A/Q1/Q2 bonus (earned only for wins). This does not change fantasy scores, draft picks, or rosters.

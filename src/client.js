@@ -1,5 +1,28 @@
 (function startApp(){
   const root=document.querySelector('#app');
+  // Remembered sessions use a server-set, first-party HttpOnly cookie. Legacy
+  // localStorage tokens are read only to avoid signing out existing managers.
+  // Browser-only logins use sessionStorage and expire server-side within a day.
+  const TOKEN_KEY='boek_dynasty_session';
+  const readTokenFrom=(kind)=>{
+    try{return (kind==='local'?localStorage:sessionStorage).getItem(TOKEN_KEY)||'';}catch{return '';}
+  };
+  const clearStoredTokens=()=>{
+    for(const kind of ['local','session']){
+      try{(kind==='local'?localStorage:sessionStorage).removeItem(TOKEN_KEY);}catch(e){}
+    }
+  };
+  let bearerToken=readTokenFrom('session')||readTokenFrom('local');
+  const saveSignedInToken=(token,rememberDevice)=>{
+    clearStoredTokens();
+    bearerToken=token;
+    if(!rememberDevice){
+      try{sessionStorage.setItem(TOKEN_KEY,token);}catch(e){}
+    }
+    // A remembered token must never be written into script-accessible storage.
+    // The Cloudflare proxy sets a 90-day Secure, HttpOnly, first-party cookie.
+  };
+  const forgetSignedInToken=()=>{bearerToken='';clearStoredTokens();};
   const ICONS={home:'⌂',team:'♙',programs:'▦',draft:'▤',trades:'⇄',league:'▥',commissioner:'⚙',more:'⋯'};
   const iconSVG=(name)=>{
     const paths={
@@ -90,9 +113,14 @@
     clearTimeout(toastId);toastId=setTimeout(()=>el.remove(),4600);
   }
   async function api(path,body){
-    const res=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),credentials:'same-origin',cache:'no-store'});
+    const res=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',
+      headers:{...(body===undefined?{}:{'Content-Type':'application/json'}),...(bearerToken?{Authorization:'Bearer '+bearerToken}:{})},
+      body:body===undefined?undefined:JSON.stringify(body),credentials:'same-origin',cache:'no-store'});
     const parsed=await res.json().catch(()=>({error:'Server returned an invalid response.'}));
-    if(!res.ok)throw new Error(parsed.error||'Request failed.');
+    if(!res.ok){
+      if(res.status===401&&path==='state')forgetSignedInToken();
+      throw new Error(parsed.error||'Request failed.');
+    }
     return parsed;
   }
 
@@ -174,7 +202,10 @@
       if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();}
       if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
     }catch(e){
-      if(String(e.message).includes('Sign in required')){me=null;league=null;if(!silent)await loadPublic();renderAuth();}
+      if(String(e.message).includes('Sign in required')){
+        me=null;league=null;forgetSignedInToken();
+        await loadPublic();renderAuth();
+      }
       else if(!silent){notice(e.message,true);}
     }
   }
@@ -202,7 +233,7 @@
       startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
-    if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    if('serviceWorker'in navigator)navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
   }
 
   async function autoImportPrograms(){
@@ -236,9 +267,11 @@
     const mode=status.needs_setup?'setup':authMode;
     const header=mode==='login'?'Sign in':mode==='join'?'Join league':'Commissioner setup';
     const desc=mode==='join'?'Invitation code required.':mode==='setup'?'Enter the commissioner setup code.':'';
-    const form=mode==='login'?'<form data-form="login">'+input('Username','username','text','Username')+input('Password','password','password','Your password')+'<button class="btn" type="submit">Sign in</button></form>':
-      mode==='join'?'<form data-form="join">'+input('Invitation code','code','text','Invitation code',selectedInvite)+input('Display / team name','display_name','text','Team name')+input('Username','username','text','Your login username')+input('Password (8+ characters)','password','password','Password')+'<button class="btn" type="submit">Create account</button></form>':
-      '<form data-form="setup">'+input('Commissioner setup code','code','password','Setup code')+input('Team name','display_name','text','Team name')+input('Username','username','text','Your login username')+input('Password (8+ characters)','password','password','Create a password')+'<button class="btn" type="submit">Create commissioner account</button></form>';
+    const rememberControl='<label class="auth-remember-option"><input type="checkbox" name="remember_device" value="yes" checked />'
+      +'<span class="auth-remember-copy"><strong>Remember this device</strong><small>Stay signed in for up to 90 days on this browser.</small></span></label>';
+    const form=mode==='login'?'<form data-form="login">'+input('Username','username','text','Username')+input('Password','password','password','Your password')+rememberControl+'<button class="btn" type="submit">Sign in</button></form>':
+      mode==='join'?'<form data-form="join">'+input('Invitation code','code','text','Invitation code',selectedInvite)+input('Display / team name','display_name','text','Team name')+input('Username','username','text','Your login username')+input('Password (8+ characters)','password','password','Password')+rememberControl+'<button class="btn" type="submit">Create account</button></form>':
+      '<form data-form="setup">'+input('Commissioner setup code','code','password','Setup code')+input('Team name','display_name','text','Team name')+input('Username','username','text','Your login username')+input('Password (8+ characters)','password','password','Create a password')+rememberControl+'<button class="btn" type="submit">Create commissioner account</button></form>';
     root.innerHTML='<div class="auth-layout"><main class="auth-panel"><div class="auth-card"><div class="auth-logo"><span class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></span><div><div class="brand-title">'+escapeHTML(status.league_name||'Boek Dynasty')+'</div><div class="auth-season">COLLEGE BASKETBALL · 2026–27</div></div></div><div class="auth-section"><h1>'+header+'</h1>'+(desc?'<p class="auth-desc">'+desc+'</p>':'')+(!status.needs_setup?'<div class="auth-top"><button data-act="auth-mode" data-mode="login" class="'+(mode==='login'?'active':'')+'">Sign in</button><button data-act="auth-mode" data-mode="join" class="'+(mode==='join'?'active':'')+'">Join with invite</button></div>':'')+form+(appError?'<p class="auth-error">'+escapeHTML(appError)+'</p>':'')+'</div></div></main></div>';
   }
   function input(label,name,type,placeholder,value=''){
@@ -1626,7 +1659,7 @@
       draftOrderPreview=list;render();return;
     }
     if(act==='auth-mode'){authMode=button.dataset.mode;renderAuth();return;}
-    if(act==='logout'){await api('logout',{});me=null;league=null;inviteLink='';await loadPublic();renderAuth();return;}
+    if(act==='logout'){await api('logout',{});forgetSignedInToken();me=null;league=null;inviteLink='';await loadPublic();renderAuth();return;}
     if(busy)return;
     busy=true;
     try{
@@ -1844,12 +1877,15 @@
         notice('Password updated. Other sessions have been signed out.');
       }else if(type==='program'){await api('admin/program',data);notice('Program added to pool.');await refresh(true);}
       else{
+        data.remember_device=!!form.querySelector('[name="remember_device"]')?.checked;
         const res=await api(type==='login'?'login':type==='join'?'join':'setup',data);
+        if(!res.token)throw new Error('Unable to establish a session. Try signing in again.');
+        saveSignedInToken(res.token,data.remember_device);
         selectedInvite='';
         if(location.search)history.replaceState({},'',location.pathname);
         me=res.user;await refresh();
         startPolling();
-        notice('Signed in.');
+        notice(data.remember_device?'Signed in. This device will be remembered.':'Signed in for this browser session.');
         if(me?.role==='commissioner')autoImportPrograms();
       }
     }catch(err){notice(err.message,true);}finally{busy=false;}

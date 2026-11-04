@@ -196,6 +196,13 @@ export const DATA_PIPELINE=(()=>{
   // imports supersede old failures; a daily cap prevents hammering ESPN.
   async function repairInterrupted(env,limit=2){
     if(!Number.isInteger(limit)||limit<1||limit>3)throw new Error('Repair limit must be 1–3 dates.');
+    // Close every orphaned run before deciding which dates require a retry.
+    // Old aborted runs can coexist with later successful imports for the same
+    // day; leaving them in 'running' creates permanent false health alerts.
+    await q(env,`UPDATE cbb_sync_runs
+      SET status='error',finished_at=unixepoch(),
+        error_text='Import timed out without completion; closed by automatic recovery.'
+      WHERE status='running' AND started_at<unixepoch()-3600`).run();
     const candidates=(await q(env,`SELECT s.id,s.season,s.target_date,s.status,s.started_at FROM cbb_sync_runs s
       WHERE s.target_date IS NOT NULL AND s.started_at>unixepoch()-14*86400
         AND (s.status='error' OR (s.status='running' AND s.started_at<unixepoch()-3600))

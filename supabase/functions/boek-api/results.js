@@ -348,13 +348,16 @@ export const DATA_PIPELINE=(()=>{
   }
   // Historical dynasty score: verified final archive and live current-season preview.
   // commissioner achievement inputs. Never equate an unimported season with zero.
-  async function programHistory(env,id,scoring,currentSeason,eligibleConferences=null){
+  async function programHistory(env,id,scoring,currentSeason,eligibleSelection=null){
     // Use the identical point calculation and component detail as Historical
     // Leaders and manager standings, preventing divergent seed or quad totals.
-    const isEligible=Array.isArray(eligibleConferences)&&PROGRAM_DIRECTORY.some(p=>
-      String(p[0])===String(id)&&eligibleConferences.map(String).includes(String(p[3])));
+    const selection=Array.isArray(eligibleSelection)?{conferences:eligibleSelection,included_programs:[],excluded_programs:[]}:eligibleSelection;
+    const isEligible=!!selection&&PROGRAM_DIRECTORY.some(p=>String(p[0])===String(id)&&
+      !selection.excluded_programs?.map(String).includes(String(id))&&
+      (selection.conferences?.map(String).includes(String(p[3]))||
+       selection.included_programs?.map(String).includes(String(id))));
     const scores=await historicalLeaders(env,scoring,currentSeason,
-      isEligible?eligibleConferences:null);
+      isEligible?eligibleSelection:null);
     const totals=new Map(scores.rows.filter(x=>x.program_id===String(id)).map(x=>[x.season,x]));
     const games=(await q(env,`SELECT season,home_id,away_id,home_score,away_score,status
       FROM cbb_games WHERE (home_id=? OR away_id=?) AND season BETWEEN '2021-22' AND ?`,id,id,currentSeason).all()).results||[];
@@ -825,7 +828,7 @@ export const DATA_PIPELINE=(()=>{
   // Single source of truth for school history, leaders and best-ball standings.
   // NCAA/First Four, conference tournament and regular-season victories each
   // earn their own base points; ALL three are eligible for NET quadrant bonuses.
-  async function historicalLeaders(env,scoring,currentSeason,eligibleConferences=null){
+  async function historicalLeaders(env,scoring,currentSeason,eligibleSelection=null){
     const rows=(await q(env,`WITH latest AS (
         SELECT season,MAX(snapshot_date) AS day
         FROM cbb_net_snapshots WHERE status='complete' AND stored_count>=350 GROUP BY season
@@ -977,8 +980,11 @@ export const DATA_PIPELINE=(()=>{
       t.quadrant_provisional=t.quadrant_source==='torvik';
       delete t.awards;
     }
-    const allowed=Array.isArray(eligibleConferences)?new Set(eligibleConferences.map(String)):null;
-    const directory=PROGRAM_DIRECTORY.filter(p=>!allowed||allowed.has(String(p[3])))
+    const selection=Array.isArray(eligibleSelection)?{conferences:eligibleSelection,included_programs:[],excluded_programs:[]}:eligibleSelection;
+    const allowed=selection?new Set((selection.conferences||[]).map(String)):null;
+    const included=new Set((selection?.included_programs||[]).map(String));
+    const excluded=new Set((selection?.excluded_programs||[]).map(String));
+    const directory=PROGRAM_DIRECTORY.filter(p=>(!allowed||allowed.has(String(p[3]))||included.has(String(p[0])))&&!excluded.has(String(p[0])))
       .map(p=>({id:String(p[0]),name:String(p[1]),abbr:String(p[2]),
         conference_id:String(p[3]),logo:'https://a.espncdn.com/i/teamlogos/ncaa/500/'+p[0]+'.png'}));
     const ids=new Set(directory.map(p=>p.id));

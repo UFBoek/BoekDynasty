@@ -176,13 +176,15 @@
     if(!force&&(ratingCache[year]||ratingError[year]))return;
     ratingLoading[year]=true;delete ratingError[year];
     try{const payload=await api('data/ratings?year='+year);
+      if(Number(payload.season)!==year)throw Error('The ratings source returned a different season. Refusing to display mismatched T-Rank data.');
       if(!Array.isArray(payload.teams)||payload.teams.length<330)throw Error('Published ratings are incomplete.');
       ratingCache[year]=payload;
     }catch(e){ratingError[year]=e.message;}
     finally{delete ratingLoading[year];if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft')render();}
   }
-  const ratingExternalLinks=()=>'<div class="rating-source-links">'
-    +'<a href="https://barttorvik.com/" target="_blank" rel="noopener noreferrer">Bart Torvik ↗</a>'
+  const ratingExternalLinks=(year=ratingYear(season()))=>'<div class="rating-source-links">'
+    +'<a href="https://barttorvik.com/trank.php?year='+year+'" target="_blank" rel="noopener noreferrer">Bart Torvik '+(year-1)+'-'+String(year%100).padStart(2,'0')+' ↗</a>'
+    +'<a href="https://barttorvik.com/'+year+'_team_results.csv" target="_blank" rel="noopener noreferrer">Verify season data ↗</a>'
     +'<a href="https://evanmiya.com/" target="_blank" rel="noopener noreferrer">EvanMiya ↗</a>'
     +'<a href="https://kenpom.com/" target="_blank" rel="noopener noreferrer">KenPom ↗</a></div>';
   async function refresh(silent=false){
@@ -814,9 +816,10 @@
     const isCurrent=year===ratingYear(season());
     const heading='<div class="rank-heading"><div><span class="rank-kicker">PROGRAM RANKINGS · ADVANCED ANALYTICS</span><h2>Power ratings</h2>'
       +'<p>Explore Bart Torvik’s national efficiency rankings, offense, defense and team strength.</p></div>'
-      +'<div class="rank-heading-mark"><span>VIEWING</span><strong>'+(year-1)+'-'+String(year%100).padStart(2,'0')+'</strong><small>T-Rank season</small></div></div>';
-    const source='<div class="rank-source-line"><span class="rank-source-mark"><i></i> '+(isCurrent?'PRELIMINARY QUADRANTS':'ARCHIVED RATING')+'</span>'
-      +'<span>'+(isCurrent?'T-Rank is used for provisional Q1/Q1A/Q2 bonuses until official NCAA NET is available.':'Historical T-Rank is for comparison; verified NCAA NET determines archived fantasy scores.')+'</span></div>';
+      +'<div class="rank-heading-mark"><span>'+(isCurrent?'CURRENT SEASON':'ARCHIVED SEASON')+'</span><strong>'+(year-1)+'-'+String(year%100).padStart(2,'0')+'</strong><small>Torvik '+year+' ratings</small></div></div>';
+    const source='<div class="rank-source-line"><span class="rank-source-mark"><i></i> '+(isCurrent?'CURRENT '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-RANK':'HISTORICAL '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-RANK')+'</span>'
+      +'<span>'+(isCurrent?'These are the 2026–27 national ratings, not 2025–26. Used for provisional Q1/Q1A/Q2 bonuses until official NCAA NET is available.':'Historical ratings are only for comparison; archived fantasy scores use the verified NCAA NET for that season.')+'</span>'
+      +(!isCurrent?'<button type="button" class="rank-current-season-button" data-act="ratings-current">View current '+escapeHTML(season())+' ratings ›</button>':'')+'</div>';
     if(!data)return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
       +(ratingError[year]?empty('T-Rank unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Try again</button>'
         :empty('Loading power ratings','Retrieving published national rankings and efficiency numbers.'))+'</section>';
@@ -857,8 +860,8 @@
       +'<div><span>WAB</span><strong>'+dec(r?.wab)+'</strong></div>'
       +'<div><span>TEMPO</span><strong>'+dec(r?.tempo)+'</strong></div></div></article>').join('');
     return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
-      +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+escapeHTML(data.source||'BART TORVIK')+'</span><span>'+valid.length+' matched / '+entries.length+' eligible</span>'
-      +'<span>Refreshed '+escapeHTML(new Date(data.fetched_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</span></div>'
+      +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+escapeHTML(data.source||'BART TORVIK')+' · '+(year-1)+'-'+String(year%100).padStart(2,'0')+'</span><span>'+valid.length+' matched / '+entries.length+' eligible</span>'
+      +'<span>Source checked '+escapeHTML(new Date(data.fetched_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</span></div>'
       +rankingFeatured(valid.slice(0,3),'ratings',sortNames[ratingSort]||'National T-Rank',featureValue)
       +rankingTools('ratings',ratingQuery,ratingConference,ratingOwnership)
       +'<div class="rank-toolbar-bottom"><div class="rank-order rank-rating-order" role="group" aria-label="Sort power ratings">'+sortTabs+'</div>'
@@ -871,7 +874,7 @@
       +'<div id="rating-empty" class="rank-empty" hidden>No schools match your filters. Try a different search or conference.</div>'
       +'<div class="rank-load"><button id="rating-more" type="button" data-act="ratings-more" class="rank-load-button" hidden>Show more schools <small></small></button></div>'
       +'<div class="rank-footnote"><span><strong>Reading the stats:</strong> Higher Barthag and offense are better. Lower defensive efficiency is better. The rank shown is national, even when sorted by another metric.</span>'
-      +ratingExternalLinks()+'</div></section>';
+      +ratingExternalLinks(year)+'</div></section>';
   }
   function filterRatings(){filterRankingDisplay('ratings');}
   function programsPage(){
@@ -1361,7 +1364,7 @@
       :'<p class="hint">'+escapeHTML(ratingError[metricsYear]||(ratingLoading[metricsYear]?'Loading public T-Rank ratings…':'No verified T-Rank match for this season.'))+'</p>';
     const analytics='<section class="panel program-analytics-panel">'+panelHeading('Power ratings · '+escapeHTML(selected),'Bart Torvik T-Rank · provisional Q1/Q1A/Q2 source before NCAA NET')
       +analyticsContent
-      +'<div class="rank-season-jump">'+ratingExternalLinks()+'<button type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+'">Compare all schools in T-Rank ›</button></div></section>';
+      +'<div class="rank-season-jump">'+ratingExternalLinks(metricsYear)+'<button type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+'">Compare all schools in T-Rank ›</button></div></section>';
 
     const recordText=record?.played?record.wins+'–'+record.losses:'—';
     const ownerButton=manager?'<button class="program-profile-owner-link" type="button" data-act="open-manager" data-id="'+escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' →</button>':'<span>Available to draft</span>';
@@ -1579,7 +1582,10 @@
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
-    if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(act==='tab'){
+      if(id==='programs'&&current!=='programs')ratingSeason=season();
+      current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
+    }
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
     if(act==='view-ratings'){
       ratingSeason=button.dataset.season||season();programMode='ratings';current='programs';render();window.scrollTo({top:0});return;
@@ -1588,10 +1594,14 @@
       leaderSeason=button.dataset.season||season();programMode='leaders';current='programs';render();
       if(!schoolLeaders)loadSchoolLeaders();window.scrollTo({top:0});return;
     }
+    if(act==='ratings-current'){ratingSeason=season();ratingShown=40;render();return;}
     if(act==='rating-season'){ratingSeason=(Number(id)-1)+'-'+String(Number(id)%100).padStart(2,'0');ratingShown=40;render();return;}
     if(act==='rating-sort'){ratingSort=id;ratingShown=40;render();return;}
     if(act==='ratings-refresh'){delete ratingError[Number(id)];delete ratingCache[Number(id)];loadRatings(Number(id),true);render();return;}
-    if(act==='school-mode'){programMode=id;render();if(id==='leaders'&&!schoolLeaders)loadSchoolLeaders();else if(id==='directory')filterPrograms();return;}
+    if(act==='school-mode'){
+      if(id==='ratings'&&programMode!=='ratings')ratingSeason=season();
+      programMode=id;render();if(id==='leaders'&&!schoolLeaders)loadSchoolLeaders();else if(id==='directory')filterPrograms();return;
+    }
     if(act==='leaders-season'){leaderSeason=id;leaderShown=40;render();return;}
     if(act==='leaders-retry'){schoolLeaders=null;schoolLeadersError='';loadSchoolLeaders();return;}
     if(act==='leaders-more'){leaderShown+=40;filterSchoolLeaders();return;}

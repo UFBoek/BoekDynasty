@@ -42,11 +42,19 @@ When the commissioner opens the site with a pending draft, the frontend checks f
 
 ## Free power ratings (informational)
 
-The **Schools → Power ratings** tab provides season-selectable Bart Torvik T-Rank team rankings for 2021–22 through 2026–27, including adjusted offensive/defensive efficiency, Barthag, WAB and tempo. Each program's profile shows the same metrics for the selected season. These are **third-party advanced metrics only** and never affect fantasy scoring, NET quadrants, program ownership or draft logic.
+The **Schools → Power ratings** tab provides season-selectable Bart Torvik T-Rank team rankings for 2021–22 through 2026–27, including adjusted offensive/defensive efficiency, Barthag, WAB and tempo. Each program's profile shows the same metrics for the selected season. During the current season **before official NCAA NET is released**, T-Rank standings serve as a clearly labeled **provisional quadrant source** for Q1, Q1A and Q2 scoring. Once a complete official NCAA NET snapshot is imported, NET takes precedence automatically. Historical seasons are always classified using official NCAA NET. The use of T-Rank does not change venue thresholds, league weights, program ownership or draft logic.
 
 The public, no-key Torvik `{year}_team_results.csv` files are fetched by the Supabase Edge Function at `GET /functions/v1/boek-api/data/ratings?year=2026` (and proxied via the Cloudflare Worker as `/api/data/ratings?year=2026`). `supabase/functions/boek-api/ratings.js` validates the CSV schema, ensures full Division I coverage, and caches responses for 6 hours (current season) or 24 hours (past seasons) per warm function instance. Failed or incomplete imports show an explicit unavailable state; no synthetic data is substituted. ESPN program-name crosswalks are conservative and may leave some schools unmatched.
 
 EvanMiya and KenPom are available as **external links only**. Their paid/restricted API or bulk exports are not scraped, redistributed, or presented as integrated numerical ratings. A public download URL is not a blanket redistribution license; confirm provider permissions before expanding public redistribution or high-frequency automation. The site does not require any paid analytics subscription.
+
+## Provisional quadrant import and NCAA NET handoff
+
+- Source: daily `2027_team_results.csv` from Bart Torvik (via `supabase/functions/boek-api/ratings.js`), with a strict unique ESPN school-ID crosswalk of at least **350 Division I programs**.
+- Storage: `cbb_preliminary_rankings` (Supabase PostgreSQL), separate from `cbb_net_rankings` and `cbb_net_snapshots`. A single transactional replace prevents half-imports from altering fantasy points.
+- Job: `boek_torvik_preliminary` via pg_cron at `05 12 * * *` UTC; commissioner can also trigger **Sync preliminary T-Rank** in Commissioner → Data. Import skips once complete official NET exists.
+- Calculations: `activeRankings()` chooses official NET if complete; otherwise preliminary T-Rank if at least 350 unique schools. `historicalLeaders()`, program history, game cards and quadrant counts all follow the same source with a provisional flag.
+- **Important:** preliminary T-Rank cannot be presented as official NCAA NET. Treat these bonuses and best-ball totals as estimates. At year-end, final official NET controls historical classifications.
 
 ## Architecture
 
@@ -126,7 +134,7 @@ The scoring **weights** may be configured separately, but this pipeline does **n
 - Rankings are separate dated snapshots in `cbb_net_rankings`. NET rankings are generally not available at the start of November; the site must never carry over the previous season's values.
 - Commissioners can import official NET snapshots as `ESPN_TEAM_ID,NET_RANK` CSV rows. Imports are rejected if dates/IDs/ranks are invalid, duplicate, or fewer than 250 Division I schools. Every snapshot has season/date/source provenance. A duplicate date is not overwritten silently.
 - Optional **provider override**: set `NET_FEED_URL` as a Worker environment variable (or secret) to a trusted, authorized JSON endpoint returning `{"date":"2026-12-01","records":[{"program_id":"57","net_rank":4}, ...]}`. By default, after December 8 the nightly job attempts the NCAA ranking API proxy and audits it; setting NET_FEED_URL overrides that default. Only use feeds for which you have redistribution/access rights.
-- Provisional Q1/Q1A/Q2/Q3/Q4 wins are derived from finished games, venue and the **latest current-season NET snapshot**. This data will change as NET ranks change. Final quadrants should be settled against final NET at the end of the season.
+- Provisional Q1/Q1A/Q2/Q3/Q4 wins are derived from finished games, actual home/away/neutral venue and the latest complete **current-season T-Rank fallback**, until a complete **official current-season NCAA NET snapshot** exists. Imported official NET always wins; historical seasons never use T-Rank. All fantasy points are recomputed from the active ranks, so existing early-season bonuses and standings automatically change as ranking sources change.
 - Program profiles load current season W–L and game log on demand, plus NET and provisional quadrant counts. **Standings points remain pending** until an independently verified scoring calculation is implemented.
 - Commissioner-supported manual achievements (season champions, NCAA seed and wins, national champion and optional final KenPom ranking) go into `cbb_awards` with source references. These are factual inputs, not fantasy points.
 

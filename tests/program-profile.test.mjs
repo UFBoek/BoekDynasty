@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../src/client.js',import.meta.url),'utf8');
 const marker="  try{\n    setInterval(updateDraftClock,1000);\n    Promise.resolve(boot()).catch(startupFailure);\n  }catch(e){startupFailure(e);}\n})();";
-const injection="  return {setup:(user,state)=>{me=user;league=state;selectedProgramId='57';selectedProgramSeason='2026-27';programProfileTab='overview';},report:result=>{programResultCache['57']=result;},tab:name=>{programProfileTab=name;return programProfilePage();},year:name=>{selectedProgramSeason=name;return programProfilePage();}};\n})();";
+const injection="  return {setup:(user,state)=>{me=user;league=state;selectedProgramId='57';selectedProgramSeason='2026-27';programProfileTab='overview';},report:result=>{programResultCache['57']=result;},tab:name=>{programProfileTab=name;return programProfilePage();},year:name=>{selectedProgramSeason=name;return programProfilePage();},quadValue:(q,a)=>quadWinBonus(q,a),scoringView:()=>scoringPage()};\n})();";
 const compiled=source.replace(marker,injection);
 assert.notEqual(compiled,source,'startup hook must be found');
 const root={innerHTML:'',addEventListener(){}};
@@ -18,7 +18,7 @@ const state={
   programs:[{id:'57',name:'Florida',abbr:'UF',conference_id:'23',logo:null}],
   ownership:[{program_id:'57',manager_id:'1'}],
   picks:[{overall:1,round:1,program_id:'57',manager_id:'1'}],
-  season:'2026-27',settings:{rounds:16,scoring:{best_programs:8}},
+  season:'2026-27',settings:{rounds:16,scoring:{best_programs:8,quad_1_win:1.5,quad_1a_win:2.5,quad_2_win:0.5}},
   trades:[],trade_items:[],roster_transactions:[],archived_rosters:[]
 };
 app.setup(user,state);
@@ -74,4 +74,14 @@ test('schedule and analytics remain available independently',()=>{
   assert.match(ratings,/pp-rating-seasons/);
   assert.match(ratings,/data-act="view-ratings"/);
   assert.doesNotMatch(ratings,/program-full-schedule/);
+});
+
+test('Q1A is a standalone 2.5-point win, not an extra Q1 bonus',()=>{
+  assert.equal(app.quadValue(1,true),2.5);
+  assert.equal(app.quadValue(1,false),1.5);
+  assert.equal(app.quadValue(2,false),0.5);
+  const html=app.scoringView();
+  assert.match(html,/Quad 1A win/);
+  assert.match(html,/does not stack with Q1/);
+  assert.doesNotMatch(html,/Extra Quad 1A win bonus/);
 });

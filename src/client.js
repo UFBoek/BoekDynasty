@@ -441,12 +441,9 @@
   }
 
   function overview(){
-    const eligible=programs().filter(p=>activeConfs().includes(p.conference_id));
-    const available=eligible.filter(p=>!programOwned(p.id)).length;
     const users=members(),status=league.settings.draft_status;
     const programName=id=>programs().find(p=>p.id===id)?.name||'Program';
     const managerName=id=>users.find(u=>u.id===id)?.display_name||'Manager';
-    const best=Number(league.settings.scoring?.best_programs||8);
     const events=[
       ...(league.trades||[]).filter(t=>t.status==='accepted').map(t=>({
         when:Number(t.resolved_at||t.offered_at||0),type:'Completed trade',
@@ -473,9 +470,7 @@
     return heading('THE LEAGUE','League Overview')
       +'<div class="overview-status overview-status-hub"><span class="overview-status-dot '+(status==='live'?'live':'')+'"></span><span class="overview-status-copy"><span class="overview-hub-kicker">'+escapeHTML(season())+' SEASON · LEAGUE STATUS</span><strong>'+(status==='live'?'Draft in progress':status==='finished'?'Inaugural draft complete':status==='paused'?'Draft paused':'Draft preparations')+'</strong><small>'+(status==='live'&&nextManager()?'On the clock: '+escapeHTML(nextManager().display_name):'Permanent program ownership')+'</small></span><div class="overview-hub-actions"><button class="btn small secondary" data-act="tab" data-id="draft">Draft room '+iconSVG('draft')+'</button><button class="btn small ghost" data-act="tab" data-id="results">Results '+iconSVG('results')+'</button></div></div>'
       +(syncActive?'<div class="standings-notice">Importing selected conferences...</div>':'')
-      +'<div class="overview-metrics"><div class="overview-metric"><span>LEAGUE MANAGERS</span><strong>'+users.length+' <em>/ '+Number(league.settings.max_managers)+'</em></strong></div>'
-      +'<div class="overview-metric"><span>AVAILABLE PROGRAMS</span><strong>'+available+'</strong></div>'
-      +'<div class="overview-metric"><span>BEST BALL FORMAT</span><strong>Top '+best+'</strong><small>Counting programs per manager</small></div></div>'
+      +'<div class="overview-community-intro"><div><span class="eyebrow">YOUR LEAGUE</span><h2>'+users.length+' of '+Number(league.settings.max_managers)+' managers</h2><p>See every roster and follow the inaugural season as it unfolds.</p></div><button class="btn small secondary" data-act="tab" data-id="league">View standings</button></div>'
       +'<section class="panel overview-teams-panel">'+panelHeading('League teams','Every manager, every owned school','<button class="btn small ghost" data-act="tab" data-id="league">Standings</button>')+'<div class="league-teams-grid">'+(teamCards||empty('Awaiting managers'))+'</div></section>'
       +'<section class="panel section-gap overview-activity-panel">'+panelHeading('League activity','Recent moves and selections')
       +(events.length?'<div class="overview-activity-list">'+events.map(e=>'<div class="overview-activity-item '+(e.type.startsWith('Pick ')?'activity-pick':e.type==='Completed trade'?'activity-trade':'activity-waiver')+'"><span class="overview-activity-marker"></span><span><strong>'+escapeHTML(e.type)+'</strong><small>'+escapeHTML(e.detail)+'</small></span>'+(e.when>0?'<time class="overview-activity-date">'+escapeHTML(new Date(e.when*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}))+'</time>':'')+'</div>').join('')+'</div>':empty('Nothing to report yet','Draft selections and completed trades will appear here.'))+'</section>';
@@ -839,11 +834,13 @@
     const ownedYears=(league.archived_rosters||[]).filter(x=>x.program_id===p.id);
     const pointText=x=>x?.points===null||x?.points===undefined?'—':Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
     const maxKnownPoints=Math.max(1,...history.filter(item=>item.points!==null&&item.points!==undefined&&Number.isFinite(Number(item.points))).map(item=>Math.max(0,Number(item.points))));
+    const rankLabel=row=>Number.isInteger(Number(row?.rank))&&Number(row?.rank_total)>0&&row?.status!=='not_applicable'
+      ?(row.rank_tied?'T-':'')+'#'+Number(row.rank)+' / '+Number(row.rank_total):'Unranked';
     const seasonRows=Array.from({length:Math.max(0,Number(season().slice(0,4))-2021+1)},(_,i)=>{
       const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');
       const row=history.find(item=>item.season===label);
       return '<button class="program-season-card '+(selected===label?'active':'')+'" type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" aria-pressed="'+(selected===label)+'">'
-        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Live points':row?.status==='complete'?'Final points':row?.status==='not_applicable'?'No D-I record':'Awaiting data')+'</small>'
+        +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small class="program-season-ranking">'+escapeHTML(rankLabel(row))+'</small><small>'+(row?.status==='partial'?'Live points':row?.status==='complete'?'Final points':row?.status==='not_applicable'?'No D-I record':'Awaiting data')+'</small>'
         +'<span class="program-season-meter" aria-hidden="true"><i style="width:'+(row?.points!==null&&row?.points!==undefined&&Number.isFinite(Number(row.points))?Math.min(100,Math.max(0,100*Number(row.points)/maxKnownPoints)):0)+'%"></i></span></button>';
     }).join('');
     const breakdown=selectedStats?.breakdown||[];
@@ -858,6 +855,7 @@
         +(selectedStats.quad_by_type?'<div class="school-score-quad-context">Quadrant wins by stage: Regular season '+Number(selectedStats.quad_by_type.regular?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.regular?.q2||0)+' Q2 · Conference tournament '+Number(selectedStats.quad_by_type.conference?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.conference?.q2||0)+' Q2 · NCAA Tournament '+Number(selectedStats.quad_by_type.ncaa?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.ncaa?.q2||0)+' Q2</div>':'')
         +'</section>':'<div class="school-score-empty">No scoring components recorded for this year yet.</div>';
     const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='complete'?'Final points from verified archived results':selectedStats.status==='partial'?'Live season points, subject to updates':selectedStats.status==='not_applicable'?'No recorded Division I season':'Awaiting verified results')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
+      +'<div class="program-season-rank-hero"><span>LEAGUE SEASON RANK</span><strong>'+escapeHTML(rankLabel(selectedStats))+'</strong><small>Against all eligible programs in this season</small></div>'
       +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
       +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
       +'<div><span>Q1 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q1:'NET pending')+'</strong></div>'
@@ -1097,11 +1095,12 @@
     if(act==='directory-letter'){programLetter=id;programShown=36;render();filterPrograms();return;}
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
     if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();return;}
-    if(act==='results-date'){resultsSelectedDay=button.dataset.date;loadResults();return;}
-    if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));loadResults();return;}
-    if(act==='results-today'){resultsSelectedDay=resultsToday();loadResults();return;}
-    if(act==='results-scope'){resultsScope=button.dataset.scope;render();return;}
-    if(act==='results-conference'){resultsConference=id;render();return;}
+    if(act==='results-date'){resultsSelectedDay=button.dataset.date;resultsShown=40;loadResults();return;}
+    if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));resultsShown=40;loadResults();return;}
+    if(act==='results-today'){resultsSelectedDay=resultsToday();resultsShown=40;loadResults();return;}
+    if(act==='results-scope'){resultsScope=button.dataset.scope;resultsShown=40;render();return;}
+    if(act==='results-conference'){resultsConference=id;resultsShown=40;render();return;}
+    if(act==='results-more'){resultsShown+=40;render();return;}
 
     if(act==='draft-round-change'){draftRoundView=id;render();return;}
     if(act==='move-draft'){
@@ -1365,10 +1364,19 @@
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
     if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
     if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
-    if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;loadResults();}
+    if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;resultsShown=40;loadResults();}
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
+    if(e.target?.id==='daily-team-search'){
+      resultsSearch=e.target.value;
+      resultsShown=40;
+      const caret=e.target.selectionStart;
+      render();
+      const field=root.querySelector('#daily-team-search');
+      if(field){field.focus({preventScroll:true});if(caret!==null)field.setSelectionRange(caret,caret);}
+      return;
+    }
     if(e.target?.id==='leader-search'){leaderQuery=e.target.value;filterSchoolLeaders();return;}
     if(e.target?.id!=='program-search')return;
     programQuery=e.target.value;

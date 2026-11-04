@@ -103,3 +103,31 @@ test('NCAA seed 1–16 settings expose the agreed exact values and no grouped ti
   const results=readFileSync(new URL('../supabase/functions/boek-api/results.js',import.meta.url),'utf8');
   assert.ok(results.includes("const seedRule=Number.isInteger(seed)&&seed>=1&&seed<=16?'ncaa_seed_'+seed:null;"));
 });
+
+
+test('individual mid-majors receive NCAA upset and at-large eligibility, excluding Gonzaga and Power programs',()=>{
+  const results=readFileSync(new URL('../supabase/functions/boek-api/results.js',import.meta.url),'utf8');
+  const start=results.indexOf('  const POWER_CONFERENCES=');
+  const end=results.indexOf('  const q=',start);
+  assert.ok(start>=0&&end>start,'Find the current shared bonus eligibility function');
+  const selected=[
+    ['2272','High Point','HP','6'],
+    ['2250','Gonzaga','GONZ','21'],
+    ['57','Florida','UF','23'],
+    ['99','Duke','DUKE','2'],
+    ['310','Sample CAA','CAA','10'],
+    ['777','Sample Ivy','IVY','12'],
+    ['999','Sample Pac-12','P12','21']
+  ];
+  const eligible=new Function('PROGRAM_DIRECTORY',results.slice(start,end)+String.fromCharCode(10)+'return isBonusEligible;')(selected);
+  assert.equal(eligible('2272'),true,'High Point qualifies despite the Big South not being selected');
+  assert.equal(eligible('310'),true,'Existing non-Power conferences qualify');
+  assert.equal(eligible('777'),true,'Future individually added Ivy programs qualify');
+  assert.equal(eligible('999'),true,'Pac-12 schools qualify');
+  assert.equal(eligible('2250'),false,'Gonzaga is explicitly excluded');
+  assert.equal(eligible('57'),false,'SEC schools are excluded');
+  assert.equal(eligible('99'),false,'ACC schools are excluded');
+  assert.equal(eligible('00000'),false,'Unknown programs do not qualify');
+  assert.ok(results.includes('isBonusEligible(row.program_id)'));
+  assert.ok(results.includes('isBonusEligible(t.program_id)'));
+});

@@ -385,15 +385,16 @@
   }
   function navButton(id){
     const live=id==='draft'&&draftIsLive()||id==='results'&&liveResultsCount()>0;
+    const pending=id==='trades'?(league?.trades||[]).filter(t=>t.status==='pending'&&t.to_manager_id===me?.id).length:0;
     const active=current===id||current==='program-detail'&&id==='programs'||current==='manager-detail'&&id==='league';
-    return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(active?'active':'')+(live?' has-live':'')+'" '+(active?'aria-current="page"':'')+'>'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>';
+    return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(active?'active':'')+(live?' has-live':'')+'" '+(active?'aria-current="page"':'')+'>'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(pending?'<span class="nav-unread" aria-label="'+pending+' pending trade offers">'+Math.min(99,pending)+'</span>':'')+'</button>';
   }
   function sidebar(){
     return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">LEAGUE HUB</div><nav class="nav">'+['home','team','results','league','programs','draft'].map(navButton).join('')+'</nav><div class="nav-label nav-label-secondary">MANAGEMENT</div><nav class="nav">'+['trades','scoring','settings',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
-    if(['home','league','team'].includes(current)&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    if(['home','league','team','manager-detail'].includes(current)&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     // The overview previews today's games without requiring a visit to Results.
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
@@ -413,13 +414,14 @@
     const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
     const activeMobile=(['trades','commissioner','waivers','history','scoring','settings'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
     const liveGames=liveResultsCount(),liveDraft=draftIsLive();
+    const pendingTradeOffers=(league.trades||[]).filter(t=>t.status==='pending'&&t.to_manager_id===me.id).length;
     const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
       liveGames?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="results"><span class="topbar-event-dot" aria-hidden="true"></span><span>'+liveGames+' live game'+(liveGames===1?'':'s')+'</span></button>':'';
     const oldDraftBoard=current==='draft'?root.querySelector('.draft-board-scroll'):null;
     const draftBoardPosition=oldDraftBoard?[oldDraftBoard.scrollLeft,oldDraftBoard.scrollTop]:null;
     const oldQueueList=current==='draft'?root.querySelector('.draft-queue-list'):null;
     const queueScrollPosition=oldQueueList?.scrollTop||0;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>⌘K</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&pendingTradeOffers?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
     if(current==='draft'){
@@ -993,7 +995,7 @@
     standingsLoading=true;standingsFetchedAt=Date.now();
     try{standingsData=await api('data/standings');standingsError='';}
     catch(e){standingsError=e.message;}
-    finally{standingsLoading=false;if(['home','league','team'].includes(current))render();}
+    finally{standingsLoading=false;if(['home','league','team','manager-detail'].includes(current))render();}
   }
   async function loadSchoolLeaders(){
     if(!me||schoolLeadersLoading)return;
@@ -2301,6 +2303,8 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(act==='search-open'){toggleGlobalSearch(true);return;}
+    if(act==='search-close'){toggleGlobalSearch(false);return;}
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='results-track-queue'){
       resultsSelectedDay=resultsToday();resultsScope='queue';resultsConference='all';resultsStatusFilter='all';
@@ -2319,6 +2323,7 @@
       return;
     }
     if(act==='tab'){
+      globalSearchOpen=false;globalSearchQuery='';
       if(id==='programs'&&current!=='programs')ratingSeason=season();
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
     }
@@ -2351,6 +2356,7 @@
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
     if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
+      globalSearchOpen=false;globalSearchQuery='';
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
       if(String(selectedProgramId)!==String(id)){programScheduleView='all';programProfileTab='overview';}
       selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
@@ -2358,6 +2364,7 @@
       loadProgramResults(id);loadProgramSchedule(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
+      globalSearchOpen=false;globalSearchQuery='';
       if(current!=='manager-detail'){managerBackPage=current;managerBackScroll=window.scrollY;}
       selectedManagerId=id;current='manager-detail';render();window.scrollTo({top:0});return;
     }
@@ -2706,6 +2713,20 @@
       draftSelectedProgram='';render();
     }
   });
+  document.addEventListener('keydown',e=>{
+    if(!me||!league)return;
+    const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'')||e.target?.isContentEditable;
+    if(((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k')||(!typing&&!globalSearchOpen&&e.key==='/')){
+      e.preventDefault();toggleGlobalSearch(true);return;
+    }
+    if(globalSearchOpen&&e.key==='Escape'){e.preventDefault();toggleGlobalSearch(false);return;}
+    if(globalSearchOpen&&e.key==='ArrowDown'&&e.target?.id==='global-search-input'){
+      e.preventDefault();root.querySelector('.global-search-result')?.focus();return;
+    }
+    if(globalSearchOpen&&e.key==='Enter'&&e.target?.id==='global-search-input'){
+      e.preventDefault();root.querySelector('.global-search-result')?.click();return;
+    }
+  });
   root.addEventListener('submit',async e=>{
     const form=e.target.closest('form[data-form]');
     if(!form)return;
@@ -2787,6 +2808,7 @@
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
+    if(e.target?.id==='global-search-input'){globalSearchQuery=e.target.value;const list=root.querySelector('#global-search-list');if(list)list.innerHTML=globalSearchResults();return;}
     if(e.target?.id==='pool-search'){
       poolQuery=e.target.value;poolShown=70;updatePoolList();return;
     }

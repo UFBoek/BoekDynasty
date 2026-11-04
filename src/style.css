@@ -3951,3 +3951,11 @@ button.daily-team-line:hover{background:#f4f8fc}
 @media(max-width:600px){.auth-remember-option{padding:12px 11px;margin-bottom:14px}
  .auth-remember-copy strong{font-size:12.5px}
  .auth-remember-copy small{font-size:10.5px}}
+
+/* Current Torvik year is unambiguous, with one-tap return from historical ratings. */
+.rank-current-season-button{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;
+  padding:8px 11px;border:1px solid #b6d2ef;border-radius:8px;background:#e9f3ff;
+  color:#15518c;font-weight:850;font-size:10.5px;white-space:nowrap;cursor:pointer}
+.rank-current-season-button:hover{background:#d8eaff;border-color:#7db0e4}
+.rank-source-line:has(.rank-current-season-button){flex-wrap:wrap}
+@media(max-width:600px){.rank-current-season-button{margin-left:0;width:100%;padding:11px 9px}}

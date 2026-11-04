@@ -56,7 +56,7 @@
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
-  let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='';
+  let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';
   let avatarDraft=null;
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
@@ -357,6 +357,7 @@
       const response=await api('data/games?date='+encodeURIComponent(today));
       if(today!==resultsToday())return; // Ignore a request that crossed midnight ET.
       overviewGames=Array.isArray(response.games)?response.games:[];
+      overviewRankingSource=response.ranking_source||'pending';
       overviewGamesDay=today;
       overviewGamesError='';
     }catch(e){
@@ -454,11 +455,32 @@
   const scoreboardRank=(id,map)=>map.has(String(id))?'<span class="scoreboard-rank">'+map.get(String(id))+'</span>':'';
   const dailyNetLabel=(rank)=>rank===null||rank===undefined?(resultsRankingSource==='torvik'?'T-Rank pending':'NET pending'):(resultsRankingSource==='torvik'?'T-Rank #':'NET #')+Number(rank);
   const dailyRecord=(record)=>record?Number(record.wins||0)+'–'+Number(record.losses||0):'0–0';
+
+  // Quadrant value is a potential win bonus, separate from the base win points.
+  // Home and away opponent rankings already incorporate venue in the API.
+  const quadWinBonus=(quad,q1a)=>{
+    const rules=league?.settings?.scoring||{};
+    return quad===1?Number(rules.quad_1_win||0)+(q1a?Number(rules.quad_1a_extra||0):0):
+      quad===2?Number(rules.quad_2_win||0):0;
+  };
+  const quadLabel=(quad,q1a)=>Number.isInteger(quad)&&quad>=1&&quad<=4?
+    'Q'+quad+(quad===1&&q1a?'A':''):'Q TBD';
+  const quadBonusText=(quad,q1a)=>{
+    const bonus=quadWinBonus(quad,q1a);
+    return bonus>0?'+'+bonus.toLocaleString('en-US',{maximumFractionDigits:2}):'';
+  };
+  const quadMeaning=(quad,q1a,preliminary)=>{
+    const amount=quadBonusText(quad,q1a);
+    return quadLabel(quad,q1a)+(amount?' · '+amount+' bonus if won':' · no quadrant bonus')+
+      (preliminary?' · provisional T-Rank':'');
+  };
   const dailyQuad=(quad,q1a)=>{
     if(!Number.isInteger(quad)||quad<1||quad>4)
       return '<span class="daily-quad pending" title="No complete current-season ranking source">Q pending</span>';
-    return '<span class="daily-quad q'+quad+(resultsRankingSource==='torvik'?' preliminary':'')+'" title="'+(resultsRankingSource==='torvik'?'Provisional T-Rank ':'Official NET ')+'Quadrant '+quad+(q1a?', including the additional Q1A bonus':'')+'">'+
-      'Q'+quad+(q1a?'<small>A</small>':'')+'</span>';
+    const bonus=quadBonusText(quad,q1a);
+    return '<span class="daily-quad q'+quad+(resultsRankingSource==='torvik'?' preliminary':'')+
+      '" title="'+escapeHTML(quadMeaning(quad,q1a,resultsRankingSource==='torvik'))+'">'+
+      quadLabel(quad,q1a)+(bonus?'<small class="daily-quad-value">'+bonus+'</small>':'')+'</span>';
   };
   // Pure matchers: shared eligibility logic for scoreboard scopes and status toggles.
   const activeDraftQueueIds=()=>{
@@ -677,9 +699,11 @@
       return g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{
         timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'TIME TBD';
     };
-    const school=(id,name,score,hasScore)=>
+    const school=(id,name,score,hasScore,quad,q1a)=>
       '<span class="overview-game-school">'+scoreboardLogo(id)+
       '<strong>'+escapeHTML(name||'Unknown school')+'</strong>'+
+      '<span class="overview-quad-value" title="'+escapeHTML(quadMeaning(quad,q1a,overviewRankingSource==='torvik'))+'">'+
+      quadLabel(quad,q1a)+(quadBonusText(quad,q1a)?' '+quadBonusText(quad,q1a):'')+'</span>'+
       '<b>'+((hasScore&&score!==null&&score!==undefined)?escapeHTML(String(score)):'–')+'</b></span>';
     const cards=fixtures.map(g=>{
       const hasScore=g.status==='final'||g.status==='live';
@@ -690,8 +714,8 @@
         (g.status==='live'?'<i aria-hidden="true"></i>':'')+escapeHTML(formatTime(g))+'</span>'+
         (isMine(g)?'<span class="overview-game-my-tag">MY ROSTER</span>':
           isWatched(g)?'<span class="overview-game-queue-tag">IN QUEUE</span>':'')+'</span>'+
-        school(g.away_id,g.away_name,g.away_score,hasScore)+
-        school(g.home_id,g.home_name,g.home_score,hasScore)+
+        school(g.away_id,g.away_name,g.away_score,hasScore,g.away_quad,g.away_q1a)+
+        school(g.home_id,g.home_name,g.home_score,hasScore,g.home_quad,g.home_q1a)+
         '<span class="overview-game-link">View game day <span aria-hidden="true">›</span></span></button>';
     }).join('');
     const count=games.length;

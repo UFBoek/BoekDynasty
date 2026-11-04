@@ -9,7 +9,7 @@ export default (function makeWorker(){
   const SESSION_SECONDS=90*24*60*60;
   const BROWSER_SESSION_SECONDS=24*60*60;
   const ENCODER=new TextEncoder();
-  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"conference_tournament_win":2,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_extra":1,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_upset_per_seed":1,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
+  const DEFAULT_SCORING=Object.freeze({"regular_win":1,"conference_tournament_win":2,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_extra":1,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_at_large_bid":5,"ncaa_upset_per_seed":1,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
   function scoringFrom(raw){
     let data={};try{data=JSON.parse(raw||'{}');}catch{}
     if(!data||typeof data!=='object'||Array.isArray(data))data={};

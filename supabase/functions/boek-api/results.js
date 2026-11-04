@@ -5,6 +5,8 @@ export const DATA_PIPELINE=(()=>{
   const teamIds=new Set(PROGRAM_DIRECTORY.map(x=>String(x[0])));
   // Matches the commissioner's MULTI-BID & MID-MAJOR group, plus the Pac-12.
   const UPSET_ELIGIBLE_CONFERENCES=new Set(['3','62','44','18','29','11','14','45','9','10','21']);
+  // The NCAA at-large award applies to the Multi-Bid & Mid-Major group only.
+  const AT_LARGE_ELIGIBLE_CONFERENCES=new Set(['3','62','44','18','29','11','14','45','9','10']);
   const programConference=new Map(PROGRAM_DIRECTORY.map(x=>[String(x[0]),String(x[3])]));
   const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);
   const err=e=>String(e?.message||e||'Unknown error').slice(0,300).replace(/[\r\n]/g,' ');
@@ -373,7 +375,7 @@ export const DATA_PIPELINE=(()=>{
         quad_by_type:t?.quad_by_type||null,
         ncaa_wins:t?.ncaa_wins||0,opening_round_wins:t?.opening_round_wins||0,
         upset_wins:t?.upset_wins||0,upset_seed_lines:t?.upset_seed_lines||0,
-        seed:t?.seed||0,net_verified:!!t?.net_verified,
+        seed:t?.seed||0,at_large_bid:!!t?.at_large_bid,net_verified:!!t?.net_verified,
         quadrant_source:t?.quadrant_source||'pending',quadrant_provisional:!!t?.quadrant_provisional,
         rank:isEligible?(t?.rank??null):null,
         rank_total:isEligible?scores.rank_total:null,
@@ -854,6 +856,13 @@ export const DATA_PIPELINE=(()=>{
         }
       }
     }
+    // Withhold at-large bonuses until all conference auto-bid winners are verified.
+    // Historical seasons have 31 or 32 tournament champions in the official archive.
+    const tournamentTitlesBySeason=new Map();
+    for(const award of awards){
+      if(award.award_type==='conference_tournament_champion'&&Number(award.value)>0)
+        tournamentTitlesBySeason.set(award.season,(tournamentTitlesBySeason.get(award.season)||0)+1);
+    }
     const table=new Map(),find=(season,id)=>{
       const key=season+'|'+String(id);
       if(!table.has(key))table.set(key,{
@@ -890,6 +899,9 @@ export const DATA_PIPELINE=(()=>{
       const titles=Number(a.conference_regular_champion)>0?1:0;
       const tournaments=Number(a.conference_tournament_champion)>0?1:0;
       const champion=Number(a.national_champion)>0?1:0;
+      const atLargeBid=seed>0&&!tournaments&&
+        (tournamentTitlesBySeason.get(t.season)||0)>=31&&
+        AT_LARGE_ELIGIBLE_CONFERENCES.has(programConference.get(t.program_id));
       const components=[
         {key:'regular_win',label:'Regular-season victories',count:t.regular_wins,rate:wt('regular_win')},
         {key:'conference_tournament_win',label:'Conference tournament victories',count:t.conference_tournament_wins,rate:wt('conference_tournament_win')},
@@ -899,6 +911,7 @@ export const DATA_PIPELINE=(()=>{
         {key:'conference_regular_title',label:'Conference regular-season championship',count:titles,rate:wt('conference_regular_title')},
         {key:'conference_tournament_title',label:'Conference tournament championship',count:tournaments,rate:wt('conference_tournament_title')},
         {key:'ncaa_seed',label:seed?'NCAA Tournament seed #'+seed:'NCAA Tournament seeding',count:seed?1:0,rate:seedPoints},
+        {key:'ncaa_at_large_bid',label:'Mid-major NCAA at-large selection',count:atLargeBid?1:0,rate:wt('ncaa_at_large_bid')},
         {key:'ncaa_tournament_win',label:'NCAA Tournament main-bracket wins',count:t.ncaa_wins,rate:wt('ncaa_tournament_win')},
         {key:'ncaa_upset_per_seed',label:'NCAA upset bonus (seed-line difference)',count:t.upset_seed_lines,rate:wt('ncaa_upset_per_seed')},
         {key:'ncaa_opening_round_win',label:'NCAA First Four wins',count:t.opening_round_wins,rate:wt('ncaa_opening_round_win')},
@@ -907,6 +920,7 @@ export const DATA_PIPELINE=(()=>{
       for(const part of components)part.points=round(part.count*part.rate);
       t.breakdown=components;
       t.seed=seed;
+      t.at_large_bid=atLargeBid;
       t.points=round(components.reduce((sum,x)=>sum+x.points,0));
       t.net_verified=verifiedNet.has(t.season);
       t.quadrant_source=t.net_verified?'net':(t.season===currentSeason&&torvikReady?'torvik':'pending');

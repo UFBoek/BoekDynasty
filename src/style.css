@@ -3336,3 +3336,42 @@ button.daily-team-line:hover{background:#f4f8fc}
 @media(max-width:850px){.daily-game-card{grid-template-columns:87px minmax(0,1fr)}.daily-card-body{grid-template-columns:minmax(0,1fr)}.daily-team-line:first-child{border-right:0;border-bottom:1px solid #f0f3f7}.daily-card-footer{grid-column:2;border-left:0;border-top:1px solid #f0f3f7;flex-direction:row;justify-content:space-between;padding:7px 12px}.daily-card-status{grid-row:1 / span 2;padding:10px 8px;border-right:1px solid #edf1f7}.daily-team-line{padding:7px 10px}.daily-game-list{padding:0 12px 12px}}
 @media(max-width:600px){.daily-calendar{padding:10px 7px;gap:3px}.daily-day-list{gap:0}.daily-day{min-height:49px;padding:4px 0}.daily-day strong{font-size:10px}.daily-day span{font-size:9px}.daily-date-arrow{height:45px;width:24px;font-size:19px}.daily-control-bar{padding:10px;gap:10px}.daily-filter-tabs{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.daily-filter-tabs button{font-size:9px;padding:8px 3px}.daily-tools{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 128px 47px;gap:5px}.daily-search{min-width:0}.daily-search input{width:100%;font-size:11px}.daily-picker{width:128px;font-size:10px}.daily-today{padding:0;font-size:10px}.daily-conference-tabs{padding:1px 10px 10px}.daily-day-header{padding:14px 12px 10px}.daily-day-header h2{font-size:15px}.daily-day-header small{font-size:10px}.daily-game-list{gap:6px;padding:0 8px 10px}.daily-game-card{grid-template-columns:76px minmax(0,1fr)}.daily-card-status{padding:8px 5px;font-size:9px}.daily-card-status>strong{font-size:9px}.daily-card-tourney{font-size:8px}.daily-team-line{padding:8px 7px;gap:6px}.daily-team-line .program-logo{width:28px;height:28px;flex-basis:28px}.daily-team-identity strong{font-size:11px}.daily-score{font-size:16px}.daily-quad{font-size:9px;padding:4px 5px}.daily-quad.pending{font-size:8px;padding:4px}.daily-card-footer{padding:7px;font-size:8px}.daily-footer-info{padding:10px;gap:7px 14px}.overview-community-intro{margin-top:18px}.overview-community-intro h2{font-size:17px}.overview-community-intro p{max-width:240px}}
 @media(max-width:360px){.daily-team-identity strong{font-size:10px}.daily-quad.pending{max-width:52px;white-space:normal;line-height:1.1}.daily-score{font-size:15px}.daily-filter-tabs button{font-size:8.5px}}
+
+
+/* Free-source advanced ratings: compact, scannable, mobile-friendly */
+.ratings-shell{padding:22px}
+.rating-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.rating-intro h3{font-size:19px;letter-spacing:-.5px;margin-bottom:5px}
+.rating-intro p{font-size:12px;line-height:1.55;color:#64758b;max-width:570px}
+.rating-source-links{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.rating-source-links a{font-size:11px;font-weight:750;border:1px solid #e1e8f2;padding:8px 11px;border-radius:9px;color:#315275;background:#f8fafc;white-space:nowrap}
+.rating-source-links a:hover{border-color:#d9611e;color:#b54c0c;background:#fff8f2}
+.rating-seasons{margin-bottom:15px}
+.rating-controls{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;margin:13px 0}
+.rating-controls .directory-search{min-width:220px;flex:1;max-width:430px}
+.rating-coverage{font-size:11px;color:#64758b;font-weight:600;margin:13px 0}
+.ratings-table-wrap{overflow-x:auto;border:1px solid #e8edf4;border-radius:13px}
+.ratings-table{border-collapse:collapse;width:100%;min-width:740px;font-size:12px;white-space:nowrap}
+.ratings-table th{background:#f6f8fb;color:#64758b;text-align:left;font-size:10px;letter-spacing:.5px;padding:13px 10px;border-bottom:1px solid #e8edf4}
+.ratings-table td{padding:10px;border-bottom:1px solid #edf1f6;vertical-align:middle;font-variant-numeric:tabular-nums;color:#2b4057}
+.ratings-table tr:last-child td{border-bottom:0}
+.ratings-table tbody tr:hover{background:#f8fafc}
+.ratings-table tr[hidden]{display:none}
+.ratings-table td.rating-rank{font-weight:850;color:#c35a18}
+.ratings-table td small{display:block;font-size:10px;color:#8793a5;margin-top:3px}
+.ratings-table .school-leader-school{min-width:175px;text-align:left;max-width:260px}
+.program-analytics-panel{padding:19px 21px;margin:15px 0}
+.program-metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:13px 0 15px}
+.program-metric-grid>div{background:#f7f9fc;border:1px solid #edf0f5;border-radius:11px;padding:12px;min-width:0}
+.program-metric-grid span{display:block;color:#66768b;font-size:10px;letter-spacing:.45px;font-weight:800;margin-bottom:6px}
+.program-metric-grid strong{display:block;font-size:21px;color:#1f3e60;font-weight:850;letter-spacing:-.6px}
+.program-metric-grid small{display:block;font-size:10px;color:#8692a1;margin-top:4px}
+@media(max-width:750px){
+ .ratings-shell{padding:15px}
+ .rating-intro{gap:11px}
+ .rating-controls .directory-search{max-width:none;width:100%;flex-basis:100%}
+ .ratings-table{min-width:680px}
+ .program-analytics-panel{padding:16px;margin:13px 0}
+ .program-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .program-metric-grid strong{font-size:18px}
+}

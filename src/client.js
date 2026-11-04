@@ -41,6 +41,7 @@
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
+  let resultsLoadedDay='';
   let resultsSearch='',resultsShown=40,resultsNetDate=null,resultsRecordNote='',resultsQuadNote='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
@@ -225,6 +226,7 @@
       if(outcomes[0].status==='fulfilled')resultsStatus=outcomes[0].value;
       if(outcomes[1].status==='fulfilled'){
         resultsGames=outcomes[1].value.games||[];
+        resultsLoadedDay=day;
         resultsNetDate=outcomes[1].value.net_date||null;
         resultsRecordNote=outcomes[1].value.record_note||'Records through the selected date.';
         resultsQuadNote=outcomes[1].value.quadrant_note||'NET quadrants update with verified rankings.';
@@ -327,8 +329,7 @@
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
     const enrolled=new Set(activeConfs().map(String));
     const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
-    const all=resultsGames;
-    const selectedDateValid=resultsSeason===season();
+    const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
     const scopeButton=(id,label)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
       '" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
     const conferenceButton=(id,label)=>'<button type="button" class="'+(resultsConference===id?'active':'')+
@@ -834,7 +835,7 @@
     const ownedYears=(league.archived_rosters||[]).filter(x=>x.program_id===p.id);
     const pointText=x=>x?.points===null||x?.points===undefined?'—':Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
     const maxKnownPoints=Math.max(1,...history.filter(item=>item.points!==null&&item.points!==undefined&&Number.isFinite(Number(item.points))).map(item=>Math.max(0,Number(item.points))));
-    const rankLabel=row=>Number.isInteger(Number(row?.rank))&&Number(row?.rank_total)>0&&row?.status!=='not_applicable'
+    const rankLabel=row=>row?.rank!==null&&row?.rank!==undefined&&Number(row.rank)>0&&Number(row?.rank_total)>0&&row?.status!=='not_applicable'
       ?(row.rank_tied?'T-':'')+'#'+Number(row.rank)+' / '+Number(row.rank_total):'Unranked';
     const seasonRows=Array.from({length:Math.max(0,Number(season().slice(0,4))-2021+1)},(_,i)=>{
       const first=Number(season().slice(0,4))-i,label=first+'-'+String((first+1)%100).padStart(2,'0');

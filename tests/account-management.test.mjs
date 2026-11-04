@@ -5,7 +5,7 @@ import {webcrypto} from 'node:crypto';
 
 const source=readFileSync(new URL('../supabase/functions/boek-api/server.js',import.meta.url),'utf8');
 const body=source.replace(/^import[^\n]*\n/gm,'').replace('export default (function makeWorker(){','return (function makeWorker(){');
-assert.notEqual(body,source,'API module must be transformable into test worker');
+assert.match(body,/return \\(function makeWorker\\(\\)/,'API module must be transformable into test worker');
 const factory=new Function('DATA_PIPELINE','PROGRAM_DIRECTORY','crypto','atob','btoa','TextEncoder','Response','URL',body);
 const worker=factory({},[],webcrypto,atob,btoa,TextEncoder,Response,URL);
 const authToken='test-session-token-longer-than-the-required-minimum';
@@ -15,24 +15,6 @@ const commishId='22222222-2222-4222-8222-222222222222';
 function environment(role='commissioner',targetRole='manager'){
   const calls=[],saved={};
   const env={FRONTEND_ORIGIN:'https://dynasty.test',DB:{
-    prepare(sql){
-      return {bind(...args){
-        return {
-          async first(){
-            calls.push({operation:'first',sql,args});
-            if(sql.includes('FROM sessions s JOIN users u'))
-              return {id:role==='commissioner'?commishId:managerId,
-                username:role==='commissioner'?'commish':'player',
-                display_name:'League member',role,token_hash:'hash-of-token',expires_at:9999999999};
-            if(sql.startsWith('SELECT id,username,display_name,role FROM users'))
-              return {id:args[0],username:targetRole==='manager'?'player':'commish',
-                display_name:'League member',role:targetRole};
-            throw Error('Unexpected read: '+sql);
-          },
-          async run(){throw Error('Unexpected write outside transaction: '+sql);}
-        };
-      }};
-    },
     async batch(statements){
       for(const statement of statements){
         const {query:sql,args}=statement._statement;

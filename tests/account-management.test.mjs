@@ -5,7 +5,7 @@ import {webcrypto} from 'node:crypto';
 
 const source=readFileSync(new URL('../supabase/functions/boek-api/server.js',import.meta.url),'utf8');
 const body=source.replace(/^import[^\n]*\n/gm,'').replace('export default (function makeWorker(){','return (function makeWorker(){');
-assert.match(body,/return \\(function makeWorker\\(\\)/,'API module must be transformable into test worker');
+assert.ok(body.includes('return (function makeWorker(){'),'API module must be transformable into test worker');
 const factory=new Function('DATA_PIPELINE','PROGRAM_DIRECTORY','crypto','atob','btoa','TextEncoder','Response','URL',body);
 const worker=factory({},[],webcrypto,atob,btoa,TextEncoder,Response,URL);
 const authToken='test-session-token-longer-than-the-required-minimum';

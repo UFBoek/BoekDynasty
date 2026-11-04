@@ -2,6 +2,7 @@ import postgres from 'npm:postgres@3.4.7';
 import apiWorker from './server.js';
 import {createD1} from './db.js';
 import {DATA_PIPELINE} from './results.js';
+import {getTorvikRatings} from './ratings.js';
 
 // The GitHub Pages site owns the UI. This function only serves the JSON API.
 const FRONTEND_ORIGIN = 'https://ufboek.github.io';
@@ -29,6 +30,18 @@ Deno.serve(async (request)=>{
   const subpath=at===-1?'':original.pathname.slice(at+marker.length);
   if(!subpath||subpath.includes('..')||subpath.length>250)
     return new Response(JSON.stringify({error:'Unknown API route.'}),{status:404,headers:{...cors,'Content-Type':'application/json'}});
+  if(subpath==='data/ratings'){
+    if(request.method!=='GET')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
+    const year=Number(original.searchParams.get('year'));
+    if(!Number.isInteger(year)||year<2022||year>2027)
+      return Response.json({error:'Choose a season from 2021–22 through 2026–27.'},{status:400,headers:cors});
+    try{
+      const ratings=await getTorvikRatings(year);
+      return Response.json(ratings,{headers:{...cors,'Cache-Control':'public, max-age=900','X-Content-Type-Options':'nosniff'}});
+    }catch(error){
+      return Response.json({error:'T-Rank ratings unavailable: '+String(error?.message||error),source:'Bart Torvik',season:year},{status:503,headers:{...cors,'Cache-Control':'no-store'}});
+    }
+  }
   if(subpath==='cron'){
     if(request.method!=='POST')
       return Response.json({error:'Method not allowed.'},{status:405,headers:cors});

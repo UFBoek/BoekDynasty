@@ -1,19 +1,25 @@
 # Boek Dynasty
 
-Permanent fantasy college basketball dynasty league starting in the **2026–27 season**. Managers draft **NCAA programs**, not individual athletes, and **keep those programs across future seasons** unless traded. Season-long scoring weights are configured, with **best 8 programs counting** per manager. Verified game results are not yet connected.
+Permanent fantasy college basketball dynasty league starting in the **2026–27 season**. Managers draft **NCAA programs**, not individual athletes, and **keep those programs across future seasons** unless traded. Season-long scoring weights are configured, with **best 12 programs counting** per manager. Historical game results from 2021–22 onward, NET rankings, NCAA tournament awards, and live scoreboard updates are stored in Supabase.
 
 ## Live app
 
 https://boek-dynasty.fig-league-archive.workers.dev/
 
-This project has its own source repository, Cloudflare Worker (`boek-dynasty`), and D1 database (`boek-dynasty-db`). It does **not** reuse or modify any Fantasy League Records / BoekMuse infrastructure.
+**Current production:** GitHub contains the app code, Cloudflare Worker `boek-dynasty` serves the familiar website as a stateless compatibility frontend, and **Supabase PostgreSQL** provides accounts, league state, scoring history, drafts, and trades. The live Worker has no D1 binding or cron jobs. The old D1 database is retained only as a rollback snapshot. GitHub Pages deployment is prepared but awaits the repository owner's Pages enablement setting. This is separate from Fantasy League Records / BoekMuse.
+
+## Deployment status
+
+The live URL above has been migrated off Cloudflare D1. Users must sign in again with their existing usernames and passwords because sessions moved from cookies to bearer tokens. Production uses the Supabase API at `https://hscgsaujazcyneykarai.supabase.co/functions/v1/boek-api` and Supabase scheduled imports. All game history and current league settings were migrated, including 7 manager slots, a 16-round draft, and best-12 scoring.
+
+GitHub Pages at `https://ufboek.github.io/BoekDynasty/` remains **unpublished** until the repository owner goes to **Settings → Pages → Build and deployment → Source: GitHub Actions** and reruns the Pages deployment. See [deployment notes](docs/GITHUB_MIGRATION.md). Do not tell managers to use the unpublished Pages URL.
 
 ## Features
 
-- **Configurable manager cap (2–20)**, including the commissioner; D1 validates capacity at registration with a settings-driven database trigger.
+- **Configurable manager cap (2–20)**, including the commissioner; PostgreSQL validates capacity at registration with a settings-driven database trigger.
 - One-time commissioner setup code, then single-use invitation links valid for 7 days.
 - Each manager creates a team with a username, team name, and password.
-- Passwords hashed with PBKDF2-SHA256 using Cloudflare-compatible 100,000 iterations; 90-day HttpOnly, Secure, SameSite cookies renew on use.
+- Passwords hashed with PBKDF2-SHA256 using Cloudflare-compatible 100,000 iterations; server-verified bearer sessions expire after 90 days and renew on use.
 - Commissioner settings are organized into General, Draft, Programs, Members, Scoring, and Trades. The commissioner can rename the league, set the manager cap (2–20), configure conferences and draft rounds (1–20), reorder/shuffle draft positions before the draft, manage invitations, and enable/disable trading.
 - College basketball conference membership from a verified 2026–27 ESPN standings snapshot (via SportsDataverse), bundled with the app; manual program entry if a school is missing.
 - Initial snake-format draft, with exclusive ownership, turn checks, pause/resume and pre-completion commissioner reset.
@@ -22,7 +28,7 @@ This project has its own source repository, Cloudflare Worker (`boek-dynasty`), 
 - **Manager-to-manager trades:** select schools from each roster, send an offer, and accept, decline or cancel. Both owners' programs transfer together after acceptance, with server-side validation against stale offers. League-wide trade activity is visible.
 - Responsive desktop/mobile design and PWA home-screen setup.
 - **Scoring tab:** regular-season wins, Q1/Q2/Q1A bonuses, conference championships, NCAA appearance seed tiers, NCAA wins, and a +15 national championship bonus. AP and KenPom award no points. Commissioner can edit the settings; members can view them.
-- No fabricated game results or fantasy points. Live results integration and year-end awards come later.
+- Historical game data and live score ingestion use ESPN feeds and verified award records. Fantasy points follow the configured scoring rules; incomplete inputs are not presented as verified.
 
 ## Interface copy and layout
 
@@ -30,22 +36,28 @@ Treat Boek Dynasty as a functional league application, not a marketing landing p
 
 ## League display and program imports
 
-The navigation uses **League Overview** for a league-wide dashboard and **My Team** for permanent program ownership, incoming/outgoing trade review, and waiver activity. **Standings** remains the season scoring table. Scores remain unranked until verified results ingestion is connected; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
+The navigation uses **League Overview** for a league-wide dashboard and **My Team** for permanent program ownership, incoming/outgoing trade review, and waiver activity. **Standings** remains the season scoring table. Rankings use imported, verified results and disclose incomplete historical NET or award coverage; the site does not invent game points. The Programs directory includes search, conference and ownership filters.
 
 When the commissioner opens the site with a pending draft, the frontend checks for selected conferences with no imported programs and imports their 2026–27 rosters from the bundled verified program directory, in small batches. Once the imports finish, the program directory shows schools and their ESPN CDN logos (where available). The commissioner can also manually use **Import selected programs** to retry or refresh. Existing ownership and draft picks remain unchanged.
 
 ## Architecture
 
-Production has **zero npm dependencies**: Cloudflare Workers serve the backend and web app, Cloudflare D1 stores league data. The 2026–27 program directory is bundled from the SportsDataverse ESPN standings snapshot; review school membership before drafting.
+The site is backed by **Supabase PostgreSQL** and its Edge Function API. All sources and deployment builds are in this GitHub repository. The existing Cloudflare Worker now serves only static assets and proxies authenticated API calls to Supabase; it does not use D1. The 2026–27 program directory remains bundled from the SportsDataverse ESPN standings snapshot; review school membership before drafting.
 
 - `data/programs-2027.json` vetted 2026–27 programs with 365 ESPN team IDs and all 32 conferences
 - `src/client.js` browser interface
 - `src/style.css` visual system
-- `src/server.js` Worker/API implementation
+- `src/server.js` legacy D1 Worker/API reference (not active)
+- `src/worker-proxy.js` production stateless Worker HTTP frontend and Supabase API proxy
+- `supabase/functions/boek-api/server.js` active API implementation
+- `supabase/functions/boek-api/results.js` game imports and scoring
+- `supabase/migrations/` PostgreSQL schema and ten scheduled ingestion jobs
 - `src/index.html` HTML shell
-- `schema.sql` D1 schema
-- `scripts/build.mjs` build pipeline
-- `dist/worker.js` Worker bundle
+- `schema.sql` historical D1 schema (rollback reference)
+- `scripts/build-worker-proxy.mjs` builds the stateless Worker served at the original URL
+- `dist/worker-proxy.js` deployed Worker bundle
+- `scripts/build-pages.mjs` builds the pending GitHub Pages frontend
+- `.github/workflows/deploy-pages.yml` automatically deploys Pages after GitHub Pages is enabled
 
 ## Program directory source
 

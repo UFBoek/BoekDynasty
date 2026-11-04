@@ -659,7 +659,7 @@
     const years=Array.from({length:6},(_,i)=>ratingYear(season())-i).filter(y=>y>=2022&&y<=2027);
     const seasons='<div class="school-leaders-seasons rating-seasons" role="group" aria-label="T-Rank season">'
       +years.map(y=>'<button type="button" data-act="rating-season" data-id="'+y+'" class="'+(year===y?'active':'')+'">'+(y-1)+'-'+String(y%100).padStart(2,'0')+'</button>').join('')+'</div>';
-    const header='<div class="rating-intro"><div><h3>Bart Torvik T-Rank</h3><p>National power ratings. Separate from dynasty fantasy points and NCAA NET quadrants.</p></div>'+ratingExternalLinks()+'</div>';
+    const header='<div class="rating-intro"><div><h3>Bart Torvik T-Rank</h3><p>National power ratings. Used for provisional quadrant bonuses until official NCAA NET becomes available.</p></div>'+ratingExternalLinks()+'</div>';
     if(!data)return '<section class="panel ratings-shell">'+header+seasons
       +(ratingError[year]?empty('Ratings unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Retry</button>'
         :empty('Loading ratings','Retrieving '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-Rank ratings.'))+'</section>';
@@ -966,7 +966,7 @@
       +'<div><span>WINS ABOVE BUBBLE</span><strong>'+decimal(metrics.wab)+'</strong></div>'
       +'<div><span>ADJUSTED TEMPO</span><strong>'+decimal(metrics.tempo)+'</strong></div></div>'
       :'<p class="hint">'+escapeHTML(ratingError[metricsYear]||(ratingLoading[metricsYear]?'Loading public T-Rank ratings…':'No verified T-Rank match for this season.'))+'</p>';
-    const analytics='<section class="panel program-analytics-panel">'+panelHeading('Power ratings · '+escapeHTML(selected),'Bart Torvik T-Rank · informational only')
+    const analytics='<section class="panel program-analytics-panel">'+panelHeading('Power ratings · '+escapeHTML(selected),'Bart Torvik T-Rank · provisional Q1/Q1A/Q2 source before NCAA NET')
       +analyticsContent+ratingExternalLinks()+'</section>';
 
     const recordText=record?.played?record.wins+'–'+record.losses:'—';

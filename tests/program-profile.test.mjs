@@ -96,10 +96,10 @@ test('NCAA seed 1–16 settings expose the agreed exact values and no grouped ti
   }
   assert.doesNotMatch(html,/Seeds 1–4|Seeds 5–8|Seeds 9–12|Seeds 13–16/);
   const server=readFileSync(new URL('../supabase/functions/boek-api/server.js',import.meta.url),'utf8');
-  const defaults=JSON.parse(server.match(/const DEFAULT_SCORING=Object\\.freeze\\((\\{[^;]+?\\})\\);/)[1]);
+  const defaults=JSON.parse(server.split('const DEFAULT_SCORING=Object.freeze(')[1].split(');')[0]);
   for(let seed=1;seed<=16;seed++)assert.equal(defaults['ncaa_seed_'+seed],seedBonuses[seed-1]);
   for(const old of ['ncaa_seed_1_4','ncaa_seed_5_8','ncaa_seed_9_12','ncaa_seed_13_16'])
     assert.equal(Object.hasOwn(defaults,old),false);
   const results=readFileSync(new URL('../supabase/functions/boek-api/results.js',import.meta.url),'utf8');
-  assert.match(results,/seedRule=Number\\.isInteger\\(seed\\).*?'ncaa_seed_'\\+seed/);
+  assert.ok(results.includes("const seedRule=Number.isInteger(seed)&&seed>=1&&seed<=16?'ncaa_seed_'+seed:null;"));
 });

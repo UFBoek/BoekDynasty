@@ -40,7 +40,8 @@
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
-  let resultsSelectedDay='',resultsConference='all',resultsScope='all',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
+  let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
+  let resultsSearch='',resultsShown=40,resultsNetDate=null,resultsRecordNote='',resultsQuadNote='';
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initials=(s)=>String(s||'??').trim().split(/\s+/).map(v=>v[0]).slice(0,2).join('').toUpperCase();
   const fmt=(v)=>Number(v||0).toLocaleString('en-US');
@@ -224,6 +225,9 @@
       if(outcomes[0].status==='fulfilled')resultsStatus=outcomes[0].value;
       if(outcomes[1].status==='fulfilled'){
         resultsGames=outcomes[1].value.games||[];
+        resultsNetDate=outcomes[1].value.net_date||null;
+        resultsRecordNote=outcomes[1].value.record_note||'Records through the selected date.';
+        resultsQuadNote=outcomes[1].value.quadrant_note||'NET quadrants update with verified rankings.';
         resultsSeason=season();resultsFetchedAt=Date.now();
       }else{
         resultsGames=[];
@@ -269,89 +273,121 @@
     return /^\d+$/.test(String(id||''))?'<img class="program-logo" src="https://a.espncdn.com/i/teamlogos/ncaa/500/'+id+'.png" loading="lazy" alt=""/>':'<span class="program-logo program-initial">NCAA</span>';
   };
   const scoreboardRank=(id,map)=>map.has(String(id))?'<span class="scoreboard-rank">'+map.get(String(id))+'</span>':'';
-  const scoreboardCard=(g,ranks)=>{
-    const canScore=['final','live'].includes(g.status);
-    const awayScore=canScore&&g.away_score!==null?String(g.away_score):'';
-    const homeScore=canScore&&g.home_score!==null?String(g.home_score):'';
-    const gameStatus=g.status==='live'?'LIVE':g.status==='final'?'FINAL':g.status==='postponed'?'PPD':g.status==='cancelled'?'CANCELLED':
-      (g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}):'TBD');
-    const gameLink=/^\d+$/.test(String(g.game_id))?'https://www.espn.com/mens-college-basketball/game/_/gameId/'+g.game_id:null;
-    const teamRow=(id,name,score,isWinner)=>'<div class="scoreboard-team-line '+(isWinner?'winner':'')+'">'
-      +scoreboardLogo(id)+scoreboardRank(id,ranks)+'<span class="scoreboard-team-name">'+escapeHTML(name)+'</span>'
-      +'<strong class="scoreboard-team-score">'+escapeHTML(score)+'</strong></div>';
-    const winner=canScore&&g.status==='final'&&g.home_score!==null&&g.away_score!==null;
-    const involved=owners().filter(o=>String(o.program_id)===String(g.home_id)||String(o.program_id)===String(g.away_id));
-    const isMyGame=involved.some(o=>o.manager_id===me?.id);
-    return '<article class="scoreboard-match '+(g.status==='live'?'is-live':g.status==='final'?'is-final':g.status==='scheduled'?'is-scheduled':'is-other')+(involved.length?' is-league-game':'')+(isMyGame?' is-my-game':'')+'">'
-      +'<div class="scoreboard-match-head"><span class="scoreboard-match-status '+(g.status==='live'?'live':'')+'">'+(g.status==='live'?'<i class="live-score-dot" aria-hidden="true"></i>':'')+escapeHTML(gameStatus)+'</span>'
-      +'<span class="scoreboard-match-tags">'+(isMyGame?'<span class="scoreboard-roster-tag is-personal">MINE</span>':involved.length?'<span class="scoreboard-roster-tag">LEAGUE</span>':'')+(g.neutral_site?'<span class="scoreboard-match-venue">NEUTRAL</span>':'')+'</span></div>'
-      +'<div class="scoreboard-match-teams">'
-      +teamRow(g.away_id,g.away_name||'Away',awayScore,winner&&g.away_score>g.home_score)
-      +teamRow(g.home_id,g.home_name||'Home',homeScore,winner&&g.home_score>g.away_score)
-      +'</div>'
-      +(gameLink?'<a class="scoreboard-game-link" href="'+gameLink+'" target="_blank" rel="noopener noreferrer">Box score <span>↗</span></a>':'')
-      +'</article>';
+  const dailyNetLabel=(rank)=>rank===null||rank===undefined?'NET pending':'NET #'+Number(rank);
+  const dailyRecord=(record)=>record?Number(record.wins||0)+'–'+Number(record.losses||0):'0–0';
+  const dailyQuad=(quad,q1a)=>{
+    if(!Number.isInteger(quad)||quad<1||quad>4)
+      return '<span class="daily-quad pending" title="Official NET ranking not yet available">NET pending</span>';
+    return '<span class="daily-quad q'+quad+'" title="Quadrant '+quad+(q1a?', including the additional Q1A bonus':'')+'">'+
+      'Q'+quad+(q1a?'<small>A</small>':'')+'</span>';
+  };
+  const dailyGameCard=(g,pollRanks)=>{
+    const finished=g.status==='final',live=g.status==='live';
+    const hasScore=finished||live;
+    const t=g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'TBD';
+    const status=live?'LIVE':finished?'FINAL':g.status==='scheduled'?t:
+      g.status==='cancelled'?'CANCELLED':g.status==='postponed'?'POSTPONED':'TBD';
+    const linked=new Set(programs().map(p=>String(p.id)));
+    const line=(id,name,record,net,quad,q1a,score,isWinner,isHome)=>{
+      const ap=pollRanks.get(String(id));
+      const body=scoreboardLogo(id)
+        +'<span class="daily-team-identity">'+(ap?'<span class="daily-ap">#'+ap+'</span>':'')
+        +'<strong>'+escapeHTML(name||'Unknown school')+'</strong>'
+        +'<small class="daily-team-record">'+dailyRecord(record)+' <span>W–L</span></small></span>'
+        +'<span class="daily-team-net">'+escapeHTML(dailyNetLabel(net))+'</span>'
+        +dailyQuad(quad,q1a)
+        +'<span class="daily-score">'+(hasScore&&score!==null?escapeHTML(String(score)):'—')+'</span>';
+      const cls='daily-team-line'+(isWinner?' is-winner':'')+(isHome?' home':' away');
+      return linked.has(String(id))
+        ?'<button type="button" class="'+cls+'" data-act="open-program" data-id="'+escapeHTML(id)+'" title="Open '+escapeHTML(name)+' school history">'+body+'</button>'
+        :'<div class="'+cls+'">'+body+'</div>';
+    };
+    const winner=finished&&g.home_score!==null&&g.away_score!==null;
+    const rostered=owners().filter(o=>String(o.program_id)===String(g.home_id)||String(o.program_id)===String(g.away_id));
+    const mine=rostered.some(o=>o.manager_id===me?.id);
+    const selectedLeague=rostered.length>0;
+    const isNeutral=Number(g.neutral_site)===1;
+    const at= isNeutral?'Neutral site':'At '+escapeHTML(g.home_name||'home school');
+    const special=g.tournament_tag==='ncaa'?'NCAA TOURNAMENT':g.tournament_tag==='conference'?'CONFERENCE TOURNAMENT':'';
+    const link=/^\d+$/.test(String(g.game_id||''))?'https://www.espn.com/mens-college-basketball/game/_/gameId/'+g.game_id:null;
+    return '<article class="daily-game-card '+(live?'is-live':'')+(mine?' is-my-game':'')+'" data-search="'+
+      escapeHTML((String(g.home_name||'')+' '+String(g.away_name||'')+' '+String(g.home_id)+' '+String(g.away_id)).toLowerCase())+'">'
+      +'<div class="daily-card-status"><strong class="'+(live?'live':'')+'">'+(live?'<i class="daily-live-dot"></i>':'')+escapeHTML(status)+'</strong>'
+      +(special?'<span class="daily-card-tourney">'+special+'</span>':'')
+      +(mine?'<span class="daily-card-mine">MY TEAM</span>':selectedLeague?'<span class="daily-card-league">ROSTERED</span>':'')
+      +'</div><div class="daily-card-body">'
+      +line(g.away_id,g.away_name,g.away_record,g.away_net,g.away_quad,g.away_q1a,g.away_score,winner&&Number(g.away_score)>Number(g.home_score),false)
+      +line(g.home_id,g.home_name,g.home_record,g.home_net,g.home_quad,g.home_q1a,g.home_score,winner&&Number(g.home_score)>Number(g.away_score),true)
+      +'</div><div class="daily-card-footer"><span>'+at+'</span>'
+      +(link?'<a href="'+link+'" target="_blank" rel="noopener noreferrer" aria-label="View ESPN box score for '+escapeHTML(g.away_name+' at '+g.home_name)+'">Game details ↗</a>':'')
+      +'</div></article>';
   };
   function resultsPage(){
-    const day=resultsSelectedDay||resultsToday(),pollRank=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
+    const day=resultsSelectedDay||resultsToday();
+    const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
+    const enrolled=new Set(activeConfs().map(String));
+    const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
     const all=resultsGames;
-    const conferencePill=(id,label)=>'<button type="button" data-act="results-conference" data-id="'+escapeHTML(id)+'" class="'+(resultsConference===id?'active':'')+'" aria-pressed="'+(resultsConference===id)+'">'+escapeHTML(label)+'</button>';
-    const conferenceOptions=conferencePill('all','All conferences')+conferencePill('league','League conferences')
-      +[...new Set([...activeConfs(),...Object.keys(conferenceNames)])].map(id=>conferencePill(id,conf(id))).join('');
+    const selectedDateValid=resultsSeason===season();
+    const scopeButton=(id,label)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
+      '" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
+    const conferenceButton=(id,label)=>'<button type="button" class="'+(resultsConference===id?'active':'')+
+      '" data-act="results-conference" data-id="'+escapeHTML(id)+'" aria-pressed="'+(resultsConference===id)+'">'+escapeHTML(label)+'</button>';
+    const days=Array.from({length:7},(_,i)=>{
+      const value=shiftResultsDay(day,i-3);
+      return '<button type="button" class="daily-day '+(value===day?'active':'')+
+        '" data-act="results-date" data-date="'+value+'" aria-pressed="'+(value===day)+'">'+
+        '<span>'+formatResultsDay(value,{weekday:'short'})+'</span><strong>'+
+        formatResultsDay(value,{month:'short',day:'numeric'})+'</strong></button>';
+    }).join('');
     let list=all.filter(g=>{
-      if(resultsConference==='league'&&!activeConfs().some(id=>g.home_conference_id===id||g.away_conference_id===id))return false;
-      if(resultsConference!=='all'&&resultsConference!=='league'&&g.home_conference_id!==resultsConference&&g.away_conference_id!==resultsConference)return false;
-      if(resultsScope==='league'&&!owners().some(o=>o.program_id===g.home_id||o.program_id===g.away_id))return false;
-      if(resultsScope==='top25'&&!pollRank.has(g.home_id)&&!pollRank.has(g.away_id))return false;
+      const homeConf=String(g.home_conference_id||''),awayConf=String(g.away_conference_id||'');
+      if(resultsScope==='league'&&!enrolled.has(homeConf)&&!enrolled.has(awayConf))return false;
+      if(resultsScope==='mine'&&!owned.has(String(g.home_id))&&!owned.has(String(g.away_id)))return false;
+      if(resultsScope==='top25'&&!pollRanks.has(String(g.home_id))&&!pollRanks.has(String(g.away_id)))return false;
+      if(resultsConference!=='all'&&homeConf!==resultsConference&&awayConf!==resultsConference)return false;
+      if(resultsSearch){
+        const q=resultsSearch.trim().toLowerCase();
+        if(q&&!((g.home_name||'')+' '+(g.away_name||'')).toLowerCase().includes(q))return false;
+      }
       return true;
     });
-    list=list.sort((a,b)=>{
-      const priority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
-      const d=(priority[a.status]??5)-(priority[b.status]??5);
-      return d||(a.start_utc||'').localeCompare(b.start_utc||'');
-    });
-    const groups=new Map();
-    for(const game of list){
-      const id=resultsConference!=='all'&&resultsConference!=='league'?resultsConference:
-        (activeConfs().includes(game.home_conference_id)?game.home_conference_id:game.home_conference_id||game.away_conference_id||'other');
-      const name=conferenceNames[id]||'Other matchups';
-      if(!groups.has(name))groups.set(name,[]);
-      groups.get(name).push(game);
-    }
-    const activeDatePills=Array.from({length:7},(_,i)=>{
-      const value=shiftResultsDay(day,i-3);
-      return '<button type="button" class="scoreboard-day '+(value===day?'active':'')+'" data-act="results-date" data-date="'+value+'" aria-pressed="'+(value===day)+'">'
-        +'<span>'+formatResultsDay(value,{weekday:'short'}).toUpperCase()+'</span><strong>'+formatResultsDay(value,{month:'short',day:'numeric'})+'</strong></button>';
-    }).join('');
-    const scopeButton=(id,title)=>'<button type="button" class="'+(resultsScope===id?'active':'')+'" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+title+'</button>';
-    const live=all.filter(g=>g.status==='live').length,finals=all.filter(g=>g.status==='final').length;
-    const hasPoll=resultsAP.length===25;
-    const subtitle='All Division I games · '+escapeHTML(season());
-    return heading('COLLEGE BASKETBALL','Scores & Results','Browse schedules, live games and final scores by day, conference or AP Top 25.')
-      +'<section class="scoreboard-shell">'
-      +'<div class="scoreboard-utility"><div><span class="scoreboard-live-dot '+(live?'active':'')+'"></span><strong>'+all.length+'</strong> games <span class="scoreboard-utility-divider">/</span> <strong>'+live+'</strong> live <span class="scoreboard-utility-divider">/</span> <strong>'+finals+'</strong> final</div>'
-      +'<div class="scoreboard-utility-actions">'+(resultsLoading?'<span class="scoreboard-updating">Updating…</span>':'')+'<button type="button" class="btn small secondary" data-act="refresh-results">↻ Refresh</button></div></div>'
-      +'<div class="scoreboard-calendar"><button class="scoreboard-calendar-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
-      +'<div class="scoreboard-days">'+activeDatePills+'</div>'
-      +'<button class="scoreboard-calendar-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
-      +'<div class="scoreboard-filterbar"><div class="scoreboard-scopes" role="group" aria-label="Show games">'+scopeButton('all','All games')+scopeButton('league','My league')+scopeButton('top25','AP Top 25')+'</div>'
-      +'<div class="scoreboard-filter-tools"><input type="date" id="scoreboard-date" class="field scoreboard-date-input" aria-label="Select game date" value="'+escapeHTML(day)+'"/>'
-      +'<button class="scoreboard-today" data-act="results-today" type="button">Today</button></div></div>'
-      +'<div class="scoreboard-conference-strip" role="group" aria-label="Filter scores by conference">'+conferenceOptions+'</div>'
-      +'<div class="scoreboard-day-heading"><div><span>'+formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</span><h2>'+list.length+' '+(list.length===1?'matchup':'matchups')+'</h2></div>'
-      +'<small>'+(resultsScope==='top25'?(hasPoll?'AP poll as of '+escapeHTML(resultsAPAsOf||''):'AP rankings not available'):'Eastern Time (ET)')+'</small></div>'
-      +(resultsError?'<div class="notice scoreboard-alert">'+escapeHTML(resultsError)+'</div>':'')
-      +(resultsScope==='top25'&&!hasPoll?'<div class="scoreboard-empty"><strong>AP Top 25 is not available yet</strong><span>We only show verified ESPN AP rankings. Check again after the poll is imported.</span></div>':
-        list.length?'<div class="scoreboard-conference-groups">'+[...groups].map(([name,games])=>
-          '<section class="scoreboard-group"><div class="scoreboard-group-heading"><strong>'+escapeHTML(name)+'</strong><span>'+games.length+' games</span></div>'
-          +'<div class="scoreboard-match-grid">'+games.map(g=>scoreboardCard(g,pollRank)).join('')+'</div></section>'
-        ).join('')+'</div>':
-        '<div class="scoreboard-empty"><strong>'+(resultsLoading?'Loading game schedule…':'No games found')+'</strong><span>'+(resultsScope==='league'?'No games involving rostered programs match these filters.':'Try another date or a different conference. Some schedules may still be syncing.')+'</span>'
-        +(me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this date</button>':'')+'</div>')
-      +'<details class="scoreboard-source"><summary>Data sources & update status</summary><div class="scoreboard-source-details"><div><span>Game feed</span><strong>ESPN scoreboards</strong></div>'
-      +'<div><span>Ranked teams</span><strong>'+(hasPoll?'AP Top 25 · '+escapeHTML(resultsAPAsOf||''):'AP poll pending')+'</strong></div>'
-      +'<div><span>Automatic updates</span><strong>'+(resultsStatus?.auto_enabled?'Enabled':'Disabled')+'</strong></div>'
-      +'<div><span>Days missing verification</span><strong>'+String(resultsStatus?.coverage?.missing_dates??'—')+'</strong></div></div></details>'
+    const priority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
+    list.sort((a,b)=>(priority[a.status]??5)-(priority[b.status]??5)||
+      (a.start_utc||'').localeCompare(b.start_utc||''));
+    const visible=list.slice(0,resultsShown);
+    const totalFinal=list.filter(g=>g.status==='final').length;
+    const totalLive=list.filter(g=>g.status==='live').length;
+    const conferenceOptions=[...enrolled].sort((a,b)=>conf(a).localeCompare(conf(b)));
+    const pollAvailable=resultsAP.length===25;
+    const note=resultsNetDate?'Quadrants use official NET as of '+resultsNetDate+'. A Q1A game is also Q1.':
+      'NET quadrants are pending until the current-season rankings are released.';
+    return heading('COLLEGE BASKETBALL','Daily Results','Every team’s record, game quadrant and score, all in one easy-to-scan view.')
+      +'<section class="daily-results">'
+      +'<div class="daily-toolbar"><div class="daily-toolbar-left"><span class="daily-status-dot '+(totalLive?'active':'')+'"></span><strong>'+
+        list.length+'</strong> games <span class="daily-tool-separator">·</span> '+totalFinal+' final'+(totalLive?' <span class="daily-live-count">· '+totalLive+' live</span>':'')+
+        '</div><button class="daily-refresh" type="button" data-act="refresh-results" aria-label="Refresh games">↻ <span>Refresh</span></button></div>'
+      +'<div class="daily-calendar"><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
+      +'<div class="daily-day-list">'+days+'</div><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
+      +'<div class="daily-control-bar"><div class="daily-filter-tabs" role="group" aria-label="Games to display">'+
+        scopeButton('league','League schools')+scopeButton('mine','My roster')+scopeButton('all','All D-I')+scopeButton('top25','AP Top 25')+
+        '</div><div class="daily-tools"><label class="daily-search"><span aria-hidden="true">⌕</span><input id="daily-team-search" type="search" autocomplete="off" placeholder="Find a school" aria-label="Search daily games by school" value="'+escapeHTML(resultsSearch)+'"/></label>'
+      +'<input type="date" id="scoreboard-date" class="field daily-picker" aria-label="Jump to a date" value="'+escapeHTML(day)+'" />'
+      +'<button type="button" class="daily-today" data-act="results-today">Today</button></div></div>'
+      +'<div class="daily-conference-tabs" role="group" aria-label="Filter by conference">'+
+        conferenceButton('all','All conferences')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div>'
+      +'<div class="daily-day-header"><div><span>DAILY SCOREBOARD</span><h2>'+
+        formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</h2></div><small>'+
+        (resultsLoading?'Updating…':visible.length+' of '+list.length+' games')+'</small></div>'
+      +(resultsError?'<div class="notice">'+escapeHTML(resultsError)+'</div>':'')
+      +(resultsScope==='top25'&&!pollAvailable
+        ?'<div class="daily-empty"><strong>AP rankings are not available yet.</strong><p>Choose League schools or All D-I to see games while the current poll is being imported.</p></div>'
+        :list.length?'<div class="daily-game-list">'+visible.map(g=>dailyGameCard(g,pollRanks)).join('')+'</div>'
+        :'<div class="daily-empty"><strong>'+(resultsLoading?'Loading games…':'No games match these filters')+'</strong><p>'+
+          (resultsScope==='mine'?'Draft a school to see its matchups here.':'Try another date, conference or school search.')+'</p>'+
+          (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
+      +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
+      +'<div class="daily-footer-info"><span><strong>W–L</strong> Updated through the selected date</span><span><strong>Q</strong> NET quadrant from each school’s perspective</span><span>'+escapeHTML(note)+'</span></div>'
       +'</section>';
   }
 

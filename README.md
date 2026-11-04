@@ -264,3 +264,16 @@ Results supports a **My queue** scope, tracking games involving available school
 ### Published full-season program schedules and quadrant value
 
 School profiles load each team's available 2026–27 ESPN team schedule via an authenticated backend endpoint, merged with previously imported verified results. The profile shows announced future fixtures and completed games, with All / Upcoming / Completed views, local Eastern dates/times, opponents, venue and provisional/current quadrant win-bonus significance. Unannounced games are never fabricated; an explicit warning appears if ESPN is temporarily unavailable and only the imported daily scoreboards are shown. Daily Results and League Overview cards show each school's potential Q1A/Q1/Q2 bonus (earned only for wins). This does not change fantasy scores, draft picks, or rosters.
+
+
+## November 4, 2026 — Backend integrity and recovery
+
+The live backend has an hourly Supabase integrity check (pg_cron `boek_integrity_hourly`) that writes structured scan results to `cbb_integrity_runs`. It validates final-game score and venue consistency, suspended source events, stale or failed imports, and gaps in recent primary-scoreboard coverage. Unlisted non-Division-I historical opponents are informational, not automatic scoring errors. The check never changes source game results.
+
+Commissioner → Data includes a **Backend control center** that shows scan issues, severity, recent health counts, scan history and scoring-rule revision history. Commissioners can trigger a new scan, review the shared scoring engine's current program-season calculations, or explicitly retry interrupted imports. These actions are enforced in the API for authenticated commissioner accounts, not only hidden in the UI.
+
+The daily `boek_recent_reconcile` job now also performs a small self-healing pass: closes stale import logs, retries at most two dates, limits reattempt frequency, and records outcomes in `cbb_sync_runs`. Existing historical game and award records are preserved. Scoring rule and best-ball changes append the previous and new configuration to `cbb_scoring_revisions` in the same database transaction as the setting change. Point totals already use the common `historicalLeaders` scorer on demand; the verifier checks that computation without rewriting points.
+
+Database tables for integrity and scoring revisions have RLS enabled with no anonymous or authenticated Data API access. The current API is the `boek-api` Supabase Edge Function and the site frontend is served by the Cloudflare Worker `boek-dynasty`.
+
+The health dashboard reports upstream anomalies rather than guessing corrections. A January 27, 2022 Towson–Delaware game is labeled *Suspended* in the source but marked *final* at 0–0; it is flagged as a warning, not credited as a win. Import runs that are abandoned are explicitly closed as failed for auditability rather than falsely marked successful. Scans cannot guarantee full source completeness for every historical game, but expose coverage gaps and known anomalies.

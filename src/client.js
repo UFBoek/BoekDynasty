@@ -1381,8 +1381,9 @@
   const scoringGroups=[
     ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win bonus'],['quad_1a_extra','Extra Quad 1A win bonus']]],
     ['Conference championships',[['conference_regular_title','Regular-season champion'],['conference_tournament_title','Tournament champion']]],
-    ['NCAA appearance by seed',[['ncaa_seed_1_4','Seeds 1–4'],['ncaa_seed_5_8','Seeds 5–8'],['ncaa_seed_9_12','Seeds 9–12'],['ncaa_seed_13_16','Seeds 13–16'],['ncaa_at_large_bid','Eligible NCAA at-large bid']]],
-    ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_upset_per_seed','Eligible upset bonus per seed line'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]]
+    ['NCAA appearance by seed',[['ncaa_seed_1_4','Seeds 1–4'],['ncaa_seed_5_8','Seeds 5–8'],['ncaa_seed_9_12','Seeds 9–12'],['ncaa_seed_13_16','Seeds 13–16']]],
+    ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]],
+    ['PAC-12 & MID-MAJOR BONUSES',[['ncaa_at_large_bid','NCAA at-large bid'],['ncaa_upset_per_seed','NCAA upset bonus per seed line']]]
   ];
   const scoreRules=()=>league?.settings?.scoring||{};
   function scoringPage(){
@@ -1390,10 +1391,11 @@
     return heading('', 'Scoring')
       +'<section class="panel scoring-lead"><div><span class="eyebrow">SEASON-LONG BEST BALL</span><h2>Best '+count+' programs count</h2><p>Every program remains owned year after year. Only the highest-scoring '+count+' programs on each roster contribute to the annual standings.</p></div><strong>'+count+'</strong></section>'
       +'<div class="scoring-grid">'+scoringGroups.map(([title,fields])=>'<section class="panel scoring-panel">'+panelHeading(escapeHTML(title))
-      +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')+'</section>').join('')+'</div>'
+      +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')
+      +(title==='PAC-12 & MID-MAJOR BONUSES'?'<p class="hint section-gap">Applies only to schools in MULTI-BID &amp; MID-MAJOR and Pac-12 conferences, <strong>excluding Gonzaga</strong>. The at-large bonus is awarded for an NCAA bid without winning the conference tournament (+5 per selection), after automatic bids are verified. Upset points are earned only by beating a better-seeded NCAA opponent (+1 per seed line, no cap). Both stack with normal tournament and quadrant points.</p>':'')+'</section>').join('')+'</div>'
       +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
       +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A stacks on top of Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik T-Rank and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
-      +'<p>Appearance points are awarded once for NCAA seeding. MULTI-BID &amp; MID-MAJOR and Pac-12 programs (except Gonzaga) earn +5 for an NCAA at-large bid, provided they did not win their conference tournament. This bonus activates after all conference tournament champions are verified. Opening Round games use their own win value. Eligible MULTI-BID &amp; MID-MAJOR and Pac-12 programs (except Gonzaga) receive +1 per seed line when defeating a better-seeded NCAA Tournament opponent, with no cap. The upset bonus also stacks with tournament wins, quadrant bonuses and the national championship bonus.</p>'
+      +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins. See the dedicated Pac-12 &amp; Mid-Major Bonuses section for at-large and upset eligibility.</p>'
       +'<p>Regular-season games earn their normal win points; conference tournament wins earn +2 and NCAA Tournament wins earn their configured postseason points. Those wins can additionally earn quadrant bonuses. There is no AP Poll or KenPom bonus.</p>'
       +'<p class="muted">Provisional T-Rank-based points can change. Completed archived seasons use official final NET rankings.</p></section>';
   }
@@ -1676,7 +1678,7 @@
         +'<p class="settings-hint">Best-ball format: top '+Number(r.best_programs||8)+' counting programs. Change that number in Commissioner → General.</p>'
         +scoringGroups.map(([title,fields])=>'<div class="section-gap"><h3 class="subhead">'+escapeHTML(title)+'</h3><div class="settings-grid">'
         +fields.map(([key,label])=>'<div class="form-row"><label for="score-'+key+'">'+escapeHTML(label)+'</label><input class="field" id="score-'+key+'" type="number" min="0" max="100" step="0.25" value="'+Number(r[key]||0)+'"/></div>').join('')+'</div></div>').join('')
-        +'<p class="settings-hint">Q1A stacks with Q1. MULTI-BID &amp; MID-MAJOR and Pac-12 schools (except Gonzaga) earn +5 for an NCAA at-large selection (not an automatic bid) and +1 per NCAA upset seed line with no cap. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
+        +'<p class="settings-hint">Q1A stacks with Q1. The PAC-12 &amp; MID-MAJOR BONUSES section applies to eligible schools only; Gonzaga is excluded. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
         +'<div class="button-row section-gap"><button class="btn" data-act="save-scoring">Save scoring</button><button class="btn secondary" data-act="tab" data-id="scoring">View rules</button></div></section>';
     }else if(adminSection==='trades'){
       body='<section class="panel setting-panel">'+panelHeading('Trading')

@@ -1922,7 +1922,7 @@
       '<div><span>SEASON RECORD</span><strong>'+escapeHTML(currentRecord)+'</strong></div>'+
       '<div><span>'+escapeHTML(ratingLabel.toUpperCase())+'</span><strong>'+escapeHTML(rankValue)+'</strong></div>'+
       '</div>'+tabNav+
-      '<main id="pp-content" class="pp-content" role="tabpanel" aria-labelledby="pp-tab-'+state+'">'+panel+'</main>'+
+      '<div id="pp-content" class="pp-content" role="tabpanel" aria-labelledby="pp-tab-'+state+'">'+panel+'</div>'+
       '</div>';
   }
   function managerProfilePage(){

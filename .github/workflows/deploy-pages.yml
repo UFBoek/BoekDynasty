@@ -27,6 +27,8 @@ jobs:
       - name: Validate app and queue sync
         run: |
           node --check src/client.js
+          node scripts/build-worker-proxy.mjs
+          node --check dist/worker-proxy.js
           node --test tests/draft-queue.test.mjs tests/client-startup.test.mjs
       - name: Build frontend
         env:

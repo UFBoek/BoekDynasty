@@ -4231,3 +4231,12 @@ button.daily-team-line:hover{background:#f4f8fc}
  .daily-filter-tabs button{font-size:7.8px}
  .daily-status-filters button{font-size:8px}
 }
+
+
+/* Keep both scoreboard navigation actions accessible on narrow phones. */
+.overview-scoreboard .panel-head{flex-wrap:wrap}
+.overview-scoreboard .panel-head>.btn{white-space:nowrap;flex:0 0 auto}
+@media(max-width:570px){
+ .overview-scoreboard .panel-head>.btn{font-size:9px;padding:8px 9px}
+ .overview-scoreboard .panel-head{justify-content:flex-start}
+}

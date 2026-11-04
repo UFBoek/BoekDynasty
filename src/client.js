@@ -355,6 +355,45 @@
       +'</section>';
   }
 
+  const teamAccentChoices=[
+    ['#D9611E','Orange'],['#164E8F','Blue'],['#1F8A70','Emerald'],
+    ['#7C3AED','Violet'],['#D9468F','Pink'],['#B45309','Amber'],
+    ['#0F766E','Teal'],['#334155','Slate']
+  ];
+  function settingsPage(){
+    const accent=me.accent_color||'#D9611E';
+    const selectedAvatar=avatarDraft===null?me.avatar_data:avatarDraft;
+    const favorite=String(me.favorite_program_id||'');
+    const eligible=programs().filter(p=>activeConfs().includes(String(p.conference_id)))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+    const colors=teamAccentChoices.map(([hex,label])=>
+      '<label class="settings-color-option" title="'+label+'"><input type="radio" name="accent_color" value="'+hex+'" '+(accent.toUpperCase()===hex?'checked':'')+'/><span class="settings-color-dot" style="background:'+hex+'"></span><small>'+label+'</small></label>'
+    ).join('');
+    return heading('PERSONAL PROFILE','My Settings','Manage how your dynasty identity looks to the rest of the league.')
+      +'<div class="settings-layout">'
+      +'<section class="panel settings-card settings-primary">'+panelHeading('Team identity','Your name and picture are visible to the league')
+      +'<div class="settings-persona"><div class="settings-avatar-preview">'+avatar({...me,avatar_data:selectedAvatar})+'</div><div><strong>'+escapeHTML(me.display_name)+'</strong><small>@'+escapeHTML(me.username)+'</small><span id="photo-hint">JPEG, PNG or WebP. Images are resized and stored securely.</span></div></div>'
+      +'<div class="settings-photo-actions"><label for="settings-photo-input" class="btn secondary small">Choose profile photo</label><input id="settings-photo-input" class="settings-photo-input" type="file" accept="image/jpeg,image/png,image/webp"/><button type="button" class="btn small ghost" data-act="settings-remove-photo">Remove photo</button></div>'
+      +'<form data-form="account-profile" class="settings-form">'
+      +'<div class="settings-form-grid"><label class="settings-field"><span>Team name</span><input class="field" name="display_name" required minlength="2" maxlength="40" autocomplete="organization" value="'+escapeHTML(me.display_name)+'"/></label>'
+      +'<label class="settings-field"><span>Username</span><div class="settings-username-wrap"><span>@</span><input class="field" name="username" required pattern="[a-zA-Z0-9_]{3,24}" maxlength="24" minlength="3" autocomplete="username" autocapitalize="off" value="'+escapeHTML(me.username)+'"/></div></label></div>'
+      +'<div class="settings-field"><span>Profile accent color</span><div class="settings-colors" role="group" aria-label="Profile color">'+colors+'</div></div>'
+      +'<label class="settings-field"><span>Favorite league program</span><select class="field settings-select" name="favorite_program_id"><option value="">No favorite selected</option>'
+      +eligible.map(p=>'<option value="'+escapeHTML(p.id)+'" '+(favorite===String(p.id)?'selected':'')+'>'+escapeHTML(p.name)+'</option>').join('')
+      +'</select><small>Shows on your manager profile. Choose from the league’s eligible schools.</small></label>'
+      +'<div class="settings-actions"><button class="btn" type="submit">Save profile changes</button><span>Visible to other league managers immediately.</span></div>'
+      +'</form></section>'
+      +'<section class="panel settings-card">'+panelHeading('Security','Keep your account protected')
+      +'<form class="settings-form" data-form="account-password" autocomplete="off">'
+      +'<label class="settings-field"><span>Current password</span><input class="field" type="password" name="current_password" autocomplete="current-password" required minlength="8"/></label>'
+      +'<label class="settings-field"><span>New password</span><input class="field" type="password" name="new_password" autocomplete="new-password" required minlength="8" maxlength="128"/></label>'
+      +'<label class="settings-field"><span>Confirm new password</span><input class="field" type="password" name="confirm_password" autocomplete="new-password" required minlength="8" maxlength="128"/></label>'
+      +'<div class="settings-actions"><button class="btn secondary" type="submit">Update password</button></div>'
+      +'<p class="settings-security-note">Changing your password signs out other sessions. Your current session stays active.</p></form>'
+      +'<div class="settings-account-footer"><span>League role</span><strong>'+(me.role==='commissioner'?'Commissioner':'Manager')+'</strong></div>'
+      +'<button class="btn ghost settings-sign-out" data-act="logout">Sign out of Boek Dynasty</button></section>'
+      +'</div>';
+  }
   function morePage(){
     const links=[['settings','My Settings','Change team name, username, photo, colors and password'],['league','Standings','Season fantasy scores and manager rankings'],['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
     if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
@@ -771,12 +810,23 @@
         +'<span>'+escapeHTML(label)+'</span><strong>'+pointText(row)+'</strong><small>'+(row?.status==='partial'?'Live points':row?.status==='complete'?'Final points':row?.status==='not_applicable'?'No D-I record':'Awaiting data')+'</small>'
         +'<span class="program-season-meter" aria-hidden="true"><i style="width:'+(row?.points!==null&&row?.points!==undefined&&Number.isFinite(Number(row.points))?Math.min(100,Math.max(0,100*Number(row.points)/maxKnownPoints)):0)+'%"></i></span></button>';
     }).join('');
+    const breakdown=selectedStats?.breakdown||[];
+    const scoreDetails=breakdown.length
+      ?'<section class="school-score-detail"><div class="school-score-detail-head"><div><span class="eyebrow">FANTASY SCORING</span><h3>Where every point came from</h3><p>Win bonuses stack with the game win points. Quadrant bonuses also count in the NCAA and conference tournaments.</p></div><strong>'+pointText(selectedStats)+' pts</strong></div>'
+        +'<div class="school-score-components">'+breakdown.map(part=>
+          '<div class="school-score-part '+(part.points?'earned':'no-points')+'"><div><strong>'+escapeHTML(part.label)+'</strong><small>'
+            +Number(part.count||0)+' × '+Number(part.rate||0).toLocaleString('en-US',{maximumFractionDigits:2})+' points</small></div>'
+            +'<b>'+(Number(part.points||0)>0?'+':'')+Number(part.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</b></div>'
+        ).join('')+'</div>'
+        +'<div class="school-score-total"><strong>Total fantasy points</strong><strong>'+pointText(selectedStats)+'</strong></div>'
+        +(selectedStats.quad_by_type?'<div class="school-score-quad-context">Quadrant wins by stage: Regular season '+Number(selectedStats.quad_by_type.regular?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.regular?.q2||0)+' Q2 · Conference tournament '+Number(selectedStats.quad_by_type.conference?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.conference?.q2||0)+' Q2 · NCAA Tournament '+Number(selectedStats.quad_by_type.ncaa?.q1||0)+' Q1 / '+Number(selectedStats.quad_by_type.ncaa?.q2||0)+' Q2</div>':'')
+        +'</section>':'<div class="school-score-empty">No scoring components recorded for this year yet.</div>';
     const yearDetail=selectedStats?'<div class="program-season-expanded"><div class="program-season-detail-heading"><div><strong>'+escapeHTML(selectedStats.season)+'</strong><small>'+(selectedStats.status==='complete'?'Final points from verified archived results':selectedStats.status==='partial'?'Live season points, subject to updates':selectedStats.status==='not_applicable'?'No recorded Division I season':'Awaiting verified results')+'</small></div><div class="program-season-bigscore">'+pointText(selectedStats)+'</div></div>'
       +'<div class="program-season-facts"><div><span>W–L</span><strong>'+((selectedStats.games>0)?selectedStats.wins+'–'+selectedStats.losses:'—')+'</strong></div>'
       +'<div><span>Regular-season wins</span><strong>'+(selectedStats.games?selectedStats.regular_wins:'—')+'</strong></div>'
       +'<div><span>Q1 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q1:'NET pending')+'</strong></div>'
       +'<div><span>Q2 wins</span><strong>'+(selectedStats.net_verified?selectedStats.q2:'NET pending')+'</strong></div></div>'
-      +'<p class="hint">'+(selectedStats.status==='complete'?'This archived season is fully scored using verified results, final NET, tournament games and championships.':'Current-season totals update as games, rankings and awards become available.')+'</p></div>'
+      +scoreDetails+'<p class="hint">'+(selectedStats.status==='complete'?'Final totals use all verified regular-season, conference tournament and NCAA Tournament results, with final NET bonuses.':'Current-season totals update as games, rankings and awards become available.')+'</p></div>'
       :'<div class="program-season-expanded"><p class="hint">Loading the program’s verified scoring history…</p></div>';
     const currentPoints=currentStats?.points!==null&&currentStats?.points!==undefined?pointText(currentStats):'—';
     const recordText=record?.played?record.wins+'–'+record.losses:'—';
@@ -814,8 +864,9 @@
     const roster=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
     const records=(league.season_records||[]).filter(x=>x.manager_id===u.id).sort((a,b)=>b.season.localeCompare(a.season));
     const titles=(league.archives||[]).filter(x=>x.champion_manager_id===u.id).length;
+    const favorite=programs().find(p=>String(p.id)===String(u.favorite_program_id||''));
     const rows=roster.map(p=>'<button class="profile-roster-row" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span>›</span></button>').join('');
-    return profileBack()+'<div class="profile-hero manager-hero">'+avatar(u)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h1>'+escapeHTML(u.display_name)+'</h1><div class="profile-subline">@'+escapeHTML(u.username)+(u.id===me.id?' · Your team':'')+'</div></div></div>'
+    return profileBack()+'<div class="profile-hero manager-hero">'+avatar(u)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h1>'+escapeHTML(u.display_name)+'</h1><div class="profile-subline">@'+escapeHTML(u.username)+(u.id===me.id?' · Your team':'')+(favorite?' · Favorite: '+escapeHTML(favorite.name):'')+'</div></div></div>'
       +'<div class="profile-stats"><div><span>OWNED PROGRAMS</span><strong>'+roster.length+'</strong></div><div><span>LEAGUE TITLES</span><strong>'+titles+'</strong></div><div><span>CURRENT POINTS</span><strong class="muted">Pending</strong></div></div>'
       +'<div class="profile-panels"><section class="panel">'+panelHeading('Current roster')+(rows||empty('No programs owned'))+'</section><section class="panel">'+panelHeading('Dynasty seasons')+(records.length?records.map(x=>{const saved=(league.archived_rosters||[]).filter(a=>a.season===x.season&&a.manager_id===u.id);return '<details class="archived-roster"><summary><strong>'+escapeHTML(x.season)+'</strong><span>'+x.programs_count+' schools · Points pending</span></summary><div class="archive-schools">'+(saved.map(a=>{const p=programs().find(p=>p.id===a.program_id);return p?'<button class="table-user" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button>':'';}).join('')||'No programs archived')+'</div></details>';}).join(''):empty('No archived seasons'))+'</section></div>';
   }

@@ -30,6 +30,7 @@
     {name:'OTHER DIVISION I',ids:['1','5','6','12','13','16','19','20','22','24','25','26','27','28','30','46']}
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
+  let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
@@ -89,6 +90,9 @@
       const editing=silent&&!busy&&document.activeElement&&
         /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
       const next=await api('state');
+      const oldScoringState=league?JSON.stringify([league.season,league.settings?.scoring,league.ownership]):'';
+      const newScoringState=JSON.stringify([next.season,next.settings?.scoring,next.ownership]);
+      if(oldScoringState!==newScoringState)standingsFetchedAt=0;
       me=next.user;league=next;appError='';
       if(!silent)current='home';
       if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();}
@@ -176,6 +180,7 @@
   }
   function render(){
     if(!me||!league)return renderAuth();
+    if((current==='league'||current==='team')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','team','results','programs','draft','more'];
@@ -437,7 +442,7 @@
       +'<div class="team-actions"><button class="btn" data-act="tab" data-id="trades">Propose trade</button><button class="btn secondary" data-act="tab" data-id="waivers">Waivers</button><button class="btn secondary" data-act="tab" data-id="programs">Browse programs</button></div>'
       +'<div class="team-layout"><section class="panel team-roster-panel">'+panelHeading('Your programs',owned.length+' permanently owned schools','<button class="btn small ghost" data-act="tab" data-id="programs">Browse schools</button>')
       +(owned.length?'<div class="team-program-grid">'+roster+'</div>':empty('Your roster is ready to build','Once the draft begins, your selected schools will appear here with their logos and season records.'))
-      +(owned.length?'<p class="team-footnote">Program points will appear after verified college basketball results are connected.</p>':'')+'</section>'
+      +(owned.length?'<p class="team-footnote">'+(standingsData?.season===season()?'Current season fantasy total (best '+bestCount+'): '+Number(standingsData.standings?.find(x=>x.manager_id===me.id)?.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+' points':'Loading current fantasy points...')+'</p>':'')+'</section>'
       +'<div class="team-aside"><section class="panel team-offers-panel">'+panelHeading('Your trades',offers.filter(t=>t.status==='pending').length+' pending · '+allOffers.length+' total')
       +(offers.length?offerCards:empty('No trades yet','Proposals and completed deals will appear here.'))
       +'<div class="team-panel-footer"><button class="btn secondary small" data-act="tab" data-id="trades">View all trades</button></div></section>'
@@ -458,6 +463,13 @@
       +'<button type="button" class="program-card-main" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="View '+escapeHTML(p.name)+'">'
       +img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span class="program-directory-chevron">›</span></button>'
       +'<span class="program-dir-status">'+status+'</span></div>';
+  }
+  async function loadStandings(){
+    if(!me||standingsLoading||Date.now()-standingsFetchedAt<60000)return;
+    standingsLoading=true;standingsFetchedAt=Date.now();
+    try{standingsData=await api('data/standings');standingsError='';}
+    catch(e){standingsError=e.message;}
+    finally{standingsLoading=false;if(current==='league'||current==='team')render();}
   }
   async function loadSchoolLeaders(){
     if(!me||schoolLeadersLoading)return;
@@ -696,22 +708,34 @@
       +'<p>Q1A wins earn both the Quad 1 bonus and the additional Quad 1A bonus. Quadrants use final NET classifications.</p>'
       +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins.</p>'
       +'<p>Regular-season win points exclude conference and NCAA tournament games. There is no AP Poll or KenPom bonus.</p>'
-      +'<p class="muted">Verified game results have not yet been integrated; standings cannot calculate actual points until they are.</p></section>';
+      +'<p class="muted">Fantasy standings update from verified ESPN results and recorded tournament achievements. Final NET rankings are used for historical quadrant classification.</p></section>';
   }
 
   function leaguePage(){
-    const users=members();
-    const rows=users.map((u,index)=>{
+    const scoring=standingsData?.season===season()?standingsData:null;
+    const scoreIndex=new Map((scoring?.standings||[]).map(x=>[x.manager_id,x]));
+    const users=members().slice();
+    if(scoring)users.sort((a,b)=>(scoreIndex.get(b.id)?.points||0)-(scoreIndex.get(a.id)?.points||0)||a.display_name.localeCompare(b.display_name));
+    const fmtPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
+    const rows=users.map(u=>{
+      const manager=scoreIndex.get(u.id);
       const schools=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
       const schoolPreview=schools.length?'<span class="standings-mini-roster">'+schools.slice(0,5).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+(schools.length>5?'<span class="standings-roster-more">+'+(schools.length-5)+'</span>':'')+'</span>':'<span class="standings-roster-pending">Draft pending</span>';
+      const points=manager&&schools.length?'<strong>'+fmtPoints(manager.points)+'</strong><small class="muted"> · '+manager.counted_programs+' counting</small>':
+        schools.length?'<span class="pending-score">Loading</span>':'<span class="pending-score">—</span>';
       return '<tr class="standing-row'+(u.id===me.id?' is-mine':'')+'"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
         +avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':'View team profile')+'</small></div></button></td>'
-        +'<td class="standing-school-cell">'+schoolPreview+'</td><td class="numerical"><span class="pending-score">—</span></td></tr>';
+        +'<td class="standing-school-cell">'+schoolPreview+'</td><td class="numerical">'+points+'</td></tr>';
     }).join('');
+    const note=standingsError?'Unable to refresh standings: '+escapeHTML(standingsError):
+      !scoring?'Calculating the current fantasy scores from verified games and awards...':
+      !owners().length?'Managers earn points after drafting their schools.':
+      !scoring.net_verified?'Live fantasy scores. NET quadrant bonuses will begin once current-season NET rankings are available.':
+      'Live scores reflect regular-season wins, NET quadrant bonuses and confirmed postseason awards.';
     return heading('SEASON '+escapeHTML(season()),'Standings','Dynasty standings for the current season.')
       +'<section class="panel standings-panel">'
       +panelHeading('League standings','Best '+Number(league.settings.scoring?.best_programs||8)+' programs count toward each manager’s total')
-      +'<div class="standings-notice">Fantasy points will appear when verified college basketball results are connected to scoring.</div>'
+      +'<div class="standings-notice">'+note+'</div>'
       +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>MANAGER</th><th>ROSTERED SCHOOLS</th><th class="numerical">FANTASY POINTS</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</section>';
   }

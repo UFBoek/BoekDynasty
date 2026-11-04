@@ -1,4 +1,5 @@
 import {PROGRAM_DIRECTORY,NET_NAME_CROSSWALK,HISTORICAL_CONFERENCE_CHAMPIONS} from './data.js';
+import {getTorvikRatings,mapTorvikToProgramRanks} from './ratings.js';
 /* ESPNs site-v2 scoreboard is the primary game source. No scoring is computed here. */
 export const DATA_PIPELINE=(()=>{
   const teamIds=new Set(PROGRAM_DIRECTORY.map(x=>String(x[0])));
@@ -206,6 +207,30 @@ export const DATA_PIPELINE=(()=>{
   const netRanks=async(env,season)=>{
     const rows=await q(env,"SELECT program_id,net_rank,snapshot_date FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT snapshot_date FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1)",season,season).all();
     return rows.results||[];
+  };
+  // Official NCAA NET ALWAYS wins. The separate T-Rank feed is used only before
+  // a complete official current-season NET snapshot has been stored.
+  const activeRankings = async(env,season) => {
+    const official=await netRanks(env,season);
+    if(official.length>=350)return {rows:official,source:'net',snapshot_date:official[0]?.snapshot_date||null,provisional:false};
+    const prelim=(await q(env,"SELECT program_id,rank AS net_rank,snapshot_date FROM cbb_preliminary_rankings WHERE season=? ORDER BY rank",season).all()).results||[];
+    if(prelim.length>=350)return {rows:prelim,source:'torvik',snapshot_date:prelim[0]?.snapshot_date||null,provisional:true};
+    return {rows:[],source:'pending',snapshot_date:null,provisional:false};
+  };
+  const syncPreliminaryTorvik = async(env,season) => {
+    if((await netRanks(env,season)).length>=350)return {skipped:'Official NCAA NET is available; Torvik fallback disabled.'};
+    if(!/^20\d\d-\d\d$/.test(season))throw Error('Invalid basketball season.');
+    const year=Number(season.slice(0,4))+1,ratings=await getTorvikRatings(year);
+    const mapped=mapTorvikToProgramRanks(ratings.teams);
+    const day=localDay();
+    // Database batch is transactional: a partial or failed import cannot replace the
+    // previous complete ranking snapshot.
+    await env.DB.batch([
+      q(env,"DELETE FROM cbb_preliminary_rankings WHERE season=?",season),
+      ...mapped.rows.map(row=>q(env,"INSERT INTO cbb_preliminary_rankings(season,program_id,rank,snapshot_date,source) VALUES(?,?,?,?,?)",
+        season,row.program_id,row.rank,day,'Bart Torvik T-Rank'))
+    ]);
+    return {season,year,source:'Bart Torvik T-Rank',snapshot_date:day,matched:mapped.matched,unmatched:mapped.unmatched};
   };
   // All games on a requested date, so the Results browser never truncates a busy slate.
   const gamesByDate=async(env,season,date)=>{
@@ -689,11 +714,11 @@ export const DATA_PIPELINE=(()=>{
   };
   const isQ1A=(rank,site)=>Number.isInteger(rank)&&rank>0&&rank<=(site==='home'?15:site==='away'?40:25);
   async function seasonQuadrants(env,season){
-    const [games,rankings]=await Promise.all([
+    const [games,ranking]=await Promise.all([
       q(env,"SELECT home_id,away_id,home_score,away_score,neutral_site FROM cbb_games WHERE season=? AND status='final' AND season_type=2 AND tournament_tag IS NULL AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score",season).all(),
-      netRanks(env,season)
+      activeRankings(env,season)
     ]);
-    const rankMap=new Map(rankings.map(x=>[x.program_id,Number(x.net_rank)])),out={};
+    const rankMap=new Map(ranking.rows.map(x=>[x.program_id,Number(x.net_rank)])),out={};
     for(const g of games.results||[]){
       const win=g.home_score>g.away_score?g.home_id:g.away_id,opp=win===g.home_id?g.away_id:g.home_id;
       const rank=rankMap.get(opp),site=g.neutral_site?'neutral':win===g.home_id?'home':'away',quad=quadrant(rank,site);
@@ -701,7 +726,7 @@ export const DATA_PIPELINE=(()=>{
       const rec=out[win]||(out[win]={q1:0,q1a:0,q2:0,q3:0,q4:0});
       rec['q'+quad]++;if(quad===1&&isQ1A(rank,site))rec.q1a++;
     }
-    return {snapshot_date:rankings[0]?.snapshot_date||null,by_program:out};
+    return {snapshot_date:ranking.snapshot_date,source:ranking.source,provisional:ranking.provisional,by_program:out};
   }
   // Conference champions from the complete, historical ESPN conference records.
   // Exact ESPN program IDs and all co-champions are retained. No name guessing.
@@ -747,6 +772,11 @@ export const DATA_PIPELINE=(()=>{
       ), ranks AS (
         SELECT r.season,r.program_id,r.net_rank FROM cbb_net_rankings r
         JOIN latest l ON l.season=r.season AND l.day=r.snapshot_date
+        UNION ALL
+        SELECT t.season,t.program_id,t.rank AS net_rank FROM cbb_preliminary_rankings t
+        WHERE t.season=? AND
+          (SELECT COUNT(*) FROM cbb_preliminary_rankings WHERE season=t.season)>=350
+          AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.season=t.season)
       ), first_ncaa AS (
         SELECT season,MIN(game_date)::date first_day
         FROM cbb_games WHERE season BETWEEN '2021-22' AND ? AND tournament_tag='ncaa'
@@ -788,11 +818,13 @@ export const DATA_PIPELINE=(()=>{
         COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1max) q1,
         COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1amax) q1a,
         COUNT(*) FILTER(WHERE net_rank>q1max AND net_rank<=q2max) q2
-      FROM classified GROUP BY season,program_id,kind`,currentSeason,currentSeason).all()).results||[];
-    const [awards,nets]=(await Promise.all([
+      FROM classified GROUP BY season,program_id,kind`,currentSeason,currentSeason,currentSeason).all()).results||[];
+    const [awards,nets,preliminary]=(await Promise.all([
       q(env,"SELECT season,program_id,award_type,value FROM cbb_awards WHERE season BETWEEN '2021-22' AND ?",currentSeason).all(),
-      q(env,"SELECT season,stored_count FROM cbb_net_snapshots WHERE status='complete' AND season BETWEEN '2021-22' AND ?",currentSeason).all()
+      q(env,"SELECT season,stored_count FROM cbb_net_snapshots WHERE status='complete' AND season BETWEEN '2021-22' AND ?",currentSeason).all(),
+      q(env,"SELECT COUNT(*) AS n FROM cbb_preliminary_rankings WHERE season=?",currentSeason).all()
     ])).map(x=>x.results||[]);
+    const torvikReady=Number(preliminary[0]?.n||0)>=350;
     const knownTitles=new Set(awards.filter(x=>x.award_type==='conference_regular_champion')
       .map(x=>x.season+'|'+x.program_id));
     for(const archive of HISTORICAL_CONFERENCE_CHAMPIONS.seasons){
@@ -855,6 +887,8 @@ export const DATA_PIPELINE=(()=>{
       t.seed=seed;
       t.points=round(components.reduce((sum,x)=>sum+x.points,0));
       t.net_verified=verifiedNet.has(t.season);
+      t.quadrant_source=t.net_verified?'net':(t.season===currentSeason&&torvikReady?'torvik':'pending');
+      t.quadrant_provisional=t.quadrant_source==='torvik';
       delete t.awards;
     }
     const allowed=Array.isArray(eligibleConferences)?new Set(eligibleConferences.map(String)):null;
@@ -959,5 +993,5 @@ export const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

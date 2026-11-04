@@ -75,7 +75,7 @@
   let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftCompareExpanded=false,draftQueueDragging='';
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
-  let globalSearchOpen=false,globalSearchQuery='';
+  let globalSearchOpen=false,globalSearchQuery='',pendingUiRefresh=false;
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let programScheduleCache={},programScheduleLoading={},programScheduleError={},programScheduleView='all';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
@@ -251,6 +251,11 @@
     +'<a href="https://barttorvik.com/'+year+'_team_results.csv" target="_blank" rel="noopener noreferrer">Verify season data ↗</a>'
     +'<a href="https://evanmiya.com/" target="_blank" rel="noopener noreferrer">EvanMiya ↗</a>'
     +'<a href="https://kenpom.com/" target="_blank" rel="noopener noreferrer">KenPom ↗</a></div>';
+  const stateFingerprint=(user,state)=>JSON.stringify([
+    user,state?.season,state?.settings,state?.users,state?.programs,state?.ownership,
+    state?.picks,state?.draft_order,state?.trades,state?.trade_items,
+    state?.waiver_claims,state?.roster_transactions,state?.archives,state?.season_records
+  ]);
   async function refresh(silent=false){
     try{
       // Keep checked trade selections when the 12-second poll updates the page.
@@ -259,14 +264,26 @@
       // Avoid dismissing the mobile keyboard every time the league auto-refreshes.
       const editing=silent&&!busy&&document.activeElement&&
         /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+      const previousFingerprint=stateFingerprint(me,league);
       const next=await api('state');
+      const changed=previousFingerprint!==stateFingerprint(next.user,next);
       const oldScoringState=league?JSON.stringify([league.season,league.settings?.scoring,league.ownership]):'';
       const newScoringState=JSON.stringify([next.season,next.settings?.scoring,next.ownership]);
       if(oldScoringState!==newScoringState)standingsFetchedAt=0;
       me=next.user;league=next;appError='';
       reconcileDraftQueue();
       if(!silent)current='home';
-      if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();}
+      if(editing&&changed)pendingUiRefresh=true;
+      if(!editing){
+        if(!silent||changed||pendingUiRefresh){
+          pendingUiRefresh=false;
+          render();if(current==='programs')filterPrograms();
+          if(current==='program-detail')loadProgramResults(selectedProgramId);
+        }
+        if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();
+        if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000)&&!overviewGamesLoading)loadOverviewGames();
+        if(['home','league','team','manager-detail'].includes(current)&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
+      }
       if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
     }catch(e){
       if(String(e.message).includes('Sign in required')){
@@ -995,7 +1012,7 @@
     standingsLoading=true;standingsFetchedAt=Date.now();
     try{standingsData=await api('data/standings');standingsError='';}
     catch(e){standingsError=e.message;}
-    finally{standingsLoading=false;if(['home','league','team','manager-detail'].includes(current))render();}
+    finally{standingsLoading=false;if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();}
   }
   async function loadSchoolLeaders(){
     if(!me||schoolLeadersLoading)return;
@@ -2718,7 +2735,7 @@
       draftSelectedProgram='';render();
     }
   });
-  document.addEventListener('keydown',e=>{
+  document.addEventListener?.('keydown',e=>{
     if(!me||!league)return;
     const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'')||e.target?.isContentEditable;
     if(((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k')||(!typing&&!globalSearchOpen&&e.key==='/')){

@@ -42,7 +42,7 @@ function environment(role='commissioner',targetRole='manager'){
             display_name:'League member',role:targetRole};
         throw Error('Unexpected read: '+sql);
       }
-    };}};
+    };}}};
   return {env,calls,saved};
 }
 function request(targetId=managerId){

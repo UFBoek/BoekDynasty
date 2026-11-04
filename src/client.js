@@ -61,6 +61,9 @@
   let avatarDraft=null;
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
+  let activitySnapshot=null,activityLoading=false,activityError='',activityRange='7d',activityMemberFilter='all',activityFetchedAt=0;
+  let activityLastPage='',activityLastPing=0;
+
   let poolDraftConfs=null,poolDraftSchools=null,poolDirty=false;
   let poolQuery='',poolConferenceFilter='all',poolScope='all',poolShown=70;
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
@@ -296,10 +299,86 @@
   async function loadPublic(){
     try{status=await api('status');authMode=status.needs_setup?'setup':selectedInvite?'join':'login';}catch(e){appError=e.message;}
   }
+
+  // A low-volume, first-party presence pulse. A page view is only recorded when
+  // the route/commissioner section actually changes, not on normal redraws.
+  function pingActivity(force=false){
+    if(!me||document.hidden)return;
+    const context=current==='commissioner'?adminSection:'';
+    const key=current+'|'+context;
+    const navigation=activityLastPage!==key,now=Date.now();
+    if(!force&&!navigation&&now-activityLastPing<55000)return;
+    activityLastPage=key;activityLastPing=now;
+    api('activity/ping',{page:current,context,navigation}).catch(()=>{});
+  }
+  async function loadActivity(force=false){
+    if(!me||me.role!=='commissioner'||activityLoading)return;
+    if(!force&&activitySnapshot&&Date.now()-activityFetchedAt<25000)return;
+    activityLoading=true;activityError='';
+    try{
+      const data=await api('admin/activity?range='+activityRange);
+      if(!Array.isArray(data.members)||!Array.isArray(data.events))throw Error('Invalid activity response.');
+      activitySnapshot=data;activityFetchedAt=Date.now();
+    }catch(e){activityError=e.message;}
+    finally{
+      activityLoading=false;
+      if(current==='commissioner'&&adminSection==='activity')render();
+    }
+  }
+  const activityAgo=(seconds,now=Date.now()/1000)=>{
+    if(!Number(seconds))return 'Not seen yet';
+    const delta=Math.max(0,Math.floor(now-Number(seconds)));
+    if(delta<60)return 'Just now';
+    if(delta<3600)return Math.floor(delta/60)+'m ago';
+    if(delta<86400)return Math.floor(delta/3600)+'h ago';
+    if(delta<604800)return Math.floor(delta/86400)+'d ago';
+    return new Date(Number(seconds)*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  };
+  function activityMonitorPage(){
+    const d=activitySnapshot,s=d?.summary||{},now=d?.now||Math.floor(Date.now()/1000);
+    const members=d?.members||[];
+    const events=(d?.events||[]).filter(e=>activityMemberFilter==='all'||e.user_id===activityMemberFilter);
+    const counts=[['Online now',s.active||0,'Seen in past 5 minutes'],['Visited today',s.visited_today||0,'Seen in past 24 hours'],
+      ['Page views',s.views||0,'During selected period'],['Actions',s.actions||0,'Successful changes']];
+    const dateText=ts=>new Date(Number(ts)*1000).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    const toolbar='<div class="activity-toolbar"><label>Time period<select class="field" id="activity-range">'
+      +[['24h','Past 24 hours'],['7d','Past 7 days'],['30d','Past 30 days']].map(([v,t])=>'<option value="'+v+'" '+(activityRange===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'
+      +'<label>Manager<select class="field" id="activity-member"><option value="all">All managers</option>'
+      +members.map(m=>'<option value="'+escapeHTML(m.id)+'" '+(activityMemberFilter===m.id?'selected':'')+'>'+escapeHTML(m.display_name)+'</option>').join('')+'</select></label>'
+      +'<button class="btn secondary" data-act="activity-refresh" type="button" '+(activityLoading?'disabled':'')+'>↻ Refresh</button></div>';
+    if(!d)return '<section class="panel setting-panel">'+panelHeading('Activity monitor','Manager presence, page visits and league actions')+toolbar+
+      (activityError?'<div class="notice">'+escapeHTML(activityError)+'</div>':'<div class="activity-loading">Loading activity…</div>')+'</section>';
+    const cards='<div class="activity-metrics">'+counts.map(([label,value,foot])=>
+      '<div class="activity-metric"><span>'+label+'</span><strong>'+Number(value).toLocaleString()+'</strong><small>'+foot+'</small></div>').join('')+'</div>';
+    const memberCards=members.map(m=>{
+      const online=Number(m.last_seen||0)>=now-300;
+      const recent=Number(m.last_seen||0)>=now-86400;
+      const pill=online?'Online':recent?'Recently active':'Offline';
+      return '<div class="activity-manager"><span class="activity-avatar">'+escapeHTML(initials(m.display_name))+'</span><div class="activity-manager-main"><strong>'+escapeHTML(m.display_name)+'</strong><small>@'+escapeHTML(m.username)+' · '+(m.last_page?escapeHTML(names[m.last_page]||m.last_page)+(m.last_context?' / '+escapeHTML(m.last_context):''):'No page visits yet')+'</small></div>'
+        +'<div class="activity-manager-meta"><span class="activity-presence '+(online?'online':recent?'recent':'')+'"><i></i>'+pill+'</span><small>'+activityAgo(m.last_seen,now)+'</small>'
+        +'<small>'+Number(m.page_views||0)+' views · '+Number(m.actions||0)+' actions</small></div></div>';
+    }).join('');
+    const eventList=events.map(e=>{
+      const label=e.kind==='page'?'Visited '+e.label:e.label;
+      return '<div class="activity-event"><span class="activity-event-icon '+e.kind+'">'+(e.kind==='page'?'◉':e.kind==='login'?'↪':'✓')+'</span>'
+        +'<div class="activity-event-main"><strong>'+escapeHTML(e.display_name)+'</strong><span>'+escapeHTML(label)+'</span></div>'
+        +'<time title="'+escapeHTML(new Date(Number(e.created_at)*1000).toLocaleString())+'">'+dateText(e.created_at)+'</time></div>';
+    }).join('');
+    return '<section class="panel setting-panel activity-intro">'+panelHeading('Activity monitor','Track who is using the site and what changes they make.')
+      +'<p class="activity-privacy">Only commissioners can see this. Last seen updates while the site is visible; page views record navigation and actions record successful updates. Passwords, IP addresses and draft-queue contents are never logged.</p>'
+      +toolbar+cards+'</section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Manager activity',members.length+' registered accounts')
+      +'<div class="activity-member-list">'+memberCards+'</div></section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Recent activity',events.length+' events shown · newest first')
+      +(activityError?'<p class="hint">'+escapeHTML(activityError)+'</p>':'')
+      +(eventList?'<div class="activity-feed">'+eventList+'</div>':empty('No recorded activity yet','New visits and changes will appear as members use the site.'))+'</section>';
+  }
+
   function startPolling(){
     if(refreshId)return;
     lastAutoPoll=Date.now();
     refreshId=setInterval(()=>{
+      pingActivity();
       if(!me||busy||syncActive||current==='commissioner'||current==='settings'||document.hidden)return;
       const onMobile=window.matchMedia?.('(max-width: 850px)').matches||false;
       const interval=onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
@@ -433,6 +512,8 @@
     }
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
+    pingActivity();
+    if(current==='commissioner'&&adminSection==='activity'&&!activityLoading&&(!activitySnapshot||Date.now()-activityFetchedAt>60000))loadActivity();
     const tabs=['home','team','results','programs','draft','more'];
     const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
     const activeMobile=(['trades','commissioner','waivers','history','scoring','settings'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
@@ -2146,7 +2227,7 @@
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','People & invites'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
+    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','People & invites'],['activity','Activity','Visits & actions'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -2271,6 +2352,8 @@
         +'<button class="btn" data-act="data-award-save">Save verified achievement</button></details></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Import log')
         +(runs.length?runs.map(run=>'<div class="data-run"><span class="'+(run.status==='error'?'failed':'')+'">'+escapeHTML(run.status.toUpperCase())+'</span><div><strong>'+escapeHTML(run.target_date||'—')+'</strong><small>'+escapeHTML(run.job)+' · '+Number(run.matched||0)+' games, '+Number(run.changed||0)+' changed</small>'+(run.error_text?'<small class="data-error">'+escapeHTML(run.error_text)+'</small>':'')+'</div></div>').join(''):empty('No imports yet'))+'</section>';
+    }else if(adminSection==='activity'){
+      body=activityMonitorPage();
     }else if(adminSection==='members'){
       body='<section class="panel setting-panel">'+panelHeading('Managers',members().length+' / '+cap+' registered')
         +members().map(u=>'<div class="manager-card">'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div><span class="status '+(u.role==='commissioner'?'wait':'')+'">'+(u.role==='commissioner'?'COMMISSIONER':'MANAGER')+'</span></div>').join('')
@@ -2321,6 +2404,7 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(act==='activity-refresh'){loadActivity(true);return;}
     if(act==='search-open'){toggleGlobalSearch(true);return;}
     if(act==='search-close'){toggleGlobalSearch(false);return;}
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
@@ -2389,7 +2473,7 @@
     if(act==='commish-section'){
       if(adminSection==='programs'&&id!=='programs'&&poolDirty&&!window.confirm('Leave without saving your program selections?'))return;
       if(adminSection==='programs'&&id!=='programs')resetPoolDraft();
-      adminSection=id;render();if(id==='data')loadResults();return;
+      adminSection=id;render();if(id==='data')loadResults();if(id==='activity')loadActivity();return;
     }
     if(act==='pool-conf'||act==='pool-major'||act==='pool-all-confs'){
       initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
@@ -2730,6 +2814,7 @@
       draftSelectedProgram='';render();
     }
   });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pingActivity(true);});
   document.addEventListener?.('keydown',e=>{
     if(!me||!league)return;
     const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'')||e.target?.isContentEditable;
@@ -2786,6 +2871,8 @@
     }catch(err){notice(err.message,true);}finally{busy=false;}
   });
   root.addEventListener('change',async e=>{
+    if(e.target?.id==='activity-range'){activityRange=e.target.value;activitySnapshot=null;activityFetchedAt=0;render();return;}
+    if(e.target?.id==='activity-member'){activityMemberFilter=e.target.value;render();return;}
     if(e.target?.id==='settings-photo-input'){
       const file=e.target.files?.[0];
       if(!file)return;

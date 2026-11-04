@@ -515,7 +515,7 @@
   // Home and away opponent rankings already incorporate venue in the API.
   const quadWinBonus=(quad,q1a)=>{
     const rules=league?.settings?.scoring||{};
-    return quad===1?Number(rules.quad_1_win||0)+(q1a?Number(rules.quad_1a_extra||0):0):
+    return quad===1?Number((q1a?rules.quad_1a_win:rules.quad_1_win)||0):
       quad===2?Number(rules.quad_2_win||0):0;
   };
   const quadLabel=(quad,q1a)=>Number.isInteger(quad)&&quad>=1&&quad<=4?
@@ -1769,7 +1769,7 @@
   }
 
   const scoringGroups=[
-    ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win bonus'],['quad_1a_extra','Extra Quad 1A win bonus']]],
+    ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win'],['quad_1a_win','Quad 1A win']]],
     ['Conference championships',[['conference_regular_title','Regular-season champion'],['conference_tournament_title','Tournament champion']]],
     ['NCAA appearance by seed',[['ncaa_seed_1_4','Seeds 1–4'],['ncaa_seed_5_8','Seeds 5–8'],['ncaa_seed_9_12','Seeds 9–12'],['ncaa_seed_13_16','Seeds 13–16']]],
     ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]],
@@ -1784,7 +1784,7 @@
       +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')
       +(title==='PAC-12 & MID-MAJOR BONUSES'?'<p class="hint section-gap">Applies only to schools in MULTI-BID &amp; MID-MAJOR and Pac-12 conferences, <strong>excluding Gonzaga</strong>. The at-large bonus is awarded for an NCAA bid without winning the conference tournament (+5 per selection), after automatic bids are verified. Upset points are earned only by beating a better-seeded NCAA opponent (+1 per seed line, no cap). Both stack with normal tournament and quadrant points.</p>':'')+'</section>').join('')+'</div>'
       +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
-      +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A stacks on top of Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik T-Rank and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
+      +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A is a separate +2.5 win category and does not stack with Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik T-Rank and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
       +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins. See the dedicated Pac-12 &amp; Mid-Major Bonuses section for at-large and upset eligibility.</p>'
       +'<p>Regular-season games earn their normal win points; conference tournament wins earn +2 and NCAA Tournament wins earn their configured postseason points. Those wins can additionally earn quadrant bonuses. There is no AP Poll or KenPom bonus.</p>'
       +'<p class="muted">Provisional T-Rank-based points can change. Completed archived seasons use official final NET rankings.</p></section>';
@@ -1928,9 +1928,10 @@
       '<section class="panel pp-section pp-scoring"><div class="pp-section-head"><div><h2>Fantasy scoring</h2>'+
       '<p>'+escapeHTML(season())+' season · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
       '<strong class="pp-section-points">'+points(currentStats)+' <small>pts</small></strong></div>'+
-      '<div class="pp-fact-strip">'+
+      '<div class="pp-fact-strip pp-fact-four">'+
       labelStat('Regular wins',currentStats?.games?currentStats.regular_wins:'—')+
       labelStat('Q1 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1??'—')+
+      labelStat('Q1A wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1a??'—')+
       labelStat('Q2 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q2??'—')+
       '</div><div class="pp-list-title">POINTS BY CATEGORY</div><div class="pp-breakdown">'+shortBreakdown+'</div>'+
       '<button type="button" class="pp-text-action" data-act="program-show-history">Full scoring breakdown <span aria-hidden="true">›</span></button>'+
@@ -1969,9 +1970,9 @@
       '<button type="button" class="pp-text-action" data-act="view-historical-rank" data-season="'+escapeHTML(selected)+
       '">View rankings ›</button></div>'+
       '<div class="pp-fact-strip pp-fact-four">'+
-      labelStat('W–L',record(selectedStats))+
       labelStat('Regular wins',selectedStats?.games?selectedStats.regular_wins:'—')+
       labelStat('Q1 wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q1??'—')+
+      labelStat('Q1A wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q1a??'—')+
       labelStat('Q2 wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q2??'—')+
       '</div><div class="pp-list-title">COMPLETE POINT BREAKDOWN</div><div class="pp-breakdown pp-breakdown-full">'+
       fullBreakdown+'</div>'+
@@ -2226,7 +2227,7 @@
         +'<p class="settings-hint">Best-ball format: top '+Number(r.best_programs||8)+' counting programs. Change that number in Commissioner → General.</p>'
         +scoringGroups.map(([title,fields])=>'<div class="section-gap"><h3 class="subhead">'+escapeHTML(title)+'</h3><div class="settings-grid">'
         +fields.map(([key,label])=>'<div class="form-row"><label for="score-'+key+'">'+escapeHTML(label)+'</label><input class="field" id="score-'+key+'" type="number" min="0" max="100" step="0.25" value="'+Number(r[key]||0)+'"/></div>').join('')+'</div></div>').join('')
-        +'<p class="settings-hint">Q1A stacks with Q1. The PAC-12 &amp; MID-MAJOR BONUSES section applies to eligible schools only; Gonzaga is excluded. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
+        +'<p class="settings-hint">Q1A is its own +2.5 win category, separate from +1.5 Q1 wins. The PAC-12 &amp; MID-MAJOR BONUSES section applies to eligible schools only; Gonzaga is excluded. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
         +'<div class="button-row section-gap"><button class="btn" data-act="save-scoring">Save scoring</button><button class="btn secondary" data-act="tab" data-id="scoring">View rules</button></div></section>';
     }else if(adminSection==='trades'){
       body='<section class="panel setting-panel">'+panelHeading('Trading')

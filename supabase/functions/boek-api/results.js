@@ -787,7 +787,9 @@ export const DATA_PIPELINE=(()=>{
       const rank=rankMap.get(opp),site=g.neutral_site?'neutral':win===g.home_id?'home':'away',quad=quadrant(rank,site);
       if(!quad||!teamIds.has(opp))continue;
       const rec=out[win]||(out[win]={q1:0,q1a:0,q2:0,q3:0,q4:0});
-      rec['q'+quad]++;if(quad===1&&isQ1A(rank,site))rec.q1a++;
+      // Q1A is a distinct win category, not an extra Q1 bonus.
+      if(quad===1&&isQ1A(rank,site))rec.q1a++;
+      else rec['q'+quad]++;
     }
     return {snapshot_date:ranking.snapshot_date,source:ranking.source,provisional:ranking.provisional,by_program:out};
   }
@@ -883,7 +885,7 @@ export const DATA_PIPELINE=(()=>{
           AND loser_seed.program_id=c.opponent_id AND loser_seed.award_type='ncaa_seed'
       )
       SELECT season,program_id,kind,COUNT(*) wins,
-        COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1max) q1,
+        COUNT(*) FILTER(WHERE net_rank>q1amax AND net_rank<=q1max) q1,
         COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1amax) q1a,
         COUNT(*) FILTER(WHERE net_rank>q1max AND net_rank<=q2max) q2,
         COALESCE(SUM(CASE WHEN kind IN ('ncaa','first_four') AND winner_seed>loser_seed
@@ -959,8 +961,8 @@ export const DATA_PIPELINE=(()=>{
         {key:'regular_win',label:'Regular-season victories',count:t.regular_wins,rate:wt('regular_win')},
         {key:'conference_tournament_win',label:'Conference tournament victories',count:t.conference_tournament_wins,rate:wt('conference_tournament_win')},
         {key:'quad_2_win',label:'Quad 2 victory bonuses',count:t.q2,rate:wt('quad_2_win')},
-        {key:'quad_1_win',label:'Quad 1 victory bonuses',count:t.q1,rate:wt('quad_1_win')},
-        {key:'quad_1a_extra',label:'Additional Quad 1A bonuses',count:t.q1a,rate:wt('quad_1a_extra')},
+        {key:'quad_1_win',label:'Quad 1 wins',count:t.q1,rate:wt('quad_1_win')},
+        {key:'quad_1a_win',label:'Quad 1A wins',count:t.q1a,rate:wt('quad_1a_win')},
         {key:'conference_regular_title',label:'Conference regular-season championship',count:titles,rate:wt('conference_regular_title')},
         {key:'conference_tournament_title',label:'Conference tournament championship',count:tournaments,rate:wt('conference_tournament_title')},
         {key:'ncaa_seed',label:seed?'NCAA Tournament seed #'+seed:'NCAA Tournament seeding',count:seed?1:0,rate:seedPoints},

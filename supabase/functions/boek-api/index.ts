@@ -95,6 +95,74 @@ Deno.serve(async (request)=>{
         }
         result={season:targetSeason,start:first,end:last,skipped,processed:rows.length,changed,failed,days:rows};
       }
+
+      else if(kind==='site-repair'){
+        // The ESPN CDN serves partial historical slates in 2021-22 and 2022-23.
+        // Fetch authoritative site.api scoreboards through Supabase pg_net.
+        // Never infer completeness from the CDN coverage rows alone.
+        const archived=['2021-22','2022-23','2023-24','2024-25','2025-26'];
+        const targetSeason=String(body?.season||'');
+        const first=String(body?.start||''),last=String(body?.end||'');
+        const from=Date.parse(first+'T12:00:00Z'),to=Date.parse(last+'T12:00:00Z');
+        const span=(to-from)/86400000;
+        if(!archived.includes(targetSeason)||!DATA_PIPELINE.dayInSeason(targetSeason,first)||
+          !DATA_PIPELINE.dayInSeason(targetSeason,last)||
+          first<targetSeason.slice(0,4)+'-11-01'||
+          last>(Number(targetSeason.slice(0,4))+1)+'-04-15'||
+          !Number.isInteger(span)||span<0||span>7)
+          return Response.json({error:'Invalid historical site range (maximum 8 dates).'},{status:400,headers:cors});
+        const rows=[];let totalChanged=0,failed=0,skipped=0;
+        for(let day=first;day<=last;day=DATA_PIPELINE.shiftDay(day,1)){
+          const groups=DATA_PIPELINE.groupsForDay(day);
+          const checked=(await db.prepare('SELECT source_group,provider FROM cbb_game_coverage WHERE season=? AND game_date=?')
+            .bind(targetSeason,day).all()).results||[];
+          if(groups.every(group=>checked.some(x=>Number(x.source_group)===group&&x.provider==='site.api.espn.com'))){
+            skipped++;continue;
+          }
+          const queued=[];
+          try{
+            for(const group of groups){
+              const link='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+
+                day.replace(/-/g,'')+'&groups='+group+'&limit=1000';
+              const response=await db.prepare('SELECT net.http_get(?::text,timeout_milliseconds:=25000) AS request_id').bind(link).first();
+              if(!response?.request_id)throw new Error('ESPN fetch could not be queued');
+              queued.push({group,id:response.request_id});
+            }
+            const events=new Map(),sources=[];
+            for(const item of queued){
+              let result=null;
+              for(let attempt=0;attempt<85;attempt++){
+                result=await db.prepare('SELECT status_code,content,error_msg FROM net._http_response WHERE id=?').bind(item.id).first();
+                if(result)break;
+                await new Promise(resolve=>setTimeout(resolve,400));
+              }
+              if(!result)throw new Error('ESPN site request timed out');
+              if(Number(result.status_code)!==200)throw new Error('ESPN site HTTP '+result.status_code+' '+String(result.error_msg||'').slice(0,100));
+              const feed=JSON.parse(result.content);
+              if(!Array.isArray(feed.events)||feed.events.length>=1000)
+                throw new Error('Invalid or oversized official ESPN scoreboard');
+              sources.push({group:item.group,count:feed.events.length,host:'site.api.espn.com'});
+              for(const event of feed.events){
+                if(event?.id)events.set(String(event.id),{...event,__sourceGroup:item.group});
+              }
+            }
+            const done=await DATA_PIPELINE.importDay(env,targetSeason,day,{
+              job:'historical-site',payload:{events:[...events.values()],host:'site.api.espn.com',sources}
+            });
+            totalChanged+=Number(done.changed||0);
+            rows.push({day,ok:true,received:done.received,changed:done.changed,groups:sources.map(g=>[g.group,g.count])});
+          }catch(error){
+            failed++;
+            rows.push({day,ok:false,error:String(error?.message||error).slice(0,170)});
+          }finally{
+            // pg_net responses are transient and can be several megabytes.
+            for(const item of queued){
+              try{await db.prepare('DELETE FROM net._http_response WHERE id=?').bind(item.id).run();}catch{}
+            }
+          }
+        }
+        result={season:targetSeason,start:first,end:last,processed:rows.length,skipped,changed:totalChanged,failed,days:rows};
+      }
       else if(kind==='postseason')result=await DATA_PIPELINE.priorityPostseason(env,2);
       else if(kind==='ncaa')result=await DATA_PIPELINE.reconcileNCAA2026(env);
       else if(kind==='titles')result=await DATA_PIPELINE.backfillHistoricalConferences(env);

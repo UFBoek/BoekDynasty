@@ -163,6 +163,55 @@ Deno.serve(async (request)=>{
         }
         result={season:targetSeason,start:first,end:last,processed:rows.length,skipped,changed:totalChanged,failed,days:rows};
       }
+
+      else if(kind==='site-import-queued'){
+        // pg_net must finish downloading before this function is invoked.
+        // Calling pg_net from another pg_net-triggered function deadlocks its worker.
+        const entries=Array.isArray(body?.entries)?body.entries:[];
+        if(!entries.length||entries.length>8)
+          return Response.json({error:'Choose 1–8 prepared dates.'},{status:400,headers:cors});
+        const output=[];let changed=0,failed=0;
+        for(const entry of entries){
+          const siteSeason=String(entry?.season||''),day=String(entry?.day||'');
+          const requests=Array.isArray(entry?.groups)?entry.groups:[];
+          const required=DATA_PIPELINE.groupsForDay(day);
+          if(!['2021-22','2022-23','2023-24','2024-25','2025-26'].includes(siteSeason)||
+             !DATA_PIPELINE.dayInSeason(siteSeason,day)||
+             !requests.length||requests.length!==required.length||
+             required.some(g=>!requests.some(x=>Number(x.group)===g))||
+             requests.some(x=>!Number.isSafeInteger(Number(x.id))||Number(x.id)<=0))
+            return Response.json({error:'Invalid queued ESPN date.'},{status:400,headers:cors});
+          const events=new Map(),sources=[];
+          try{
+            for(const request of requests){
+              const response=await db.prepare('SELECT status_code,content,error_msg FROM net._http_response WHERE id=?')
+                .bind(Number(request.id)).first();
+              if(!response)throw new Error('Official ESPN response not ready or expired');
+              if(Number(response.status_code)!==200)
+                throw new Error('ESPN site HTTP '+response.status_code+' '+String(response.error_msg||'').slice(0,80));
+              const feed=JSON.parse(response.content);
+              if(!Array.isArray(feed.events)||feed.events.length>=1000)
+                throw new Error('Invalid official ESPN event list');
+              sources.push({group:Number(request.group),count:feed.events.length,host:'site.api.espn.com'});
+              for(const event of feed.events){
+                if(event?.id)events.set(String(event.id),{...event,__sourceGroup:Number(request.group)});
+              }
+            }
+            const done=await DATA_PIPELINE.importDay(env,siteSeason,day,{
+              job:'historical-site',payload:{events:[...events.values()],host:'site.api.espn.com',sources}
+            });
+            changed+=Number(done.changed||0);
+            output.push({season:siteSeason,day,ok:true,received:done.received,changed:done.changed,groups:sources.map(x=>[x.group,x.count])});
+            for(const request of requests){
+              try{await db.prepare('DELETE FROM net._http_response WHERE id=?').bind(Number(request.id)).run();}catch{}
+            }
+          }catch(error){
+            failed++;
+            output.push({season:siteSeason,day,ok:false,error:String(error?.message||error).slice(0,160)});
+          }
+        }
+        result={processed:output.length,changed,failed,days:output};
+      }
       else if(kind==='postseason')result=await DATA_PIPELINE.priorityPostseason(env,2);
       else if(kind==='ncaa')result=await DATA_PIPELINE.reconcileNCAA2026(env);
       else if(kind==='titles')result=await DATA_PIPELINE.backfillHistoricalConferences(env);

@@ -2186,7 +2186,12 @@
         +'<section class="panel setting-panel section-gap">'+panelHeading('Archived seasons')+(archives.length?archives.map(a=>'<div class="season-archive-item"><div class="grow"><strong>'+escapeHTML(a.season)+'</strong><small>Champion: '+escapeHTML(members().find(u=>u.id===a.champion_manager_id)?.display_name||'Not recorded')+'</small></div><select class="field season-champion-select" data-season="'+escapeHTML(a.season)+'">'+options.replace('<option value="'+escapeHTML(a.champion_manager_id||'')+'"','<option selected value="'+escapeHTML(a.champion_manager_id||'')+'"')+'</select><button class="btn small secondary" data-act="season-champion" data-id="'+escapeHTML(a.season)+'">Save</button></div>').join(''):empty('No archived seasons'))+'</section>';
 
     }
-    return heading('', 'Commissioner')+'<div class="commissioner-layout">'+menu+'<div class="commissioner-body">'+body+'</div></div>';
+    return heading('COMMISSIONER CONSOLE','League settings','Make changes to your league from one organized workspace.')
+      +'<div class="commissioner-overview"><div><span>CURRENT SEASON</span><strong>'+escapeHTML(season())+'</strong></div>'
+      +'<div><span>LEAGUE MEMBERS</span><strong>'+members().length+' / '+cap+'</strong></div>'
+      +'<div><span>ELIGIBLE PROGRAMS</span><strong>'+eligiblePrograms().length+'</strong></div>'
+      +'<div><span>DRAFT STATUS</span><strong class="admin-draft-state">'+escapeHTML(settings.draft_status)+'</strong></div></div>'
+      +'<div class="commissioner-layout">'+menu+'<div class="commissioner-body">'+body+'</div></div>';
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;

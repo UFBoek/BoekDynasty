@@ -1,3 +1,4 @@
+import {PROGRAM_DIRECTORY} from './data.js';
 // Read-only, no-key T-Rank feed. Fetches one published CSV per season.
 // This module never touches the dynasty scoring tables.
 const cache = new Map();
@@ -86,4 +87,63 @@ export async function getTorvikRatings(year) {
   pending.set(year,task);
   try { return await task; }
   finally { pending.delete(year); }
+}
+
+
+// ESPN uses full mascot names; Torvik uses shorter campus names.
+// Map only exact verified aliases or unique institution prefixes to ESPN IDs.
+const cleanName = name => String(name || '').toLowerCase().normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g,'').replace(/&/g,' and ')
+  .replace(/\bstate\b/g,'st').replace(/\buniversity\b/g,'')
+  .replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+const campusAliases = {
+  'ualbany great danes':'albany',
+  'miami hurricanes':'miami fl',
+  'miami redhawks':'miami oh',
+  'nc st wolfpack':'n c st',
+  'uconn huskies':'connecticut',
+  'sam houston bearkats':'sam houston st',
+  'pennsylvania quakers':'penn',
+  'uic flames':'illinois chicago',
+  'long island sharks':'liu',
+  'long island university sharks':'liu',
+  'ut martin skyhawks':'tennessee martin',
+  'loyola maryland greyhounds':'loyola md',
+  'ole miss rebels':'mississippi',
+  'mcneese cowboys':'mcneese st',
+  'nicholls colonels':'nicholls st',
+  'se louisiana lions':'southeastern louisiana',
+  'grambling tigers':'grambling st',
+  'app st mountaineers':'appalachian st',
+  'ul monroe warhawks':'louisiana monroe',
+  'hawai i rainbow warriors':'hawaii',
+  'iu indianapolis jaguars':'iu indy',
+  'omaha mavericks':'nebraska omaha',
+  'california baptist lancers':'cal baptist',
+  'south carolina upstate spartans':'usc upstate',
+  'kansas city roos':'umkc',
+  'florida international panthers':'fiu',
+  'lsu new orleans privateers':'new orleans',
+  'texas a and m corpus christi islanders':'texas a and m corpus chris'
+};
+export function mapTorvikToProgramRanks(teams) {
+  if (!Array.isArray(teams) || teams.length < 330) throw Error('No complete Torvik ratings to match.');
+  const ordered=teams.map(t=>({...t,normalized:cleanName(t.team)}))
+    .filter(t=>Number.isInteger(t.rank)&&t.rank>0&&t.rank<=400&&t.normalized);
+  const exact = new Map(ordered.map(t=>[t.normalized,t]));
+  const matched=[],used=new Set(),unmatched=[];
+  for (const [espnId,displayName] of PROGRAM_DIRECTORY) {
+    const name=cleanName(displayName),alias=campusAliases[name];
+    const options=alias ? [exact.get(alias)].filter(Boolean)
+      : ordered.filter(t=>name===t.normalized||name.startsWith(t.normalized+' '))
+        .sort((a,b)=>b.normalized.length-a.normalized.length);
+    const candidate=options[0];
+    if (!candidate || used.has(candidate.normalized)){unmatched.push(displayName);continue;}
+    used.add(candidate.normalized);
+    matched.push({program_id:String(espnId),rank:candidate.rank});
+  }
+  const ranks=new Set(matched.map(r=>r.rank));
+  if(matched.length<350 || ranks.size!==matched.length)
+    throw Error('Torvik to ESPN crosswalk incomplete: '+matched.length+' unique matches. Missing: '+unmatched.slice(0,16).join(', '));
+  return {rows:matched,matched:matched.length,unmatched};
 }

@@ -779,7 +779,6 @@
       ranks.set(String(row.p.id),rank);
     });
     const rows=(leaderOrder==='name'?entries.sort((a,b)=>a.p.name.localeCompare(b.p.name)):byPoints);
-    const leading=byPoints.filter(row=>row.selected!==null).slice(0,3);
     const format=value=>rankingNumber(value,2).replace(/\.00$/,'');
     const previewYears=[...new Set([...(period==='all'?[]:[period]),...years.slice(-3).reverse()])].slice(0,4);
     const thYears=years.slice().map(y=>'<th class="rank-year-cell '+(period===y?'active':'')+'"><button type="button" data-act="leaders-season" data-id="'+escapeHTML(y)+'" title="Rank by '+escapeHTML(y)+'">'+escapeHTML(y.slice(2))+'</button></th>').join('');
@@ -805,7 +804,6 @@
       'Scores reflect available verified results; unfinished historical imports may change totals.';
     return '<section class="panel ranking-dashboard school-leaders-shell">'+header+seasonNav
       +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+(period===season()?'LIVE SEASON':'SEASON RECORDS')+'</span><span>'+entries.length+' eligible schools in this view</span><span>Ranked by '+(period==='all'?'career total':period+' points')+'</span></div>'
-      +rankingFeatured(leading,'leaders','fantasy pts',row=>format(row.selected))
       +rankingTools('leaders',leaderQuery,leaderConference,leaderOwnership)
       +'<div class="rank-toolbar-bottom"><div class="rank-order" role="group" aria-label="Sort historical leaderboard">'
       +[['points','Most points'],['name','A–Z']].map(([id,label])=>'<button type="button" data-act="leaders-sort" data-id="'+id+'" class="'+(leaderOrder===id?'active':'')+'">'+label+'</button>').join('')+'</div>'

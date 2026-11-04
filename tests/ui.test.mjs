@@ -101,7 +101,8 @@ test('Historical Leaders compares school points by season with a searchable tabl
     rows:[{season:'2021-22',program_id:'57',points:24.5},{season:'2022-23',program_id:'57',points:32},
       {season:'2022-23',program_id:'58',points:17.5}]});
   const html=app.page('programs');
-  assert.match(html,/Historical point leaders/);
+  assert.match(html,/Historical leaders/);
+  assert.doesNotMatch(html,/data-featured="leaders"/);
   assert.match(html,/id="leader-search"/);
   assert.match(html,/data-act="leaders-season"/);
   assert.match(html,/Florida basketball/);

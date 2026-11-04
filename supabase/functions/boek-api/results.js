@@ -948,8 +948,7 @@ export const DATA_PIPELINE=(()=>{
     const round=n=>Math.round((Number(n)||0)*100)/100;
     for(const t of table.values()){
       const a=t.awards,seed=Number(a.ncaa_seed)||0;
-      const seedRule=!seed?null:seed<=4?'ncaa_seed_1_4':seed<=8?'ncaa_seed_5_8':
-        seed<=12?'ncaa_seed_9_12':'ncaa_seed_13_16';
+      const seedRule=Number.isInteger(seed)&&seed>=1&&seed<=16?'ncaa_seed_'+seed:null;
       const seedPoints=seedRule?wt(seedRule):0;
       const titles=Number(a.conference_regular_champion)>0?1:0;
       const tournaments=Number(a.conference_tournament_champion)>0?1:0;

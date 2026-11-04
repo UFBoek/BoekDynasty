@@ -396,9 +396,15 @@
     +'<label class="global-search-input-wrap">'+iconSVG('search')+'<input id="global-search-input" type="search" autocomplete="off" spellcheck="false" aria-label="Search the league" placeholder="Find a school, manager, or page..." value="'+escapeHTML(globalSearchQuery)+'"/></label>'
     +'<div id="global-search-list" class="global-search-list">'+globalSearchResults()+'</div><div class="global-search-foot"><span>Enter to open</span><span><kbd>Esc</kbd> to close</span></div></section></div>';
   function toggleGlobalSearch(open){
-    globalSearchOpen=open;if(open)globalSearchQuery='';
-    render();
-    if(open)root.querySelector('#global-search-input')?.focus({preventScroll:true});
+    globalSearchOpen=open;
+    root.querySelector('.global-search-layer')?.remove();
+    if(open){
+      globalSearchQuery='';
+      root.insertAdjacentHTML('beforeend',globalSearchDialog());
+      root.querySelector('#global-search-input')?.focus({preventScroll:true});
+    }else{
+      root.querySelector('.global-search-trigger')?.focus({preventScroll:true});
+    }
   }
   function navButton(id){
     const live=id==='draft'&&draftIsLive()||id==='results'&&liveResultsCount()>0;
@@ -2744,6 +2750,13 @@
     if(globalSearchOpen&&e.key==='Escape'){e.preventDefault();toggleGlobalSearch(false);return;}
     if(globalSearchOpen&&e.key==='ArrowDown'&&e.target?.id==='global-search-input'){
       e.preventDefault();root.querySelector('.global-search-result')?.focus();return;
+    }
+    if(globalSearchOpen&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&e.target?.closest?.('.global-search-result')){
+      const buttons=[...root.querySelectorAll('.global-search-result')];
+      const index=buttons.indexOf(e.target.closest('.global-search-result'));
+      const next=Math.max(0,Math.min(buttons.length-1,index+(e.key==='ArrowDown'?1:-1)));
+      if(buttons[next]){e.preventDefault();buttons[next].focus();}
+      return;
     }
     if(globalSearchOpen&&e.key==='Enter'&&e.target?.id==='global-search-input'){
       e.preventDefault();root.querySelector('.global-search-result')?.click();return;

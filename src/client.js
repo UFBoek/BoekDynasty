@@ -2255,7 +2255,38 @@
       if(current!=='manager-detail'){managerBackPage=current;managerBackScroll=window.scrollY;}
       selectedManagerId=id;current='manager-detail';render();window.scrollTo({top:0});return;
     }
-    if(act==='commish-section'){adminSection=id;render();if(id==='data')loadResults();return;}
+    if(act==='commish-section'){
+      if(adminSection==='programs'&&id!=='programs'&&poolDirty&&!window.confirm('Leave without saving your program selections?'))return;
+      if(adminSection==='programs'&&id!=='programs')resetPoolDraft();
+      adminSection=id;render();if(id==='data')loadResults();return;
+    }
+    if(act==='pool-conf'||act==='pool-major'||act==='pool-all-confs'){
+      initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
+      const targets=act==='pool-conf'?[id]:act==='pool-major'?conferenceGroups[0].ids:Object.keys(conferenceNames);
+      const turnOn=act==='pool-conf'?!poolDraftConfs.has(id):true;
+      for(const confId of targets){
+        if(turnOn)poolDraftConfs.add(confId);else poolDraftConfs.delete(confId);
+        programs().filter(p=>String(p.conference_id)===confId).forEach(p=>{
+          if(turnOn)poolDraftSchools.add(String(p.id));else poolDraftSchools.delete(String(p.id));
+        });
+      }
+      poolDirty=true;render();return;
+    }
+    if(act==='pool-school'){
+      initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
+      if(poolDraftSchools.has(id))poolDraftSchools.delete(id);else poolDraftSchools.add(id);
+      poolDirty=true;render();return;
+    }
+    if(act==='pool-scope'){poolScope=id;poolShown=70;render();return;}
+    if(act==='pool-more'){poolShown+=70;updatePoolList();return;}
+    if(act==='pool-add-visible'||act==='pool-remove-visible'){
+      initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
+      poolVisible().forEach(p=>{
+        if(act==='pool-add-visible')poolDraftSchools.add(String(p.id));else poolDraftSchools.delete(String(p.id));
+      });
+      poolDirty=true;render();return;
+    }
+    if(act==='pool-reset'){resetPoolDraft();render();return;}
     if(act==='load-programs'){programShown+=36;filterPrograms();return;}
     if(act==='directory-conference'){programConference=id;programLetter='all';programShown=36;render();filterPrograms();return;}
     if(act==='directory-ownership'){programOwnership=id;programShown=36;render();filterPrograms();return;}
@@ -2462,10 +2493,15 @@
         await api('trade/respond',{trade_id:id,mode:'decline'});notice('Trade declined.');
       }else if(act==='trade-cancel'){
         await api('trade/cancel',{trade_id:id});notice('Trade offer cancelled.');
-      }else if(act==='save-confs'){
-        const selected=[...document.querySelectorAll('input[name="conference"]:checked')].map(x=>x.value);
-        await api('admin/settings',{conferences:selected,rounds:league.settings.rounds});
-        notice('Draft pool settings saved.');
+      }else if(act==='save-pool'){
+        initPoolDraft();
+        if(!poolDraftSchools.size)throw new Error('Select at least one program.');
+        const conferences=[...poolDraftConfs];
+        const included=programs().filter(p=>poolDraftSchools.has(String(p.id))&&!poolDraftConfs.has(String(p.conference_id))).map(p=>String(p.id));
+        const excluded=programs().filter(p=>!poolDraftSchools.has(String(p.id))&&poolDraftConfs.has(String(p.conference_id))).map(p=>String(p.id));
+        await api('admin/settings',{conferences,included_programs:included,excluded_programs:excluded,rounds:league.settings.rounds});
+        poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;
+        schoolLeaders=null;standingsFetchedAt=0;notice('Eligible program pool saved.');
       }else if(act==='invite'){
         const r=await api('admin/invite',{});
         inviteLink=location.origin+'/?invite='+encodeURIComponent(r.code);
@@ -2497,10 +2533,9 @@
         draftSelectedProgram='';
         current='draft';
       }else if(act==='sync'){
-        const selected=[...document.querySelectorAll('input[name="conference"]:checked')].map(x=>x.value);
-        if(!selected.length)throw Error('Select at least one conference.');
+        const selected=activeConfs().slice();
+        if(!selected.length)throw Error('No enabled conferences to resync.');
         if(!window.confirm('Import programs for '+selected.length+' conferences? This may take several moments.')){busy=false;return;}
-        await api('admin/settings',{conferences:selected,rounds:league.settings.rounds});
         syncActive=true;let done=0,errors=[];
         for(const confId of selected){
           try{const result=await api('admin/sync',{conference_id:confId});done+=result.added||0;}catch(e){errors.push(conf(confId)+': '+e.message);}
@@ -2631,6 +2666,7 @@
       finally{URL.revokeObjectURL(url);e.target.value='';}
       return;
     }
+    if(e.target?.id==='pool-conf-filter'){poolConferenceFilter=e.target.value;poolShown=70;render();return;}
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
@@ -2645,6 +2681,9 @@
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
+    if(e.target?.id==='pool-search'){
+      poolQuery=e.target.value;poolShown=70;updatePoolList();return;
+    }
     if(e.target?.id==='daily-team-search'){
       resultsSearch=e.target.value;
       resultsShown=40;

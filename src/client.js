@@ -37,6 +37,7 @@
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
   let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
+  let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
@@ -90,6 +91,55 @@
     if(!res.ok)throw new Error(parsed.error||'Request failed.');
     return parsed;
   }
+
+  // T-Rank is an informational comparison, never an input to fantasy points or NET quadrants.
+  const ratingYear=(label)=>Number(String(label||season()).slice(0,4))+1;
+  const ratingName=(raw)=>String(raw||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/&/g,' and ').replace(/\bsaint\b/g,'st').replace(/\bstate\b/g,'st')
+    .replace(/\buniversity\b/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  const ratingAliases={
+    'uconn huskies':'connecticut','ole miss rebels':'mississippi','pitt panthers':'pittsburgh',
+    'cal golden bears':'california','miami hurricanes':'miami fl','miami redhawks':'miami oh',
+    'lsu tigers':'lsu','uc irvine anteaters':'uc irvine','uc santa barbara gauchos':'uc santa barbara',
+    'uc davis aggies':'uc davis','uc riverside highlanders':'uc riverside',
+    'unc asheville bulldogs':'unc asheville','nc st wolfpack':'nc st',
+    'utep miners':'utep','utsa roadrunners':'utsa','fgcu eagles':'fgcu'
+  };
+  function ratingOf(program,year){
+    const entries=ratingCache[year]?.teams;
+    if(!program||!Array.isArray(entries))return null;
+    const key=ratingName(program.name),explicit=ratingAliases[key]||'';
+    if(explicit){
+      const found=entries.find(x=>ratingName(x.team)===explicit);
+      if(found)return found;
+    }
+    // ESPN uses mascot-inclusive names; Torvik uses institution names.
+    // Longest unique prefix wins (Michigan State before Michigan).
+    const matched=entries.filter(x=>{
+      const candidate=ratingName(x.team);
+      if(candidate==='florida'&&key.startsWith('florida gulf coast'))return false;
+      if(candidate==='houston'&&key.startsWith('houston christian'))return false;
+      if(candidate==='california'&&key.startsWith('california baptist'))return false;
+      if(candidate==='north carolina'&&key.startsWith('north carolina a'))return false;
+      if(candidate==='texas and m'&&key.startsWith('texas and m corpus'))return false;
+      return candidate.length>2&&(key===candidate||key.startsWith(candidate+' '));
+    }).sort((a,b)=>ratingName(b.team).length-ratingName(a.team).length);
+    return matched[0]||null;
+  }
+  async function loadRatings(year,force=false){
+    if(!me||!Number.isInteger(year)||year<2022||year>2027||ratingLoading[year])return;
+    if(!force&&(ratingCache[year]||ratingError[year]))return;
+    ratingLoading[year]=true;delete ratingError[year];
+    try{const payload=await api('data/ratings?year='+year);
+      if(!Array.isArray(payload.teams)||payload.teams.length<330)throw Error('Published ratings are incomplete.');
+      ratingCache[year]=payload;
+    }catch(e){ratingError[year]=e.message;}
+    finally{delete ratingLoading[year];if(current==='programs'&&programMode==='ratings'||current==='program-detail')render();}
+  }
+  const ratingExternalLinks=()=>'<div class="rating-source-links">'
+    +'<a href="https://barttorvik.com/" target="_blank" rel="noopener noreferrer">Bart Torvik ↗</a>'
+    +'<a href="https://evanmiya.com/" target="_blank" rel="noopener noreferrer">EvanMiya ↗</a>'
+    +'<a href="https://kenpom.com/" target="_blank" rel="noopener noreferrer">KenPom ↗</a></div>';
   async function refresh(silent=false){
     try{
       // Keep checked trade selections when the 12-second poll updates the page.
@@ -190,6 +240,8 @@
   function render(){
     if(!me||!league)return renderAuth();
     if((current==='league'||current==='team')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
+    if(current==='program-detail')loadRatings(ratingYear(selectedProgramSeason||season()));
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','team','results','programs','draft','more'];

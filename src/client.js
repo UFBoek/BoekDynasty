@@ -2845,7 +2845,7 @@
       draftSelectedProgram='';render();
     }
   });
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pingActivity(true);});
+  document.addEventListener?.('visibilitychange',()=>{if(!document.hidden)pingActivity(true);});
   document.addEventListener?.('keydown',e=>{
     if(!me||!league)return;
     const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'')||e.target?.isContentEditable;

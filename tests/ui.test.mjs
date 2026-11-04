@@ -3,7 +3,9 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/client.js',import.meta.url),'utf8');
 const injection=`  return {
- set:(user,state)=>{me=user;league=state;},
+ set:(user,state)=>{me=user;league=state;standingsData=null;},
+ search:query=>{globalSearchQuery=query;return globalSearchDialog();},
+ manager:(id,data)=>{selectedManagerId=id;standingsData=data;standingsFetchedAt=Date.now();return managerProfilePage();},
  page:page=>{current=page;render();return root.innerHTML;},
  section:section=>{adminSection=section;return commissionerPage();},
  mode:mode=>{draftRoundView=mode;},
@@ -128,4 +130,26 @@ test('Results exposes touch-friendly conference buttons, not a select menu',()=>
   assert.match(html,/class="scoreboard-conference-strip"/);
   assert.match(html,/data-act="results-conference"/);
   assert.doesNotMatch(html,/id="scoreboard-conference"/);
+});
+
+
+test('global search finds school profiles, managers and navigation destinations',()=>{
+ const school=app.search('florida');
+ assert.match(school,/role="dialog"/);
+ assert.match(school,/Florida basketball/);
+ assert.match(school,/data-act="open-program"/);
+ assert.match(app.search('Hayden'),/data-act="open-manager"/);
+ assert.match(app.search('Standings'),/data-id="league"/);
+ assert.match(app.page('home'),/data-act="search-open"/);
+});
+test('manager profiles show actual season points and league rank instead of placeholders',()=>{
+ league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'2'}];
+ const standings={season:'2026-27',standings:[{manager_id:'1',points:88.25},{manager_id:'2',points:54}]};
+ const html=app.manager('1',standings);
+ assert.match(html,/SEASON POINTS/);
+ assert.match(html,/88\.25/);
+ assert.match(html,/LEAGUE RANK/);
+ assert.match(html,/#1/);
+ assert.doesNotMatch(html,/CURRENT POINTS<\/span><strong class="muted">Pending/);
+ league.ownership=[];
 });

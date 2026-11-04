@@ -192,6 +192,45 @@ export const DATA_PIPELINE=(()=>{
     }
     return result;
   }
+  // Retry only the latest failed or abandoned import for a date. Completed
+  // imports supersede old failures; a daily cap prevents hammering ESPN.
+  async function repairInterrupted(env,limit=2){
+    if(!Number.isInteger(limit)||limit<1||limit>3)throw new Error('Repair limit must be 1–3 dates.');
+    const candidates=(await q(env,`SELECT s.id,s.season,s.target_date,s.status,s.started_at FROM cbb_sync_runs s
+      WHERE s.target_date IS NOT NULL AND s.started_at>unixepoch()-14*86400
+        AND (s.status='error' OR (s.status='running' AND s.started_at<unixepoch()-3600))
+        AND NOT EXISTS (
+          SELECT 1 FROM cbb_sync_runs newer
+          WHERE newer.season=s.season AND newer.target_date=s.target_date
+            AND (newer.started_at>s.started_at OR (newer.started_at=s.started_at AND newer.id>s.id))
+        )
+      ORDER BY s.started_at DESC LIMIT 30`).all()).results||[];
+    const results=[],seen=new Set(),now=Math.floor(Date.now()/1000);
+    let skipped=0;
+    for(const candidate of candidates){
+      if(results.length>=limit)break;
+      const key=candidate.season+'|'+candidate.target_date;
+      if(seen.has(key)||!dayInSeason(candidate.season,candidate.target_date)){skipped++;continue;}
+      seen.add(key);
+      const retries=await q(env,`SELECT COUNT(*) AS n,MAX(started_at) AS last_try
+        FROM cbb_sync_runs WHERE season=? AND target_date=? AND job='auto-repair'
+          AND started_at>unixepoch()-86400`,candidate.season,candidate.target_date).first();
+      if(Number(retries?.n||0)>=2||now-Number(retries?.last_try||0)<3600){skipped++;continue;}
+      if(candidate.status==='running'){
+        await q(env,`UPDATE cbb_sync_runs SET status='error',finished_at=unixepoch(),
+          error_text='Timed out after an hour; queued for controlled retry.'
+          WHERE id=? AND status='running' AND started_at<unixepoch()-3600`,candidate.id).run();
+      }
+      try{
+        const done=await importDay(env,candidate.season,candidate.target_date,
+          {job:'auto-repair',includeSecondary:true});
+        results.push({season:candidate.season,date:candidate.target_date,ok:true,changed:done.changed});
+      }catch(e){
+        results.push({season:candidate.season,date:candidate.target_date,ok:false,error:err(e)});
+      }
+    }
+    return {attempted:results.length,skipped,results};
+  }
   const status=async(env,season)=>{
     const [games,runs,net,awards,opt,health,rankings]=await Promise.all([
       q(env,"SELECT COUNT(*) AS n,SUM(CASE WHEN status='final' THEN 1 ELSE 0 END) AS final_count,MAX(updated_at) AS last_change FROM cbb_games WHERE season=?",season).first(),
@@ -1090,5 +1129,5 @@ export const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,publishedTeamSchedule,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,repairInterrupted,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,publishedTeamSchedule,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

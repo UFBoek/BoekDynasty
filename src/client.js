@@ -349,6 +349,7 @@
       overviewGamesDay=today;
       overviewGamesError='';
     }catch(e){
+      overviewGames=[];
       overviewGamesDay=today;
       overviewGamesError='Today’s games are temporarily unavailable.';
     }finally{

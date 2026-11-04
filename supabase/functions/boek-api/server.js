@@ -238,6 +238,11 @@ export default (function makeWorker(){
         if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
         return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season,settings.conferences));
       }
+      if(path==='data/schedule'){
+        const id=String(url.searchParams.get('id')||'');
+        if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
+        return response(await DATA_PIPELINE.publishedTeamSchedule(env,season,id));
+      }
       if(path==='data/program'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);

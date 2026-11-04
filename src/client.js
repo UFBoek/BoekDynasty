@@ -653,10 +653,48 @@
     const counter=document.querySelector('#leader-count');
     if(counter)counter.textContent=visible+' '+(visible===1?'school':'schools');
   }
+  function ratingsPage(){
+    const year=ratingYear(ratingSeason||season()),data=ratingCache[year];
+    const years=Array.from({length:6},(_,i)=>ratingYear(season())-i).filter(y=>y>=2022&&y<=2027);
+    const seasons='<div class="school-leaders-seasons rating-seasons" role="group" aria-label="T-Rank season">'
+      +years.map(y=>'<button type="button" data-act="rating-season" data-id="'+y+'" class="'+(year===y?'active':'')+'">'+(y-1)+'-'+String(y%100).padStart(2,'0')+'</button>').join('')+'</div>';
+    const header='<div class="rating-intro"><div><h3>Bart Torvik T-Rank</h3><p>National power ratings. Separate from dynasty fantasy points and NCAA NET quadrants.</p></div>'+ratingExternalLinks()+'</div>';
+    if(!data)return '<section class="panel ratings-shell">'+header+seasons
+      +(ratingError[year]?empty('Ratings unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Retry</button>'
+        :empty('Loading ratings','Retrieving '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-Rank ratings.'))+'</section>';
+    const eligible=programs().filter(p=>activeConfs().includes(p.conference_id));
+    const metrics={rank:(a,b)=>(a.r?.rank??999)-(b.r?.rank??999),
+      offense:(a,b)=>(a.r?.adj_o_rank??999)-(b.r?.adj_o_rank??999),
+      defense:(a,b)=>(a.r?.adj_d_rank??999)-(b.r?.adj_d_rank??999),
+      power:(a,b)=>(b.r?.barthag??-1)-(a.r?.barthag??-1),
+      wab:(a,b)=>(b.r?.wab??-999)-(a.r?.wab??-999)};
+    const rows=eligible.map(p=>({p,r:ratingOf(p,year)})).sort((a,b)=>(metrics[ratingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
+    const matched=rows.filter(x=>x.r).length;
+    const dec=(value,places=1)=>value===null||value===undefined?'—':Number(value).toFixed(places);
+    const sort=[['rank','T-Rank'],['offense','Offense'],['defense','Defense'],['power','Power'],['wab','WAB']].map(([id,label])=>
+      '<button type="button" data-act="rating-sort" data-id="'+id+'" class="'+(ratingSort===id?'active':'')+'">'+label+'</button>').join('');
+    const cells=rows.map(({p,r})=>'<tr class="rating-school-row" data-search="'+escapeHTML((p.name+' '+conf(p.conference_id)).toLowerCase())+'">'
+      +'<td class="rating-rank">'+(r?'#'+r.rank:'—')+'</td>'
+      +'<td><button class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
+      +'<td>'+dec(r?.barthag,3)+'</td><td>'+dec(r?.adj_o)+'<small>'+(r?.adj_o_rank?' #'+r.adj_o_rank:'')+'</small></td>'
+      +'<td>'+dec(r?.adj_d)+'<small>'+(r?.adj_d_rank?' #'+r.adj_d_rank:'')+'</small></td>'
+      +'<td>'+dec(r?.wab)+'</td><td>'+dec(r?.tempo)+'</td></tr>').join('');
+    return '<section class="panel ratings-shell">'+header+seasons
+      +'<div class="rating-controls"><label class="directory-search"><span aria-hidden="true">⌕</span><input id="rating-search" type="search" class="field" placeholder="Find a school..." value="'+escapeHTML(ratingQuery)+'" autocomplete="off"/></label><div class="directory-sort-tabs">'+sort+'</div></div>'
+      +'<p class="rating-coverage"><span id="rating-count">'+matched+' matched schools</span> / '+eligible.length+' eligible · National rank · Fetched '+escapeHTML(new Date(data.fetched_at).toLocaleDateString())+'</p>'
+      +'<div class="ratings-table-wrap"><table class="ratings-table"><thead><tr><th>T-RANK</th><th>SCHOOL</th><th>BARTHAG</th><th>ADJ. OFF.</th><th>ADJ. DEF.</th><th>WAB</th><th>TEMPO</th></tr></thead><tbody>'+cells+'</tbody></table></div>'
+      +'<p class="hint">Offense and defense use points per 100 possessions (lower is better on defense). Unmatched schools show a dash rather than an estimated rating.</p></section>';
+  }
+  function filterRatings(){
+    let count=0;const query=ratingQuery.toLowerCase().trim();
+    root.querySelectorAll('.rating-school-row').forEach(row=>{const shown=row.dataset.search.includes(query);row.hidden=!shown;if(shown)count++;});
+    const label=root.querySelector('#rating-count');if(label)label.textContent=count+' schools';
+  }
   function programsPage(){
     const nav='<div class="school-view-tabs" role="group" aria-label="Schools sections">'
-      +[['directory','School directory'],['leaders','Historical leaders']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
+      +[['directory','School directory'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
     if(programMode==='leaders')return heading('COLLEGE BASKETBALL','Schools','Browse programs or compare historical fantasy scoring across all Division I schools.')+nav+schoolLeadersPage();
+    if(programMode==='ratings')return heading('COLLEGE BASKETBALL','Schools','Compare eligible programs using T-Rank efficiency ratings.')+nav+ratingsPage();
     const eligible=programs().filter(p=>activeConfs().includes(p.conference_id));
     const available=eligible.filter(p=>!programOwned(p.id)).length;
     const sorters={

@@ -143,7 +143,13 @@ Deno.serve(async (request)=>{
       const eligible=[11,12,1,2,3,4].includes(Number(today.slice(5,7)))&&DATA_PIPELINE.dayInSeason(season,today);
       let result;
       if(kind==='live')result=eligible?await DATA_PIPELINE.importDay(env,season,today,{job:'live'}):{skipped:'offseason'};
-      else if(kind==='recent')result=eligible?await DATA_PIPELINE.backfill(env,season,4):{skipped:'offseason'};
+      else if(kind==='recent'){
+        // A regular reconciliation also repairs a small, rate-limited batch
+        // of interrupted imports, including historical jobs.
+        const reconciled=eligible?await DATA_PIPELINE.backfill(env,season,4):{skipped:'offseason'};
+        const repaired=await DATA_PIPELINE.repairInterrupted(env,2);
+        result={reconciled,repaired};
+      }
       else if(kind==='upcoming')result=eligible?await DATA_PIPELINE.upcoming(env,season,3):{skipped:'offseason'};
       else if(kind==='ap')result=eligible?await DATA_PIPELINE.syncAPPoll(env,season):{skipped:'offseason'};
        else if(kind==='torvik')result=eligible?await DATA_PIPELINE.syncPreliminaryTorvik(env,season):{skipped:'offseason'};

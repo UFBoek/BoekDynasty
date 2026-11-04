@@ -3937,3 +3937,17 @@ button.daily-team-line:hover{background:#f4f8fc}
  .draft-selection-sheet{animation:none}
  .draft-live-progress>span,.draft-pool-card{transition:none}
 }
+
+
+/* Explicit remembered-device consent in all account entry points. */
+.auth-remember-option{display:flex;align-items:flex-start;gap:11px;padding:12px 13px;margin:-2px 0 15px;
+  border:1px solid #dce6f0;border-radius:11px;background:linear-gradient(110deg,#f8fbff,#fff);cursor:pointer;min-height:59px}
+.auth-remember-option:focus-within{border-color:#84b2e1;box-shadow:0 0 0 3px rgba(39,112,185,.12)}
+.auth-remember-option>input[type=checkbox]{flex:0 0 17px;width:17px;height:17px;margin:2px 0 0;
+  accent-color:#1e5e9d;cursor:pointer}
+.auth-remember-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.auth-remember-copy strong{font-size:12px;line-height:1.35;font-weight:850;color:#234667}
+.auth-remember-copy small{font-size:10.5px;line-height:1.45;color:#7187a0;font-weight:550}
+@media(max-width:600px){.auth-remember-option{padding:12px 11px;margin-bottom:14px}
+ .auth-remember-copy strong{font-size:12.5px}
+ .auth-remember-copy small{font-size:10.5px}}

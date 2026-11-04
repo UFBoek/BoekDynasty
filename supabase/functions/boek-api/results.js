@@ -313,96 +313,41 @@ export const DATA_PIPELINE=(()=>{
   // Historical dynasty score: verified final archive and live current-season preview.
   // commissioner achievement inputs. Never equate an unimported season with zero.
   async function programHistory(env,id,scoring,currentSeason){
-    const latestYear=Number(currentSeason.slice(0,4)),startYear=2021;
-    const verifiedArchives=await verifiedArchiveSeasons(env);
-    const games=(await q(env,`SELECT season,game_date,home_id,away_id,home_score,away_score,
-      status,season_type,tournament_tag,neutral_site
-      FROM cbb_games WHERE (home_id=? OR away_id=?) AND season>=? AND season<=?
-      ORDER BY season DESC,game_date DESC`,id,id,'2021-22',currentSeason).all()).results||[];
-    const ncaaResults=(await q(env,`SELECT season,opening_round FROM cbb_ncaa_results WHERE winner_id=? AND season BETWEEN '2021-22' AND ?`,id,currentSeason).all()).results||[];
-    const awards=(await q(env,`SELECT season,award_type,value FROM cbb_awards WHERE program_id=?
-      AND season>=? AND season<=?`,id,'2021-22',currentSeason).all()).results||[];
-    // Read source-verified conference titles directly when D1's daily write
-    // allowance prevents their archival rows from being persisted yet.
-    const presentTitles=new Set(awards.filter(x=>x.award_type==='conference_regular_champion').map(x=>x.season));
-    for(const entry of HISTORICAL_CONFERENCE_CHAMPIONS.seasons){
-      if(entry.season>currentSeason||presentTitles.has(entry.season))continue;
-      if(entry.winners.some(x=>String(x.id)===String(id)))
-        awards.push({season:entry.season,award_type:'conference_regular_champion',value:1});
-    }
-    const net=(await q(env,`SELECT r.season,r.program_id,r.net_rank
-      FROM cbb_net_rankings r JOIN cbb_net_snapshots s
-      ON r.season=s.season AND r.snapshot_date=s.snapshot_date
-      WHERE s.status='complete' AND r.season>=? AND r.season<=?
-        AND s.snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_net_snapshots
-          WHERE season=r.season AND status='complete')`,'2021-22',currentSeason).all()).results||[];
-    const netBySeason=new Map();
-    for(const r of net){
-      if(!netBySeason.has(r.season))netBySeason.set(r.season,new Map());
-      netBySeason.get(r.season).set(String(r.program_id),Number(r.net_rank));
-    }
-    const periods=[];
-    const weight=(key)=>Number(scoring?.[key]||0);
-    for(let y=latestYear;y>=startYear;y--){
-      const label=y+'-'+String((y+1)%100).padStart(2,'0');
-      const seasonGames=games.filter(g=>g.season===label);
-      const completed=seasonGames.filter(g=>g.status==='final'&&
+    // Use the identical point calculation and component detail as Historical
+    // Leaders and manager standings, preventing divergent seed or quad totals.
+    const scores=await historicalLeaders(env,scoring,currentSeason);
+    const totals=new Map(scores.rows.filter(x=>x.program_id===String(id)).map(x=>[x.season,x]));
+    const games=(await q(env,`SELECT season,home_id,away_id,home_score,away_score,status
+      FROM cbb_games WHERE (home_id=? OR away_id=?) AND season BETWEEN '2021-22' AND ?`,id,id,currentSeason).all()).results||[];
+    const years=Number(currentSeason.slice(0,4)),periods=[];
+    for(let y=years;y>=2021;y--){
+      const label=y+'-'+String((y+1)%100).padStart(2,'0'),t=totals.get(label);
+      const completed=games.filter(g=>g.season===label&&g.status==='final'&&
         g.home_score!==null&&g.away_score!==null&&g.home_score!==g.away_score);
       const wins=completed.filter(g=>{
         const home=String(g.home_id)===String(id);
         return home?g.home_score>g.away_score:g.away_score>g.home_score;
       });
-      const losses=completed.length-wins.length;
-      const regularWins=wins.filter(g=>Number(g.season_type)===2&&!g.tournament_tag);
-      const honors=awards.filter(a=>a.season===label);
-      const ranks=netBySeason.get(label);
-      let earned=regularWins.length*weight('regular_win');
-      let q1=0,q1a=0,q2=0;
-      if(ranks?.size>=350){
-        for(const g of wins){
-          if(Number(g.season_type)!==2||g.tournament_tag)continue;
-          const home=String(g.home_id)===String(id);
-          const opponent=String(home?g.away_id:g.home_id);
-          const rank=ranks.get(opponent);
-          if(!rank)continue;
-          const venue=g.neutral_site?'neutral':home?'home':'away';
-          const quad=quadrant(rank,venue);
-          if(quad===1){q1++;earned+=weight('quad_1_win');if(isQ1A(rank,venue)){q1a++;earned+=weight('quad_1a_extra');}}
-          if(quad===2){q2++;earned+=weight('quad_2_win');}
-        }
-      }
-      const awardValue=(kind)=>honors.filter(a=>a.award_type===kind)
-        .reduce((total,a)=>total+Number(a.value||0),0);
-      if(awardValue('conference_regular_champion'))earned+=weight('conference_regular_title');
-      if(awardValue('conference_tournament_champion'))earned+=weight('conference_tournament_title');
-      const seed=awardValue('ncaa_seed');
-      if(seed>0){
-        earned+=seed<=4?weight('ncaa_seed_1_4'):seed<=8?weight('ncaa_seed_5_8'):
-          seed<=12?weight('ncaa_seed_9_12'):weight('ncaa_seed_13_16');
-      }
-      const verifiedNCAA=ncaaResults.filter(g=>g.season===label);
-      const manualNCAA=honors.some(a=>a.award_type==='ncaa_wins');
-      const taggedNCAA=wins.filter(g=>g.tournament_tag==='ncaa');
-      const ncaaWins=verifiedNCAA.length?verifiedNCAA.filter(g=>Number(g.opening_round)!==1).length:
-        manualNCAA?awardValue('ncaa_wins'):taggedNCAA.filter(g=>g.game_date>(y+1)+'-03-20').length;
-      const openingWins=verifiedNCAA.filter(g=>Number(g.opening_round)===1).length;
-      if(ncaaWins>0)earned+=ncaaWins*weight('ncaa_tournament_win');
-      if(openingWins>0)earned+=openingWins*weight('ncaa_opening_round_win');
-      if(awardValue('national_champion'))earned+=weight('national_championship');
-      const have=completed.length>0||honors.length>0;
-      const isFinal=verifiedArchives.has(label);
-      const seasonStatus=!have?(isFinal?'not_applicable':'unavailable'):isFinal?'complete':'partial';
-      periods.push({season:label,points:have?Math.round(earned*100)/100:null,
-        status:seasonStatus,games:completed.length,wins:wins.length,
-        losses,regular_wins:regularWins.length,q1,q1a,q2,
-        net_verified:!!(ranks&&ranks.size>=350),ncaa_wins:ncaaWins,opening_round_wins:openingWins,
-        awards_verified:honors.length,
-        note:isFinal?(have?'Final verified season fantasy points.':'No recorded Division I season for this program.'):
-          have?'Current or incomplete season: points will update as results are verified.':'No verified results for this season yet.'});
+      const isFinal=scores.verified_seasons.includes(label),have=!!t||completed.length>0;
+      const state=!have?(isFinal?'not_applicable':'unavailable'):isFinal?'complete':'partial';
+      periods.push({
+        season:label,points:t?.points??(have?0:null),status:state,
+        games:completed.length,wins:wins.length,losses:completed.length-wins.length,
+        regular_wins:t?.regular_wins||0,
+        conference_tournament_wins:t?.conference_tournament_wins||0,
+        q1:t?.q1||0,q1a:t?.q1a||0,q2:t?.q2||0,
+        quad_by_type:t?.quad_by_type||null,
+        ncaa_wins:t?.ncaa_wins||0,opening_round_wins:t?.opening_round_wins||0,
+        seed:t?.seed||0,net_verified:!!t?.net_verified,
+        breakdown:t?.breakdown||[],
+        note:state==='complete'?'Final points, including all applicable tournament NET bonuses.':
+          state==='partial'?'Live fantasy scoring; points will update as games and awards are verified.':
+          'No verified games or scoring awards for this program and season.'
+      });
     }
     return {program_id:String(id),current_season:currentSeason,seasons:periods,
-      source:'ESPN game results, archived final NET, NCAA tournament game archive, verified championships',
-      archive_complete:verifiedArchives.size===5,complete:verifiedArchives.size===5};
+      source:'ESPN final scores and venues, season-end NET, NCAA bracket, verified conference titles',
+      archive_complete:scores.archive_complete,complete:scores.archive_complete};
   }
   // Fair, idempotent historical backfill: each pass advances across every
   // requested year instead of exhausting 2025-26 before 2021-22 begins.

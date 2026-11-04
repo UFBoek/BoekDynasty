@@ -7,7 +7,7 @@ const client=readFileSync(new URL('../src/client.js',import.meta.url),'utf8');
 
 async function runStartup(authenticated){
   let fatal=null;
-  const app={innerHTML:'Loading Boek Dynasty…',addEventListener(){}};
+  const app={innerHTML:'Loading Boek Dynasty…',addEventListener(){},querySelector(){return null;}};
   const league={
     user:{id:'test',username:'test',display_name:'Test Manager',role:'manager'},
     users:[{id:'test',username:'test',display_name:'Test Manager',role:'manager'}],

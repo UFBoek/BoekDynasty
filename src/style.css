@@ -4955,3 +4955,50 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .seed-scale-grid .score-row span{font-size:12px}
 .seed-scale-grid .score-row strong{font-variant-numeric:tabular-nums}
 @media(max-width:670px){.seed-scale-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}}
+
+/* Commissioner / Activity: compact analytics that remain readable on mobile */
+.activity-intro{background:linear-gradient(135deg,#fff 50%,#f2f6fc 100%)}
+.activity-privacy{font-size:12px;line-height:1.6;color:#64758b;max-width:820px;margin:-6px 0 20px}
+.activity-toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:16px 0 21px}
+.activity-toolbar label{display:flex;flex-direction:column;gap:6px;min-width:160px;flex:1 1 165px;max-width:280px;font-size:11px;font-weight:750;color:#526781}
+.activity-toolbar .field{min-height:42px;background:#fff}
+.activity-toolbar .btn{min-height:42px;white-space:nowrap}
+.activity-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.activity-metric{border:1px solid #e3eaf3;background:#fff;border-radius:14px;padding:16px;min-width:0}
+.activity-metric span,.activity-metric small{display:block;font-size:11px;color:#64758b;line-height:1.4}
+.activity-metric span{font-weight:700}
+.activity-metric strong{font-size:29px;letter-spacing:-.8px;display:block;margin:5px 0;color:#172b46;font-variant-numeric:tabular-nums}
+.activity-manager{display:flex;align-items:center;gap:12px;padding:15px 2px;border-bottom:1px solid #ebeff5;min-width:0}
+.activity-manager:last-child{border-bottom:none}
+.activity-avatar{width:39px;height:39px;border-radius:12px;background:#e6edf7;color:#174f88;font-size:12px;font-weight:900;display:grid;place-items:center;flex-shrink:0}
+.activity-manager-main{flex:1;min-width:0}
+.activity-manager-main strong{display:block;font-size:13px;color:#172b46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-manager-main small{display:block;font-size:11px;color:#77879b;margin-top:4px;line-height:1.5;overflow-wrap:anywhere}
+.activity-manager-meta{min-width:115px;display:flex;align-items:flex-end;flex-direction:column;gap:4px;text-align:right}
+.activity-manager-meta small{font-size:10px;color:#7c8a9b}
+.activity-presence{display:inline-flex;align-items:center;gap:6px;border-radius:30px;background:#edf1f6;color:#738298;font-size:10px;padding:5px 9px;font-weight:800}
+.activity-presence i{width:7px;height:7px;display:block;border-radius:100%;background:#a1acba}
+.activity-presence.online{background:#e2f7ea;color:#167548}
+.activity-presence.online i{background:#21a365;box-shadow:0 0 0 3px #21a36518}
+.activity-presence.recent{background:#fff5e5;color:#965d18}
+.activity-presence.recent i{background:#d89134}
+.activity-feed{display:flex;flex-direction:column}
+.activity-event{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid #ebeff5;min-width:0}
+.activity-event:last-child{border-bottom:0}
+.activity-event-icon{width:33px;height:33px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;font-size:15px;font-weight:800;background:#eef4fc;color:#2c68ac}
+.activity-event-icon.action{background:#e4f4ec;color:#1c8656}
+.activity-event-icon.login{background:#fef0e4;color:#b66b2d}
+.activity-event-main{min-width:0;display:flex;flex:1;gap:5px 12px;align-items:baseline;flex-wrap:wrap}
+.activity-event-main strong{font-size:12px;color:#172b46}
+.activity-event-main span{font-size:12px;color:#526781;overflow-wrap:anywhere}
+.activity-event time{font-size:10px;color:#8291a4;white-space:nowrap;flex-shrink:0}
+.activity-loading{padding:36px 8px;text-align:center;color:#64758b;font-size:13px}
+@media (max-width:1000px){.activity-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){
+  .activity-toolbar{gap:9px}.activity-toolbar label{min-width:0;flex:1 1 40%}
+  .activity-toolbar .btn{width:100%}
+  .activity-metrics{gap:8px}.activity-metric{padding:12px}.activity-metric strong{font-size:25px}
+  .activity-manager{gap:9px}.activity-manager-meta{min-width:86px}
+  .activity-event{align-items:flex-start;gap:9px}.activity-event time{font-size:9px;padding-top:5px}
+  .activity-event-main{display:block}.activity-event-main span{display:block;margin-top:3px}
+}

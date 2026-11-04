@@ -542,8 +542,7 @@
     if(scope==='mine')return owned.has(home)||owned.has(away);
     if(scope==='queue')return watched.has(home)||watched.has(away);
     if(scope==='top25')return pollRanks.has(home)||pollRanks.has(away);
-    if(scope==='league')return enrolled.has(String(g.home_conference_id||''))||
-      enrolled.has(String(g.away_conference_id||''));
+    if(scope==='league')return enrolled.has(home)||enrolled.has(away);
     return true;
   };
   const matchScoreboardStatus=(g,filter)=>filter==='all'||
@@ -596,7 +595,7 @@
   function resultsPage(){
     const day=resultsSelectedDay||resultsToday();
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
-    const enrolled=new Set(eligibleConferenceIds().map(String));
+    const enrolled=new Set(eligiblePrograms().map(p=>String(p.id)));
     const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
     const watched=activeDraftQueueIds();
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
@@ -2619,7 +2618,7 @@
         await api('account/password',{current_password:data.current_password,new_password:data.new_password});
         form.reset();
         notice('Password updated. Other sessions have been signed out.');
-      }else if(type==='program'){await api('admin/program',data);notice('Program added to pool.');await refresh(true);}
+      }else if(type==='program'){await api('admin/program',data);poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;notice('Program added to pool.');await refresh(true);}
       else{
         data.remember_device=!!form.querySelector('[name="remember_device"]')?.checked;
         const res=await api(type==='login'?'login':type==='join'?'join':'setup',data);

@@ -4541,3 +4541,298 @@ button.daily-team-line:hover{background:#f4f8fc}
 @media(max-width:980px){.commissioner-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.pool-editor{grid-template-columns:1fr}.pool-conference-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 8px}.pool-conference-group h3{grid-column:1/-1}.pool-school-list{max-height:480px}}
 @media(max-width:800px){.commissioner-layout{grid-template-columns:1fr}.commissioner-menu{top:auto;position:static;display:flex;overflow-x:auto;gap:4px;padding:6px;scrollbar-width:thin}.commissioner-menu button{min-width:125px;flex:0 0 auto;padding:10px 12px}.commissioner-menu button.active{box-shadow:inset 0 -3px 0 #e97a31}.commissioner-body{width:100%}}
 @media(max-width:560px){.commissioner-overview{gap:7px}.commissioner-overview>div{padding:11px 12px}.commissioner-overview strong{font-size:16px}.pool-intro{padding:15px;align-items:flex-start}.pool-intro h2{font-size:19px}.pool-intro p{font-size:11px}.pool-stat{padding:9px 10px;min-width:78px}.pool-stat strong{font-size:22px}.pool-stat span{font-size:8px;white-space:normal}.pool-editor>.panel{padding:14px 12px}.pool-conference-group{grid-template-columns:1fr 1fr;gap:2px 3px}.pool-conference{padding:5px 3px;gap:5px}.pool-conf-name{font-size:10px}.pool-conf-count{font-size:9px}.pool-search-tools{flex-wrap:wrap}.pool-search-tools>.field{max-width:none;width:100%}.pool-school-status{display:none}.pool-footer{bottom:6px;padding:10px;gap:7px;flex-wrap:wrap}.pool-footer-actions{width:100%}.pool-footer-actions .btn{flex:1}.pool-school-list{max-height:430px}}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   2026 UX REFINEMENT: editorial league dashboard + coherent sitewide UI.
+   Restraint over decoration: stronger hierarchy, fewer competing surfaces.
+   ══════════════════════════════════════════════════════════════════════ */
+:root{
+  --ui-ink:#18334e;--ui-text:#334d66;--ui-muted:#74879b;
+  --ui-blue:#245d93;--ui-blue-hover:#194d7f;--ui-blue-soft:#edf4fb;
+  --ui-orange:#db7132;--ui-line:#e1e8f0;--ui-bg:#f5f7fa;
+  --ui-radius:12px;
+  background:var(--ui-bg);color:var(--ui-ink);
+  font-family:"Inter",ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--ui-bg)!important;background-image:none!important;color:var(--ui-ink);line-height:1.45}
+.main:before,.main::before{display:none!important}
+.shell{grid-template-columns:216px minmax(0,1fr)}
+.sidebar{padding:23px 13px 16px;background:#fff;border-right:1px solid var(--ui-line);gap:17px;box-shadow:none;overflow-y:auto;scrollbar-width:thin}
+.sidebar .brand{padding:1px 9px 17px;border-bottom:1px solid #edf1f5;gap:10px}
+.sidebar .brand-title{font-size:15px;letter-spacing:-.45px;max-width:124px}
+.sidebar .brand-icon{border-radius:10px;flex:none}
+.sidebar .nav{gap:3px}
+.sidebar .nav-label{font-size:9px;letter-spacing:.09em;margin:9px 12px 7px;color:#8a9aa9}
+.sidebar .nav-label-secondary{margin-top:19px}
+.sidebar .nav button{min-height:40px;padding:9px 11px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:-.012em;color:#5d7286;gap:10px;transition:background .15s,color .15s}
+.sidebar .nav button svg{width:18px;height:18px;flex:0 0 18px}
+.sidebar .nav button:hover{background:#f2f6fa;color:#255784}
+.sidebar .nav button.active{background:var(--ui-blue-soft);color:#1c5c98;box-shadow:inset 3px 0 0 var(--ui-orange)}
+.sidebar .side-foot{padding:12px;border-color:#e6edf4;border-radius:10px;gap:10px}
+.sidebar .side-foot .avatar{border-radius:10px}
+.sidebar .account-mini strong{font-size:12px;line-height:1.3}
+.sidebar .season-pill{font-size:9px;letter-spacing:.07em;color:#51708e}
+.sidebar .logout{font-size:11px;padding:7px 0 1px;border-top:1px solid #edf1f5}
+.sidebar .logout:hover{color:#b75c2b}
+.main{background:transparent}
+.topbar{height:64px;padding:0 29px;background:rgba(255,255,255,.98);border-bottom:1px solid var(--ui-line);position:sticky;top:0;z-index:35;backdrop-filter:blur(12px);box-shadow:none}
+.topbar-logo{width:26px!important;height:26px!important;flex:0 0 26px}
+.topbar-heading{gap:9px;min-width:0}
+.topbar .title{font-size:12px;font-weight:750;letter-spacing:-.015em;color:#35516b}
+.topbar .sep{color:#b1becb;margin:0 7px}
+.top-right{gap:11px}
+.top-right .chip{background:#f7f9fb;color:#58718a;border:1px solid #e3eaf1;padding:6px 10px;font-size:10px;border-radius:7px}
+.header-account-avatar{border-radius:9px}
+.content{max-width:1380px;margin:0 auto;padding:26px 30px 94px}
+.page-heading{margin-bottom:19px}
+.page-heading .eyebrow,.eyebrow{font-size:9px;letter-spacing:.085em;font-weight:850;color:#c56830}
+.page-heading .headline{font-family:"Plus Jakarta Sans","Inter",sans-serif;font-size:clamp(25px,2.8vw,31px);letter-spacing:-.05em;font-weight:800;line-height:1.2;color:#193954}
+.page-heading .intro-text{font-size:12px;line-height:1.55;color:#778a9c;margin-top:6px;max-width:690px}
+.panel,.metric{background:#fff;border:1px solid var(--ui-line);border-radius:var(--ui-radius);box-shadow:none}
+.panel{padding:19px}
+.panel-head{gap:12px;margin-bottom:15px;align-items:center}
+.panel-head h2{font-family:"Plus Jakarta Sans","Inter",sans-serif;font-weight:800;font-size:15px;letter-spacing:-.035em;color:#1e3d5a;line-height:1.27}
+.panel-head p{font-size:11px;line-height:1.5;color:#8393a4;margin-top:4px;font-weight:500}
+.panel-head>.btn{flex:none}
+.section-gap{margin-top:14px}
+.btn{min-height:37px;border-radius:8px;font-size:11.5px;line-height:1.2;font-weight:780;letter-spacing:-.01em;padding:9px 14px;box-shadow:none;transition:background .14s,border-color .14s,color .14s}
+.btn:not(.secondary):not(.ghost):not(.danger){background:var(--ui-blue);color:#fff}
+.btn:not(.secondary):not(.ghost):not(.danger):hover:not(:disabled){background:var(--ui-blue-hover)}
+.btn.secondary{background:#f2f6fa;color:#2a587f;border:1px solid #dbe5ee}
+.btn.secondary:hover:not(:disabled){background:#e7f0f8;border-color:#c7dcec}
+.btn.ghost{background:#fff;color:#456680;border:1px solid #dde6ee}
+.btn.ghost:hover:not(:disabled){background:#f7fafd;border-color:#bed1e3}
+.btn.small{min-height:31px;padding:7px 10px;font-size:10px;border-radius:7px}
+.btn:disabled{opacity:.46}
+.field,input.field,select.field,textarea.field{border:1px solid #d6e0ea;border-radius:8px;color:#284862;background:#fff;box-shadow:none}
+.field:focus,input.field:focus,select.field:focus,textarea.field:focus{border-color:#5c96c7;box-shadow:0 0 0 3px rgba(67,134,189,.11)}
+.form-row label,.settings-field>span{font-size:11px;font-weight:750;color:#4f6981}
+.program-logo{border-color:#e7edf2;background:#fff;border-radius:8px}
+.empty{min-height:92px;padding:17px;border-color:#e2eaf1;background:#fbfcfe;color:#7e8ea0;font-size:12px;line-height:1.5}
+.empty strong{color:#2f4d68}
+.status{letter-spacing:0;font-weight:800}
+.rowline,.history-row{border-bottom-color:#e9eef3}
+.table th,.standings-table thead th{color:#8191a2;font-size:10px;letter-spacing:.06em}
+.table td,.standings-table td{border-bottom-color:#edf1f5}
+a,button{-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f8bc0;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.sidebar .nav button{transition:none}}
+
+/* League Overview — deliberate content hierarchy */
+.overview-head{display:flex;align-items:end;justify-content:space-between;gap:19px;margin-bottom:17px}
+.overview-head>div:first-child{min-width:0}
+.overview-kicker{font-size:9.5px;font-weight:850;letter-spacing:.095em;color:#be6734}
+.overview-head h1{font-family:"Plus Jakarta Sans","Inter",sans-serif;font-weight:800;font-size:clamp(26px,3vw,33px);color:#173854;letter-spacing:-.055em;line-height:1.15;margin:5px 0}
+.overview-head p{color:#7a8ca0;font-size:12px;line-height:1.5}
+.overview-head-actions{display:flex;align-items:center;gap:8px;flex:none}
+.overview-head-actions .btn{white-space:nowrap}
+.overview-status-clean{display:flex;align-items:center;gap:12px;min-height:60px;padding:11px 16px;margin:0 0 14px;background:#fff;border:1px solid var(--ui-line);border-radius:10px;box-shadow:none}
+.overview-status-clean .overview-status-dot{width:9px;height:9px;flex:0 0 9px;margin:0;box-shadow:0 0 0 3px #edf3f7}
+.overview-status-clean .overview-status-dot.live{background:#d86d33;box-shadow:0 0 0 3px #faede5}
+.overview-status-clean .overview-status-copy{flex:1;display:grid;gap:2px;min-width:0}
+.overview-status-clean .overview-status-copy strong{font-size:13px;color:#294b69;font-weight:800;line-height:1.25}
+.overview-status-clean .overview-status-copy small{font-size:10.5px;color:#8394a5;line-height:1.4}
+.overview-status-meta{font-size:10.5px;color:#617991;font-weight:750;white-space:nowrap;background:#f5f8fb;border-radius:6px;padding:7px 9px}
+.overview-main-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(248px,.82fr);align-items:stretch;gap:14px;margin-bottom:14px}
+.overview-main-grid>.panel{min-width:0;margin:0}
+.overview-scoreboard{padding:18px!important;background:#fff!important;border:1px solid var(--ui-line)!important;border-radius:12px!important;box-shadow:none!important}
+.overview-scoreboard .panel-head{margin-bottom:14px}
+.overview-scoreboard .panel-head h2{font-size:15px}
+.overview-scoreboard .panel-head p{font-size:10.5px}
+.overview-scoreboard .panel-head>.btn{color:#3e6b92}
+.overview-game-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.overview-game-card{min-height:128px;padding:10px 11px;gap:5px;border:1px solid #e2eaf2;border-radius:9px;background:#fff;color:#21415f;box-shadow:none;transition:background .13s,border-color .13s}
+.overview-game-card:hover{border-color:#a9c9e5;background:#f7fafd;box-shadow:none;transform:none}
+.overview-game-card.is-mine{border-color:#a6c9e7;background:#f7fbff}
+.overview-game-card.is-live{border-color:#edb993}
+.overview-game-heading{margin-bottom:2px;min-height:17px}
+.overview-game-status{font-size:9.5px;letter-spacing:.015em;color:#657e94}
+.overview-game-school{min-height:28px;gap:7px}
+.overview-game-school strong{font-size:11px;line-height:1.3;font-weight:800}
+.overview-game-school b{font-size:13px}
+.overview-game-school .program-logo{width:25px;height:25px;flex:0 0 25px;padding:2px;border:0;background:transparent}
+.overview-quad-value{padding:3px 4px;font-size:9px;border-radius:5px;background:#edf4fa;color:#446d92}
+.overview-game-link{display:none}
+.overview-game-my-tag,.overview-game-queue-tag{font-size:8px;padding:3px 5px;letter-spacing:0}
+.overview-games-placeholder{border:0;background:#f7f9fb;border-radius:9px;color:#768ca0;min-height:90px;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;line-height:1.5}
+.overview-standings,.overview-quick-panel{display:flex;flex-direction:column;padding:18px!important;background:#fff}
+.overview-standings .panel-head,.overview-quick-panel .panel-head{align-items:start}
+.overview-text-link{border:0;background:transparent;color:#2b679d;font-size:10.5px;font-weight:800;white-space:nowrap;padding:4px 0;cursor:pointer}
+.overview-text-link:hover{color:#c26b32;text-decoration:underline}
+.overview-standings-list{display:grid}
+.overview-standing-row{display:flex;align-items:center;gap:8px;border:0;border-bottom:1px solid #edf1f5;background:transparent;padding:10px 2px;text-align:left;min-width:0;width:100%;color:#274969;cursor:pointer}
+.overview-standing-row:last-child{border-bottom:0}
+.overview-standing-row:hover{background:#f8fbfe}
+.overview-standing-row.is-mine{background:#f2f7fc;border-radius:6px}
+.overview-standing-rank{font-size:11px;color:#8192a3;font-weight:800;font-variant-numeric:tabular-nums;width:16px;flex:0 0 16px;text-align:center}
+.overview-standing-row .avatar{width:27px;height:27px;flex:0 0 27px;font-size:9px;border-radius:7px}
+.overview-standing-row strong{font-size:11px;min-width:0;flex:1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.overview-standing-row>span:last-child{font-size:11px;font-variant-numeric:tabular-nums;color:#225c92;font-weight:850}
+.overview-aside-note{font-size:10px;color:#8a9bae;border-top:1px solid #edf1f5;line-height:1.5;padding-top:12px;margin-top:auto}
+.overview-next-step{display:flex;flex-direction:column;align-items:start;gap:9px;flex:1;padding:2px 0 12px}
+.overview-next-step-icon{width:33px;height:33px;border:1px solid #e1e9f2;background:#f2f6fb;color:#295f91;border-radius:8px;display:grid;place-items:center}
+.overview-next-step-icon svg{width:17px;height:17px}
+.overview-next-step strong{font-size:14px;font-weight:800;color:#234765;letter-spacing:-.02em}
+.overview-next-step p{font-size:11px;color:#7b8d9f;line-height:1.55}
+.overview-next-step .btn{margin-top:auto;width:100%}
+.overview-quick-links{display:grid;border-top:1px solid #edf1f5}
+.overview-quick-links button{border:0;border-bottom:1px solid #edf1f5;background:transparent;text-align:left;color:#52718b;font-size:11px;font-weight:750;padding:10px 2px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.overview-quick-links button:last-child{border:0}
+.overview-quick-links button:hover{color:#24629b}
+.overview-lower-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(252px,.88fr);align-items:start;gap:14px}
+.overview-lower-grid>.panel{min-width:0;margin:0;padding:18px}
+.overview-teams-panel .panel-head,.overview-activity-panel .panel-head{margin-bottom:13px}
+.overview-teams-panel .league-teams-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.overview-team-tile{padding:11px!important;min-width:0;min-height:0!important;display:grid;gap:9px;background:#fff!important;border:1px solid #e2eaf2!important;border-radius:9px!important;box-shadow:none!important;text-align:left}
+.overview-team-tile:hover{background:#f9fbfd!important;border-color:#a8c9e2!important;transform:none;box-shadow:none!important}
+.overview-team-tile.is-mine{border-color:#a8cde8!important;background:#f7fbff!important}
+.overview-team-tile .league-tile-top{display:flex;align-items:center;gap:9px;width:100%;min-width:0}
+.overview-team-tile .league-tile-top>.avatar{width:34px;height:34px;flex:0 0 34px;border-radius:8px;font-size:10px}
+.overview-team-tile .league-tile-top .grow{min-width:0;flex:1}
+.overview-team-tile .league-tile-top strong{font-size:11.5px;color:#244461;line-height:1.35;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.overview-team-tile .league-tile-top small{font-size:10px;color:#8496a7;display:block;margin-top:3px}
+.overview-team-tile .league-tile-arrow{font-size:15px;font-weight:500;color:#9aaaba}
+.overview-team-tile .team-self-pill{font-style:normal;font-size:8px;letter-spacing:0;background:#edf5fb;color:#28659b;padding:2px 4px;border-radius:4px}
+.overview-team-tile .league-logo-strip{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0;border:0;padding:0}
+.overview-team-tile .league-logo-holder{width:26px;height:26px;flex:0 0 26px;border-radius:5px;background:#fff;border:1px solid #edf1f5;display:grid;place-items:center;padding:1px}
+.overview-team-tile .league-logo-holder .program-logo{width:23px;height:23px;object-fit:contain;flex:none;padding:1px;border:0;border-radius:3px;background:transparent}
+.overview-team-tile .league-tile-pending{font-size:10px;color:#a1b0bf;padding:2px 0}
+.overview-activity-panel .panel-head p{max-width:220px}
+.overview-activity-panel .overview-activity-list{display:grid;grid-template-columns:1fr;gap:0}
+.overview-activity-panel .overview-activity-item{padding:12px 0;border:0;border-bottom:1px solid #edf1f5;min-width:0;display:flex;align-items:start;gap:10px}
+.overview-activity-panel .overview-activity-item:last-child{border:0}
+.overview-activity-item .overview-activity-marker{width:7px;height:7px;flex:0 0 7px;margin-top:5px;border-radius:50%;background:#94abc0;border:0;box-shadow:0 0 0 4px #f1f5f8}
+.overview-activity-item.activity-trade .overview-activity-marker{background:#cc8256;box-shadow:0 0 0 4px #fbf2ec}
+.overview-activity-item span:nth-child(2){flex:1;min-width:0}
+.overview-activity-item strong{color:#314f68;font-size:11px;font-weight:800;line-height:1.35}
+.overview-activity-item small{display:block;color:#8899a8;font-size:10px;line-height:1.5;margin-top:4px}
+.overview-activity-item .overview-activity-date{font-size:9px;color:#96a4b2;white-space:nowrap;margin-left:auto}
+.overview-activity-empty{border:1px dashed #e1e8f0;border-radius:8px;background:#fbfcfe;min-height:110px;padding:17px;display:flex;flex-direction:column;align-items:start;justify-content:center;gap:13px;color:#8799aa;font-size:11px;line-height:1.55}
+
+/* Sidewide consistency on the most traveled destination pages */
+.school-view-tabs{border-color:#e2eaf2;background:#fff;border-radius:9px;padding:3px;box-shadow:none}
+.school-view-tabs button{font-size:11px;font-weight:750;border-radius:6px}
+.school-view-tabs button.active{box-shadow:none;background:#ecf4fb;color:#205d94}
+.program-directory-shell,.directory-welcome{border-radius:12px}
+.directory-welcome{box-shadow:none}
+.directory-filters{background:#fff;border-color:#e2eaf2}
+.directory-conference-strip{scrollbar-width:thin}
+.directory-conference-strip button,.directory-status-tabs button,.directory-sort-tabs button{border-radius:7px;font-weight:750}
+.program-directory-card{background:#fff;border-color:#e3eaf1;border-radius:9px;box-shadow:none}
+.program-directory-card:hover{border-color:#b4cfe5;background:#fafdff;transform:none;box-shadow:none}
+.program-directory-card .program-card-main{min-height:48px}
+.program-directory-card .program-card-main strong{font-size:12px}
+.program-directory-card .program-card-main small{font-size:10px}
+.standings-panel{box-shadow:none}
+.standings-panel .standings-notice{border-color:#e5edf4;background:#f8fbfe;color:#647e95;border-radius:8px;font-size:11px;line-height:1.55}
+.standings-table tbody tr:hover td{background:#f7fafe}
+.team-hero-fresh,.profile-hero,.scoring-lead{background:#fff!important;border:1px solid var(--ui-line)!important;box-shadow:none!important;border-radius:12px}
+.team-hero-fresh{padding:18px}
+.team-stats-refined{gap:10px}
+.team-stats-refined .team-stat,.profile-stats>div{border:1px solid var(--ui-line);background:#fff!important;border-radius:9px;box-shadow:none;padding:14px;min-height:82px}
+.team-stats-refined .team-stat>span,.profile-stats>div>span{letter-spacing:.055em;color:#8293a4;font-size:9.5px}
+.team-stats-refined .team-stat strong,.profile-stats strong{color:#244764}
+.team-season-score{background:#f8fbfe!important}
+.team-actions{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 17px}
+.team-actions .btn{flex:0 0 auto}
+.team-roster-panel,.team-aside>.panel{border-color:var(--ui-line);box-shadow:none}
+.team-program,.trade-offer,.team-offer{border-color:#e4eaf0;border-radius:9px;box-shadow:none}
+.team-program:hover,.trade-choice:hover{background:#f8fbfd}
+.trade-columns>div{min-width:0}
+.trade-choice{border-color:#e6edf4}
+.trade-exchange-side{background:#f7f9fc;border-radius:7px}
+.scoring-grid{gap:12px}
+.scoring-panel{padding:17px 19px}
+.scoring-panel .score-row{padding:10px 0}
+.scoring-panel .score-row strong{font-weight:850;color:#225f95}
+.scoring-lead h2{color:#214465;font-size:21px;letter-spacing:-.04em}
+.scoring-lead>strong{font-size:37px;color:#1a598d;opacity:1}
+.settings-card,.setting-panel,.commissioner-overview>div{box-shadow:none!important;border-color:var(--ui-line)!important}
+.commissioner-menu{box-shadow:none}
+.commissioner-menu button.active{background:#edf4fb;color:#205e94}
+.pool-intro{background:#fff;border-color:var(--ui-line);box-shadow:none}
+.pool-conference.is-selected,.pool-school.is-selected{background:#f2f8fd}
+.draft-v2 .panel{box-shadow:none}
+.draft-v2-board{box-shadow:none;border-radius:11px}
+.draft-v2 .draft-board-cell.on-clock{animation:none}
+.daily-game-card,.pp-content .panel,.rank-data-row{box-shadow:none}
+.daily-game-card:hover{box-shadow:none}
+.program-full-schedule{border-radius:12px;box-shadow:none}
+.more-menu{overflow:hidden}
+.more-menu-item{border-bottom:1px solid #edf1f5;min-height:55px}
+.more-menu-item:hover{background:#f7fbfe}
+
+/* Responsive: readable click targets and intentionally fewer columns. */
+@media(max-width:1250px){
+ .content{padding-left:24px;padding-right:24px}
+ .overview-main-grid{grid-template-columns:minmax(0,1.55fr) minmax(238px,.9fr)}
+ .overview-lower-grid{grid-template-columns:minmax(0,1.5fr) minmax(238px,.9fr)}
+}
+@media(max-width:1080px){
+ .overview-main-grid,.overview-lower-grid{grid-template-columns:minmax(0,1fr)}
+ .overview-main-grid .overview-game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .overview-lower-grid .league-teams-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:850px){
+ .shell{display:block}
+ .sidebar{display:none}
+ .topbar{height:59px;padding:0 17px;z-index:32}
+ .content{padding:20px 17px calc(110px + env(safe-area-inset-bottom))}
+ .bottom{background:rgba(255,255,255,.98);border-top:1px solid #dfe8f1;box-shadow:0 -4px 15px rgba(37,64,90,.07);padding:7px 6px max(8px,env(safe-area-inset-bottom));gap:2px}
+ .bottom button{border-radius:8px;min-height:50px}
+ .bottom button.active{background:#eff5fa;color:#235c91}
+ .bottom button.active:before{background:var(--ui-orange)}
+ .bottom button span{font-weight:700!important}
+ .overview-head{align-items:center}
+ .overview-lower-grid .league-teams-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .team-actions .btn{flex:1 1 auto}
+}
+@media(max-width:610px){
+ .content{padding:17px 12px calc(110px + env(safe-area-inset-bottom))}
+ .topbar{padding:0 12px}
+ .topbar .title{font-size:11px}
+ .top-right .chip{font-size:9px;padding:5px 6px}
+ .page-heading .headline{font-size:25px}
+ .page-heading{margin-bottom:15px}
+ .panel{padding:14px}
+ .panel-head h2{font-size:14px}
+ .overview-head{align-items:start;flex-wrap:wrap;gap:12px;margin-bottom:13px}
+ .overview-head h1{font-size:27px}
+ .overview-head p{font-size:11px}
+ .overview-head-actions{width:100%;gap:7px}
+ .overview-head-actions .btn{flex:1}
+ .overview-status-clean{min-height:55px;padding:10px 11px;gap:10px}
+ .overview-status-clean .overview-status-copy strong{font-size:12px}
+ .overview-status-clean .overview-status-copy small{font-size:9.5px}
+ .overview-status-meta{font-size:9px;padding:5px 6px}
+ .overview-main-grid,.overview-lower-grid{gap:10px;margin-bottom:10px}
+ .overview-main-grid>.panel,.overview-lower-grid>.panel{padding:14px!important}
+ .overview-scoreboard .panel-head{gap:7px;margin-bottom:11px}
+ .overview-scoreboard .panel-head .btn{font-size:9px;padding:7px 8px}
+ .overview-main-grid .overview-game-grid{grid-template-columns:1fr;gap:6px}
+ .overview-game-card{min-height:0;padding:10px;gap:5px}
+ .overview-game-heading{margin-bottom:0}
+ .overview-game-school{min-height:28px}
+ .overview-scoreboard .panel-head p{font-size:9.5px}
+ .overview-lower-grid .league-teams-grid{grid-template-columns:1fr;gap:7px}
+ .overview-team-tile{padding:10px 11px!important}
+ .overview-team-tile .league-logo-strip{gap:4px}
+ .overview-activity-panel .overview-activity-item{padding:11px 1px}
+ .overview-quick-panel .overview-next-step{gap:7px}
+ .scoring-grid{grid-template-columns:1fr;gap:10px}
+ .team-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .team-actions .btn{width:100%;font-size:10px;padding:9px 7px}
+ .team-stats-refined{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .team-stats-refined .team-stat{padding:11px}
+ .program-directory-grid{grid-template-columns:1fr}
+ .program-directory-card .program-card-main{min-height:45px}
+ .trade-columns{grid-template-columns:1fr}
+ .standings-table-wrap{overflow:visible}
+}
+@media(max-width:370px){
+ .overview-status-meta{display:none}
+ .overview-head h1{font-size:25px}
+ .bottom button span{font-size:8.6px!important}
+}

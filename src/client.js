@@ -319,7 +319,7 @@
       const data=await api('admin/activity?range='+activityRange);
       if(!Array.isArray(data.members)||!Array.isArray(data.events))throw Error('Invalid activity response.');
       activitySnapshot=data;activityFetchedAt=Date.now();
-    }catch(e){activityError=e.message;}
+    }catch(e){activityError=e.message;activityFetchedAt=Date.now();}
     finally{
       activityLoading=false;
       if(current==='commissioner'&&adminSection==='activity')render();
@@ -513,7 +513,7 @@
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     pingActivity();
-    if(current==='commissioner'&&adminSection==='activity'&&!activityLoading&&(!activitySnapshot||Date.now()-activityFetchedAt>60000))loadActivity();
+    if(current==='commissioner'&&adminSection==='activity'&&!activityLoading&&(!activityFetchedAt||Date.now()-activityFetchedAt>60000))loadActivity();
     const tabs=['home','team','results','programs','draft','more'];
     const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
     const activeMobile=(['trades','commissioner','waivers','history','scoring','settings'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;

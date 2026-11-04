@@ -4836,3 +4836,26 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .overview-head h1{font-size:25px}
  .bottom button span{font-size:8.6px!important}
 }
+
+
+/* Navigation polish: mobile shows the destination, desktop retains the breadcrumb. */
+.topbar .topbar-page{font-weight:800;color:#234966}
+.topbar .topbar-league{font-weight:650;color:#72879a}
+.more-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
+.more-menu-section{padding:6px 0 0;overflow:hidden;border:1px solid #e2e9f0;box-shadow:none}
+.more-menu-section .more-group-title{font-size:10px;font-weight:850;color:#7b90a4;letter-spacing:.06em;text-transform:uppercase;padding:13px 17px 10px}
+.more-menu-section .more-menu-item{display:flex;width:100%;min-height:63px;padding:11px 17px;border:0;border-top:1px solid #edf1f5;gap:12px;align-items:center;text-align:left;background:#fff}
+.more-menu-section .more-menu-item:last-child{border-bottom:0}
+.more-menu-section .more-menu-item:hover{background:#f7fafd}
+.more-menu-section .more-menu-icon{border:1px solid #e6edf4;background:#f3f7fb;border-radius:8px;color:#2b6497;display:grid;place-items:center;width:33px;height:33px;flex:0 0 33px}
+.more-menu-section .more-menu-icon svg{width:17px;height:17px}
+.more-menu-section .more-menu-item strong{font-size:12px;color:#2c4c68;font-weight:800}
+.more-menu-section .more-menu-item small{font-size:10px;color:#8b9cab;margin-top:3px;line-height:1.35}
+.more-menu-section .more-chevron{color:#9aaebe;font-size:19px;margin-left:auto}
+.more-account{border-color:#e2e9f0;border-radius:11px;box-shadow:none}
+@media(max-width:850px){
+ .topbar .topbar-league,.topbar .sep{display:none}
+ .topbar .topbar-page{font-size:12px}
+ .more-groups{grid-template-columns:1fr;gap:10px}
+ .more-menu-section .more-menu-item{min-height:59px}
+}

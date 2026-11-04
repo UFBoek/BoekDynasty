@@ -147,6 +147,31 @@ export default (function makeWorker(){
       const settings=await getSettings(env),season=settings.current_season;
       if(path==='data/status')return response(await DATA_PIPELINE.status(env,season));
       if(path==='data/records')return response({season,records:await DATA_PIPELINE.records(env,season)});
+      if(path==='data/standings'){
+        const [history,allUsers,owners]=(await Promise.all([
+          DATA_PIPELINE.historicalLeaders(env,settings.scoring,season),
+          q(env,'SELECT id,display_name FROM users ORDER BY created_at,id').all(),
+          q(env,'SELECT manager_id,program_id FROM program_owners').all()
+        ]));
+        const best=Math.max(1,Number(settings.scoring.best_programs)||8);
+        const programPoints=Object.fromEntries(history.rows
+          .filter(row=>row.season===season)
+          .map(row=>[String(row.program_id),Math.round((Number(row.points)||0)*100)/100]));
+        const allOwners=owners.results||[];
+        const standings=(allUsers.results||[]).map(member=>{
+          const schools=allOwners.filter(p=>p.manager_id===member.id)
+            .map(p=>({program_id:p.program_id,points:programPoints[String(p.program_id)]||0}))
+            .sort((a,b)=>b.points-a.points||String(a.program_id).localeCompare(String(b.program_id)));
+          const counted=schools.slice(0,best);
+          return {manager_id:member.id,display_name:member.display_name,
+            points:Math.round(counted.reduce((total,p)=>total+p.points,0)*100)/100,
+            counted_program_ids:counted.map(p=>p.program_id),
+            counted_programs:counted.length,rostered_programs:schools.length};
+        }).sort((a,b)=>b.points-a.points||a.display_name.localeCompare(b.display_name));
+        return response({season,best_programs:best,as_of:timestamp(),standings,
+          program_points:programPoints,net_verified:history.rows.some(r=>r.season===season&&r.net_verified)});
+      }
+
       if(path==='data/games'){
         const day=String(url.searchParams.get('date')||DATA_PIPELINE.localDay());
         if(!DATA_PIPELINE.dayInSeason(season,day))return failure('Select a date in the current basketball season.',400);

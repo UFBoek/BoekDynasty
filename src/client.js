@@ -1457,18 +1457,6 @@
     if(control&&!control.disabled)control.focus({preventScroll:true});
     return true;
   }
-  // One tap promotes a school from anywhere in the saved priority list.
-  function moveDraftQueueToTop(id){
-    prepareDraftQueue();
-    const index=draftWatchlist.indexOf(String(id));
-    if(index<=0)return false;
-    draftWatchlist.splice(index,1);
-    draftWatchlist.unshift(String(id));
-    storeDraftQueue();
-    render();
-    root.querySelector('#draft-queue-section')?.scrollIntoView({behavior:'smooth',block:'start'});
-    return true;
-  }
   function insertDraftQueue(id,targetId,after=false){
     prepareDraftQueue();
     id=String(id);targetId=String(targetId);
@@ -1644,7 +1632,7 @@
           '<span>'+(history?'Limited history: '+history.count+' season'+(history.count===1?'':'s'):
             schoolLeaders?'No archived score':'History loading…')+'</span>')+'</div>'
         +'<div class="draft-compare-actions"><button type="button" data-act="draft-select" data-id="'+escapeHTML(id)+'">Preview ›</button>'
-        +(i?'<button type="button" data-act="draft-queue-top" data-id="'+escapeHTML(id)+'">Make #1</button>':'<span>Top choice</span>')
+        +(i===0?'<span>Top choice</span>':'')
         +'</div></article>';
     }).join('');
     const cards=sorted.map(p=>{
@@ -1710,7 +1698,7 @@
         +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · T-Rank #'+rank:'')+
         (history?.eligibleForSort?' · 5Y '+historicalPointLabel(history.avg)+' pts':'')+'</small></span>'
         +'<span class="draft-queue-pick">Preview ›</span></button>'
-        +'<div class="draft-queue-controls">'+(!first?'<button type="button" class="draft-queue-top" data-act="draft-queue-top" data-id="'+escapeHTML(id)+'" aria-label="Move '+escapeHTML(p.name)+' to first place in draft queue" title="Move to #1">⇧</button>':'')+'<button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
+        +'<div class="draft-queue-controls"><button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
         +'<button type="button" data-act="draft-queue-down" data-id="'+escapeHTML(id)+'" '+(last?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' down in draft queue" title="Move down">↓</button>'
         +'<button type="button" class="draft-queue-remove" data-act="draft-queue-toggle" data-id="'+escapeHTML(id)+'" aria-label="Remove '+escapeHTML(p.name)+' from draft queue" title="Remove from queue">×</button></div></div>';
     }).join('');
@@ -2441,7 +2429,6 @@
     if(act==='draft-queue-up'||act==='draft-queue-down'){
       moveDraftQueue(id,act==='draft-queue-up'?-1:1);return;
     }
-    if(act==='draft-queue-top'){moveDraftQueueToTop(id);return;}
     if(act==='draft-compare-toggle'){draftCompareExpanded=!draftCompareExpanded;render();return;}
     if(act==='draft-queue-collapse'){draftQueueExpanded=!draftQueueExpanded;render();return;}
     if(act==='draft-jump-queue'){

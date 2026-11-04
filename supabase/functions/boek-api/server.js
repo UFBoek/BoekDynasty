@@ -176,9 +176,45 @@ export default (function makeWorker(){
         const day=String(url.searchParams.get('date')||DATA_PIPELINE.localDay());
         if(!DATA_PIPELINE.dayInSeason(season,day))return failure('Select a date in the current basketball season.',400);
         const confMap=new Map(PROGRAM_DIRECTORY.map(row=>[String(row[0]),String(row[3])]));
-        const games=(await DATA_PIPELINE.gamesByDate(env,season,day)).map(g=>({...g,
-          home_conference_id:confMap.get(g.home_id)||null,away_conference_id:confMap.get(g.away_id)||null}));
-        return response({season,date:day,games});
+        const [gamesByDay,netRankings,recordsResult]=await Promise.all([
+          DATA_PIPELINE.gamesByDate(env,season,day),
+          DATA_PIPELINE.netRanks(env,season),
+          q(env,`SELECT program_id,SUM(w) AS wins,COUNT(*)-SUM(w) AS losses
+            FROM (
+              SELECT home_id AS program_id,CASE WHEN home_score>away_score THEN 1 ELSE 0 END AS w
+              FROM cbb_games WHERE season=? AND game_date<=? AND status='final'
+                AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score
+              UNION ALL
+              SELECT away_id AS program_id,CASE WHEN away_score>home_score THEN 1 ELSE 0 END AS w
+              FROM cbb_games WHERE season=? AND game_date<=? AND status='final'
+                AND home_score IS NOT NULL AND away_score IS NOT NULL AND home_score<>away_score
+            ) outcomes GROUP BY program_id`,season,day,season,day).all()
+        ]);
+        const records=Object.fromEntries((recordsResult.results||[])
+          .map(r=>[String(r.program_id),{wins:Number(r.wins)||0,losses:Number(r.losses)||0}]));
+        const net=Object.fromEntries(netRankings.map(r=>[String(r.program_id),Number(r.net_rank)]));
+        const venue=(g,isHome)=>g.neutral_site?'neutral':isHome?'home':'away';
+        const quad=(rank,site)=>DATA_PIPELINE.quadrant(rank,site);
+        const games=gamesByDay.map(g=>{
+          const homeNet=net[String(g.home_id)],awayNet=net[String(g.away_id)];
+          const homeSite=venue(g,true),awaySite=venue(g,false);
+          return {...g,
+            home_conference_id:confMap.get(String(g.home_id))||null,
+            away_conference_id:confMap.get(String(g.away_id))||null,
+            home_record:records[String(g.home_id)]||null,
+            away_record:records[String(g.away_id)]||null,
+            home_net:Number.isInteger(homeNet)?homeNet:null,
+            away_net:Number.isInteger(awayNet)?awayNet:null,
+            home_quad:quad(awayNet,homeSite),
+            away_quad:quad(homeNet,awaySite),
+            home_q1a:DATA_PIPELINE.isQ1A(awayNet,homeSite),
+            away_q1a:DATA_PIPELINE.isQ1A(homeNet,awaySite)
+          };
+        });
+        return response({season,date:day,games,net_date:netRankings[0]?.snapshot_date||null,
+          record_note:'Records include final games through the selected date.',
+          quadrant_note:netRankings.length?'Quadrants use the latest official NET snapshot and the team’s actual home, away or neutral venue.':
+            'NET quadrants will appear when current-season rankings become available.'});
       }
       if(path==='data/rankings'){
         const poll=await DATA_PIPELINE.apPoll(env,season);
@@ -190,7 +226,7 @@ export default (function makeWorker(){
       if(path==='data/history'){
         const id=String(url.searchParams.get('id')||'');
         if(!id||id.length>120||!PROGRAM_DIRECTORY.some(p=>String(p[0])===id))return failure('Program not found.',404);
-        return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season));
+        return response(await DATA_PIPELINE.programHistory(env,id,settings.scoring,season,settings.conferences));
       }
       if(path==='data/program'){
         const id=String(url.searchParams.get('id')||'');

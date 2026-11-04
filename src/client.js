@@ -12,11 +12,12 @@
       trades:'<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
       scoring:'<path d="M4 4h16v16H4zM8 10h8M8 14h5"/>',
       commissioner:'<path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="5"/>',
+      settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.5 1.5 0 0 0 .3 1.7l.1.1-1.8 1.8-.1-.1a1.5 1.5 0 0 0-1.7-.3l-.2.1a1.5 1.5 0 0 0-.9 1.4V20H9v-.3a1.5 1.5 0 0 0-.9-1.4l-.2-.1a1.5 1.5 0 0 0-1.7.3l-.1.1-1.8-1.8.1-.1A1.5 1.5 0 0 0 4.7 15l-.1-.2a1.5 1.5 0 0 0-1.4-.9H3v-3.8h.2a1.5 1.5 0 0 0 1.4-.9l.1-.2a1.5 1.5 0 0 0-.3-1.7l-.1-.1 1.8-1.8.1.1a1.5 1.5 0 0 0 1.7.3l.2-.1A1.5 1.5 0 0 0 9 4.3V4h6v.3a1.5 1.5 0 0 0 .9 1.4l.2.1a1.5 1.5 0 0 0 1.7-.3l.1-.1 1.8 1.8-.1.1a1.5 1.5 0 0 0-.3 1.7l.1.2a1.5 1.5 0 0 0 1.4.9h.2v3.8h-.2a1.5 1.5 0 0 0-1.4.9Z"/>' ,
       more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
   };
-  const names={home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',more:'More',waivers:'Waivers',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
+  const names={home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',settings:'My Settings',more:'More',waivers:'Waivers',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -31,6 +32,7 @@
   ];
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
+  let avatarDraft=null;
   let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
@@ -66,7 +68,12 @@
   const isMyTurn=()=>league?.settings?.draft_status==='live'&&nextManager()?.id===me?.id;
   const draftTotal=()=>members().length*Number(league?.settings?.rounds||0);
   const img=(p)=>p.logo&&/^https:\/\/a\.espncdn\.com\//.test(p.logo)?'<img class="program-logo" src="'+escapeHTML(p.logo)+'" alt="" loading="lazy" referrerpolicy="no-referrer"/>':'<span class="program-logo program-initial">'+escapeHTML(initials(p.abbr||p.name))+'</span>';
-  const avatar=(u)=>'<span class="avatar">'+escapeHTML(initials(u.display_name))+'</span>';
+  const avatar=(u)=>{
+    const color=/^#[0-9A-Fa-f]{6}$/.test(u?.accent_color||'')?u.accent_color:'#D9611E';
+    const photo=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u?.avatar_data||'')?u.avatar_data:'';
+    return '<span class="avatar" style="background:'+escapeHTML(color)+'">'+
+      (photo?'<img src="'+escapeHTML(photo)+'" alt="" loading="lazy"/>':escapeHTML(initials(u?.display_name)))+'</span>';
+  };
   const heading=(eyebrow,title,desc='')=>'<header class="page-heading">'+(eyebrow?'<div class="eyebrow">'+eyebrow+'</div>':'')+'<h1 class="headline">'+title+'</h1>'+(desc?'<p class="intro-text">'+desc+'</p>':'')+'</header>';
   const panelHeading=(title,subtitle='',action='')=>'<div class="panel-head"><div><h2>'+title+'</h2>'+(subtitle?'<p>'+subtitle+'</p>':'')+'</div>'+action+'</div>';
   const empty=(title,desc='')=>'<div class="empty"><strong>'+title+'</strong>'+(desc?'<span>'+desc+'</span>':'')+'</div>';
@@ -109,7 +116,7 @@
     if(refreshId)return;
     lastAutoPoll=Date.now();
     refreshId=setInterval(()=>{
-      if(!me||busy||syncActive||current==='commissioner'||document.hidden)return;
+      if(!me||busy||syncActive||current==='commissioner'||current==='settings'||document.hidden)return;
       const onMobile=window.matchMedia?.('(max-width: 850px)').matches||false;
       const interval=onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
       const now=Date.now();
@@ -176,7 +183,7 @@
     return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(active?'active':'')+(live?' has-live':'')+'" '+(active?'aria-current="page"':'')+'>'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>';
   }
   function sidebar(){
-    return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">LEAGUE HUB</div><nav class="nav">'+['home','team','results','league','programs','draft'].map(navButton).join('')+'</nav><div class="nav-label nav-label-secondary">MANAGEMENT</div><nav class="nav">'+['trades','scoring',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out →</button></div></aside>';
+    return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">LEAGUE HUB</div><nav class="nav">'+['home','team','results','league','programs','draft'].map(navButton).join('')+'</nav><div class="nav-label nav-label-secondary">MANAGEMENT</div><nav class="nav">'+['trades','scoring','settings',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="tab" data-id="settings" class="logout">Edit account and profile</button><button data-act="logout" class="logout">Sign out →</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
@@ -185,11 +192,11 @@
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','team','results','programs','draft','more'];
     const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
-    const activeMobile=(['trades','commissioner','waivers','history','scoring'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
+    const activeMobile=(['trades','commissioner','waivers','history','scoring','settings'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
     const liveGames=liveResultsCount(),liveDraft=draftIsLive();
     const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
       liveGames?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="results"><span class="topbar-event-dot" aria-hidden="true"></span><span>'+liveGames+' live game'+(liveGames===1?'':'s')+'</span></button>':'';
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><div class="avatar-small">'+escapeHTML(initials(me.display_name))+'</div></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' <span class="sep">/</span> '+(names[current]||'Profile')+'</span></div><div class="top-right">'+eventLink+'<span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+'</button>').join('')+'</nav>';
   }
 
   const resultsToday=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'});
@@ -349,7 +356,7 @@
   }
 
   function morePage(){
-    const links=[['league','Standings','Season fantasy scores and manager rankings'],['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
+    const links=[['settings','My Settings','Change team name, username, photo, colors and password'],['league','Standings','Season fantasy scores and manager rankings'],['results','Results','Scores, schedules and data status'],['scoring','Scoring','Point values and best-ball rules'],['trades','Trades','Propose trades and view league activity'],['waivers','Waivers','Claim or release unrostered schools'],['history','Dynasty history','Archived seasons and champions']];
     if(me.role==='commissioner')links.push(['commissioner','Commissioner','League settings and manager controls']);
     return heading('', 'More')
       +'<section class="panel more-menu">'+links.map(([id,title,description])=>
@@ -439,7 +446,7 @@
       +'<div class="team-stats team-stats-refined"><div class="team-stat"><span>ROSTER</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong><div class="team-roster-progress"><i style="width:'+Math.min(100,100*owned.length/Math.max(1,Number(league.settings.rounds)))+'%"></i></div></div>'
       +'<div class="team-stat"><span>COUNTING PROGRAMS</span><strong>Best '+bestCount+'</strong><small>Season-long best ball</small></div>'
       +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div></div>'
-      +'<div class="team-actions"><button class="btn" data-act="tab" data-id="trades">Propose trade</button><button class="btn secondary" data-act="tab" data-id="waivers">Waivers</button><button class="btn secondary" data-act="tab" data-id="programs">Browse programs</button></div>'
+      +'<div class="team-actions"><button class="btn" data-act="tab" data-id="settings">Edit team profile</button><button class="btn" data-act="tab" data-id="trades">Propose trade</button><button class="btn secondary" data-act="tab" data-id="waivers">Waivers</button><button class="btn secondary" data-act="tab" data-id="programs">Browse programs</button></div>'
       +'<div class="team-layout"><section class="panel team-roster-panel">'+panelHeading('Your programs',owned.length+' permanently owned schools','<button class="btn small ghost" data-act="tab" data-id="programs">Browse schools</button>')
       +(owned.length?'<div class="team-program-grid">'+roster+'</div>':empty('Your roster is ready to build','Once the draft begins, your selected schools will appear here with their logos and season records.'))
       +(owned.length?'<p class="team-footnote">'+(standingsData?.season===season()?'Current season fantasy total (best '+bestCount+'): '+Number(standingsData.standings?.find(x=>x.manager_id===me.id)?.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+' points':'Loading current fantasy points...')+'</p>':'')+'</section>'
@@ -484,7 +491,7 @@
     const period=leaderSeason==='all'?'all':years.includes(leaderSeason)?leaderSeason:'all';
     const nav='<div class="school-leaders-seasons" role="group" aria-label="Select scoring season">'
       +[['all','All seasons'],...years.slice().reverse().map(y=>[y,y])].map(([id,label])=>'<button type="button" data-act="leaders-season" data-id="'+id+'" class="'+(period===id?'active':'')+'" aria-pressed="'+(period===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
-    if(!all)return '<section class="panel school-leaders-shell">'+panelHeading('Historical points','Every Division I program from 2021–22 onward')+nav
+    if(!all)return '<section class="panel school-leaders-shell">'+panelHeading('Historical points','Eligible league conferences from 2021–22 onward')+nav
       +(schoolLeadersError?empty('Unable to load rankings',escapeHTML(schoolLeadersError)):empty('Loading school leaderboards','Calculating historical scores, seeds, championships and quadrant wins.'))+'</section>';
     const byId=new Map();
     for(const item of all.rows||[]){
@@ -509,8 +516,8 @@
         +row.values.map((v,i)=>'<td class="school-leader-year '+(period===years[i]?'selected':'')+'">'+score(v)+'</td>').join('')
         +'</tr>';
     }).join('');
-    return '<section class="panel school-leaders-shell">'+panelHeading('Historical point leaders','All '+rows.length+' Division I programs · 2021–22 to '+escapeHTML(season()))
-      +'<p class="school-leaders-note">'+(all.archive_complete?'The 2021–22 through 2025–26 archives are verified and fully scored. Current-season totals update live.':'Historical scores use verified games, final NET rankings, NCAA seeds, tournament wins and confirmed titles. Remaining unverified seasons may change.')+'</p>'
+    return '<section class="panel school-leaders-shell">'+panelHeading('Historical point leaders',rows.length+' eligible league programs · 2021–22 to '+escapeHTML(season()))
+      +'<p class="school-leaders-note">'+(all.archive_complete?'Historical scores include only schools from the league’s eligible conferences. Five archived seasons are verified; current-season totals update live.':'Scores include only the league’s eligible conferences. Remaining unverified seasons may change.')+'</p>'
       +nav
       +'<div class="school-leader-tools"><label class="directory-search"><span aria-hidden="true">⌕</span><input id="leader-search" class="field" type="search" value="'+escapeHTML(leaderQuery)+'" placeholder="Find a team in the rankings..." aria-label="Search school leaders" autocomplete="off"/></label><span id="leader-count">'+rows.length+' schools</span></div>'
       +'<div class="school-leader-table-wrap"><table class="school-leader-table"><thead><tr><th>#</th><th>PROGRAM</th><th>'+(period==='all'?'TOTAL':escapeHTML(period))+'</th>'+headerYears+'</tr></thead><tbody>'+body+'</tbody></table></div></section>';
@@ -692,7 +699,7 @@
   }
 
   const scoringGroups=[
-    ['Regular season',[['regular_win','Regular-season win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win bonus'],['quad_1a_extra','Extra Quad 1A win bonus']]],
+    ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win bonus'],['quad_1a_extra','Extra Quad 1A win bonus']]],
     ['Conference championships',[['conference_regular_title','Regular-season champion'],['conference_tournament_title','Tournament champion']]],
     ['NCAA appearance by seed',[['ncaa_seed_1_4','Seeds 1–4'],['ncaa_seed_5_8','Seeds 5–8'],['ncaa_seed_9_12','Seeds 9–12'],['ncaa_seed_13_16','Seeds 13–16']]],
     ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]]
@@ -705,9 +712,9 @@
       +'<div class="scoring-grid">'+scoringGroups.map(([title,fields])=>'<section class="panel scoring-panel">'+panelHeading(escapeHTML(title))
       +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')+'</section>').join('')+'</div>'
       +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
-      +'<p>Q1A wins earn both the Quad 1 bonus and the additional Quad 1A bonus. Quadrants use final NET classifications.</p>'
+      +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A stacks on top of Q1. NET classification uses the true winning venue and final season rankings.</p>'
       +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins.</p>'
-      +'<p>Regular-season win points exclude conference and NCAA tournament games. There is no AP Poll or KenPom bonus.</p>'
+      +'<p>Regular-season games earn their normal win points; conference tournament wins earn +2 and NCAA Tournament wins earn their configured postseason points. Those wins can additionally earn quadrant bonuses. There is no AP Poll or KenPom bonus.</p>'
       +'<p class="muted">Fantasy standings update from verified ESPN results and recorded tournament achievements. Final NET rankings are used for historical quadrant classification.</p></section>';
   }
 

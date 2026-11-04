@@ -1012,7 +1012,11 @@
     const from=draftWatchlist.indexOf(String(id)),to=from+delta;
     if(from<0||to<0||to>=draftWatchlist.length)return false;
     [draftWatchlist[from],draftWatchlist[to]]=[draftWatchlist[to],draftWatchlist[from]];
-    storeDraftQueue();render();return true;
+    storeDraftQueue();render();
+    const moved=root.querySelector('.draft-queue-row[data-queue-id="'+String(id)+'"]');
+    const control=moved?.querySelector('[data-act="draft-queue-'+(delta<0?'up':'down')+'"]');
+    if(control&&!control.disabled)control.focus({preventScroll:true});
+    return true;
   }
   function insertDraftQueue(id,targetId,after=false){
     prepareDraftQueue();
@@ -1206,7 +1210,7 @@
       return school?'<div class="draft-my-pick" '+draftStyle(school) +'><span class="draft-mini-logo">'+img(school)+'</span><span><strong>'+escapeHTML(school.name)+'</strong><small>Round '+p.round+' · Pick #'+p.overall+'</small></span></div>':'';
     }).join('');
     const sidebar='<aside class="draft-pick-aside"><section class="panel draft-pick-desk">'
-      +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOU ARE ON THE CLOCK':'Preview and shortlist')+'</strong></div>'
+      +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOU ARE ON THE CLOCK':'Preview and queue')+'</strong></div>'
       +selectedView+'</section>'
       +'<section class="panel draft-my-picks-panel"><div class="draft-side-title"><span>MY DRAFT</span><strong>'+myPicks.length+' / '+rounds+' programs</strong></div>'
       +(myPickList||'<p class="draft-side-empty">Your selected programs will appear here as the draft progresses.</p>')
@@ -1701,8 +1705,9 @@
       if(index>=0)draftWatchlist.splice(index,1);
       else if(draftAvailable().some(p=>String(p.id)===programId)){
         if(draftWatchlist.length>=120){notice('The draft queue holds up to 120 schools.',true);return;}
+        const wasEmpty=draftWatchlist.length===0;
         draftWatchlist.push(programId);
-        draftQueueExpanded=true;
+        if(wasEmpty)draftQueueExpanded=true;
       }
       draftWatchlist=draftWatchlist.slice(0,120);
       storeDraftQueue();render();return;
@@ -1930,6 +1935,10 @@
     root.querySelectorAll('.draft-queue-row.dragging, .draft-queue-row.drop-before, .draft-queue-row.drop-after')
       .forEach(row=>row.classList.remove('dragging','drop-before','drop-after'));
   };
+  const clearDraftDropMarkers=()=>{
+    root.querySelectorAll('.draft-queue-row.drop-before, .draft-queue-row.drop-after')
+      .forEach(row=>row.classList.remove('drop-before','drop-after'));
+  };
   root.addEventListener('dragstart',e=>{
     const handle=e.target.closest?.('.draft-queue-grip');
     if(!handle||current!=='draft')return;
@@ -1945,7 +1954,7 @@
     if(!row)return;
     e.preventDefault();
     if(e.dataTransfer)e.dataTransfer.dropEffect='move';
-    clearDraftDragMarkers();
+    clearDraftDropMarkers();
     const mid=row.getBoundingClientRect().top+row.getBoundingClientRect().height/2;
     row.classList.add(e.clientY<mid?'drop-before':'drop-after');
   });

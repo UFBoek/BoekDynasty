@@ -1388,7 +1388,7 @@
         +'<span class="draft-pool-logo">'+img(p)+'</span><span class="draft-pool-info"><strong>'+escapeHTML(p.name)+'</strong>'
         +'<small>'+escapeHTML(conf(p.conference_id))+'</small>'
         +(history?'<span class="draft-pool-history'+(history.eligibleForSort?'':' limited')+'">'+
-          (history.eligibleForSort?'5Y AVG '+historicalPointLabel(history.avg)+' pts':'History: '+history.count+' season'+(history.count===1?'':'s'))+
+          (history.eligibleForSort?'5Y AVG '+historicalPointLabel(history.avg)+' pts · '+history.count+'/'+history.totalYears+' seasons':'History: '+history.count+' season'+(history.count===1?'':'s'))+
           '</span>':'')+'</span>'
         +'<span class="draft-pool-stat"><strong>'+(rank?'#'+rank:'—')+'</strong><small>T-RANK</small></span>'
         +'<span class="draft-pool-arrow">›</span></button>'

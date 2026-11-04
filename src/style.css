@@ -4240,3 +4240,66 @@ button.daily-team-line:hover{background:#f4f8fc}
  .overview-scoreboard .panel-head>.btn{font-size:9px;padding:8px 9px}
  .overview-scoreboard .panel-head{justify-content:flex-start}
 }
+
+
+/* Full published schedule on every program profile. Quadrant values are win bonuses, never projections. */
+.daily-quad{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;line-height:1.1}
+.daily-quad .daily-quad-value{font-size:9px;letter-spacing:0;font-weight:950}
+.overview-quad-value{display:inline-flex;justify-content:center;align-items:center;white-space:nowrap;
+ padding:4px 5px;border-radius:6px;background:#edf4fc;color:#315c85;font-size:9px;font-weight:950;
+ font-variant-numeric:tabular-nums}
+.program-full-schedule{margin:16px 0 18px;padding:19px}
+.program-schedule-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:15px}
+.program-schedule-heading h2{font-size:20px;letter-spacing:-.5px;color:#234766}
+.program-schedule-heading p{font-size:11px;line-height:1.6;color:#7c90a4;margin-top:5px}
+.program-schedule-heading .btn{flex:0 0 auto;white-space:nowrap}
+.program-schedule-tabs{display:flex;width:fit-content;gap:4px;padding:4px;margin:0 0 12px;
+ border:1px solid #dce7f2;border-radius:10px;background:#f1f6fb}
+.program-schedule-tabs button{border:0;border-radius:7px;padding:9px 12px;background:transparent;
+ color:#7189a2;font-size:11px;font-weight:850;display:flex;align-items:center;gap:7px;cursor:pointer}
+.program-schedule-tabs button.active{background:#fff;color:#1c609a;box-shadow:0 2px 8px #234a7118}
+.program-schedule-tabs button span{font-size:9px;font-variant-numeric:tabular-nums}
+.program-schedule-list{display:grid;border:1px solid #e2eaf4;border-radius:12px;overflow:hidden;background:#fff}
+.program-schedule-row{display:grid;grid-template-columns:86px 55px minmax(0,1fr) 68px 88px 22px;
+ gap:10px;align-items:center;min-height:57px;padding:8px 11px;border-bottom:1px solid #edf2f7}
+.program-schedule-row:last-child{border-bottom:0}
+.program-schedule-row.is-completed{background:#fafbfd}
+.program-schedule-row.is-live{background:#fff6ec}
+.program-schedule-row>time{font-size:11px;font-weight:850;color:#506d8b;white-space:nowrap}
+.program-schedule-venue{font-size:10px;font-weight:800;color:#8a9db0}
+.program-schedule-opponent{display:flex;align-items:center;gap:9px;min-width:0}
+.program-schedule-opponent .program-logo{width:33px;height:33px;flex:0 0 33px;border-radius:7px;padding:3px}
+.program-schedule-opponent>span:last-child{min-width:0}
+.program-schedule-opponent strong{font-size:12px;font-weight:900;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.program-schedule-opponent small{font-size:9px;color:#8599ae;display:block;margin-top:3px}
+.program-schedule-quad{display:flex;align-items:center;justify-content:center;gap:4px;border-radius:7px;
+ padding:7px 4px;background:#edf5fc;color:#376b96;font-size:10px;font-weight:950;white-space:nowrap}
+.program-schedule-quad small{color:#2d835d;font-size:9px;font-weight:950}
+.program-schedule-result{text-align:right;font-size:11px;color:#355879;font-weight:900;
+ font-variant-numeric:tabular-nums;white-space:nowrap}
+.program-schedule-link{text-align:center;color:#397ab2;font-size:16px}
+.program-schedule-link:hover{color:#134e80}
+.program-schedule-placeholder{border:1px dashed #d5e0ed;background:#f9fcff;border-radius:10px;padding:22px;
+ font-size:12px;color:#6a839b}
+.program-schedule-note{font-size:10px;line-height:1.6;color:#8194aa;margin:10px 0 0}
+@media(max-width:1100px){
+ .program-schedule-row{grid-template-columns:78px 51px minmax(0,1fr) 63px 76px 18px;gap:6px;padding:8px}
+}
+@media(max-width:650px){
+ .program-full-schedule{padding:13px 11px}
+ .program-schedule-heading{flex-direction:column;align-items:flex-start}
+ .program-schedule-heading .btn{width:100%;justify-content:center}
+ .program-schedule-tabs{width:100%;justify-content:space-between}
+ .program-schedule-tabs button{flex:1;justify-content:center;font-size:10px;padding:9px 6px}
+ .program-schedule-row{grid-template-columns:62px minmax(0,1fr) 63px;gap:5px 8px;min-height:65px}
+ .program-schedule-row>time{grid-column:1;grid-row:1;font-size:9px}
+ .program-schedule-venue{grid-column:1;grid-row:2;font-size:9px}
+ .program-schedule-opponent{grid-column:2;grid-row:1/3}
+ .program-schedule-opponent .program-logo{width:30px;height:30px;flex-basis:30px}
+ .program-schedule-opponent strong{font-size:10.5px}
+ .program-schedule-quad{grid-column:3;grid-row:1;font-size:9px;padding:5px 3px}
+ .program-schedule-quad small{font-size:9px}
+ .program-schedule-result{grid-column:3;grid-row:2;font-size:10px}
+ .program-schedule-link{display:none}
+ .overview-quad-value{font-size:8px;padding:3px}
+}

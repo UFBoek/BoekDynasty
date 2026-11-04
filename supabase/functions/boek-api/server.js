@@ -7,6 +7,7 @@ const PAGE='';
 export default (function makeWorker(){
   const COOKIE='boek_session';
   const SESSION_SECONDS=90*24*60*60;
+  const BROWSER_SESSION_SECONDS=24*60*60;
   const ENCODER=new TextEncoder();
   const DEFAULT_SCORING=Object.freeze({"regular_win":1,"conference_tournament_win":2,"quad_2_win":0.5,"quad_1_win":1.5,"quad_1a_extra":1,"conference_regular_title":8,"conference_tournament_title":8,"ncaa_seed_1_4":8,"ncaa_seed_5_8":6,"ncaa_seed_9_12":5,"ncaa_seed_13_16":4,"ncaa_tournament_win":3,"ncaa_opening_round_win":2,"national_championship":15,"best_programs":8});
   function scoringFrom(raw){
@@ -57,9 +58,10 @@ export default (function makeWorker(){
     if(!entry)return null;
     return {user:{id:entry.id,username:entry.username,display_name:entry.display_name,role:entry.role,avatar_data:entry.avatar_data,accent_color:entry.accent_color,favorite_program_id:entry.favorite_program_id},session:entry,token};
   }
-  async function remember(env,userId){
+  async function remember(env,userId,rememberDevice=true){
     const token=rand(32);
-    await q(env,'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)',await hash(token),userId,timestamp()+SESSION_SECONDS).run();
+    const ttl=rememberDevice?SESSION_SECONDS:BROWSER_SESSION_SECONDS;
+    await q(env,'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)',await hash(token),userId,timestamp()+ttl).run();
     return token;
   }
   function invalidUser(data){
@@ -132,11 +134,8 @@ export default (function makeWorker(){
       const auth=await getUser(request,env);
       if(!auth)return failure('Sign in required.',401);
       const data=await getState(env,auth.user);
-      const headers={};
-      if(auth.session.expires_at-timestamp()<SESSION_SECONDS/2){
-        await q(env,'UPDATE sessions SET expires_at=? WHERE token_hash=?',timestamp()+SESSION_SECONDS,auth.session.token_hash).run();
-        // Bearer session lifetime extended server-side; no third-party cookies.
-      }
+      // Fixed expiry ensures a temporary browser login never becomes a
+      // 90-day remembered session during ordinary state polling.
       return response(data);
     }
 
@@ -261,7 +260,7 @@ export default (function makeWorker(){
       if(!expected||await hash(String(data.code||''))!==expected.value)return failure('Invalid commissioner setup code.',403);
       const user=await createUser(env,data,'commissioner');
       await q(env,"DELETE FROM settings WHERE key='setup_hash'").run();
-      return response({user,token:await remember(env,user.id)});
+      return response({user,token:await remember(env,user.id,data.remember_device!==false)});
     }
     if(path==='join'){
       const code=String(data.code||'').trim();
@@ -273,7 +272,7 @@ export default (function makeWorker(){
       if(num.total>=setting.max_managers)return failure('This league is full ('+setting.max_managers+' managers).',409);
       const user=await createUser(env,data,'manager');
       await q(env,'UPDATE invites SET used_at=? WHERE code_hash=? AND used_at IS NULL',timestamp(),entry.code_hash).run();
-      return response({user,token:await remember(env,user.id)});
+      return response({user,token:await remember(env,user.id,data.remember_device!==false)});
     }
     if(path==='login'){
       const username=String(data.username||'').trim().toLowerCase();
@@ -290,7 +289,7 @@ export default (function makeWorker(){
       }
       await q(env,'DELETE FROM login_attempts WHERE username=?',username).run();
       const user={id:row.id,username:row.username,display_name:row.display_name,role:row.role};
-      return response({user,token:await remember(env,row.id)});
+      return response({user,token:await remember(env,row.id,data.remember_device!==false)});
     }
     if(path==='logout'){
       const auth=await getUser(request,env);

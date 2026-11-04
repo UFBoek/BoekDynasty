@@ -1842,7 +1842,7 @@
     const r=scoreRules(),count=Number(r.best_programs||8);
     return heading('', 'Scoring')
       +'<section class="panel scoring-lead"><div><span class="eyebrow">SEASON-LONG BEST BALL</span><h2>Best '+count+' programs count</h2><p>Every program remains owned year after year. Only the highest-scoring '+count+' programs on each roster contribute to the annual standings.</p></div><strong>'+count+'</strong></section>'
-      +'<div class="scoring-grid">'+scoringGroups.map(([title,fields])=>'<section class="panel scoring-panel">'+panelHeading(escapeHTML(title))
+      +'<div class="scoring-grid">'+scoringGroups.map(([title,fields])=>'<section class="panel scoring-panel'+(title==='NCAA Tournament seeding'?' scoring-panel-seeding':'')+'">'+panelHeading(escapeHTML(title))
       +(title==='NCAA Tournament seeding'?'<div class="seed-scale-grid">':'')
       +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')
       +(title==='NCAA Tournament seeding'?'</div><p class="hint section-gap">Each seed receives its own appearance bonus once per NCAA Tournament.</p>':'')

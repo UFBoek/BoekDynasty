@@ -5018,3 +5018,26 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .account-manager-row .btn{margin-left:auto}
  .account-reset-receipt{padding:14px}
 }
+
+
+/* Commissioner-only backend control center */
+.backend-center .backend-summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin:15px 0}
+.backend-center .backend-summary p{margin:8px 0 0}
+.backend-center .backend-severity{display:inline-flex;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.055em;background:#64748b1d;color:inherit}
+.backend-center .backend-severity.healthy{background:#0e9f6e1a;color:#16835d}
+.backend-center .backend-severity.warning{background:#d977061a;color:#c26e12}
+.backend-center .backend-severity.critical{background:#dc26261a;color:#d94444}
+.backend-center .backend-severity-metrics{display:grid;grid-template-columns:auto auto;gap:3px 9px;align-items:center}
+.backend-center .backend-severity-metrics strong{font-size:20px;font-variant-numeric:tabular-nums;text-align:right}
+.backend-center .backend-severity-metrics small{font-size:12px;opacity:.7}
+.backend-center .backend-issues{max-height:300px;overflow:auto}
+.backend-center .backend-issues .data-run{align-items:flex-start}
+.backend-center details{border-top:1px solid rgba(140,155,180,.2);padding-top:11px}
+.backend-center summary{cursor:pointer;font-weight:650;padding:5px 0}
+.backend-center .button-row{flex-wrap:wrap}
+@media (max-width:600px){
+ .backend-center .backend-summary{align-items:flex-start}
+ .backend-center .button-row button{width:100%}
+ .backend-center .data-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .backend-center .data-kpis strong{font-size:clamp(14px,4vw,22px)}
+}

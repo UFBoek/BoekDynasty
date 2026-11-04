@@ -4932,3 +4932,18 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .topbar-event.is-live{padding:5px 6px}
  .top-right{gap:5px}
 }
+
+
+/* Keep the mobile utility bar breathable when live scores and the draft overlap. */
+.topbar-heading,.topbar-heading .title{min-width:0}
+.topbar .title{display:flex;align-items:center;gap:0;white-space:nowrap;overflow:hidden}
+.topbar-page{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:440px){
+ .topbar-event{display:none!important}
+ .top-right{flex:none}
+ .topbar-heading{flex:1;overflow:hidden}
+ .topbar-logo{flex-shrink:0}
+}
+@media(max-width:355px){
+ .topbar .chip{display:none}
+}

@@ -48,7 +48,7 @@ test('profile opens with compact summary and does not dump all sections onto the
   assert.doesNotMatch(html,/program-full-schedule/);
   assert.doesNotMatch(html,/pp-history-list/);
   assert.doesNotMatch(html,/pp-ratings-grid/);
-  assert.equal((html.match(/data-act="program-profile-tab"/g)||[]).length,4);
+  assert.equal((html.match(/role="tab"/g)||[]).length,4);
 });
 test('history shows annual rank, record, points, and complete itemized scoring',()=>{
   const html=app.tab('history');

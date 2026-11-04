@@ -8,7 +8,7 @@ const exposed=source.replace(end,"  return {set:(user,state)=>{me=user;league=st
 function create(store={}){
   const saved=new Map(Object.entries(store));
   const storage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
-  const root={innerHTML:'',addEventListener(){}};
+  const root={innerHTML:'',addEventListener(){},querySelector(){return null;}};
   const app=new Function('document','location','URLSearchParams','localStorage','setTimeout','clearTimeout',
     'return '+exposed)({querySelector:x=>x==='#app'?root:null}, {search:''},URLSearchParams,storage,()=>1,()=>{});
   return {app,saved};

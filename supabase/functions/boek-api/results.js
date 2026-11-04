@@ -930,6 +930,8 @@ export const DATA_PIPELINE=(()=>{
     return {seasons:Array.from({length:Number(currentSeason.slice(0,4))-2021+1},(_,i)=>{
         const y=2021+i;return y+'-'+String((y+1)%100).padStart(2,'0');
       }),directory,rank_total:numberEligible,rows:rankedRows,
+      quadrant_source:verifiedNet.has(currentSeason)?'net':(torvikReady?'torvik':'pending'),
+      quadrant_provisional:!verifiedNet.has(currentSeason)&&torvikReady,
       complete:archiveComplete,archive_complete:archiveComplete,verified_seasons:[...verifiedArchives].sort(),
       note:archiveComplete?'Five archived seasons verified; current-season totals update with new results.':
         'Some archived data remains unverified; historical totals may change.'};

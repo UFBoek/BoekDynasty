@@ -4170,3 +4170,28 @@ button.daily-team-line:hover{background:#f4f8fc}
  .draft-queue-manager .draft-queue-icon .program-logo{width:25px;height:25px}
 }
 @media(prefers-reduced-motion:reduce){.draft-compare-card{scroll-behavior:auto}}
+
+
+/* Historical draft scouting: official fantasy history alongside current T-Rank. */
+.draft-pool-history-note{display:flex;align-items:center;justify-content:space-between;gap:9px;
+ padding:6px 13px 9px;font-size:10px;font-weight:650;line-height:1.45;color:#7890a5;background:#fcfdff}
+.draft-pool-history-note button{color:#21679f;background:#eaf4ff;border:1px solid #c8ddec;
+ border-radius:7px;font-weight:800;font-size:10px;padding:6px 8px;cursor:pointer}
+.draft-pool-history{display:block;margin-top:4px;color:#1e6a9c;font-size:9px;font-weight:900;
+ font-variant-numeric:tabular-nums;letter-spacing:.15px}
+.draft-pool-history.limited{color:#8494a5;font-weight:650}
+.draft-compare-history{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;
+ padding:9px 0 1px;font-size:9.5px;font-weight:700;color:#70899f}
+.draft-compare-history b{font-size:13px;color:#245d8e;font-weight:900;font-variant-numeric:tabular-nums}
+.draft-history-snapshot{display:flex;align-items:center;flex-wrap:wrap;gap:7px 11px;
+ border-radius:9px;margin-top:8px;padding:9px 10px;background:#ecf5ff;border:1px solid #d6e7f7}
+.draft-history-snapshot span{color:#567fa0;font-size:8px;letter-spacing:.6px;font-weight:950;flex-basis:100%}
+.draft-history-snapshot strong{font-size:12px;font-weight:950;color:#215480;font-variant-numeric:tabular-nums}
+.draft-history-snapshot small{font-size:9px;color:#7892aa;margin-left:auto;font-weight:750}
+@media(max-width:850px){.draft-pool-tabs{flex-wrap:wrap}}
+@media(max-width:590px){
+ .draft-pool-history-note{padding:7px 10px 9px;font-size:9px}
+ .draft-pool-history{font-size:9px}
+ .draft-compare-history{font-size:9px}
+ .draft-history-snapshot{gap:6px;padding:9px}
+}

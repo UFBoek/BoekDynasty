@@ -304,7 +304,10 @@
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
     if(current==='program-detail')loadRatings(ratingYear(selectedProgramSeason||season()));
-    if(current==='draft')loadRatings(ratingYear(season()));
+    if(current==='draft'){
+      loadRatings(ratingYear(season()));
+      if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
+    }
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     const tabs=['home','team','results','programs','draft','more'];
@@ -755,7 +758,11 @@
     if(current==='programs'&&programMode==='leaders')render();
     try{schoolLeaders=await api('data/leaders');}
     catch(e){schoolLeadersError=e.message;}
-    finally{schoolLeadersLoading=false;if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}}
+    finally{
+      schoolLeadersLoading=false;
+      if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}
+      else if(current==='draft'&&document.activeElement?.id!=='draft-pool-search')render();
+    }
   }
 
   // Ranked views share one compact, accessible filter and paging behavior.
@@ -1205,6 +1212,32 @@
     if(draftWatchlist.every((v,i)=>v===old[i]))return false;
     storeDraftQueue();render();return true;
   }
+  // Uses verified fantasy points from the same school-leader feed as profiles.
+  // The current unfinished season is excluded; missing seasons are not zero-filled.
+  function draftHistoricalIndex(){
+    const years=(schoolLeaders?.seasons||[]).filter(y=>y<season()).slice(-5);
+    const yearSet=new Set(years),groups=new Map();
+    for(const row of schoolLeaders?.rows||[]){
+      if(!yearSet.has(row.season)||row.points===null||row.points===undefined||
+        !Number.isFinite(Number(row.points)))continue;
+      const id=String(row.program_id),scores=groups.get(id)||new Map();
+      scores.set(row.season,Number(row.points));
+      groups.set(id,scores);
+    }
+    const byId=new Map();
+    for(const [id,scores] of groups){
+      const values=years.filter(y=>scores.has(y)).map(y=>scores.get(y));
+      if(!values.length)continue;
+      const avg=values.reduce((sum,n)=>sum+n,0)/values.length;
+      const best=Math.max(...values);
+      const recent=years.slice(-3).filter(y=>scores.has(y)).map(y=>scores.get(y));
+      byId.set(id,{avg,best,count:values.length,totalYears:years.length,
+        recentAvg:recent.length?recent.reduce((sum,n)=>sum+n,0)/recent.length:null,
+        eligibleForSort:values.length>=3});
+    }
+    return {years,byId};
+  }
+  const historicalPointLabel=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:1});
   function draftSelectionOrder(slot,managers){
     if(!managers.length)return '';
     const idx=slot-1,r=Math.floor(idx/managers.length),pos=idx%managers.length;
@@ -1266,10 +1299,17 @@
         .find(slot=>draftSelectionOrder(slot,fullOrder)===me.id)||null:null;
     const myPicks=picks().filter(p=>p.manager_id===me.id).slice().sort((a,b)=>Number(b.overall)-Number(a.overall));
     const metricsYear=ratingYear(season());
+    const historyIndex=draftHistoricalIndex();
+    const historyOf=p=>p?historyIndex.byId.get(String(p.id)):null;
     const ratingInfo=p=>ratingOf(p,metricsYear);
     const programRank=p=>ratingInfo(p)?.rank??null;
     const sorted=available.slice().sort((a,b)=>{
       if(draftScope==='queue')return (queuePosition.get(String(a.id))??999)-(queuePosition.get(String(b.id))??999)||a.name.localeCompare(b.name);
+      if(draftSort==='history'){
+        const ah=historyOf(a),bh=historyOf(b);
+        const av=ah?.eligibleForSort?ah.avg:-1,bv=bh?.eligibleForSort?bh.avg:-1;
+        return bv-av||(programRank(a)??999)-(programRank(b)??999)||a.name.localeCompare(b.name);
+      }
       if(draftSort==='conference')return conf(a.conference_id).localeCompare(conf(b.conference_id))||a.name.localeCompare(b.name);
       if(draftSort==='name')return a.name.localeCompare(b.name);
       const ra=programRank(a),rb=programRank(b);
@@ -1311,12 +1351,16 @@
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(draftConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     const sortButton=(id,label)=>'<button type="button" data-act="draft-pool-sort" data-id="'+id+'" aria-pressed="'+(draftSort===id)+'" class="'+(draftSort===id?'active':'')+'">'+label+'</button>';
     const queueLabel=usedQueue.length?usedQueue.length+' in priority order':'Queue is empty';
+    const historyStatus=schoolLeaders?
+      (historyIndex.years.length+' completed seasons · historical fantasy points; 3+ seasons required for sorting'):
+      schoolLeadersError?'Historical fantasy points unavailable':
+      'Loading historical fantasy points…';
     const compareMetric=(value,digits=1)=>value!==null&&value!==undefined&&
       Number.isFinite(Number(value))?Number(value).toFixed(digits):'—';
     const compareCards=usedQueue.slice(0,4).map((id,i)=>{
       const p=programIndex.get(id);
       if(!p)return '';
-      const rating=ratingInfo(p),rank=rating?.rank;
+      const rating=ratingInfo(p),rank=rating?.rank,history=historyOf(p);
       const metric=(label,value)=>'<div><span>'+label+'</span><strong>'+escapeHTML(String(value))+'</strong></div>';
       return '<article class="draft-compare-card" '+draftStyle(p)+'>'
         +'<div class="draft-compare-top"><span class="draft-compare-priority">#'+(i+1)+' PRIORITY</span>'
@@ -1327,18 +1371,25 @@
         +'<div class="draft-compare-metrics">'+metric('OFFENSE',compareMetric(rating?.adj_o))
         +metric('DEFENSE',compareMetric(rating?.adj_d))
         +metric('WAB',compareMetric(rating?.wab))+'</div>'
+        +'<div class="draft-compare-history">'+(history?.eligibleForSort?
+          '<span><b>'+historicalPointLabel(history.avg)+'</b> avg pts / season</span><span><b>'+historicalPointLabel(history.best)+'</b> best season</span>':
+          '<span>'+(history?'Limited history: '+history.count+' season'+(history.count===1?'':'s'):
+            schoolLeaders?'No archived score':'History loading…')+'</span>')+'</div>'
         +'<div class="draft-compare-actions"><button type="button" data-act="draft-select" data-id="'+escapeHTML(id)+'">Preview ›</button>'
         +(i?'<button type="button" data-act="draft-queue-top" data-id="'+escapeHTML(id)+'">Make #1</button>':'<span>Top choice</span>')
         +'</div></article>';
     }).join('');
     const cards=sorted.map(p=>{
-      const rank=programRank(p),queueNumber=queuePosition.get(String(p.id)),queued=!!queueNumber;
+      const rank=programRank(p),history=historyOf(p),queueNumber=queuePosition.get(String(p.id)),queued=!!queueNumber;
       const selected=chosen?.id===p.id;
       return '<article class="draft-pool-card '+(selected?'selected':'')+'" '+draftStyle(p)
         +' data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'" data-conference="'+escapeHTML(p.conference_id)+'" data-queued="'+(queued?'1':'0')+'">'
         +'<button type="button" class="draft-pool-open" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" title="Select '+escapeHTML(p.name)+'">'
         +'<span class="draft-pool-logo">'+img(p)+'</span><span class="draft-pool-info"><strong>'+escapeHTML(p.name)+'</strong>'
-        +'<small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<small>'+escapeHTML(conf(p.conference_id))+'</small>'
+        +(history?'<span class="draft-pool-history'+(history.eligibleForSort?'':' limited')+'">'+
+          (history.eligibleForSort?'5Y AVG '+historicalPointLabel(history.avg)+' pts':'History: '+history.count+' season'+(history.count===1?'':'s'))+
+          '</span>':'')+'</span>'
         +'<span class="draft-pool-stat"><strong>'+(rank?'#'+rank:'—')+'</strong><small>T-RANK</small></span>'
         +'<span class="draft-pool-arrow">›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
@@ -1351,7 +1402,9 @@
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">⌕</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+confOptions+'</select></label>'
-      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','T-Rank')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
+      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','T-Rank')+sortButton('history','5Y Points')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
+      +'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+
+        (schoolLeadersError?'<button type="button" data-act="draft-history-retry">Retry history</button>':'')+'</div>'
       +'<div class="draft-pool-subbar"><div class="draft-pool-scope"><button type="button" data-act="draft-pool-scope" data-id="all" class="'+(draftScope==='all'?'active':'')+'">All available</button>'
       +'<button type="button" data-act="draft-pool-scope" data-id="queue" class="'+(draftScope==='queue'?'active':'')+'">★ My queue <span>'+usedQueue.length+'</span></button></div>'
       +'<button type="button" class="draft-queue-shortcut" data-act="draft-jump-queue">Reorder queue ↗</button>'
@@ -1361,11 +1414,13 @@
       +'<div class="draft-pool-bottom"><button id="draft-pool-more" type="button" data-act="draft-pool-more" hidden>Show more programs</button></div>'
       +'</section>';
     const selectedRank=chosen?programRank(chosen):null;
+    const selectedHistory=chosen?historyOf(chosen):null;
     const selectedView=chosen?'<div class="draft-selection-preview">'
       +'<div class="draft-selection-team" '+draftStyle(chosen)+'><div class="draft-selection-team-art">'+img(chosen)+'</div>'
       +'<div class="draft-selection-team-info"><span>SELECTED PROGRAM</span><h3>'+escapeHTML(chosen.name)+'</h3>'
       +'<p>'+escapeHTML(conf(chosen.conference_id))+(selectedRank?' · National T-Rank #'+selectedRank:'')+'</p></div></div>'
       +'<div class="draft-selection-facts"><div><span>STATUS</span><strong>Available</strong></div><div><span>YOUR PICK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong></div></div>'
+      +(selectedHistory?'<div class="draft-history-snapshot"><span>HISTORICAL FANTASY</span><strong>'+historicalPointLabel(selectedHistory.avg)+' avg pts</strong><strong>'+historicalPointLabel(selectedHistory.best)+' peak</strong><small>'+selectedHistory.count+'/'+selectedHistory.totalYears+' seasons</small></div>':'')
       +(yourTurn?'<p class="draft-selection-explainer">Your selection is permanent for the dynasty. Confirm to add this program to your roster.</p>'
         :'<p class="draft-selection-explainer">Save this school to your draft queue. Only the manager on the clock can submit the next pick.</p>')
       +'<button type="button" class="draft-confirm-action" data-act="draft-confirm" data-id="'+escapeHTML(chosen.id)+'" '+(!yourTurn?'disabled':'')+'>'
@@ -1377,14 +1432,15 @@
       :'<div class="draft-selection-idle"><div class="draft-idle-mark">+</div><strong>'+(yourTurn?'Your selection is waiting':'Scout your next pick')+'</strong>'
       +'<p>Tap a program to preview its details. '+(yourTurn?'Confirm it here when you are ready.':'Build an ordered draft queue while other managers pick.')+'</p></div>';
     const queueItems=usedQueue.map((id,i)=>{
-      const p=programIndex.get(id),rank=p?programRank(p):null;
+      const p=programIndex.get(id),rank=p?programRank(p):null,history=historyOf(p);
       if(!p)return '';
       const first=i===0,last=i===usedQueue.length-1;
       return '<div class="draft-queue-row '+(first?'top-priority':'')+(chosen?.id===p.id?' is-selected':'')+'" data-queue-id="'+escapeHTML(id)+'" '+draftStyle(p)+'>'
         +'<span class="draft-queue-position" aria-label="Priority '+(i+1)+'">'+(i+1)+'</span>'
         +'<span class="draft-queue-grip" data-id="'+escapeHTML(id)+'" draggable="true" title="Drag to reorder '+escapeHTML(p.name)+'" aria-hidden="true">⠿</span>'
         +'<button type="button" class="draft-queue-team" data-act="draft-select" data-id="'+escapeHTML(id)+'" title="Preview '+escapeHTML(p.name)+'">'
-        +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · T-Rank #'+rank:'')+'</small></span>'
+        +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · T-Rank #'+rank:'')+
+        (history?.eligibleForSort?' · 5Y '+historicalPointLabel(history.avg)+' pts':'')+'</small></span>'
         +'<span class="draft-queue-pick">Preview ›</span></button>'
         +'<div class="draft-queue-controls">'+(!first?'<button type="button" class="draft-queue-top" data-act="draft-queue-top" data-id="'+escapeHTML(id)+'" aria-label="Move '+escapeHTML(p.name)+' to first place in draft queue" title="Move to #1">⇧</button>':'')+'<button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
         +'<button type="button" data-act="draft-queue-down" data-id="'+escapeHTML(id)+'" '+(last?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' down in draft queue" title="Move down">↓</button>'
@@ -1398,7 +1454,7 @@
       +(usedQueue.length?'<button type="button" data-act="draft-queue-collapse" class="draft-queue-collapse" aria-expanded="'+draftQueueExpanded+'">'+(draftQueueExpanded?'Collapse':'Expand queue')+'</button>':'')+'</div></div>'
       +(usedQueue.length
         ?'<div class="draft-queue-topline"><span>FIRST CHOICE</span><strong>#1 '+escapeHTML(programIndex.get(usedQueue[0])?.name||'School')+'</strong><span>'+escapeHTML(queueLabel)+'</span></div>'
-          +(draftCompareExpanded&&usedQueue.length>1?'<div class="draft-compare-section"><div class="draft-compare-heading"><strong>Compare your top '+Math.min(4,usedQueue.length)+' choices</strong><span>2026–27 T-Rank · informational ratings</span></div><div class="draft-compare-grid">'+compareCards+'</div><small>Higher WAB and offense are better. Lower defensive efficiency is better. Ratings are not fantasy projections.</small></div>':'')
+          +(draftCompareExpanded&&usedQueue.length>1?'<div class="draft-compare-section"><div class="draft-compare-heading"><strong>Compare your top '+Math.min(4,usedQueue.length)+' choices</strong><span>Current T-Rank + 5-year fantasy history</span></div><div class="draft-compare-grid">'+compareCards+'</div><small>Fantasy averages use archived scoring, not projections. Higher WAB and offense are better; lower defensive efficiency is better.</small></div>':'')
           +(draftQueueExpanded?'<div class="draft-queue-list" aria-label="Draft priority order">'+queueItems+'</div>':'')
         :'<div class="draft-queue-empty"><span class="draft-queue-empty-icon">☆</span><div><strong>Start your queue</strong><p>Tap the star on any available school to add it here. Rearrange your picks whenever you like.</p></div>'
           +'<button type="button" data-act="draft-jump-pool">Browse available schools ›</button></div>')
@@ -1891,6 +1947,7 @@
     if(act==='directory-conference'){programConference=id;programLetter='all';programShown=36;render();filterPrograms();return;}
     if(act==='directory-ownership'){programOwnership=id;programShown=36;render();filterPrograms();return;}
     if(act==='directory-letter'){programLetter=id;programShown=36;render();filterPrograms();return;}
+    if(act==='draft-history-retry'){schoolLeadersError='';schoolLeaders=null;loadSchoolLeaders();return;}
     if(act==='draft-pool-sort'){draftSort=id;draftShown=30;render();return;}
     if(act==='draft-pool-scope'){draftScope=id;draftShown=30;render();root.querySelector('#draft-pool-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     if(act==='draft-pool-more'){draftShown+=30;filterDraftPool();return;}

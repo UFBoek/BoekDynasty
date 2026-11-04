@@ -249,3 +249,8 @@ League Overview now shows a compact, automatically refreshed daily scoreboard fo
 ### Draft-room scouting and return navigation (November 2026)
 
 Draft queues now show account-sync status and have an immediate **Move to #1** action, while preserving single-step arrows and desktop drag-and-drop. The optional comparison panel shows the first four available queued schools side-by-side using the current-season Torvik rank, adjusted offense, adjusted defense, and WAB; unavailable ratings remain blank rather than guessed. Opening school and manager profiles now preserves the prior page scroll position when returning via **Back**, which helps when browsing long program directories and draft boards.
+
+
+### Five-year draft fantasy scout (November 2026)
+
+The draft room loads the same verified school-leader point history used on school profiles. Managers can sort available programs by their average fantasy points over the five most recent completed seasons; sorting requires at least three recorded seasons and puts limited-history programs after those with sufficient history. Draft cards, the selection preview, the saved priority queue and the four-school comparison show historical fantasy averages, peak season points and/or sample size. Current-season T-Rank is retained as a separate informational rating. Historical data is loaded once per session, and missing data is never represented as a zero or invented ranking.

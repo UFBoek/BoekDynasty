@@ -254,3 +254,8 @@ Draft queues now show account-sync status and have an immediate **Move to #1** a
 ### Five-year draft fantasy scout (November 2026)
 
 The draft room loads the same verified school-leader point history used on school profiles. Managers can sort available programs by their average fantasy points over the five most recent completed seasons; sorting requires at least three recorded seasons and puts limited-history programs after those with sufficient history. Draft cards, the selection preview, the saved priority queue and the four-school comparison show historical fantasy averages, peak season points and/or sample size. Current-season T-Rank is retained as a separate informational rating. Historical data is loaded once per session, and missing data is never represented as a zero or invented ranking.
+
+
+### Daily Results — draft watchlist and game status filters (November 2026)
+
+Results supports a **My queue** scope, tracking games involving available schools in the manager's saved draft queue before the inaugural draft. Queue games are visually distinguished from owned-roster games on the daily scoreboard and on League Overview. A **Track games** shortcut in the draft queue opens today's matching results. Results also has All / Live / Upcoming / Final status filtering with counts and a clear-filters action, with mobile-friendly controls. The topbar's live indicator no longer treats a historical scoreboard as today's live games. This feature changes neither actual picks nor fantasy scoring.

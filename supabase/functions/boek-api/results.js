@@ -34,7 +34,16 @@ export const DATA_PIPELINE=(()=>{
     const title=String(ev.name||ev.shortName||'').slice(0,140);
     const notes=(c.notes||[]).map(x=>x.headline||x.text||'').join(' ').slice(0,200);
     const note=(title+' '+notes).toLowerCase();
-    const tag=ev.__sourceGroup===100||/ncaa (men.s )?(basketball )?tournament|march madness|first four/.test(note)?'ncaa':/\bconference tournament\b|\b(acc|sec|big ten|big 12|big east|pac-12|mountain west|wcc|atlantic 10|american) tournament\b/.test(note)?'conference':null;
+    // ESPN flags dozens of conference championships as "Championship" or
+    // "Playoffs", not the literal word "Tournament". The old hardcoded list
+    // missed the A-10, American, Mountain West, Ivy, Horizon and others,
+    // inflating regular-season and quadrant win bonuses.
+    const month=Number(gameDay.slice(5,7)),dayOfMonth=Number(gameDay.slice(8,10));
+    const conferencePostseason=(Number(ev.season?.type)===2&&c.conferenceCompetition===true&&
+      (month===3||(month===2&&dayOfMonth>=25))&&
+      /\b(tournament|championship|playoffs?)\b/i.test(notes));
+    const tag=ev.__sourceGroup===100||/ncaa (men.s )?(basketball )?tournament|march madness|first four/.test(note)?'ncaa':
+      conferencePostseason?'conference':null;
     const row=[String(ev.id).slice(0,80),season,gameDay,utc,hId,aId,
       String(home.team?.displayName||home.team?.name||'Home').slice(0,100),String(away.team?.displayName||away.team?.name||'Away').slice(0,100),
       hs,as,phase,String(st.shortDetail||st.detail||st.description||'').slice(0,140),

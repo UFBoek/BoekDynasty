@@ -41,6 +41,8 @@
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
   let ratingConference='all',ratingOwnership='all',ratingShown=40;
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
+  let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
+  let draftWatchlist=[],draftWatchlistOwner='';
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
@@ -895,75 +897,280 @@
     el.classList.remove('expired');
     el.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
   }
+
+  /* Draft room: in-place selection desk and the original server-authoritative snake order.
+     Brand accents are presentation only, never a draft ranking or eligibility source. */
+  const DRAFT_BRANDS={
+    'alabama':'#9e1b32','auburn':'#0c2340','arkansas':'#9d2235','arizona st':'#8c1d40','arizona state':'#8c1d40','arizona':'#ab0520',
+    'baylor':'#154734','boise st':'#0033a0','boise state':'#0033a0','butler':'#13294b','byu':'#002e5d','brigham young':'#002e5d',
+    'california baptist':'#002554','california':'#003262','clemson':'#f56600','colorado st':'#1e4d2b','colorado state':'#1e4d2b',
+    'colorado':'#cfb87c','creighton':'#005ca9','cincinnati':'#e00122','dayton':'#d50032','depaul':'#005eb8',
+    'duke':'#003087','duquesne':'#041e42','florida atlantic':'#003366','florida gulf coast':'#005a3c',
+    'florida international':'#081e3f','florida st':'#782f40','florida state':'#782f40','florida':'#0021a5',
+    'george mason':'#006633','george washington':'#002f6c','georgetown':'#041e42','georgia tech':'#003057',
+    'georgia':'#ba0c2f','gonzaga':'#002967','houston christian':'#00205b','houston':'#c8102e',
+    'illinois chicago':'#b40021','illinois':'#13294b','indiana':'#990000','iowa st':'#c8102e',
+    'iowa state':'#c8102e','iowa':'#151515','kansas st':'#512888','kansas state':'#512888',
+    'kansas':'#0051ba','kentucky':'#0033a0','louisville':'#ad0000','loyola chicago':'#922247',
+    'lsu':'#461d7c','marquette':'#003366','maryland':'#e21833','memphis':'#2a5dba',
+    'miami':'#005030','michigan st':'#18453b','michigan state':'#18453b','michigan':'#00274c',
+    'mississippi st':'#660000','mississippi state':'#660000','mississippi':'#9d2235','ole miss':'#9d2235',
+    'missouri':'#151515','nebraska':'#d00000','north carolina st':'#cc0000','north carolina state':'#cc0000',
+    'nc st':'#cc0000','north carolina':'#2974aa','notre dame':'#0c2340','northwestern':'#4e2a84',
+    'oklahoma st':'#c94d14','oklahoma state':'#c94d14','oklahoma':'#841617','ohio st':'#ba0c2f','ohio state':'#ba0c2f',
+    'oregon st':'#c44511','oregon state':'#c44511','oregon':'#154733','penn st':'#041e42','penn state':'#041e42',
+    'pittsburgh':'#003594','pitt':'#003594','providence':'#151515','purdue':'#28251f',
+    'rutgers':'#cc0033','saint john':'#d71920','st john':'#d71920','saint joseph':'#9e1b32',
+    'saint louis':'#003da5','san diego st':'#a6192e','san diego state':'#a6192e',
+    'seton hall':'#004488','smu':'#0033a0','south carolina':'#73000a','stanford':'#8c1515',
+    'syracuse':'#d44500','tcu':'#4d1979','temple':'#9e1b34','tennessee':'#c94f00',
+    'texas a and m':'#500000','texas a&m':'#500000','texas christian':'#4d1979',
+    'texas tech':'#cc0000','texas st':'#501214','texas state':'#501214','texas':'#bf5700',
+    'tulane':'#006747','tulsa':'#002d72','ucla':'#2774ae','ucf':'#171b1e',
+    'uconn':'#000e2f','connecticut':'#000e2f','unc':'#2974aa','usc upstate':'#006747',
+    'usc':'#990000','utah st':'#0f2439','utah state':'#0f2439','utah':'#cc0000',
+    'vanderbilt':'#6a5c35','villanova':'#00205b','virginia tech':'#630031','virginia':'#232d4b',
+    'vcu':'#242424','wake forest':'#5a4b35','washington st':'#981e32','washington state':'#981e32',
+    'washington':'#4b2e83','west virginia':'#002855','wichita st':'#ffc217','wichita state':'#151515',
+    'wisconsin':'#c5050c','xavier':'#0c2340'
+  };
+  const DRAFT_CONFERENCE_FALLBACK={
+    '23':'#1f598f','2':'#193f7b','7':'#3d5d8a','8':'#163753','4':'#265e50','21':'#5a306d',
+    '3':'#214c8d','44':'#3b587a','18':'#314f8b','29':'#185877','62':'#31516e'
+  };
+  function draftBrand(p){
+    const name=String(p?.name||'').toLowerCase().replace(/[.&]/g,' ').replace(/\s+/g,' ').trim();
+    const matched=Object.keys(DRAFT_BRANDS).filter(prefix=>name===prefix||name.startsWith(prefix+' '))
+      .sort((a,b)=>b.length-a.length)[0];
+    return matched?DRAFT_BRANDS[matched]:(DRAFT_CONFERENCE_FALLBACK[String(p?.conference_id)]||'#344967');
+  }
+  const draftStyle=p=>' style="--draft-brand:'+draftBrand(p)+'"';
+  const draftQueueKey=()=>me?'boek_dynasty_draft_queue_'+String(me.id):'';
+  function prepareDraftQueue(){
+    if(!me||draftWatchlistOwner===String(me.id))return;
+    draftWatchlistOwner=String(me.id);
+    try{const rows=JSON.parse(localStorage.getItem(draftQueueKey())||'[]');draftWatchlist=Array.isArray(rows)?rows.map(String).slice(0,120):[];}
+    catch(e){draftWatchlist=[];}
+  }
+  function storeDraftQueue(){
+    try{localStorage.setItem(draftQueueKey(),JSON.stringify(draftWatchlist));}catch(e){}
+  }
+  function draftSelectionOrder(slot,managers){
+    if(!managers.length)return '';
+    const idx=slot-1,r=Math.floor(idx/managers.length),pos=idx%managers.length;
+    return managers[r%2===0?pos:managers.length-1-pos]||'';
+  }
+  function draftAvailable(){
+    const drafted=new Set(picks().map(p=>String(p.program_id)));
+    return programs().filter(p=>activeConfs().includes(String(p.conference_id))&&!drafted.has(String(p.id))&&!programOwned(p.id));
+  }
+  function filterDraftPool(){
+    if(current!=='draft')return;
+    const query=draftQuery.trim().toLowerCase(),cards=[...root.querySelectorAll('.draft-pool-card')];
+    let total=0,visible=0;
+    for(const card of cards){
+      const matches=card.dataset.search.includes(query)
+        &&(draftConference==='all'||card.dataset.conference===draftConference)
+        &&(draftScope!=='queue'||card.dataset.queued==='1');
+      if(matches)total++;
+      const show=matches&&total<=draftShown;
+      card.hidden=!show;if(show)visible++;
+    }
+    const counter=root.querySelector('#draft-pool-count');
+    if(counter)counter.textContent=total===visible?total+' programs':visible+' of '+total+' programs';
+    const load=root.querySelector('#draft-pool-more');
+    if(load){load.hidden=total<=draftShown;load.textContent='Show '+Math.min(30,total-visible)+' more programs';}
+    const blank=root.querySelector('#draft-pool-empty');
+    if(blank)blank.hidden=total>0;
+  }
   function draftPage(){
-    const settings=league.settings,fullOrder=order(),count=fullOrder.length;
-    const total=draftTotal(),completed=picks().length;
-    const status=settings.draft_status,rounds=Number(settings.rounds||0);
-    const preview=status==='pending'&&count<2;
-    const openSeats=preview?Math.max(0,Math.min(20,Number(settings.max_managers||7))-count):0;
-    const visualOrder=preview?[...fullOrder,...Array.from({length:openSeats},(_,i)=>'open-seat-'+i)]:fullOrder;
-    const visualCount=visualOrder.length;
-    const plannedTotal=preview?visualCount*rounds:total;
-    const roundNumber=Math.min(rounds,Math.floor(completed/Math.max(1,count))+1);
-    const next=nextManager(),available=programs().filter(p=>activeConfs().includes(p.conference_id)).length;
-    const canStart=count>=2&&available>=total;
-    const mode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
-    const columns=mode==='mine'?visualOrder.filter(id=>id===me.id):visualOrder;
-    const rows=mode==='current'?[roundNumber]:Array.from({length:rounds},(_,i)=>i+1);
-    const draftPicks=new Map(picks().map(p=>[Number(p.overall),p]));
+    prepareDraftQueue();
+    const settings=league.settings,fullOrder=order(),managerCount=fullOrder.length;
+    const status=settings.draft_status,rounds=Number(settings.rounds||0),completed=picks().length,total=draftTotal();
+    const draftLive=status==='live',draftDone=status==='finished'||(total>0&&completed>=total);
+    const yourTurn=draftLive&&nextManager()?.id===me.id;
+    const openSeats=status==='pending'&&managerCount<2
+      ?Math.max(0,Math.min(20,Number(settings.max_managers||7))-managerCount):0;
+    const preview=!!openSeats,visualOrder=preview?[...fullOrder,...Array.from({length:openSeats},(_,i)=>'open-seat-'+i)]:fullOrder;
+    const visualCount=visualOrder.length,plannedTotal=preview?visualCount*rounds:total;
+    const activePick=draftDone?total:Math.min(total||1,completed+1);
+    const activeRound=Math.max(1,Math.min(rounds,Math.floor(completed/Math.max(1,managerCount))+1));
+    const next=nextManager(),managerIndex=new Map(members().map(m=>[String(m.id),m]));
     const programIndex=new Map(programs().map(p=>[String(p.id),p]));
-    const memberIndex=new Map(members().map(m=>[String(m.id),m]));
-    const boardWidth='grid-template-columns:75px repeat('+Math.max(columns.length,1)+',minmax(154px,1fr));min-width:'+(75+columns.length*154)+'px';
-    const headers=columns.map(id=>{
-      const manager=memberIndex.get(id),vacant=id.startsWith('open-seat-');
-      return '<div class="draft-board-manager '+(id===me.id?'mine':vacant?'vacant':'')+'"><span class="draft-board-avatar">'+avatar(manager||{display_name:'+'})+'</span><div><strong>'+escapeHTML(manager?.display_name||'Open seat')+'</strong><small>'+(vacant?'WAITING FOR MANAGER':id===me.id?'YOUR TEAM':'PICK POSITION '+(fullOrder.indexOf(id)+1))+'</small></div></div>';
+    const pickMap=new Map(picks().map(p=>[Number(p.overall),p]));
+    const pickedIds=new Set(picks().map(p=>String(p.program_id)));
+    const available=draftAvailable();
+    const usedQueue=draftWatchlist.filter(id=>!pickedIds.has(id)&&available.some(p=>String(p.id)===id));
+    if(draftSelectedProgram&&!available.some(p=>String(p.id)===String(draftSelectedProgram)))draftSelectedProgram='';
+    const chosen=available.find(p=>String(p.id)===String(draftSelectedProgram));
+    const nextMine=draftLive||status==='paused'||status==='pending'
+      ?Array.from({length:Math.max(0,total-completed)},(_,i)=>i+completed+1)
+        .find(slot=>draftSelectionOrder(slot,fullOrder)===me.id)||null:null;
+    const myPicks=picks().filter(p=>p.manager_id===me.id).slice().sort((a,b)=>Number(b.overall)-Number(a.overall));
+    const metricsYear=ratingYear(season());
+    const ratingInfo=p=>ratingOf(p,metricsYear);
+    const programRank=p=>ratingInfo(p)?.rank??null;
+    const sorted=available.slice().sort((a,b)=>{
+      if(draftSort==='conference')return conf(a.conference_id).localeCompare(conf(b.conference_id))||a.name.localeCompare(b.name);
+      if(draftSort==='name')return a.name.localeCompare(b.name);
+      const ra=programRank(a),rb=programRank(b);
+      return (ra??999)-(rb??999)||a.name.localeCompare(b.name);
+    });
+    const roundLabel=activeRound+' / '+rounds;
+    const phase=status==='live'?'LIVE DRAFT':status==='paused'?'DRAFT PAUSED':status==='finished'?'DRAFT COMPLETE':'DRAFT PREVIEW';
+    const headline=yourTurn?"You're on the clock":draftLive?'On the clock':status==='paused'?'The draft is paused':
+      draftDone?'The inaugural draft is complete':'Your dynasty starts here';
+    const clock=settings.draft_clock_seconds>0&&draftLive
+      ?'<div class="draft-live-clock"><span>DRAFT CLOCK</span><strong id="draft-clock">--:--</strong><small>No automatic picks</small></div>':'';
+    const upNext=Array.from({length:Math.min(5,Math.max(0,total-completed))},(_,i)=>{
+      const slot=completed+i+1,id=draftSelectionOrder(slot,fullOrder),manager=managerIndex.get(id);
+      return '<div class="draft-upcoming-pill '+(i===0?'active':'')+(id===me.id?' mine':'')+'"><span>#'+slot+'</span>'
+        +avatar(manager||{display_name:'?'})+'<strong>'+escapeHTML(manager?.display_name||'Open manager')+'</strong></div>';
     }).join('');
-    const cells=rows.map(round=>{
-      const slots=columns.map(id=>{
-        const vacant=id.startsWith('open-seat-');
-        const columnIndex=visualOrder.indexOf(id);
-        const overall=(round-1)*visualCount+(round%2===1?columnIndex+1:visualCount-columnIndex);
-        const pick=draftPicks.get(overall),program=programIndex.get(String(pick?.program_id||''));
-        const onClock=status==='live'&&overall===completed+1;
-        const mine=id===me.id;
-        const state=program?'selected':onClock?'on-clock':vacant?'vacant':'open';
-        return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'" '+(vacant?'':'data-pick="'+overall+'"')+'>'
-          +'<div class="draft-cell-meta"><span>'+(preview?'PROJ. ':'')+'#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON CLOCK</strong>':program?'<span class="draft-cell-done">PICKED</span>':'')+'</div>'
-          +(program?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(program.id)+'" title="View '+escapeHTML(program.name)+'">'+img(program)+'<span class="draft-cell-team"><strong>'+escapeHTML(program.name)+'</strong><small>'+escapeHTML(conf(program.conference_id))+'</small></span></button>'
-            :onClock?'<div class="draft-cell-open"><strong>'+escapeHTML(memberIndex.get(id)?.display_name||'Manager')+'</strong><small>Making selection</small></div>'
-            :'<div class="draft-cell-placeholder">'+(vacant?'Awaiting manager':'Open pick')+'</div>')
+    const hero='<section class="draft-live-hero '+(yourTurn?'my-turn':'')+'">'
+      +'<div class="draft-live-main"><span class="draft-live-status"><i></i>'+phase+'</span>'
+      +'<h2>'+escapeHTML(headline)+'</h2>'
+      +'<div class="draft-live-manager">'+(draftLive&&next?avatar(next):'')
+      +'<div><strong>'+(draftLive?escapeHTML(next?.display_name||'Waiting for manager'):draftDone?'All picks are in':status==='paused'?'Waiting for commissioner':'Awaiting draft start')+'</strong>'
+      +'<span>'+(draftLive?'Round '+roundLabel+' · Overall pick #'+activePick:
+         draftDone?completed+' programs selected':completed+' of '+plannedTotal+' projected selections')+'</span></div></div>'
+      +'</div><div class="draft-live-right"><div class="draft-live-stat"><span>ON DECK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong><small>'+(nextMine?'Your next selection':'No picks remaining')+'</small></div>'
+      +'<div class="draft-live-stat"><span>PROGRESS</span><strong>'+completed+' <em>/ '+plannedTotal+'</em></strong><small>'+Math.max(0,plannedTotal-completed)+' picks remaining</small></div>'
+      +clock
+      +'<button type="button" class="draft-live-cta" data-act="draft-jump-pool">'+(yourTurn?'Choose your program':'Browse available programs')+' <span>›</span></button></div>'
+      +'<div class="draft-live-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,plannedTotal))+'%"></span></div>'
+      +'</section>';
+    const tracker='<div class="draft-pick-ticker"><div class="draft-pick-ticker-label"><strong>NEXT PICKS</strong><small>Snake order</small></div>'
+      +'<div class="draft-pick-ticker-scroll">'+(upNext||'<span class="draft-no-upcoming">Draft order will appear here when the draft opens.</span>')+'</div></div>';
+    const ready=status==='pending'?'<div class="draft-readiness draft-readiness-v2">'
+      +'<span class="'+(managerCount>=2?'good':'')+'">'+(managerCount>=2?'✓':'○')+' '+managerCount+' managers registered</span>'
+      +'<span class="'+(programs().filter(p=>activeConfs().includes(String(p.conference_id))).length>=total?'good':'')+'">'
+      +(programs().filter(p=>activeConfs().includes(String(p.conference_id))).length>=total?'✓':'○')
+      +' '+programs().filter(p=>activeConfs().includes(String(p.conference_id))).length+' eligible programs</span>'
+      +'<strong>'+(managerCount>=2&&available.length>=total?'Ready for commissioner to start':'Waiting for draft setup')+'</strong></div>':'';
+    const confOptions=activeConfs().slice().sort((a,b)=>conf(a).localeCompare(conf(b)))
+      .map(id=>'<option value="'+escapeHTML(id)+'" '+(draftConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
+    const sortButton=(id,label)=>'<button type="button" data-act="draft-pool-sort" data-id="'+id+'" aria-pressed="'+(draftSort===id)+'" class="'+(draftSort===id?'active':'')+'">'+label+'</button>';
+    const queueLabel=usedQueue.length?usedQueue.length+' shortlisted':'No shortlisted schools';
+    const cards=sorted.map(p=>{
+      const rank=programRank(p),queued=usedQueue.includes(String(p.id));
+      const selected=chosen?.id===p.id;
+      return '<article class="draft-pool-card '+(selected?'selected':'')+'" '+draftStyle(p)
+        +' data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'" data-conference="'+escapeHTML(p.conference_id)+'" data-queued="'+(queued?'1':'0')+'">'
+        +'<button type="button" class="draft-pool-open" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" title="Select '+escapeHTML(p.name)+'">'
+        +'<span class="draft-pool-logo">'+img(p)+'</span><span class="draft-pool-info"><strong>'+escapeHTML(p.name)+'</strong>'
+        +'<small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<span class="draft-pool-stat"><strong>'+(rank?'#'+rank:'—')+'</strong><small>T-RANK</small></span>'
+        +'<span class="draft-pool-arrow">›</span></button>'
+        +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' shortlist" aria-pressed="'+queued+'" title="'+(queued?'Remove from shortlist':'Shortlist this school')+'">'+(queued?'★':'☆')+'</button>'
+        +'</article>';
+    }).join('');
+    const pool='<section id="draft-pool-section" class="panel draft-pool-panel">'
+      +'<div class="draft-section-heading"><div><span class="draft-section-overline">YOUR DRAFT DESK</span><h2>Available programs</h2>'
+      +'<p>Choose a school below. Review it, then confirm your pick right here.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
+      +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">⌕</span>'
+      +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
+      +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+confOptions+'</select></label>'
+      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','T-Rank')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
+      +'<div class="draft-pool-subbar"><div class="draft-pool-scope"><button type="button" data-act="draft-pool-scope" data-id="all" class="'+(draftScope==='all'?'active':'')+'">All available</button>'
+      +'<button type="button" data-act="draft-pool-scope" data-id="queue" class="'+(draftScope==='queue'?'active':'')+'">★ My shortlist <span>'+usedQueue.length+'</span></button></div>'
+      +'<span id="draft-pool-count">'+available.length+' programs</span></div>'
+      +'<div class="draft-pool-grid">'+cards+'</div>'
+      +'<div class="draft-pool-empty" id="draft-pool-empty" hidden>No matching schools. Try another search or show all available.</div>'
+      +'<div class="draft-pool-bottom"><button id="draft-pool-more" type="button" data-act="draft-pool-more" hidden>Show more programs</button></div>'
+      +'</section>';
+    const selectedRank=chosen?programRank(chosen):null;
+    const selectedView=chosen?'<div class="draft-selection-preview">'
+      +'<div class="draft-selection-team" '+draftStyle(chosen)+'><div class="draft-selection-team-art">'+img(chosen)+'</div>'
+      +'<div class="draft-selection-team-info"><span>SELECTED PROGRAM</span><h3>'+escapeHTML(chosen.name)+'</h3>'
+      +'<p>'+escapeHTML(conf(chosen.conference_id))+(selectedRank?' · National T-Rank #'+selectedRank:'')+'</p></div></div>'
+      +'<div class="draft-selection-facts"><div><span>STATUS</span><strong>Available</strong></div><div><span>YOUR PICK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong></div></div>'
+      +(yourTurn?'<p class="draft-selection-explainer">Your selection is permanent for the dynasty. Confirm to add this program to your roster.</p>'
+        :'<p class="draft-selection-explainer">Save this program to your shortlist. Only the manager on the clock can submit the next pick.</p>')
+      +'<button type="button" class="draft-confirm-action" data-act="draft-confirm" data-id="'+escapeHTML(chosen.id)+'" '+(!yourTurn?'disabled':'')+'>'
+      +(yourTurn?'Confirm pick: '+escapeHTML(chosen.name):'Waiting for your turn')+' <span>›</span></button>'
+      +'<div class="draft-preview-actions"><button type="button" data-act="draft-queue-toggle" data-id="'+escapeHTML(chosen.id)+'">'
+      +(usedQueue.includes(String(chosen.id))?'★ Remove from shortlist':'☆ Add to shortlist')+'</button>'
+      +'<button type="button" data-act="open-program" data-id="'+escapeHTML(chosen.id)+'">View school details ›</button></div>'
+      +'<button type="button" class="draft-selection-clear" data-act="draft-clear-selection">Change selection</button></div>'
+      :'<div class="draft-selection-idle"><div class="draft-idle-mark">+</div><strong>'+(yourTurn?'Your selection is waiting':'Scout your next pick')+'</strong>'
+      +'<p>Tap a program to preview its details. '+(yourTurn?'Confirm it here when you are ready.':'Shortlist your favorites while other managers pick.')+'</p></div>';
+    const queueItems=usedQueue.slice(0,7).map(id=>{
+      const p=programIndex.get(id),rank=p?programRank(p):null;
+      if(!p)return '';
+      return '<div class="draft-queue-row" '+draftStyle(p)+'><button type="button" data-act="draft-select" data-id="'+escapeHTML(id)+'">'
+        +'<span class="draft-queue-icon">'+img(p)+'</span><span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · #'+rank+' T-Rank':'')+'</small></span></button>'
+        +'<button type="button" data-act="draft-queue-toggle" data-id="'+escapeHTML(id)+'" aria-label="Remove '+escapeHTML(p.name)+' from shortlist">×</button></div>';
+    }).join('');
+    const myPickList=myPicks.slice(0,4).map(p=>{
+      const school=programIndex.get(String(p.program_id));
+      return school?'<div class="draft-my-pick" '+draftStyle(school) +'><span class="draft-mini-logo">'+img(school)+'</span><span><strong>'+escapeHTML(school.name)+'</strong><small>Round '+p.round+' · Pick #'+p.overall+'</small></span></div>':'';
+    }).join('');
+    const sidebar='<aside class="draft-pick-aside"><section class="panel draft-pick-desk">'
+      +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOU ARE ON THE CLOCK':'Preview and shortlist')+'</strong></div>'
+      +selectedView+'</section>'
+      +'<section class="panel draft-watchlist-panel"><div class="draft-side-title"><span>MY WATCHLIST</span><strong>'+escapeHTML(queueLabel)+'</strong></div>'
+      +(queueItems||'<p class="draft-side-empty">Use the star on any school to build a shortlist for upcoming rounds.</p>')
+      +(usedQueue.length>7?'<button class="draft-show-watchlist" data-act="draft-pool-scope" data-id="queue">'+(usedQueue.length-7)+' more shortlisted ›</button>':'')
+      +'</section>'
+      +'<section class="panel draft-my-picks-panel"><div class="draft-side-title"><span>MY DRAFT</span><strong>'+myPicks.length+' / '+rounds+' programs</strong></div>'
+      +(myPickList||'<p class="draft-side-empty">Your selected programs will appear here as the draft progresses.</p>')
+      +'</section></aside>';
+    const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
+    const boardColumns=boardMode==='mine'?visualOrder.filter(id=>id===me.id):visualOrder;
+    const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1);
+    const boardWidth='grid-template-columns:72px repeat('+Math.max(1,boardColumns.length)+',minmax(163px,1fr));min-width:'+(72+Math.max(1,boardColumns.length)*163)+'px';
+    const boardHeaders=boardColumns.map(id=>{
+      const member=managerIndex.get(id),vacant=id.startsWith('open-seat-');
+      const selection=visualOrder.indexOf(id)+1;
+      return '<div class="draft-board-manager '+(id===me.id?'mine':vacant?'vacant':'')+'">'
+        +'<span class="draft-board-avatar">'+avatar(member||{display_name:'+'})+'</span><div><strong>'+escapeHTML(member?.display_name||'Open seat')+'</strong>'
+        +'<small>'+(id===me.id?'YOUR COLUMN':vacant?'UNCLAIMED':'DRAFT POSITION '+selection)+'</small></div></div>';
+    }).join('');
+    const boardCells=boardRows.map(round=>{
+      const slots=boardColumns.map(id=>{
+        const vacant=id.startsWith('open-seat-'),pos=visualOrder.indexOf(id);
+        const overall=(round-1)*Math.max(1,visualCount)+(round%2===1?pos+1:visualCount-pos);
+        const picked=pickMap.get(overall),p=programIndex.get(String(picked?.program_id||''));
+        const onClock=draftLive&&overall===activePick,mine=id===me.id;
+        const state=p?'selected':onClock?'on-clock':vacant?'vacant':'open';
+        return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'"'+(p?draftStyle(p):'')+' data-pick="'+overall+'" '+(onClock?'id="draft-current-slot"':'')+'>'
+          +'<div class="draft-cell-meta"><span>#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON THE CLOCK</strong>':p?'<span class="draft-cell-done">LOCKED</span>':'')+'</div>'
+          +(p?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
+            +'<span class="draft-cell-logo">'+img(p)+'</span><span class="draft-cell-team"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
+            :onClock?'<button type="button" class="draft-cell-open '+(mine?'take-pick':'')+'" data-act="draft-jump-pool">'
+              +'<strong>'+(mine?'Your pick is live':'Awaiting pick')+'</strong><small>'+(mine?'Choose a school ›':escapeHTML(memberIndex.get(id)?.display_name||'Manager')+' is selecting')+'</small></button>'
+            :'<div class="draft-cell-placeholder">'+(vacant?'Open seat':'AVAILABLE PICK')+'</div>')
           +'</div>';
       }).join('');
-      return '<div class="draft-board-round">ROUND '+round+'<span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
+      return '<div class="draft-board-round '+(round===activeRound?'current':'')+'"><strong>R'+round+'</strong><span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
     }).join('');
-    const recent=[...picks()].reverse().slice(0,8);
-    const nextSlots=preview?[]:Array.from({length:Math.min(6,Math.max(0,total-completed))},(_,i)=>{
-      const overall=completed+i+1,r=Math.floor((overall-1)/Math.max(1,count)),local=(overall-1)%Math.max(1,count);
-      const id=r%2===0?fullOrder[local]:fullOrder[count-1-local];
-      return {overall,manager:memberIndex.get(id)};
-    });
-    const modeButton=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(mode===id?'active':'')+'">'+label+'</button>';
-    return heading('INAUGURAL PROGRAM DRAFT','Draft Room','Every pick, every manager, one permanent roster.')
-      +'<section class="draft-command">'
-      +'<div class="draft-command-state"><span class="draft-state-tag '+(status==='live'?'live':'')+'"><i></i>'+escapeHTML(status==='live'?'LIVE DRAFT':status==='finished'?'DRAFT COMPLETE':status==='paused'?'PAUSED':'PRE-DRAFT')+'</span>'
-      +'<h2>'+(status==='live'?'On the clock: '+escapeHTML(next?.display_name||'Manager'):status==='finished'?'The draft is complete':status==='paused'?'The draft is paused':'Ready to build your dynasty')+'</h2>'
-      +'<p>'+completed+' of '+plannedTotal+(preview?' projected':'')+' picks <span>·</span> '+count+' registered <span>·</span> '+rounds+' rounds</p>'
-      +'<div class="draft-command-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,plannedTotal))+'%"></span></div></div>'
-      +'<div class="draft-command-right">'+(settings.draft_clock_seconds>0?'<div class="draft-clock-box"><span>DRAFT CLOCK</span><strong id="draft-clock">--:--</strong><small>Manual selections only</small></div>':'<div class="draft-command-count"><strong>'+Math.max(0,plannedTotal-completed)+'</strong><small>'+(preview?'PROJECTED PICKS':'PICKS REMAINING')+'</small></div>')+'</div>'
-      +'<button class="btn draft-command-cta" data-act="tab" data-id="programs">'+(isMyTurn()?'Make your pick':'Browse programs')+' <span>→</span></button></section>'
-      +(status==='pending'?'<div class="draft-readiness"><span class="'+(count>=2?'good':'')+'">'+(count>=2?'✓':'○')+' '+count+' registered managers</span><span class="'+(available>=plannedTotal?'good':'')+'">'+(available>=plannedTotal?'✓':'○')+' '+available+' eligible schools for '+plannedTotal+(preview?' projected':'')+' picks</span><strong>'+(canStart?'Draft pool ready':'Waiting for draft readiness')+'</strong></div>':'')
-      +'<section class="panel draft-board-panel">'
-      +'<div class="draft-board-toolbar"><div><h2>Draft board</h2><p>'+(preview?'Projected positions · '+openSeats+' manager seats available':'Snake format · '+rounds+' rounds · Live pick tracker')+'</p></div><div class="draft-board-switch" role="group" aria-label="Draft board view">'+modeButton('all','Full board')+modeButton('current','Current round')+modeButton('mine','My picks')+'</div></div>'
-      +'<div class="draft-board-key"><span><i class="selected"></i> Selected</span><span><i class="on-clock"></i> On the clock</span><span><i class="mine"></i> Your column</span><small>Scroll horizontally to view every manager</small></div>'
-      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable draft board"><div class="draft-board-grid" style="'+boardWidth+'"><div class="draft-board-corner">ROUND</div>'+headers+cells+'</div></div>'
-      +'</section>'
-      +'<div class="draft-recap-grid section-gap"><section class="panel">'+panelHeading('Recent picks','Latest selections')
-      +(recent.length?recent.map(p=>{
-        const team=programIndex.get(String(p.program_id)),manager=memberIndex.get(String(p.manager_id));
-        return '<div class="draft-recap-item"><span class="draft-recap-position">'+p.overall+'</span>'+(team?img(team):'')+'<span class="grow"><strong>'+escapeHTML(team?.name||'School')+'</strong><small>'+escapeHTML(manager?.display_name||'Manager')+' · Round '+p.round+'</small></span></div>';
-      }).join(''):empty('No picks yet','The first selection will appear here.'))+'</section>'
-      +'<section class="panel">'+panelHeading('Upcoming picks','Next managers to select')
-      +(nextSlots.length?nextSlots.map(item=>'<div class="draft-next-item"><span class="draft-recap-position">'+item.overall+'</span>'+avatar(item.manager||{display_name:'?'})+'<div class="grow"><strong>'+escapeHTML(item.manager?.display_name||'Manager')+'</strong><small>'+(item.overall===completed+1&&status==='live'?'On the clock':'Upcoming selection')+'</small></div></div>').join(''):empty(preview?'Awaiting managers':'Draft complete',preview?'Upcoming picks will appear once managers join.':''))+'</section></div>';
+    const boardTab=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(boardMode===id?'active':'')+'" aria-pressed="'+(boardMode===id)+'">'+label+'</button>';
+    const board='<section class="panel draft-board-panel draft-v2-board" id="draft-board-section">'
+      +'<div class="draft-board-toolbar"><div><span class="draft-section-overline">THE FULL LEAGUE</span><h2>Snake draft board</h2>'
+      +'<p>All managers, every round, every permanent selection. Click a picked school to view its profile.</p></div>'
+      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My picks')+'</div></div>'
+      +'<div class="draft-board-key"><span><i class="selected"></i> Picked programs</span><span><i class="on-clock"></i> On the clock</span>'
+      +'<span><i class="mine"></i> My draft column</span><button type="button" data-act="draft-follow-live">Jump to current round ↗</button></div>'
+      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board"><div class="draft-board-grid" style="'+boardWidth+'">'
+      +'<div class="draft-board-corner">ROUND</div>'+boardHeaders+boardCells+'</div></div>'
+      +'<div class="draft-board-footer"><span>Rounds alternate direction to maintain the original snake order.</span>'
+      +'<span>'+completed+' / '+plannedTotal+' picks made</span></div></section>';
+    const recent=picks().slice(-6).reverse().map(p=>{
+      const school=programIndex.get(String(p.program_id)),member=managerIndex.get(String(p.manager_id));
+      return school?'<button type="button" class="draft-recent-card" data-act="open-program" data-id="'+escapeHTML(school.id)+'" '+draftStyle(school)+'>'
+        +'<span class="draft-recent-logo">'+img(school)+'</span><span><small>PICK #'+p.overall+' · ROUND '+p.round+'</small>'
+        +'<strong>'+escapeHTML(school.name)+'</strong><small>'+escapeHTML(member?.display_name||'Manager')+'</small></span></button>':'';
+    }).join('');
+    const foot='<section class="draft-recent-section"><div><span class="draft-section-overline">JUST OFF THE BOARD</span><h2>Recent selections</h2></div>'
+      +(recent?'<div class="draft-recent-grid">'+recent+'</div>':'<p>No picks yet. Your dynasty draft history begins here.</p>')+'</section>';
+    const sheet=chosen?'<div class="draft-selection-sheet" role="dialog" aria-modal="true" aria-label="Selected draft program">'
+      +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
+      +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
+      +selectedView+'</div></div>':'';
+    return heading('2026–27 · INAUGURAL SNAKE DRAFT','Draft Room','Scout programs, make your selections and follow every pick as it happens.')
+      +'<div class="draft-v2">'+hero+tracker+ready
+      +'<div class="draft-workspace">'+pool+sidebar+'</div>'+board+foot+'</div>'+sheet;
   }
 
   function updateTradeSelections(){

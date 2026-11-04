@@ -244,3 +244,8 @@ Real live game results and scoring ingestion, year-end roster snapshots / season
 ### Daily overview and quick season score (November 2026)
 
 League Overview now shows a compact, automatically refreshed daily scoreboard for eligible programs, prioritizing a manager’s own matchups and highlighting live scores. Each card opens the full Results view for today. The preview uses the existing public game endpoint and does not modify scoring. My Team shows current season fantasy points in the top four-stat grid instead of burying the total below the roster.
+
+
+### Draft-room scouting and return navigation (November 2026)
+
+Draft queues now show account-sync status and have an immediate **Move to #1** action, while preserving single-step arrows and desktop drag-and-drop. The optional comparison panel shows the first four available queued schools side-by-side using the current-season Torvik rank, adjusted offense, adjusted defense, and WAB; unavailable ratings remain blank rather than guessed. Opening school and manager profiles now preserves the prior page scroll position when returning via **Back**, which helps when browsing long program directories and draft boards.

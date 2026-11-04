@@ -66,9 +66,10 @@
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
   let ratingConference='all',ratingOwnership='all',ratingShown=40;
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
+  let programBackScroll=0,managerBackScroll=0;
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
-  let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftQueueDragging='';
-  let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null;
+  let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftCompareExpanded=false,draftQueueDragging='';
+  let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
@@ -1082,7 +1083,7 @@
   function prepareDraftQueue(){
     if(!me||draftWatchlistOwner===String(me.id))return;
     draftWatchlistOwner=String(me.id);
-    draftQueueVersion=0;draftQueueDirty=false;draftQueueSaving=false;
+    draftQueueVersion=0;draftQueueDirty=false;draftQueueSaving=false;draftQueueSyncError=false;
     if(draftQueueRetryTimer){clearTimeout(draftQueueRetryTimer);draftQueueRetryTimer=null;}
     try{draftWatchlist=normalizeDraftQueue(JSON.parse(localStorage.getItem(draftQueueKey())||'[]'));}
     catch(e){draftWatchlist=[];}
@@ -1115,10 +1116,21 @@
     draftWatchlist=remote;
     draftQueueVersion=version;
     writeLocalDraftQueue();
+    updateDraftQueueSyncStatus();
+  }
+  const draftQueueSyncMessage=()=>draftQueueSyncError?'Sync delayed · retrying':
+    draftQueueDirty||draftQueueSaving?'Syncing changes…':
+    draftQueueVersion>0?'Saved to account':'Waiting for first sync';
+  function updateDraftQueueSyncStatus(){
+    const status=root.querySelector('.draft-queue-sync');
+    if(!status)return;
+    status.textContent=draftQueueSyncMessage();
+    status.classList.toggle('has-error',draftQueueSyncError);
   }
   function storeDraftQueue(){
     writeLocalDraftQueue();
     draftQueueDirty=true;
+    updateDraftQueueSyncStatus();
     if(draftQueueRetryTimer)clearTimeout(draftQueueRetryTimer);
     draftQueueRetryTimer=setTimeout(flushDraftQueue,180);
   }
@@ -1127,11 +1139,13 @@
     if(!me||!draftQueueDirty||draftQueueSaving)return;
     const owner=draftWatchlistOwner,local=draftWatchlist.slice(),version=draftQueueVersion;
     draftQueueSaving=true;draftQueueDirty=false;
+    updateDraftQueueSyncStatus();
     let retryDelay=180;
     try{
       const saved=await api('draft/queue',{program_ids:local,version});
       if(owner!==draftWatchlistOwner)return;
       draftQueueVersion=Number(saved.version)||version+1;
+      draftQueueSyncError=false;
       markDraftQueueMigrated();
     }catch(error){
       if(owner!==draftWatchlistOwner)return;
@@ -1139,15 +1153,18 @@
       if(error.status===409&&error.payload?.draft_queue){
         const remote=normalizeDraftQueue(error.payload.draft_queue.items);
         draftQueueVersion=Number(error.payload.draft_queue.version)||0;
+        draftQueueSyncError=false;
         // Never discard either device's selections after a simultaneous edit.
         draftWatchlist=normalizeDraftQueue([...draftWatchlist,...remote]);
         writeLocalDraftQueue();
       }else{
         retryDelay=12000;
+        draftQueueSyncError=true;
         notice('Queue saved on this device, but account sync failed. Retrying.',true);
       }
     }finally{
       draftQueueSaving=false;
+      updateDraftQueueSyncStatus();
       if(owner===draftWatchlistOwner&&draftQueueDirty&&!draftQueueRetryTimer)
         draftQueueRetryTimer=setTimeout(flushDraftQueue,retryDelay);
     }
@@ -1163,6 +1180,18 @@
     const moved=root.querySelector('.draft-queue-row[data-queue-id="'+String(id)+'"]');
     const control=moved?.querySelector('[data-act="draft-queue-'+(delta<0?'up':'down')+'"]');
     if(control&&!control.disabled)control.focus({preventScroll:true});
+    return true;
+  }
+  // One tap promotes a school from anywhere in the saved priority list.
+  function moveDraftQueueToTop(id){
+    prepareDraftQueue();
+    const index=draftWatchlist.indexOf(String(id));
+    if(index<=0)return false;
+    draftWatchlist.splice(index,1);
+    draftWatchlist.unshift(String(id));
+    storeDraftQueue();
+    render();
+    root.querySelector('#draft-queue-section')?.scrollIntoView({behavior:'smooth',block:'start'});
     return true;
   }
   function insertDraftQueue(id,targetId,after=false){
@@ -1282,6 +1311,26 @@
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(draftConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     const sortButton=(id,label)=>'<button type="button" data-act="draft-pool-sort" data-id="'+id+'" aria-pressed="'+(draftSort===id)+'" class="'+(draftSort===id?'active':'')+'">'+label+'</button>';
     const queueLabel=usedQueue.length?usedQueue.length+' in priority order':'Queue is empty';
+    const compareMetric=(value,digits=1)=>value!==null&&value!==undefined&&
+      Number.isFinite(Number(value))?Number(value).toFixed(digits):'—';
+    const compareCards=usedQueue.slice(0,4).map((id,i)=>{
+      const p=programIndex.get(id);
+      if(!p)return '';
+      const rating=ratingInfo(p),rank=rating?.rank;
+      const metric=(label,value)=>'<div><span>'+label+'</span><strong>'+escapeHTML(String(value))+'</strong></div>';
+      return '<article class="draft-compare-card" '+draftStyle(p)+'>'
+        +'<div class="draft-compare-top"><span class="draft-compare-priority">#'+(i+1)+' PRIORITY</span>'
+        +'<span class="draft-compare-rank">'+(rank?'T-Rank #'+rank:'T-Rank pending')+'</span></div>'
+        +'<button type="button" class="draft-compare-school" data-act="draft-select" data-id="'+escapeHTML(id)+'">'
+        +'<span class="draft-compare-logo">'+img(p)+'</span><span><strong>'+escapeHTML(p.name)+'</strong>'
+        +'<small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
+        +'<div class="draft-compare-metrics">'+metric('OFFENSE',compareMetric(rating?.adj_o))
+        +metric('DEFENSE',compareMetric(rating?.adj_d))
+        +metric('WAB',compareMetric(rating?.wab))+'</div>'
+        +'<div class="draft-compare-actions"><button type="button" data-act="draft-select" data-id="'+escapeHTML(id)+'">Preview ›</button>'
+        +(i?'<button type="button" data-act="draft-queue-top" data-id="'+escapeHTML(id)+'">Make #1</button>':'<span>Top choice</span>')
+        +'</div></article>';
+    }).join('');
     const cards=sorted.map(p=>{
       const rank=programRank(p),queueNumber=queuePosition.get(String(p.id)),queued=!!queueNumber;
       const selected=chosen?.id===p.id;
@@ -1337,7 +1386,7 @@
         +'<button type="button" class="draft-queue-team" data-act="draft-select" data-id="'+escapeHTML(id)+'" title="Preview '+escapeHTML(p.name)+'">'
         +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · T-Rank #'+rank:'')+'</small></span>'
         +'<span class="draft-queue-pick">Preview ›</span></button>'
-        +'<div class="draft-queue-controls"><button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
+        +'<div class="draft-queue-controls">'+(!first?'<button type="button" class="draft-queue-top" data-act="draft-queue-top" data-id="'+escapeHTML(id)+'" aria-label="Move '+escapeHTML(p.name)+' to first place in draft queue" title="Move to #1">⇧</button>':'')+'<button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
         +'<button type="button" data-act="draft-queue-down" data-id="'+escapeHTML(id)+'" '+(last?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' down in draft queue" title="Move down">↓</button>'
         +'<button type="button" class="draft-queue-remove" data-act="draft-queue-toggle" data-id="'+escapeHTML(id)+'" aria-label="Remove '+escapeHTML(p.name)+' from draft queue" title="Remove from queue">×</button></div></div>';
     }).join('');
@@ -1345,12 +1394,15 @@
       +'<div class="draft-queue-manager-head"><div class="draft-queue-title"><span class="draft-section-overline">YOUR PRIORITY LIST</span><h2>My draft queue <span>'+usedQueue.length+'</span></h2>'
       +'<p>Put your top choice at #1. Drag on desktop or use the arrow buttons on mobile. Your priority order syncs across signed-in devices. No automatic picks.</p></div>'
       +'<div class="draft-queue-header-actions"><button type="button" data-act="draft-jump-pool" class="draft-queue-find">+ Add schools</button>'
+      +(usedQueue.length>1?'<button type="button" data-act="draft-compare-toggle" class="draft-compare-toggle" aria-expanded="'+draftCompareExpanded+'">'+(draftCompareExpanded?'Hide comparison':'Compare top 4')+'</button>':'')
       +(usedQueue.length?'<button type="button" data-act="draft-queue-collapse" class="draft-queue-collapse" aria-expanded="'+draftQueueExpanded+'">'+(draftQueueExpanded?'Collapse':'Expand queue')+'</button>':'')+'</div></div>'
       +(usedQueue.length
         ?'<div class="draft-queue-topline"><span>FIRST CHOICE</span><strong>#1 '+escapeHTML(programIndex.get(usedQueue[0])?.name||'School')+'</strong><span>'+escapeHTML(queueLabel)+'</span></div>'
+          +(draftCompareExpanded&&usedQueue.length>1?'<div class="draft-compare-section"><div class="draft-compare-heading"><strong>Compare your top '+Math.min(4,usedQueue.length)+' choices</strong><span>2026–27 T-Rank · informational ratings</span></div><div class="draft-compare-grid">'+compareCards+'</div><small>Higher WAB and offense are better. Lower defensive efficiency is better. Ratings are not fantasy projections.</small></div>':'')
           +(draftQueueExpanded?'<div class="draft-queue-list" aria-label="Draft priority order">'+queueItems+'</div>':'')
         :'<div class="draft-queue-empty"><span class="draft-queue-empty-icon">☆</span><div><strong>Start your queue</strong><p>Tap the star on any available school to add it here. Rearrange your picks whenever you like.</p></div>'
           +'<button type="button" data-act="draft-jump-pool">Browse available schools ›</button></div>')
+      +'<div class="draft-queue-sync" role="status" aria-live="polite">'+escapeHTML(draftQueueSyncMessage())+'</div>'
       +'</section>';
     const myPickList=myPicks.slice(0,4).map(p=>{
       const school=programIndex.get(String(p.program_id));
@@ -1506,7 +1558,7 @@
       +'</section>';
   }
 
-  function profileBack(){return '<button class="profile-back" data-act="tab" data-id="'+escapeHTML(current==='program-detail'?programBackPage:managerBackPage)+'">← Back</button>';}
+  function profileBack(){return '<button class="profile-back" data-act="profile-back">← Back</button>';}
   function programProfilePage(){
     const p=programs().find(p=>p.id===selectedProgramId)||(schoolLeaders?.directory||[]).find(p=>p.id===selectedProgramId);
     if(!p)return heading('', 'Program unavailable')+profileBack();
@@ -1790,6 +1842,13 @@
       resultsSelectedDay=resultsToday();resultsScope='league';resultsSearch='';resultsShown=40;
       current='results';render();loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
     }
+    if(act==='profile-back'){
+      const to=current==='program-detail'?programBackPage:managerBackPage;
+      const restore=current==='program-detail'?programBackScroll:managerBackScroll;
+      current=to;render();if(to==='programs')filterPrograms();
+      requestAnimationFrame(()=>window.scrollTo({top:restore,behavior:'auto'}));
+      return;
+    }
     if(act==='tab'){
       if(id==='programs'&&current!=='programs')ratingSeason=season();
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
@@ -1819,12 +1878,12 @@
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
     if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
-      programBackPage=current==='program-detail'?programBackPage:current;
+      if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
       selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
         programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
-      managerBackPage=current==='manager-detail'?managerBackPage:current;
+      if(current!=='manager-detail'){managerBackPage=current;managerBackScroll=window.scrollY;}
       selectedManagerId=id;current='manager-detail';render();window.scrollTo({top:0});return;
     }
     if(act==='commish-section'){adminSection=id;render();if(id==='data')loadResults();return;}
@@ -1838,6 +1897,8 @@
     if(act==='draft-queue-up'||act==='draft-queue-down'){
       moveDraftQueue(id,act==='draft-queue-up'?-1:1);return;
     }
+    if(act==='draft-queue-top'){moveDraftQueueToTop(id);return;}
+    if(act==='draft-compare-toggle'){draftCompareExpanded=!draftCompareExpanded;render();return;}
     if(act==='draft-queue-collapse'){draftQueueExpanded=!draftQueueExpanded;render();return;}
     if(act==='draft-jump-queue'){
       draftQueueExpanded=true;render();

@@ -59,7 +59,7 @@
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
   let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';
   let avatarDraft=null;
-  let inviteLink='', busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
+  let inviteLink='', passwordResetReceipt=null, busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let activitySnapshot=null,activityLoading=false,activityError='',activityRange='7d',activityMemberFilter='all',activityFetchedAt=0;
   let activityLastPage='',activityLastPing=0;
@@ -2227,7 +2227,7 @@
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','People & invites'],['activity','Activity','Visits & actions'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
+    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','Accounts & invites'],['activity','Activity','Visits & actions'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -2355,8 +2355,20 @@
     }else if(adminSection==='activity'){
       body=activityMonitorPage();
     }else if(adminSection==='members'){
-      body='<section class="panel setting-panel">'+panelHeading('Managers',members().length+' / '+cap+' registered')
-        +members().map(u=>'<div class="manager-card">'+avatar(u)+'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div><span class="status '+(u.role==='commissioner'?'wait':'')+'">'+(u.role==='commissioner'?'COMMISSIONER':'MANAGER')+'</span></div>').join('')
+      body='<section class="panel setting-panel">'+panelHeading('Account management',members().length+' / '+cap+' accounts')
+        +'<p class="hint">Usernames are visible to the commissioner. Passwords are securely hashed and cannot be viewed. Reset a manager to create a new temporary password and sign out their existing devices.</p>'
+        +members().map(u=>'<div class="manager-card account-manager-row">'+avatar(u)
+        +'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div>'
+        +(u.role==='manager'?'<button class="btn small secondary" type="button" data-act="admin-reset-member-password" data-id="'+escapeHTML(u.id)+'">Reset password</button>':
+          '<span class="status wait">COMMISSIONER</span>')+'</div>').join('')
+        +(passwordResetReceipt?'<div class="account-reset-receipt" role="status">'
+          +'<strong>Temporary password for @'+escapeHTML(passwordResetReceipt.username)+'</strong>'
+          +'<p>Copy and share privately with '+escapeHTML(passwordResetReceipt.display_name)+'. Their previous password and all existing sessions are now invalid. This password cannot be retrieved again after you dismiss it or leave this page.</p>'
+          +'<div class="account-reset-credential"><code>'+escapeHTML(passwordResetReceipt.temporary_password)+'</code></div>'
+          +'<div class="button-row"><button class="btn small" type="button" data-act="copy-reset-password">Copy password</button>'
+          +'<button class="btn small secondary" type="button" data-act="dismiss-reset-password">Dismiss</button></div>'
+          +'</div>':'')
+        +'<p class="hint section-gap">Managers can set their own permanent password in My Settings after signing in with the temporary password.</p>'
         +'</section><section class="panel setting-panel section-gap">'+panelHeading('Invitations')
         +'<p class="hint">Each invite link expires after 7 days and works once.</p>'
         +'<div class="button-row section-gap"><button class="btn" data-act="invite" '+(members().length>=cap||settings.draft_status!=='pending'?'disabled':'')+'>Generate invite</button></div>'
@@ -2473,6 +2485,7 @@
     if(act==='commish-section'){
       if(adminSection==='programs'&&id!=='programs'&&poolDirty&&!window.confirm('Leave without saving your program selections?'))return;
       if(adminSection==='programs'&&id!=='programs')resetPoolDraft();
+      if(id!==adminSection)passwordResetReceipt=null;
       adminSection=id;render();if(id==='data')loadResults();if(id==='activity')loadActivity();return;
     }
     if(act==='pool-conf'||act==='pool-major'||act==='pool-all-confs'){
@@ -2571,7 +2584,7 @@
       draftOrderPreview=list;render();return;
     }
     if(act==='auth-mode'){authMode=button.dataset.mode;renderAuth();return;}
-    if(act==='logout'){await api('logout',{});forgetSignedInToken();me=null;league=null;inviteLink='';await loadPublic();renderAuth();return;}
+    if(act==='logout'){passwordResetReceipt=null;await api('logout',{});forgetSignedInToken();me=null;league=null;inviteLink='';await loadPublic();renderAuth();return;}
     if(busy)return;
     busy=true;
     try{
@@ -2716,6 +2729,24 @@
         await api('admin/settings',{conferences,included_programs:included,excluded_programs:excluded,rounds:league.settings.rounds});
         poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;
         schoolLeaders=null;programResultCache={};standingsFetchedAt=0;notice('Eligible program pool saved.');
+      }else if(act==='admin-reset-member-password'){
+        if(me.role!=='commissioner')throw new Error('Commissioner access required.');
+        const target=members().find(u=>String(u.id)===String(id));
+        if(!target||target.role!=='manager')throw new Error('Select a manager account.');
+        if(!window.confirm('Reset @'+target.username+'? Their current password will stop working and all their devices will be signed out.'))return;
+        passwordResetReceipt=null;
+        const result=await api('admin/member/reset-password',{manager_id:String(target.id)});
+        passwordResetReceipt={username:result.username,display_name:result.display_name,temporary_password:result.temporary_password};
+        render();
+        notice('Temporary password generated for @'+result.username+'. Copy it before leaving this page.');
+        return;
+      }else if(act==='copy-reset-password'){
+        if(!passwordResetReceipt)throw new Error('No temporary password is available. Reset the manager again.');
+        await navigator.clipboard.writeText(passwordResetReceipt.temporary_password);
+        notice('Temporary password copied. Share it privately.');
+        return;
+      }else if(act==='dismiss-reset-password'){
+        passwordResetReceipt=null;render();return;
       }else if(act==='invite'){
         const r=await api('admin/invite',{});
         inviteLink=location.origin+'/?invite='+encodeURIComponent(r.code);

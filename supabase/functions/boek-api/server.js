@@ -523,6 +523,25 @@ export default (function makeWorker(){
     }
     if(user.role!=='commissioner')return failure('Commissioner access required.',403);
 
+    // Commissioner-only recovery. Existing passwords are never exposed.
+    // The temporary credential is returned only in the reset response.
+    if(path==='admin/member/reset-password'){
+      const targetId=String(data.manager_id||'').trim();
+      if(!/^[0-9a-f-]{36}$/i.test(targetId))return failure('Choose a valid manager.',400);
+      const target=await q(env,'SELECT id,username,display_name,role FROM users WHERE id=?',targetId).first();
+      if(!target||target.role!=='manager')return failure('Only manager accounts can be reset.',404);
+      const temporaryPassword=rand(18);
+      const salt=rand(18),passwordHash=await hashPassword(temporaryPassword,salt);
+      // Hash update and session revocation happen in the same transaction.
+      const operations=await env.DB.batch([
+        q(env,"UPDATE users SET password_hash=?,salt=? WHERE id=? AND role='manager'",passwordHash,salt,target.id),
+        q(env,'DELETE FROM sessions WHERE user_id=?',target.id)
+      ]);
+      if(Number(operations[0]?.meta?.changes)!==1)return failure('Password reset failed.',500);
+      return response({ok:true,manager_id:target.id,username:target.username,
+        display_name:target.display_name,temporary_password:temporaryPassword});
+    }
+
     if(path==='admin/data/sync'){
       const settings=await getSettings(env),day=String(data.date||DATA_PIPELINE.localDay());
       if(!DATA_PIPELINE.dayInSeason(settings.current_season,day))return failure('Choose a date in the current season.',400);

@@ -5002,3 +5002,19 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
   .activity-event{align-items:flex-start;gap:9px}.activity-event time{font-size:9px;padding-top:5px}
   .activity-event-main{display:block}.activity-event-main span{display:block;margin-top:3px}
 }
+
+/* Commissioner account recovery: compact cards and a transient, one-time credential. */
+.account-manager-row{min-width:0}
+.account-manager-row .grow{min-width:0}
+.account-manager-row .grow small{overflow-wrap:anywhere}
+.account-manager-row .btn{flex-shrink:0}
+.account-reset-receipt{margin-top:18px;padding:17px 18px;border:1px solid #cbd8eb;border-radius:12px;background:#f6f9fe}
+.account-reset-receipt>strong{display:block;font-size:15px}
+.account-reset-receipt p{margin:8px 0 12px;font-size:13px;color:#53647c;line-height:1.55}
+.account-reset-credential{margin:0 0 12px;padding:12px 14px;border-radius:9px;background:#fff;border:1px solid #dbe4ef;overflow-x:auto}
+.account-reset-credential code{font-size:15px;letter-spacing:.035em;font-weight:700;user-select:all;white-space:nowrap;overflow-wrap:normal}
+@media(max-width:520px){
+ .account-manager-row{flex-wrap:wrap;gap:10px}
+ .account-manager-row .btn{margin-left:auto}
+ .account-reset-receipt{padding:14px}
+}

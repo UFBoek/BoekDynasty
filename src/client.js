@@ -72,6 +72,7 @@
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
+  let programScheduleCache={},programScheduleLoading={},programScheduleError={},programScheduleView='all';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
   let resultsLoadedDay='';
   let resultsSearch='',resultsShown=40,resultsStatusFilter='all',resultsNetDate=null,resultsRecordNote='',resultsQuadNote='',resultsRankingSource='pending',resultsRankingDate=null;
@@ -305,7 +306,11 @@
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
-    if(current==='program-detail')loadRatings(ratingYear(selectedProgramSeason||season()));
+    if(current==='program-detail'){
+      loadRatings(ratingYear(selectedProgramSeason||season()));
+      if(selectedProgramId&&!programScheduleCache[selectedProgramId]&&!programScheduleLoading[selectedProgramId]&&
+        !programScheduleError[selectedProgramId])loadProgramSchedule(selectedProgramId);
+    }
     if(current==='draft'){
       loadRatings(ratingYear(season()));
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
@@ -397,6 +402,22 @@
       }else{resultsAP=[];resultsAPAsOf=null;resultsAPSource='';}
     }catch(e){if(request===resultsRequest)resultsError=e.message;}
     finally{if(request===resultsRequest){resultsLoading=false;if(current==='results'||(current==='commissioner'&&adminSection==='data'))render();}}
+  }
+  async function loadProgramSchedule(id,force=false){
+    if(!me||!id||programScheduleLoading[id])return;
+    const cached=programScheduleCache[id];
+    if(!force&&cached?.season===season()&&Date.now()-(cached.fetchedAt||0)<1800000)return;
+    programScheduleLoading[id]=true;
+    delete programScheduleError[id];
+    try{
+      const data=await api('data/schedule?id='+encodeURIComponent(id));
+      if(data.season!==season()||!Array.isArray(data.games))throw Error('Schedule returned invalid season data.');
+      programScheduleCache[id]={...data,fetchedAt:Date.now()};
+    }catch(e){programScheduleError[id]=String(e.message||e);}
+    finally{
+      delete programScheduleLoading[id];
+      if(current==='program-detail'&&String(selectedProgramId)===String(id))render();
+    }
   }
   async function loadProgramResults(id){
     if(!me||(programResultCache[id]?.season===season()&&Date.now()-(programResultCache[id]?.loadedAt||0)<60000))return;
@@ -1660,6 +1681,65 @@
   }
 
   function profileBack(){return '<button class="profile-back" data-act="profile-back">← Back</button>';}
+  function programSeasonSchedule(p){
+    const data=programScheduleCache[String(p.id)];
+    const loading=!!programScheduleLoading[p.id],error=programScheduleError[p.id];
+    const all=data?.season===season()?data.games:[];
+    const upcoming=all.filter(g=>g.status==='scheduled'||g.status==='live');
+    const complete=all.filter(g=>g.status==='final');
+    const shown=programScheduleView==='upcoming'?upcoming:programScheduleView==='completed'?complete:all;
+    const tab=(id,label,n)=>'<button type="button" data-act="schedule-view" data-id="'+id+'"'+
+      ' class="'+(programScheduleView===id?'active':'')+'" aria-pressed="'+(programScheduleView===id)+'">'+
+      label+' <span>'+n+'</span></button>';
+    const date=g=>g.start_utc?new Date(g.start_utc).toLocaleDateString('en-US',{
+      timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'}):g.game_date;
+    const time=g=>g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{
+      timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'TBD';
+    const rows=shown.map(g=>{
+      const ownHome=String(g.home_id)===String(p.id);
+      const ownScore=ownHome?g.home_score:g.away_score,oppScore=ownHome?g.away_score:g.home_score;
+      const opponent=programs().find(x=>String(x.id)===String(g.opponent_id));
+      const score=g.status==='final'&&ownScore!==null&&oppScore!==null
+        ?(Number(ownScore)>Number(oppScore)?'W ':Number(ownScore)<Number(oppScore)?'L ':'T ')+ownScore+'–'+oppScore:
+        g.status==='live'?'LIVE '+(ownScore??'–')+'–'+(oppScore??'–'):
+        g.status==='scheduled'?time(g):String(g.status||'TBD').toUpperCase();
+      const quad=quadLabel(g.quad,g.q1a),bonus=quadBonusText(g.quad,g.q1a);
+      const venue=g.venue==='neutral'?'Neutral':g.venue==='away'?'Away':'Home';
+      const note=(g.conference_game?'Conference':'Nonconference')+(Number(g.season_type)===1?' · Exhibition':'');
+      const hasLink=/^\d+$/.test(String(g.game_id||''));
+      return '<div class="program-schedule-row '+(g.status==='final'?'is-completed':g.status==='live'?'is-live':'')+'">'+
+        '<time>'+escapeHTML(date(g))+'</time>'+
+        '<span class="program-schedule-venue">'+escapeHTML(venue)+'</span>'+
+        '<span class="program-schedule-opponent">'+scoreboardLogo(g.opponent_id)+
+          '<span><strong>'+escapeHTML(g.opponent_name||'Opponent TBD')+'</strong><small>'+escapeHTML(note)+'</small></span></span>'+
+        '<span class="program-schedule-quad" title="'+escapeHTML(quadMeaning(g.quad,g.q1a,data?.rankings_source==='torvik'))+'">'+
+          quad+(bonus?'<small>'+bonus+'</small>':'')+'</span>'+
+        '<span class="program-schedule-result">'+escapeHTML(score)+'</span>'+
+        (hasLink?'<a class="program-schedule-link" href="https://www.espn.com/mens-college-basketball/game/_/gameId/'+
+          escapeHTML(g.game_id)+'" target="_blank" rel="noopener noreferrer" aria-label="Game details">↗</a>':'')+
+        '</div>';
+    }).join('');
+    const message=error||data?.source_error?
+      'ESPN team schedule is temporarily unavailable. Only previously imported games may be shown.':
+      data?.source==='ESPN published schedule'?
+        'Published ESPN schedule combined with verified results. Unannounced tournament matchups are added when confirmed.':
+        'Only imported fixtures are available. Published future games will appear when the team schedule is available.';
+    return '<section id="program-schedule" class="panel program-full-schedule">'+
+      '<div class="program-schedule-heading"><div><span class="eyebrow">COMPLETE PUBLISHED SLATE</span><h2>'+
+      escapeHTML(season())+' Schedule</h2><p>Every announced matchup, venue and potential quadrant win bonus</p></div>'+
+      '<button type="button" class="btn small secondary" data-act="schedule-retry" data-id="'+escapeHTML(p.id)+'">'+
+        (loading?'Loading…':'↻ Refresh schedule')+'</button></div>'+
+      '<div class="program-schedule-tabs" role="group" aria-label="Schedule game filters">'+
+      tab('all','All',all.length)+tab('upcoming','Upcoming',upcoming.length)+
+      tab('completed','Completed',complete.length)+'</div>'+
+      (rows?'<div class="program-schedule-list">'+rows+'</div>':
+        '<div class="program-schedule-placeholder">'+escapeHTML(loading?'Loading published 2026–27 schedule…':
+          error||'No games match this filter.')+'</div>')+
+      '<p class="program-schedule-note">'+escapeHTML(message)+
+      (data?.rankings_source==='torvik'?' Quadrants are provisional until official NCAA NET is published.':
+        data?.rankings_source==='pending'?' Quadrants will appear when team rankings are available.':'')+
+      ' Bonus points are earned only for wins.</p></section>';
+  }
   function programProfilePage(){
     const p=programs().find(p=>p.id===selectedProgramId)||(schoolLeaders?.directory||[]).find(p=>p.id===selectedProgramId);
     if(!p)return heading('', 'Program unavailable')+profileBack();
@@ -1734,6 +1814,7 @@
       +'<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+currentPoints+'</strong><small>'+(currentStats?.status==='partial'?'Verified components only':'Season scoring pending')+'</small></div>'
       +'<div><span>SEASON RECORD</span><strong>'+recordText+'</strong></div>'
       +'<div><span>'+(report?.ranking_source==='torvik'?'T-RANK (PRELIM)':'NET RANK')+'</span><strong>'+(report?.net?'#'+report.net.net_rank:'—')+'</strong></div></div>'
+      +programSeasonSchedule(p)
       +analytics
        +'<section class="panel program-history-panel">'+panelHeading('Season-by-season performance','Select any season from 2021–22 onward')
       +'<div class="program-season-strip">'+seasonRows+'</div>'+yearDetail+'</section>'
@@ -1960,6 +2041,8 @@
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
     }
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
+    if(act==='schedule-view'){programScheduleView=id;render();return;}
+    if(act==='schedule-retry'){loadProgramSchedule(id,true);return;}
     if(act==='view-ratings'){
       ratingSeason=button.dataset.season||season();programMode='ratings';current='programs';render();window.scrollTo({top:0});return;
     }
@@ -1985,8 +2068,10 @@
     if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
+      if(String(selectedProgramId)!==String(id))programScheduleView='all';
       selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
-        programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();loadProgramResults(id);window.scrollTo({top:0});return;
+        programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();
+      loadProgramResults(id);loadProgramSchedule(id);window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
       if(current!=='manager-detail'){managerBackPage=current;managerBackScroll=window.scrollY;}

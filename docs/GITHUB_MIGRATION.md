@@ -1,48 +1,57 @@
-# CBB Dynasty: GitHub Pages + Supabase deployment
+# Boek Dynasty: Supabase migration and GitHub deployment
 
-The public site is served by GitHub Pages. The private API is a Supabase Edge Function using PostgreSQL. Cloudflare D1 is no longer needed by the new site.
+## Current production (live)
 
-## Services
-- Website: `https://ufboek.github.io/BoekDynasty/`
-- API: `https://hscgsaujazcyneykarai.supabase.co/functions/v1/boek-api`
-- Database: Supabase project `hscgsaujazcyneykarai`
-- Ingestion: Supabase `pg_cron` + `pg_net` call authenticated background jobs in the Edge Function. ESPN games and NCAA NET / AP ranking updates are stored in PostgreSQL. Historical archive refreshes happen separately.
-- Continuous deployment: `.github/workflows/deploy-pages.yml` runs on pushes to `main`.
+- Website: https://boek-dynasty.fig-league-archive.workers.dev/
+- Public source: https://github.com/UFBoek/BoekDynasty (`main`)
+- API: https://hscgsaujazcyneykarai.supabase.co/functions/v1/boek-api
+- Database: Supabase PostgreSQL project `hscgsaujazcyneykarai`
+- Frontend: Stateless Cloudflare Worker for the existing URL. It serves assets committed to GitHub and forwards `/api/*` to Supabase. It has **zero D1 bindings and zero Cloudflare cron jobs**.
+- Results: Supabase scheduled imports from ESPN, including live games every 15 minutes, reconciliation, historical backfills, official NET and AP rankings.
 
-## Important one-time GitHub Pages setting
-Repository Settings → Pages → Build and deployment → Source: **GitHub Actions**.
-GitHub does not permit a normal `GITHUB_TOKEN` to enable Pages from `actions/configure-pages` automatically. This repository setting must be enabled by an owner if it has not been set already.
+The production site is **already off D1**. The previous D1 database and `dist/worker.js` remain intact solely for rollback. Do not restore the old D1 Worker by accident.
 
-## Repository structure
-- `scripts/build-pages.mjs`: bundles the HTML/CSS/JavaScript/image into `pages-dist/`, rebases the root paths for `/BoekDynasty/`, and points the API client at Supabase.
-- `supabase/functions/boek-api/index.ts`: secure CORS, API routing and authenticated cron imports.
-- `supabase/functions/boek-api/server.js`: existing dynasty API rules, password verification, trades and draft logic.
-- `supabase/functions/boek-api/db.js`: parameterized PostgreSQL adapter and transactional batched writes.
-- `supabase/functions/boek-api/results.js`: ESPN scoreboard, historical scoring, NET quadrant and award imports.
-- `supabase/migrations/`: database tables, NCAA tournament records, and job schedules.
+## GitHub Pages: one setting is still required
+
+The alternative static site at https://ufboek.github.io/BoekDynasty/ is **not published**. GitHub Actions builds the client successfully, but `actions/configure-pages` fails because GitHub Pages itself is not enabled for this repository. The standard `GITHUB_TOKEN` cannot create a Pages site with `enablement: true`; it needs a more privileged personal or GitHub App token.
+
+**The repository owner must visit:** https://github.com/UFBoek/BoekDynasty/settings/pages
+- Under **Build and deployment**, select **GitHub Actions** as the source.
+- Then visit https://github.com/UFBoek/BoekDynasty/actions/workflows/deploy-pages.yml and rerun the failed deployment, or push a new commit to `main`. The workflow also runs automatically on future pushes to `main`.
+- After a successful deployment, open the Pages URL and sign in. The existing Worker URL will continue to work until an explicit retirement decision.
+
+Do not describe the Pages URL as live until it actually returns HTTP 200 and the login/browser flows are checked.
+
+## Code paths
+
+- `src/client.js`: canonical UI; no D1-specific changes are needed here.
+- `src/worker-proxy.js`: existing-URL frontend and authenticated API reverse proxy.
+- `scripts/build-worker-proxy.mjs`: builds `dist/worker-proxy.js` from the canonical interface assets and inserts bearer-token session support.
+- `wrangler.toml`: points to `dist/worker-proxy.js`, no D1 binding, `crons = []`.
+- `scripts/build-pages.mjs`: builds `pages-dist/`, pointing at the Supabase API for `/BoekDynasty/`.
+- `.github/workflows/deploy-pages.yml`: Pages build and deployment.
+- `supabase/functions/boek-api/`: deployed private API, PostgreSQL adapter, ESPN result processing, validated scheduling.
+- `supabase/migrations/`: tables, RLS, NCAA results and all Supabase cron schedules.
+- `src/server.js`, `src/results.js`, `schema.sql`, `dist/worker.js`: legacy D1 implementation, retained as backup/reference, **not active**.
+
+## Data migration and checks
+
+- Imported original 26,176 recorded D1 games and historical metadata. Supabase ingestion continues adding missing games.
+- Imported the commissioner account (PBKDF2-SHA256 password hash and salt), 135 programs, invitations, final league scoring/settings, 1,794 NET ranks plus NET details, 335 NCAA tournament results, 573 awards, 827 game-coverage records, and 25 AP rankings.
+- Verified the final D1 settings match Supabase, including **7 managers**, **16 draft rounds**, the exact selected conference pool, and scoring rules (best 12 programs).
+- Verified the Supabase API `/status` and `/state` authorization, and a live ESPN import.
+- Historical leader calculations produced 1,988 school-season records across 365 programs before additional backfills.
+- Verified the live original URL now returns its UI, bearer-token client script, the correct 7-manager API status, and a 401 for unsigned `/state`.
+- Verified Cloudflare production script settings have `bindings: []` and `schedules: []`.
+- **Still requires human browser acceptance:** sign in with an actual migrated manager password, then test creating a second account from an invite, drafting, trading and your device's mobile/browser UI. A temporary authenticated end-to-end test was blocked by the available testing interface and was not claimed as passed.
 
 ## Security and operations
-- Never commit live password hashes, session tokens, invitation codes, Supabase connection strings, or service keys. The current public Git repository contains code and schema, not migrated private data.
-- All league tables have RLS enabled and explicitly deny direct `anon` / `authenticated` access. The API authenticates each manager before serving league data or allowing mutations.
-- GitHub Pages uses a Bearer token in localStorage; users must **sign in again** after moving from the Cloudflare Worker. Previous usernames/passwords remain valid because their PBKDF2 password hashes were migrated.
-- Supabase scheduled jobs use a random 256-bit secret generated inside PostgreSQL, stored encrypted in Vault, with only the SHA-256 hash in the private `settings` table. The raw secret is not in the Git repository.
-- Background jobs can be monitored with `SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'boek_%'`; API responses are in `net._http_response` (typically retained six hours).
-- Pages site uses the default deployed Supabase API URL, overridable via `BOEK_API_BASE`.
 
-## Rollback
-The previous Cloudflare Worker/D1 site and original database are preserved until the Pages URL, account login, signups, draft, results and trading are verified. **Avoid running both sites as independently writable live leagues after launch.** Disable old D1 ingestion or redirect the old site after the Pages cutover.
-
-## Verification already performed
-- Imported all 26,176 previously recorded D1 basketball games; manager/settings/invites, 135 imported programs, 1,794 NET rankings, 1,794 NET detail rows, 335 NCAA tournament results, 573 awards, 827 date/group coverage records, and 25 AP rankings.
-- Live `/status` returned HTTP 200 from Supabase with the league name and membership count.
-- Unauthenticated `/state` returned HTTP 401.
-- `/login` validation returned HTTP 400 and the correct GitHub Pages CORS origin.
-- Protected scheduled `ncaa`, `verify-leaders`, `verify-quads`, and `live` job routes returned HTTP 200. The live job fetched ESPN events successfully.
-- Historical leader calculation produced 1,988 program-season records across 365 programs and seasons 2021–22 to 2026–27.
-- Full browser registration/login/draft/trade testing requires a manager session and must still be completed before an irreversible shutdown of D1.
-
-## Deploy
-1. Enable GitHub Actions as the Pages source in repository Settings if necessary.
-2. Push changes to main (workflow builds and publishes).
-3. Confirm `https://ufboek.github.io/BoekDynasty/` loads, log in with an existing manager account, and validate results.
-4. After the site and accounts work, retire the Cloudflare Worker ingestion. Do not erase D1 until verified.
+- The GitHub repo is public. Never commit actual D1 data exports, user password hashes, raw session tokens, invite codes, private database connection strings, or service keys.
+- The `public` tables have RLS enabled and no direct `anon` or `authenticated` data access. League authorization is enforced server-side within the Supabase Edge API.
+- The app uses bearer sessions and requires all users to **sign in again** once after migration. Their existing usernames/passwords remain valid.
+- Scheduled functions are protected by a generated 256-bit secret stored in Supabase Vault. Only its SHA-256 hash is in the private settings table.
+- Monitor `SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'boek_%'` (10 jobs).
+- See recent HTTP results in `net._http_response`, and Supabase Edge Function logs for failures.
+- The Worker compatibility frontend is currently deployed from the committed `dist/worker-proxy.js` via the Cloudflare Worker API. A source edit does not automatically redeploy this legacy URL; rebuild and deploy with Wrangler if needed. The Pages workflow does auto-deploy after the one-time enablement.
+- Keep the former D1 database as a read-only rollback reference. Do not simultaneously run separate writeable leagues against both databases.

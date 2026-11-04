@@ -3,7 +3,9 @@
 const cache = new Map();
 const pending = new Map();
 const numbers = value => {
-  const n = Number(String(value ?? '').replace(/,/g, '').trim());
+  const raw = String(value ?? '').replace(/,/g, '').trim();
+  if(!raw || /^(?:n\/a|na|null|undefined|-)$/i.test(raw))return null;
+  const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 };
 const normalizedHeader = value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');

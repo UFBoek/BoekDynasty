@@ -279,10 +279,33 @@ export const DATA_PIPELINE=(()=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? ORDER BY game_date DESC,start_utc DESC LIMIT ?",season,Math.min(100,Math.max(1,limit))).all();
     return rows.results||[];
   };
-  // Historical dynasty score PREVIEW: earned points from recorded wins and verified
+  // A season is final only when all scoring inputs have verified archival coverage.
+  // Keep the active 2026-27 season provisional until its own season concludes.
+  async function verifiedArchiveSeasons(env){
+    const rows=(await q(env,`WITH years(season,expected_days) AS (VALUES
+      ('2021-22',166),('2022-23',166),('2023-24',167),('2024-25',166),('2025-26',166))
+      SELECT y.season,y.expected_days,
+        (SELECT COUNT(*) FROM cbb_game_coverage c WHERE c.season=y.season AND c.source_group=50) AS primary_days,
+        (SELECT COUNT(*) FROM cbb_game_coverage c WHERE c.season=y.season AND c.source_group=100) AS postseason_days,
+        (SELECT COUNT(*) FROM cbb_games g WHERE g.season=y.season AND g.status='final') AS final_games,
+        (SELECT COUNT(*) FROM cbb_net_snapshots n WHERE n.season=y.season AND n.status='complete' AND n.stored_count>=350) AS net_snapshots,
+        (SELECT COUNT(*) FROM cbb_awards a WHERE a.season=y.season AND a.award_type='conference_regular_champion') AS regular_titles,
+        (SELECT COUNT(*) FROM cbb_awards a WHERE a.season=y.season AND a.award_type='conference_tournament_champion') AS tournament_titles,
+        (SELECT COUNT(*) FROM cbb_awards a WHERE a.season=y.season AND a.award_type='ncaa_seed') AS seeds,
+        (SELECT COUNT(*) FROM cbb_awards a WHERE a.season=y.season AND a.award_type='national_champion') AS national_champions,
+        (SELECT COUNT(*) FROM cbb_ncaa_results n WHERE n.season=y.season) AS ncaa_results
+      FROM years y`).all()).results||[];
+    return new Set(rows.filter(r=>Number(r.primary_days)>=Number(r.expected_days)&&
+      Number(r.postseason_days)>=46&&Number(r.final_games)>=5700&&
+      Number(r.net_snapshots)>=1&&Number(r.regular_titles)>=31&&
+      Number(r.tournament_titles)>=31&&Number(r.seeds)===68&&
+      Number(r.national_champions)===1&&Number(r.ncaa_results)===67).map(r=>r.season));
+  }
+  // Historical dynasty score: verified final archive and live current-season preview.
   // commissioner achievement inputs. Never equate an unimported season with zero.
   async function programHistory(env,id,scoring,currentSeason){
     const latestYear=Number(currentSeason.slice(0,4)),startYear=2021;
+    const verifiedArchives=await verifiedArchiveSeasons(env);
     const games=(await q(env,`SELECT season,game_date,home_id,away_id,home_score,away_score,
       status,season_type,tournament_tag,neutral_site
       FROM cbb_games WHERE (home_id=? OR away_id=?) AND season>=? AND season<=?
@@ -358,16 +381,19 @@ export const DATA_PIPELINE=(()=>{
       if(openingWins>0)earned+=openingWins*weight('ncaa_opening_round_win');
       if(awardValue('national_champion'))earned+=weight('national_championship');
       const have=completed.length>0||honors.length>0;
+      const isFinal=verifiedArchives.has(label);
+      const seasonStatus=!have?(isFinal?'not_applicable':'unavailable'):isFinal?'complete':'partial';
       periods.push({season:label,points:have?Math.round(earned*100)/100:null,
-        status:have?'partial':'unavailable',games:completed.length,wins:wins.length,
+        status:seasonStatus,games:completed.length,wins:wins.length,
         losses,regular_wins:regularWins.length,q1,q1a,q2,
         net_verified:!!(ranks&&ranks.size>=350),ncaa_wins:ncaaWins,opening_round_wins:openingWins,
         awards_verified:honors.length,
-        note:have?'Verified components only; not a final fantasy total.':'Historical game and award data not yet imported.'});
+        note:isFinal?(have?'Final verified season fantasy points.':'No recorded Division I season for this program.'):
+          have?'Current or incomplete season: points will update as results are verified.':'No verified results for this season yet.'});
     }
     return {program_id:String(id),current_season:currentSeason,seasons:periods,
       source:'ESPN game results, archived final NET, NCAA tournament game archive, verified championships',
-      complete:false};
+      archive_complete:verifiedArchives.size===5,complete:verifiedArchives.size===5};
   }
   // Fair, idempotent historical backfill: each pass advances across every
   // requested year instead of exhausting 2025-26 before 2021-22 begins.
@@ -816,10 +842,14 @@ export const DATA_PIPELINE=(()=>{
       t.ncaa_wins=ncaaWins;t.net_verified=validNet.has(t.season);
       delete t.awards;
     }
+    const verifiedArchives=await verifiedArchiveSeasons(env);
+    const archiveComplete=verifiedArchives.size===5;
     return {seasons:Array.from({length:Number(currentSeason.slice(0,4))-2021+1},(_,i)=>{const y=2021+i;return y+'-'+String((y+1)%100).padStart(2,'0');}),
       directory:PROGRAM_DIRECTORY.map(p=>({id:String(p[0]),name:String(p[1]),abbr:String(p[2]),conference_id:String(p[3]),logo:'https://a.espncdn.com/i/teamlogos/ncaa/500/'+p[0]+'.png'})),
-      rows:[...table.values()].filter(x=>teamIds.has(x.program_id)),complete:false,
-      note:'Imported scoring components only; rankings are provisional until game and award coverage is complete.'};
+      rows:[...table.values()].filter(x=>teamIds.has(x.program_id)),
+      complete:archiveComplete,archive_complete:archiveComplete,verified_seasons:[...verifiedArchives].sort(),
+      note:archiveComplete?'All five archived seasons verified. Current-season totals remain live and provisional.':
+        'Some archived data remains unverified; historical totals may be incomplete.'};
   }
   async function scheduled(env,cron){
     const pairs=(await q(env,"SELECT key,value FROM settings WHERE key IN ('current_season','results_auto_sync')").all()).results||[];

@@ -32,11 +32,15 @@ test('full snake board reverses the second round but not manager columns',()=>{
  assert.match(html,/Full board/);
  assert.match(html,/My picks/);
 });
-test('league overview replaces redundant pick metrics with school logo rosters',()=>{
+test('league overview prioritizes games, actionable guidance and compact team rosters',()=>{
  const html=app.page('home');
  assert.doesNotMatch(html,/ROSTERED PROGRAMS|DRAFT PICKS/);
+ assert.match(html,/overview-main-grid/);
+ assert.match(html,/overview-lower-grid/);
+ assert.match(html,/overview-quick-panel/);
  assert.match(html,/league-team-tile/);
- assert.match(html,/BEST BALL FORMAT/);
+ assert.match(html,/overview-activity-panel/);
+ assert.match(html,/data-id="team"/);
 });
 test('standings do not show a redundant schools count',()=>{
  const html=app.page('league');
@@ -66,6 +70,15 @@ test('mobile navigation presents six usable primary destinations with Standings 
  const tabs=[...mobile.matchAll(/data-id="([^"]+)"/g)].map(x=>x[1]);
  assert.deepEqual(tabs,['home','team','results','programs','draft','more']);
  assert.match(app.page('more'),/data-id="league"/);
+});
+test('More has clear account, league and tools groups',()=>{
+ const html=app.page('more');
+ assert.match(html,/more-groups/);
+ assert.match(html,/Your account/);
+ assert.match(html,/League information/);
+ assert.match(html,/League tools/);
+ assert.match(html,/data-id="settings"/);
+ assert.match(html,/data-id="league"/);
 });
 test('program draft, results and standings expose honest contextual visual data',()=>{
  league.ownership=[{program_id:'57',manager_id:'1'}];

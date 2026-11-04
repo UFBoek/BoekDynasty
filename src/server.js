@@ -88,8 +88,13 @@ export default (function makeWorker(){
     const saved=Array.isArray(settings.draft_order)?settings.draft_order:[];
     return [...new Set([...saved.filter(id=>ids.includes(id)),...ids])];
   };
+  const parseDraftQueue=row=>{
+    let items=[];
+    try{items=JSON.parse(row?.program_ids||'[]');}catch(e){}
+    return {items:Array.isArray(items)?items.map(String).slice(0,120):[],version:Number(row?.revision)||0};
+  };
   async function getState(env,user){
-    const [users,teams,picks,ownership,trades,tradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves]=await Promise.all([
+    const [users,teams,picks,ownership,trades,tradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves,draftQueueRow]=await Promise.all([
       q(env,"SELECT id,username,display_name,role,created_at FROM users ORDER BY created_at,rowid").all(),
       q(env,'SELECT id,name,abbr,conference_id,logo FROM programs ORDER BY name').all(),
       q(env,'SELECT overall,round,manager_id,program_id,picked_at FROM picks ORDER BY overall').all(),
@@ -101,11 +106,12 @@ export default (function makeWorker(){
       q(env,'SELECT season,manager_id,program_id FROM season_rosters ORDER BY season DESC').all(),
       q(env,'SELECT season,manager_id,programs_count,fantasy_points,final_place FROM season_manager_records ORDER BY season DESC').all(),
       q(env,'SELECT id,season,manager_id,program_id,drop_program_id,status,created_at,resolved_at FROM waiver_claims ORDER BY created_at DESC LIMIT 150').all(),
-      q(env,'SELECT id,season,manager_id,program_id,action,created_at FROM roster_transactions ORDER BY created_at DESC LIMIT 150').all()
+      q(env,'SELECT id,season,manager_id,program_id,action,created_at FROM roster_transactions ORDER BY created_at DESC LIMIT 150').all(),
+      q(env,'SELECT program_ids,revision FROM draft_queues WHERE manager_id=?',user.id).first()
     ]);
     const allUsers=users.results||[];
     const order=resolvedOrder(allUsers,settings);
-    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season,archives:archives.results||[],archived_rosters:archivedRosters.results||[],season_records:seasonRecords.results||[],waiver_claims:waiverClaims.results||[],roster_transactions:rosterMoves.results||[]};
+    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season,archives:archives.results||[],archived_rosters:archivedRosters.results||[],season_records:seasonRecords.results||[],waiver_claims:waiverClaims.results||[],roster_transactions:rosterMoves.results||[],draft_queue:parseDraftQueue(draftQueueRow)};
   }
   function parseBody(req){
     if(!(req.headers.get('Content-Type')||'').toLowerCase().includes('application/json'))throw new Error('JSON request required.');
@@ -225,6 +231,29 @@ export default (function makeWorker(){
     const auth=await getUser(request,env);
     if(!auth)return failure('Sign in required.',401);
     const user=auth.user;
+    if(path==='draft/queue'){
+      const ids=data?.program_ids;
+      const version=Number(data?.version);
+      if(!Array.isArray(ids)||ids.length>120||ids.some(id=>!((typeof id==='string'||typeof id==='number')&&/^[A-Za-z0-9_-]{1,40}$/.test(String(id)))))
+        return failure('Invalid draft queue. Choose up to 120 programs.');
+      const items=ids.map(String);
+      if(new Set(items).size!==items.length)return failure('Draft queue cannot contain duplicates.');
+      if(!Number.isInteger(version)||version<0||version>2147483646)
+        return failure('Invalid draft queue revision.');
+      let saved;
+      if(version===0){
+        saved=await q(env,'INSERT INTO draft_queues(manager_id,program_ids,revision,updated_at) VALUES(?,?,1,?) ON CONFLICT(manager_id) DO NOTHING RETURNING program_ids,revision',
+          user.id,JSON.stringify(items),timestamp()).first();
+      }else{
+        saved=await q(env,'UPDATE draft_queues SET program_ids=?,revision=revision+1,updated_at=? WHERE manager_id=? AND revision=? RETURNING program_ids,revision',
+          JSON.stringify(items),timestamp(),user.id,version).first();
+      }
+      if(!saved){
+        const latest=await q(env,'SELECT program_ids,revision FROM draft_queues WHERE manager_id=?',user.id).first();
+        return response({error:'Draft queue changed on another device.',draft_queue:parseDraftQueue(latest)},409);
+      }
+      return response({ok:true,draft_queue:parseDraftQueue(saved),version:Number(saved.revision)});
+    }
     if(path==='draft/pick'){
       const settings=await getSettings(env);
       if(settings.draft_status!=='live')return failure('The draft is not live.',409);

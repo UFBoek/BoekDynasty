@@ -1,8 +1,8 @@
 (function startApp(){
   const root=document.querySelector('#app');
-  // Remembered sessions use a server-set, first-party HttpOnly cookie. Legacy
-  // localStorage tokens are read only to avoid signing out existing managers.
-  // Browser-only logins use sessionStorage and expire server-side within a day.
+  // Same-origin Workers use first-party HttpOnly session cookies. The hosted
+  // GitHub Pages build uses persistent bearer storage for remembered sessions
+  // because its Supabase API is on a different origin.
   const TOKEN_KEY='boek_dynasty_session';
   const readTokenFrom=(kind)=>{
     try{return (kind==='local'?localStorage:sessionStorage).getItem(TOKEN_KEY)||'';}catch{return '';}
@@ -16,11 +16,12 @@
   const saveSignedInToken=(token,rememberDevice)=>{
     clearStoredTokens();
     bearerToken=token;
-    if(!rememberDevice){
+    if(rememberDevice&&typeof API_BASE!=='undefined'){
+      // The GitHub Pages build cannot use the same-origin Cloudflare cookie.
+      try{localStorage.setItem(TOKEN_KEY,token);}catch(e){}
+    }else if(!rememberDevice){
       try{sessionStorage.setItem(TOKEN_KEY,token);}catch(e){}
     }
-    // A remembered token must never be written into script-accessible storage.
-    // The Cloudflare proxy sets a 90-day Secure, HttpOnly, first-party cookie.
   };
   const forgetSignedInToken=()=>{bearerToken='';clearStoredTokens();};
   const ICONS={home:'⌂',team:'♙',programs:'▦',draft:'▤',trades:'⇄',league:'▥',commissioner:'⚙',more:'⋯'};
@@ -66,6 +67,7 @@
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
   let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftQueueDragging='';
+  let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null;
   let appError='';
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
@@ -119,7 +121,9 @@
     const parsed=await res.json().catch(()=>({error:'Server returned an invalid response.'}));
     if(!res.ok){
       if(res.status===401&&path==='state')forgetSignedInToken();
-      throw new Error(parsed.error||'Request failed.');
+      const error=new Error(parsed.error||'Request failed.');
+      error.status=res.status;error.payload=parsed;
+      throw error;
     }
     return parsed;
   }
@@ -200,6 +204,7 @@
       const newScoringState=JSON.stringify([next.season,next.settings?.scoring,next.ownership]);
       if(oldScoringState!==newScoringState)standingsFetchedAt=0;
       me=next.user;league=next;appError='';
+      reconcileDraftQueue();
       if(!silent)current='home';
       if(!editing){render();if(current==='programs')filterPrograms();if(current==='program-detail')loadProgramResults(selectedProgramId);if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();}
       if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
@@ -231,7 +236,7 @@
     root.innerHTML='<div class="loading"><div class="spinner"></div></div>';
     await loadPublic();
     try{
-      const next=await api('state'); me=next.user;league=next;render();
+      const next=await api('state'); me=next.user;league=next;reconcileDraftQueue();render();
       startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
@@ -994,16 +999,85 @@
   }
   const draftStyle=p=>' style="--draft-brand:'+draftBrand(p)+'"';
   const draftQueueKey=()=>me?'boek_dynasty_draft_queue_'+String(me.id):'';
+  const draftQueueMigratedKey=()=>draftQueueKey()+'_account_synced_v1';
+  const normalizeDraftQueue=rows=>Array.isArray(rows)
+    ?[...new Set(rows.filter(id=>typeof id==='string'||typeof id==='number').map(String))].slice(0,120):[];
+  function writeLocalDraftQueue(){
+    if(!me)return;
+    try{localStorage.setItem(draftQueueKey(),JSON.stringify(draftWatchlist));}catch(e){}
+  }
   function prepareDraftQueue(){
     if(!me||draftWatchlistOwner===String(me.id))return;
     draftWatchlistOwner=String(me.id);
-    try{
-      const rows=JSON.parse(localStorage.getItem(draftQueueKey())||'[]');
-      draftWatchlist=Array.isArray(rows)?[...new Set(rows.map(String))].slice(0,120):[];
-    }catch(e){draftWatchlist=[];}
+    draftQueueVersion=0;draftQueueDirty=false;draftQueueSaving=false;
+    if(draftQueueRetryTimer){clearTimeout(draftQueueRetryTimer);draftQueueRetryTimer=null;}
+    try{draftWatchlist=normalizeDraftQueue(JSON.parse(localStorage.getItem(draftQueueKey())||'[]'));}
+    catch(e){draftWatchlist=[];}
+  }
+  function wasDraftQueueMigrated(){
+    try{return localStorage.getItem(draftQueueMigratedKey())==='1';}catch(e){return false;}
+  }
+  function markDraftQueueMigrated(){
+    try{localStorage.setItem(draftQueueMigratedKey(),'1');}catch(e){}
+  }
+  // Bring browser-only lists into account storage once, preserving the server's
+  // established order and appending any missing mobile-only choices.
+  function reconcileDraftQueue(){
+    if(!me||!league)return;
+    prepareDraftQueue();
+    const remote=normalizeDraftQueue(league.draft_queue?.items);
+    const version=Number(league.draft_queue?.version)||0;
+    // Ignore an older poll response or a server read while local edits save.
+    if(draftQueueDirty||draftQueueSaving||version<draftQueueVersion)return;
+    if(!wasDraftQueueMigrated()&&draftWatchlist.length){
+      const merged=normalizeDraftQueue([...remote,...draftWatchlist]);
+      draftQueueVersion=version;
+      if(merged.some((id,i)=>remote[i]!==id)||merged.length!==remote.length){
+        draftWatchlist=merged;
+        storeDraftQueue();
+        return;
+      }
+    }
+    markDraftQueueMigrated();
+    draftWatchlist=remote;
+    draftQueueVersion=version;
+    writeLocalDraftQueue();
   }
   function storeDraftQueue(){
-    try{localStorage.setItem(draftQueueKey(),JSON.stringify(draftWatchlist));}catch(e){}
+    writeLocalDraftQueue();
+    draftQueueDirty=true;
+    if(draftQueueRetryTimer)clearTimeout(draftQueueRetryTimer);
+    draftQueueRetryTimer=setTimeout(flushDraftQueue,180);
+  }
+  async function flushDraftQueue(){
+    draftQueueRetryTimer=null;
+    if(!me||!draftQueueDirty||draftQueueSaving)return;
+    const owner=draftWatchlistOwner,local=draftWatchlist.slice(),version=draftQueueVersion;
+    draftQueueSaving=true;draftQueueDirty=false;
+    let retryDelay=180;
+    try{
+      const saved=await api('draft/queue',{program_ids:local,version});
+      if(owner!==draftWatchlistOwner)return;
+      draftQueueVersion=Number(saved.version)||version+1;
+      markDraftQueueMigrated();
+    }catch(error){
+      if(owner!==draftWatchlistOwner)return;
+      draftQueueDirty=true;
+      if(error.status===409&&error.payload?.draft_queue){
+        const remote=normalizeDraftQueue(error.payload.draft_queue.items);
+        draftQueueVersion=Number(error.payload.draft_queue.version)||0;
+        // Never discard either device's selections after a simultaneous edit.
+        draftWatchlist=normalizeDraftQueue([...draftWatchlist,...remote]);
+        writeLocalDraftQueue();
+      }else{
+        retryDelay=12000;
+        notice('Queue saved on this device, but account sync failed. Retrying.',true);
+      }
+    }finally{
+      draftQueueSaving=false;
+      if(owner===draftWatchlistOwner&&draftQueueDirty&&!draftQueueRetryTimer)
+        draftQueueRetryTimer=setTimeout(flushDraftQueue,retryDelay);
+    }
   }
   // A queue is priority ordered: index zero is the manager's first choice.
   // Keep the existing per-manager storage key so old shortlists migrate intact.
@@ -1196,7 +1270,7 @@
     }).join('');
     const queueManager='<section class="panel draft-queue-manager" id="draft-queue-section" aria-label="My ordered draft queue">'
       +'<div class="draft-queue-manager-head"><div class="draft-queue-title"><span class="draft-section-overline">YOUR PRIORITY LIST</span><h2>My draft queue <span>'+usedQueue.length+'</span></h2>'
-      +'<p>Put your top choice at #1. Drag the handle on desktop or use the arrow buttons on mobile. No picks are made automatically.</p></div>'
+      +'<p>Put your top choice at #1. Drag on desktop or use the arrow buttons on mobile. Your priority order syncs across signed-in devices. No automatic picks.</p></div>'
       +'<div class="draft-queue-header-actions"><button type="button" data-act="draft-jump-pool" class="draft-queue-find">+ Add schools</button>'
       +(usedQueue.length?'<button type="button" data-act="draft-queue-collapse" class="draft-queue-collapse" aria-expanded="'+draftQueueExpanded+'">'+(draftQueueExpanded?'Collapse':'Expand queue')+'</button>':'')+'</div></div>'
       +(usedQueue.length

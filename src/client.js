@@ -1040,6 +1040,7 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
     if(act==='school-mode'){programMode=id;render();if(id==='leaders'){if(!schoolLeaders)loadSchoolLeaders();else filterSchoolLeaders();}else filterPrograms();return;}
@@ -1266,7 +1267,18 @@
     const data=Object.fromEntries(new FormData(form).entries());
     busy=true;
     try{
-      if(type==='program'){await api('admin/program',data);notice('Program added to pool.');await refresh(true);}
+      if(type==='account-profile'){
+        if(avatarDraft!==null)data.avatar_data=avatarDraft;
+        const changed=await api('account/profile',data);
+        avatarDraft=null;me=changed.user;
+        await refresh(true);
+        notice('Your team profile was updated.');
+      }else if(type==='account-password'){
+        if(data.new_password!==data.confirm_password)throw new Error('The two new passwords do not match.');
+        await api('account/password',{current_password:data.current_password,new_password:data.new_password});
+        form.reset();
+        notice('Password updated. Other sessions have been signed out.');
+      }else if(type==='program'){await api('admin/program',data);notice('Program added to pool.');await refresh(true);}
       else{
         const res=await api(type==='login'?'login':type==='join'?'join':'setup',data);
         selectedInvite='';
@@ -1278,7 +1290,38 @@
       }
     }catch(err){notice(err.message,true);}finally{busy=false;}
   });
-  root.addEventListener('change',e=>{
+  root.addEventListener('change',async e=>{
+    if(e.target?.id==='settings-photo-input'){
+      const file=e.target.files?.[0];
+      if(!file)return;
+      if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024){
+        notice('Choose a JPEG, PNG or WebP photo under 8 MB.',true);e.target.value='';return;
+      }
+      const url=URL.createObjectURL(file),image=new Image();
+      try{
+        await new Promise((resolve,reject)=>{
+          image.onload=resolve;image.onerror=()=>reject(new Error('The image could not be opened.'));
+          image.src=url;
+        });
+        const canvas=document.createElement('canvas'),size=192;
+        canvas.width=size;canvas.height=size;
+        const ctx=canvas.getContext('2d');
+        if(!ctx)throw new Error('Your browser cannot resize profile images.');
+        ctx.fillStyle='#ffffff';ctx.fillRect(0,0,size,size);
+        const width=image.naturalWidth,height=image.naturalHeight,side=Math.min(width,height);
+        ctx.drawImage(image,(width-side)/2,(height-side)/2,side,side,0,0,size,size);
+        const encoded=canvas.toDataURL('image/jpeg',0.76);
+        if(encoded.length>82000)throw new Error('Image is still too large after resizing.');
+        avatarDraft=encoded;
+        const preview=root.querySelector('.settings-avatar-preview');
+        if(preview)preview.innerHTML=avatar({...me,avatar_data:encoded});
+        const hint=root.querySelector('#photo-hint');
+        if(hint)hint.textContent='New photo ready. Save your profile to publish it.';
+        notice('Profile photo ready to save.');
+      }catch(error){notice(String(error.message||error),true);}
+      finally{URL.revokeObjectURL(url);e.target.value='';}
+      return;
+    }
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}

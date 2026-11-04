@@ -911,8 +911,8 @@
   const DRAFT_BRANDS={
     'alabama':'#9e1b32','auburn':'#0c2340','arkansas':'#9d2235','arizona st':'#8c1d40','arizona state':'#8c1d40','arizona':'#ab0520',
     'baylor':'#154734','boise st':'#0033a0','boise state':'#0033a0','butler':'#13294b','byu':'#002e5d','brigham young':'#002e5d',
-    'california baptist':'#002554','california':'#003262','clemson':'#f56600','colorado st':'#1e4d2b','colorado state':'#1e4d2b',
-    'colorado':'#cfb87c','creighton':'#005ca9','cincinnati':'#e00122','dayton':'#d50032','depaul':'#005eb8',
+    'california baptist':'#002554','california':'#003262','clemson':'#af4a00','colorado st':'#1e4d2b','colorado state':'#1e4d2b',
+    'colorado':'#393522','creighton':'#005ca9','cincinnati':'#e00122','dayton':'#d50032','depaul':'#005eb8',
     'duke':'#003087','duquesne':'#041e42','florida atlantic':'#003366','florida gulf coast':'#005a3c',
     'florida international':'#081e3f','florida st':'#782f40','florida state':'#782f40','florida':'#0021a5',
     'george mason':'#006633','george washington':'#002f6c','georgetown':'#041e42','georgia tech':'#003057',
@@ -939,7 +939,7 @@
     'usc':'#990000','utah st':'#0f2439','utah state':'#0f2439','utah':'#cc0000',
     'vanderbilt':'#6a5c35','villanova':'#00205b','virginia tech':'#630031','virginia':'#232d4b',
     'vcu':'#242424','wake forest':'#5a4b35','washington st':'#981e32','washington state':'#981e32',
-    'washington':'#4b2e83','west virginia':'#002855','wichita st':'#ffc217','wichita state':'#151515',
+    'washington':'#4b2e83','west virginia':'#002855','wichita st':'#1a1a1a','wichita state':'#151515',
     'wisconsin':'#c5050c','xavier':'#0c2340'
   };
   const DRAFT_CONFERENCE_FALLBACK={
@@ -947,7 +947,7 @@
     '3':'#214c8d','44':'#3b587a','18':'#314f8b','29':'#185877','62':'#31516e'
   };
   function draftBrand(p){
-    const name=String(p?.name||'').toLowerCase().replace(/[.&]/g,' ').replace(/\s+/g,' ').trim();
+    const name=String(p?.name||'').toLowerCase().replace(/&/g,' and ').replace(/\./g,'').replace(/\s+/g,' ').trim();
     const matched=Object.keys(DRAFT_BRANDS).filter(prefix=>name===prefix||name.startsWith(prefix+' '))
       .sort((a,b)=>b.length-a.length)[0];
     return matched?DRAFT_BRANDS[matched]:(DRAFT_CONFERENCE_FALLBACK[String(p?.conference_id)]||'#344967');
@@ -1176,7 +1176,7 @@
       +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
-    return heading('2026–27 · INAUGURAL SNAKE DRAFT','Draft Room','Scout programs, make your selections and follow every pick as it happens.')
+    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Scout programs, make your selections and follow every pick as it happens.')
       +'<div class="draft-v2">'+hero+tracker+ready
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'+board+foot+'</div>'+sheet;
   }

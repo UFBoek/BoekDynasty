@@ -17,6 +17,44 @@ const cors = {
   'Access-Control-Max-Age':'600',
   'Vary':'Origin'
 };
+
+const ACTIVITY_PAGES = new Set(['home','team','results','programs','program-detail','manager-detail','draft','trades','league','scoring','commissioner','settings','more','waivers','history']);
+const ACTIVITY_SECTIONS = new Set(['general','programs','draft','scoring','members','data','trades','waivers','seasons','activity']);
+const ACTION_NAMES = {
+  'draft/queue':'Updated draft queue','draft/pick':'Selected a draft pick',
+  'trade/propose':'Proposed a trade','trade/respond':'Responded to a trade','trade/cancel':'Cancelled a trade',
+  'waiver/claim':'Submitted a waiver claim','waiver/cancel':'Cancelled a waiver claim','waiver/drop':'Dropped a program',
+  'account/profile':'Updated profile','account/password':'Changed password',
+  'admin/invite':'Created an invitation','admin/general':'Updated league settings',
+  'admin/bestball':'Updated best-ball format','admin/scoring-settings':'Updated scoring settings',
+  'admin/settings':'Updated program eligibility','admin/program':'Updated program',
+  'admin/draft-control':'Changed draft status','admin/draft-order':'Updated draft order',
+  'admin/clock':'Updated draft clock','admin/trade-settings':'Updated trade settings',
+  'admin/waiver-settings':'Updated waiver settings','admin/waiver/review':'Reviewed waiver claim',
+  'admin/season/rollover':'Advanced league season','admin/season/champion':'Updated season champion'
+};
+const epochNow = () => Math.floor(Date.now()/1000);
+async function activityActor(request) {
+  const header=request.headers.get('Authorization')||'';
+  if(!header.startsWith('Bearer '))return null;
+  const token=header.slice(7);
+  if(!/^[A-Za-z0-9_-]{25,256}$/.test(token))return null;
+  const raw=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)));
+  const tokenHash=Array.from(raw,x=>x.toString(16).padStart(2,'0')).join('');
+  return await db.prepare('SELECT u.id,u.username,u.display_name,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?')
+    .bind(tokenHash,epochNow()).first();
+}
+async function saveActivity(userId,kind,label,dedupeSeconds=0) {
+  const now=epochNow();
+  if(dedupeSeconds>0){
+    const previous=await db.prepare('SELECT created_at FROM activity_events WHERE user_id=? AND kind=? AND label=? ORDER BY created_at DESC LIMIT 1')
+      .bind(userId,kind,label).first();
+    if(previous&&now-Number(previous.created_at)<dedupeSeconds)return;
+  }
+  await db.prepare('INSERT INTO activity_events(user_id,kind,label,created_at) VALUES(?,?,?,?)')
+    .bind(userId,kind,label.slice(0,100),now).run();
+}
+
 Deno.serve(async (request)=>{
   const origin=request.headers.get('Origin');
   if(origin && origin!==FRONTEND_ORIGIN)
@@ -30,6 +68,48 @@ Deno.serve(async (request)=>{
   const subpath=at===-1?'':original.pathname.slice(at+marker.length);
   if(!subpath||subpath.includes('..')||subpath.length>250)
     return new Response(JSON.stringify({error:'Unknown API route.'}),{status:404,headers:{...cors,'Content-Type':'application/json'}});
+
+  if(subpath==='activity/ping'){
+    if(request.method!=='POST')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
+    const actor=await activityActor(request);
+    if(!actor)return Response.json({error:'Sign in required.'},{status:401,headers:cors});
+    const body=await request.json().catch(()=>null);
+    const page=String(body?.page||'');
+    if(!ACTIVITY_PAGES.has(page))return Response.json({error:'Invalid page.'},{status:400,headers:cors});
+    const context=page==='commissioner'&&ACTIVITY_SECTIONS.has(String(body?.context||''))?String(body.context):'';
+    const now=epochNow();
+    await db.prepare("INSERT INTO activity_presence(user_id,last_seen,last_page,last_context) VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET last_seen=excluded.last_seen,last_page=excluded.last_page,last_context=excluded.last_context WHERE activity_presence.last_seen < excluded.last_seen - 20 OR activity_presence.last_page <> excluded.last_page OR activity_presence.last_context <> excluded.last_context")
+      .bind(actor.id,now,page,context).run();
+    if(body?.navigation===true){
+      const label=page==='commissioner'?'Commissioner / '+(context||'general'):page;
+      await saveActivity(actor.id,'page',label,30);
+    }
+    return Response.json({ok:true},{headers:{...cors,'Cache-Control':'no-store'}});
+  }
+  if(subpath==='admin/activity'){
+    if(request.method!=='GET')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
+    const actor=await activityActor(request);
+    if(!actor)return Response.json({error:'Sign in required.'},{status:401,headers:cors});
+    if(actor.role!=='commissioner')return Response.json({error:'Commissioner access required.'},{status:403,headers:cors});
+    const period=String(original.searchParams.get('range')||'7d');
+    const windowSeconds=({'24h':86400,'7d':604800,'30d':2592000})[period];
+    if(!windowSeconds)return Response.json({error:'Invalid activity range.'},{status:400,headers:cors});
+    const now=epochNow(),since=now-windowSeconds;
+    const [membersQuery,eventsQuery]=await Promise.all([
+      db.prepare("SELECT u.id,u.username,u.display_name,u.role,p.last_seen,p.last_page,p.last_context, (SELECT count(*)::integer FROM activity_events e WHERE e.user_id=u.id AND e.kind='page' AND e.created_at>=?) AS page_views, (SELECT count(*)::integer FROM activity_events e WHERE e.user_id=u.id AND e.kind='action' AND e.created_at>=?) AS actions FROM users u LEFT JOIN activity_presence p ON p.user_id=u.id ORDER BY COALESCE(p.last_seen,0) DESC,u.display_name")
+        .bind(since,since).all(),
+      db.prepare('SELECT e.id,e.user_id,e.kind,e.label,e.created_at,u.username,u.display_name FROM activity_events e JOIN users u ON u.id=e.user_id WHERE e.created_at>=? ORDER BY e.created_at DESC,e.id DESC LIMIT 180')
+        .bind(since).all()
+    ]);
+    const members=membersQuery.results||[],events=eventsQuery.results||[];
+    return Response.json({now,range:period,members,events,summary:{
+      active:members.filter(m=>Number(m.last_seen||0)>=now-300).length,
+      visited_today:members.filter(m=>Number(m.last_seen||0)>=now-86400).length,
+      views:members.reduce((a,m)=>a+Number(m.page_views||0),0),
+      actions:members.reduce((a,m)=>a+Number(m.actions||0),0)
+    }},{headers:{...cors,'Cache-Control':'no-store'}});
+  }
+
   if(subpath==='data/ratings'){
     if(request.method!=='GET')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
     const year=Number(original.searchParams.get('year'));
@@ -228,6 +308,21 @@ Deno.serve(async (request)=>{
   original.pathname='/api/'+subpath;
   const forwarded=new Request(original.toString(),request);
   const response=await apiWorker.fetch(forwarded,{DB:db,FRONTEND_ORIGIN});
+  // Audit only successful, authenticated mutations. Never store request bodies, tokens or IP addresses.
+  if(request.method==='POST'&&response.ok){
+    try{
+      if(subpath==='login'||subpath==='join'||subpath==='setup'){
+        const result=await response.clone().json().catch(()=>null);
+        if(result?.user?.id)await saveActivity(result.user.id,'login',subpath==='login'?'Signed in':subpath==='join'?'Joined the league':'Created commissioner account');
+      }else if(subpath!=='logout'&&!subpath.startsWith('data/')){
+        const label=ACTION_NAMES[subpath]||(subpath.startsWith('admin/')?'Commissioner: '+subpath.slice(6).replace(/[-/]/g,' '):'');
+        if(label){
+          const actor=await activityActor(request);
+          if(actor)await saveActivity(actor.id,'action',label,subpath==='draft/queue'?90:0);
+        }
+      }
+    }catch(err){console.warn('Activity logging failed',String(err?.message||err));}
+  }
   const headers=new Headers(response.headers);
   for(const [key,value] of Object.entries(cors)) headers.set(key,value);
   headers.delete('Set-Cookie');

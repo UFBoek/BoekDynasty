@@ -954,6 +954,19 @@
       +scoreDetails+'<p class="hint">'+(selectedStats.status==='complete'?'Final totals use all verified regular-season, conference tournament and NCAA Tournament results, with final NET bonuses.':'Current-season totals update as games, rankings and awards become available.')+'</p></div>'
       :'<div class="program-season-expanded"><p class="hint">Loading the program’s verified scoring history…</p></div>';
     const currentPoints=currentStats?.points!==null&&currentStats?.points!==undefined?pointText(currentStats):'—';
+    const metricsYear=ratingYear(selected),metrics=ratingOf(p,metricsYear);
+    const decimal=(n,d=1)=>n===null||n===undefined?'—':Number(n).toFixed(d);
+    const analyticsContent=metrics?'<div class="program-metric-grid">'
+      +'<div><span>NATIONAL T-RANK</span><strong>#'+metrics.rank+'</strong></div>'
+      +'<div><span>BARTHAG</span><strong>'+decimal(metrics.barthag,3)+'</strong></div>'
+      +'<div><span>ADJUSTED OFFENSE</span><strong>'+decimal(metrics.adj_o)+'</strong><small>'+(metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Pts / 100 poss')+'</small></div>'
+      +'<div><span>ADJUSTED DEFENSE</span><strong>'+decimal(metrics.adj_d)+'</strong><small>'+(metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Pts / 100 poss')+'</small></div>'
+      +'<div><span>WINS ABOVE BUBBLE</span><strong>'+decimal(metrics.wab)+'</strong></div>'
+      +'<div><span>ADJUSTED TEMPO</span><strong>'+decimal(metrics.tempo)+'</strong></div></div>'
+      :'<p class="hint">'+escapeHTML(ratingError[metricsYear]||(ratingLoading[metricsYear]?'Loading public T-Rank ratings…':'No verified T-Rank match for this season.'))+'</p>';
+    const analytics='<section class="panel program-analytics-panel">'+panelHeading('Power ratings · '+escapeHTML(selected),'Bart Torvik T-Rank · informational only')
+      +analyticsContent+ratingExternalLinks()+'</section>';
+
     const recordText=record?.played?record.wins+'–'+record.losses:'—';
     const ownerButton=manager?'<button class="program-profile-owner-link" type="button" data-act="open-manager" data-id="'+escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' →</button>':'<span>Available to draft</span>';
     const games=report?.games||[];
@@ -965,7 +978,8 @@
       +'<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+currentPoints+'</strong><small>'+(currentStats?.status==='partial'?'Verified components only':'Season scoring pending')+'</small></div>'
       +'<div><span>SEASON RECORD</span><strong>'+recordText+'</strong></div>'
       +'<div><span>NET RANK</span><strong>'+(report?.net?'#'+report.net.net_rank:'—')+'</strong></div></div>'
-      +'<section class="panel program-history-panel">'+panelHeading('Season-by-season performance','Select any season from 2021–22 onward')
+      +analytics
+       +'<section class="panel program-history-panel">'+panelHeading('Season-by-season performance','Select any season from 2021–22 onward')
       +'<div class="program-season-strip">'+seasonRows+'</div>'+yearDetail+'</section>'
       +'<div class="program-profile-bottom">'
       +'<section class="panel">'+panelHeading('Program information')
@@ -1168,7 +1182,10 @@
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='tab'){current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
-    if(act==='school-mode'){programMode=id;render();if(id==='leaders'){if(!schoolLeaders)loadSchoolLeaders();else filterSchoolLeaders();}else filterPrograms();return;}
+    if(act==='rating-season'){ratingSeason=(Number(id)-1)+'-'+String(Number(id)%100).padStart(2,'0');render();filterRatings();return;}
+    if(act==='rating-sort'){ratingSort=id;render();filterRatings();return;}
+    if(act==='ratings-refresh'){delete ratingError[Number(id)];delete ratingCache[Number(id)];loadRatings(Number(id),true);render();return;}
+    if(act==='school-mode'){programMode=id;render();if(id==='leaders'){if(!schoolLeaders)loadSchoolLeaders();else filterSchoolLeaders();}else if(id==='ratings')filterRatings();else filterPrograms();return;}
     if(act==='leaders-season'){leaderSeason=id;render();filterSchoolLeaders();return;}
     if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
@@ -1469,6 +1486,7 @@
       return;
     }
     if(e.target?.id==='leader-search'){leaderQuery=e.target.value;filterSchoolLeaders();return;}
+    if(e.target?.id==='rating-search'){ratingQuery=e.target.value;filterRatings();return;}
     if(e.target?.id!=='program-search')return;
     programQuery=e.target.value;
     programShown=36;

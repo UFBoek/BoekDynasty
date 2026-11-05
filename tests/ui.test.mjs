@@ -62,8 +62,8 @@ test('results filters are based on actual AP and conference IDs',()=>{
  const ap=[{program_id:'57',rank:1},...Array.from({length:24},(_,i)=>({program_id:String(100+i),rank:i+2}))];
  app.results(games,ap);
  app.filter('all','all');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,2);
- app.filter('top25','all');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,1);
- app.filter('all','8');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,1);
+ app.filter('top25','all');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,1);
+ app.filter('all','8');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,1);
 });
 
 test('mobile navigation presents six usable primary destinations with Standings under More',()=>{

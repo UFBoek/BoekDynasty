@@ -29,13 +29,13 @@ const env={DB:{prepare(sql){
     []})};}};
 }}};
 
-test('uncapped seed-line upset points apply only to multi-bid/mid-major and Pac-12 programs',async()=>{
+test('uncapped seed-line upset points apply to all eligible non-power programs except Gonzaga',async()=>{
   const r=await pipeline.historicalLeaders(env,{ncaa_tournament_win:3,ncaa_upset_per_seed:1},'2026-27');
   const find=id=>r.rows.find(x=>x.program_id===id&&x.season===season);
   assert.equal(find('mid').points,10); // 3 NCAA win + (12 seed beating a 5 seed) 7
   assert.equal(find('pac').points,16); // 3 NCAA win + 13 seed lines, uncapped
   assert.equal(find('power').points,3);
-  assert.equal(find('other').points,3);
+  assert.equal(find('other').points,11);
   assert.equal(find('mid').breakdown.find(x=>x.key==='ncaa_upset_per_seed').points,7);
   assert.equal(find('pac').upset_wins,2);
 });
@@ -43,5 +43,6 @@ test('uncapped seed-line upset points apply only to multi-bid/mid-major and Pac-
 test('the production SQL awards only genuine NCAA upsets with both seeds present',()=>{
   assert.match(source,/kind IN \('ncaa','first_four'\) AND winner_seed>loser_seed/);
   assert.match(source,/loser_seed\.award_type='ncaa_seed'/);
-  assert.match(source,/UPSET_ELIGIBLE_CONFERENCES=new Set\(\['3','62','44','18','29','11','14','45','9','10','21'\]\)/);
+  assert.match(source,/POWER_CONFERENCES=new Set\(\['2','4','7','8','23'\]\)/);
+  assert.match(source,/INELIGIBLE_BONUS_PROGRAMS=new Set\(\['2250'\]\)/);
 });

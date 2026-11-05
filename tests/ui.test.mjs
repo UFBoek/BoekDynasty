@@ -156,7 +156,7 @@ test('manager profiles show actual season points and league rank instead of plac
 });
 
 
-test('My Team prioritizes scored programs and keeps trades and waivers behind one disclosure',()=>{
+test('My Team presents only season score, ranked programs and collapsible management',()=>{
   const oldOwnership=league.ownership,oldStatus=league.settings.draft_status;
   const oldWaivers=league.settings.waivers_enabled,oldBest=league.settings.scoring.best_programs;
   try{
@@ -166,16 +166,20 @@ test('My Team prioritizes scored programs and keeps trades and waivers behind on
     const html=app.team({season:'2026-27',
       program_points:{'57':12.25,'58':40.5},
       standings:[{manager_id:'1',points:40.5,counted_programs:1,counted_program_ids:['58']}]});
-    const table=html.slice(html.indexOf('<table class="team-roster-table">'));
+    const table=html.slice(html.indexOf('<table class="tm-table">'));
+    assert.match(html,/tm-masthead/);
     assert.match(html,/SEASON POINTS/);
+    assert.match(html,/tm-score/);
+    assert.match(html,/40\.5/);
+    assert.doesNotMatch(html,/OWNED PROGRAMS|CURRENTLY COUNTING|LEAGUE TITLES|Counting programs/);
     assert.match(table,/Duke basketball/);
     assert.match(table,/Florida basketball/);
     assert.ok(table.indexOf('Duke basketball')<table.indexOf('Florida basketball'));
     assert.match(table,/40\.5/);
     assert.match(table,/12\.25/);
-    assert.match(table,/team-roster-badge counts">Counting/);
-    assert.match(table,/team-roster-badge ">Reserve/);
-    assert.match(html,/<details class="team-activity-drawer">/);
+    assert.doesNotMatch(table,/COUNTING|RESERVE|BEST BALL/);
+    assert.match(html,/<details class="tm-transactions">/);
+    assert.doesNotMatch(html,/<details class="tm-transactions" open/);
     assert.match(html,/data-id="trades"/);
     assert.match(html,/data-id="waivers"/);
     assert.doesNotMatch(html,/team-program-grid|data-act="team-drop"/);

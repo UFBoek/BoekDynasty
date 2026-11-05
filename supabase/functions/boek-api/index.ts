@@ -3,6 +3,7 @@ import apiWorker from './server.js';
 import {createD1} from './db.js';
 import {DATA_PIPELINE} from './results.js';
 import {getTorvikRatings} from './ratings.js';
+import {createNotificationEngine} from './notifications.js';
 
 // The GitHub Pages site owns the UI. This function only serves the JSON API.
 const FRONTEND_ORIGIN = 'https://ufboek.github.io';
@@ -10,6 +11,7 @@ const poolUrl = Deno.env.get('SUPABASE_DB_URL');
 if(!poolUrl) throw new Error('SUPABASE_DB_URL must be configured in Supabase secrets.');
 const pg = postgres(poolUrl,{prepare:false,max:5,idle_timeout:15,connect_timeout:10});
 const db = createD1(pg);
+const notificationEngine=createNotificationEngine(db);
 const cors = {
   'Access-Control-Allow-Origin': FRONTEND_ORIGIN,
   'Access-Control-Allow-Methods':'GET, POST, OPTIONS',
@@ -18,8 +20,8 @@ const cors = {
   'Vary':'Origin'
 };
 
-const ACTIVITY_PAGES = new Set(['home','team','results','programs','program-detail','manager-detail','draft','trades','league','scoring','commissioner','settings','more','draft-order','waivers','history']);
-const ACTIVITY_SECTIONS = new Set(['general','programs','draft','scoring','members','data','trades','waivers','seasons','activity']);
+const ACTIVITY_PAGES = new Set(['home','team','results','programs','program-detail','manager-detail','draft','trades','league','scoring','commissioner','settings','more','draft-order','waivers','history','notifications']);
+const ACTIVITY_SECTIONS = new Set(['general','programs','draft','scoring','members','data','trades','waivers','seasons','activity','notifications']);
 const ACTION_NAMES = {
   'draft/queue':'Updated draft queue','draft/pick':'Selected a draft pick',
   'trade/propose':'Proposed a program/pick trade','trade/respond':'Responded to a program/pick trade','trade/cancel':'Cancelled a trade',
@@ -70,6 +72,14 @@ Deno.serve(async (request)=>{
   if(!subpath||subpath.includes('..')||subpath.length>250)
     return new Response(JSON.stringify({error:'Unknown API route.'}),{status:404,headers:{...cors,'Content-Type':'application/json'}});
 
+  // Notification routes are authenticated by the same hashed bearer session as every league action.
+  if(subpath.startsWith('notifications/')||subpath.startsWith('admin/notifications')){
+    const actor=await activityActor(request);
+    const result=await notificationEngine.route(subpath,request,actor,original);
+    const headers=new Headers(result.headers);
+    for(const [key,value] of Object.entries(cors))headers.set(key,value);
+    return new Response(result.body,{status:result.status,headers});
+  }
   if(subpath==='activity/ping'){
     if(request.method!=='POST')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
     const actor=await activityActor(request);
@@ -306,15 +316,32 @@ Deno.serve(async (request)=>{
       }
 
       else return Response.json({error:'Unknown task.'},{status:400,headers:cors});
+      // Reconcile any transiently failed push deliveries on the existing scheduled jobs.
+      if(kind==='live'||kind==='recent')await notificationEngine.flush(12).catch(error=>
+        console.warn('Push retry skipped:',String(error?.message||error)));
       return Response.json({ok:true,kind,result},{headers:cors});
     }catch(error){
       console.error('Boek Dynasty scheduled job failed',kind,error);
       return Response.json({error:'Scheduled sync failed.',kind},{status:500,headers:cors});
     }
   }
+  // Inspect only the small set of mutations that generate league alerts.
+  // Clone before constructing the forwarded Request to preserve the request body.
+  const actionable=['trade/propose','trade/respond','trade/cancel','draft/pick','admin/draft-control'].includes(subpath);
+  const notificationBody=actionable&&request.method==='POST'
+    ?await request.clone().json().catch(()=>null):null;
   original.pathname='/api/'+subpath;
   const forwarded=new Request(original.toString(),request);
   const response=await apiWorker.fetch(forwarded,{DB:db,FRONTEND_ORIGIN});
+  if(actionable&&response.ok&&notificationBody){
+    try{
+      const actor=await activityActor(request);
+      await notificationEngine.onMutation(subpath,actor,notificationBody,response);
+    }catch(error){
+      // A notification failure must never invalidate a completed draft pick or trade.
+      console.error('Notification delivery failed',String(error?.message||error));
+    }
+  }
   // Audit only successful, authenticated mutations. Never store request bodies, tokens or IP addresses.
   if(request.method==='POST'&&response.ok){
     try{

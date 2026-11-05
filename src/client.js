@@ -154,14 +154,23 @@
   const myPrograms=()=>owners().filter(o=>o.manager_id===me?.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
   const season=()=>league?.season||'2026-27';
   const order=()=>league?.draft_order||members().map(x=>x.id);
+  const originalDraftOwner=(slot,arr=order())=>{
+    if(!arr.length||slot<1)return null;
+    const i=slot-1,round=Math.floor(i/arr.length),pos=i%arr.length;
+    return arr[round%2===0?pos:arr.length-1-pos]||null;
+  };
+  const draftOwnerOverrides=()=>new Map((league?.draft_pick_owners||[]).map(p=>[Number(p.overall),p.owner_manager_id]));
+  const draftOwner=(slot,arr=order())=>draftOwnerOverrides().get(Number(slot))||originalDraftOwner(slot,arr);
+  const futureDraftPicks=id=>Array.from({length:Math.max(0,draftTotal()-picks().length)},
+    (_,i)=>picks().length+i+1).filter(slot=>draftOwner(slot)===id);
+  const draftPickText=slot=>'Round '+(Math.floor((slot-1)/Math.max(1,order().length))+1)+' · #'+slot;
   const nextManager=()=>{
     const arr=order();
     if(!arr.length)return null;
     const idx=picks().length;
     const round=Math.floor(idx/arr.length);
     if(round>=Number(league.settings.rounds))return null;
-    const loc=idx%arr.length;
-    const chosen=round%2===0?arr[loc]:arr[arr.length-1-loc];
+    const chosen=draftOwner(idx+1,arr);
     return members().find(u=>u.id===chosen)||null;
   };
   const isMyTurn=()=>league?.settings?.draft_status==='live'&&nextManager()?.id===me?.id;
@@ -1685,11 +1694,7 @@
     return {years,byId};
   }
   const historicalPointLabel=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:1});
-  function draftSelectionOrder(slot,managers){
-    if(!managers.length)return '';
-    const idx=slot-1,r=Math.floor(idx/managers.length),pos=idx%managers.length;
-    return managers[r%2===0?pos:managers.length-1-pos]||'';
-  }
+  function draftSelectionOrder(slot,managers){return draftOwner(slot,managers)||'';}
   function draftAvailable(){
     const drafted=new Set(picks().map(p=>String(p.program_id)));
     return eligiblePrograms().filter(p=>!drafted.has(String(p.id))&&!programOwned(p.id));

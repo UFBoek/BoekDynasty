@@ -1490,7 +1490,7 @@
       +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div>'
       +'</div></header>'
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
-      +'<div class="tm-roster-heading"><div><span class="tm-overline">2026–27 ROSTER</span>'
+      +'<div class="tm-roster-heading"><div><span class="tm-overline">'+seasonLabel+' ROSTER</span>'
       +'<h2 id="tm-roster-title">Your Programs</h2><p>'
       +(owned.length?owned.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
         'Your permanent program roster will appear here after the draft')+'</p></div>'+actions+'</div>'

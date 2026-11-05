@@ -10,13 +10,13 @@ const injection=`  return {
  section:section=>{adminSection=section;return commissionerPage();},
  mode:mode=>{draftRoundView=mode;},
  schools:(mode,data)=>{programMode=mode;schoolLeaders=data;leaderSeason='all';},
- results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
+ results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsLoadedDay='2026-11-03';resultsSeason=season();resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
  filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;}
 };
 })();`;
 const compiled=source.replace('  try{\n    setInterval(updateDraftClock,1000);\n    Promise.resolve(boot()).catch(startupFailure);\n  }catch(e){startupFailure(e);}\n})();',injection);
 assert.notEqual(compiled,source);
-const root={innerHTML:'',addEventListener(){}};
+const root={innerHTML:'',addEventListener(){},querySelector(){return null;},querySelectorAll(){return [];}};
 const app=new Function('document','location','URLSearchParams','return '+compiled)(
  {querySelector:x=>x==='#app'?root:null,querySelectorAll:()=>[],activeElement:null},
  {search:''},URLSearchParams);
@@ -32,7 +32,7 @@ test('full snake board reverses the second round but not manager columns',()=>{
  const picks=[...html.matchAll(/data-pick="(\d+)"/g)].map(x=>Number(x[1]));
  assert.deepEqual(picks,[1,2,3,4,8,7,6,5,9,10,11,12]);
  assert.match(html,/Full board/);
- assert.match(html,/My picks/);
+ assert.match(html,/My rounds/);
 });
 test('league overview prioritizes games, actionable guidance and compact team rosters',()=>{
  const html=app.page('home');
@@ -61,7 +61,7 @@ test('results filters are based on actual AP and conference IDs',()=>{
  ];
  const ap=[{program_id:'57',rank:1},...Array.from({length:24},(_,i)=>({program_id:String(100+i),rank:i+2}))];
  app.results(games,ap);
- app.filter('all','all');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,2);
+ app.filter('all','all');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,2);
  app.filter('top25','all');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,1);
  app.filter('all','8');assert.equal((app.page('results').match(/class="scoreboard-match /g)||[]).length,1);
 });
@@ -96,7 +96,7 @@ test('program draft, results and standings expose honest contextual visual data'
    home_conference_id:'23',away_conference_id:'2'}];
  app.results(games,[]);
  app.filter('all','all');
- assert.match(app.page('results'),/scoreboard-roster-tag is-personal/);
+ assert.match(app.page('results'),/daily-card-mine/);
  league.ownership=[];
  league.picks=[];
 });
@@ -127,7 +127,7 @@ test('Historical Leaders compares school points by season with a searchable tabl
 });
 test('Results exposes touch-friendly conference buttons, not a select menu',()=>{
   const html=app.page('results');
-  assert.match(html,/class="scoreboard-conference-strip"/);
+  assert.match(html,/class="daily-conference-tabs"/);
   assert.match(html,/data-act="results-conference"/);
   assert.doesNotMatch(html,/id="scoreboard-conference"/);
 });

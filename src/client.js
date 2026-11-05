@@ -2838,7 +2838,7 @@
       const devices=Math.max(0,Number(m.devices)||0);
       const muted=['trades','draft','announcements'].every(key=>m[key]===false);
       const push=devices>0&&m.push_enabled!==false&&!muted;
-      const email=m.email_active===true&&!muted;
+      const email=m.email_active===true&&d.email_available===true&&!muted;
       return {...m,devices,push,email,muted,enabled:push||email};
     });
     const enabledCount=enrolled.filter(m=>m.enabled).length;

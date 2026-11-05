@@ -70,7 +70,7 @@ export default {
       if(path==='/icon.svg'||path==='/favicon.svg')return Response.redirect(url.origin+'/icon.png',302);
       if(path==='/manifest.webmanifest')
         return json({id:'/',name:'Boek Dynasty',short_name:'Boek Dynasty',description:'College basketball fantasy by NCAA program',start_url:'/',display:'standalone',theme_color:'#f4f6fa',background_color:'#f4f6fa',icons:[{src:'/icon.png?v=3',sizes:'192x192',type:'image/png'}]});
-      if(path==='/sw.js')return new Response("self.addEventListener('install',e=>{self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())})",{headers:{...SECURE,'Content-Type':'application/javascript','Cache-Control':'no-store'}});
+      if(path==='/sw.js')return new Response(SW,{headers:{...SECURE,'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate','Service-Worker-Allowed':'/'}});
       return json({error:'Not found.'},404);
     }catch(error){console.error('Boek proxy error',path,String(error));return json({error:'The service is temporarily unavailable.'},502);}
   }

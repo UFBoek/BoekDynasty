@@ -57,6 +57,17 @@
     {name:'MULTI-BID & MID-MAJOR',ids:['3','62','44','18','29','11','14','45','9','10']},
     {name:'OTHER DIVISION I',ids:['1','5','6','12','13','16','19','20','22','24','25','26','27','28','30','46']}
   ];
+  // A shared conference filter across the directory, rankings, draft and daily results.
+  // Mid-Major includes all non-major conference groups; the Pac-12 remains a separate
+  // major-conference filter consistent with the existing conference selector.
+  const MID_MAJOR_FILTER='mid-major';
+  const midMajorConferenceIds=new Set(conferenceGroups.slice(1).flatMap(group=>group.ids));
+  const matchesConferenceFilter=(conferenceId,filter)=>
+    filter==='all'||(filter===MID_MAJOR_FILTER
+      ?midMajorConferenceIds.has(String(conferenceId))
+      :String(conferenceId)===String(filter));
+  const midMajorOption=selected=>'<option value="'+MID_MAJOR_FILTER+'"'+
+    (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major (all conferences)</option>';
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
   let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';
@@ -121,7 +132,7 @@
     initPoolDraft();
     const search=poolQuery.trim().toLowerCase();
     return programs().filter(p=>
-      (poolConferenceFilter==='all'||String(p.conference_id)===poolConferenceFilter)&&
+      matchesConferenceFilter(p.conference_id,poolConferenceFilter)&&
       (poolScope==='all'||(poolScope==='included')===poolDraftSchools.has(String(p.id)))&&
       (!search||(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase().includes(search))
     ).sort((a,b)=>a.name.localeCompare(b.name));
@@ -996,7 +1007,7 @@
     const scoped=all.filter(g=>{
       const homeConf=String(g.home_conference_id||''),awayConf=String(g.away_conference_id||'');
       return matchScoreboardScope(g,resultsScope,enrolled,owned,watched,pollRanks)&&
-        (resultsConference==='all'||homeConf===resultsConference||awayConf===resultsConference)&&
+        (matchesConferenceFilter(homeConf,resultsConference)||matchesConferenceFilter(awayConf,resultsConference))&&
         (!query||((g.home_name||'')+' '+(g.away_name||'')).toLowerCase().includes(query));
     });
     const statusCounts={live:0,upcoming:0,final:0};
@@ -1037,7 +1048,7 @@
         statusButton('upcoming','Upcoming',statusCounts.upcoming)+statusButton('final','Final',statusCounts.final)+
         '</div>'+(clearable?'<button type="button" class="daily-clear-filter" data-act="results-clear-filters">Clear filters</button>':'')+'</div>'
       +'<div class="daily-conference-tabs" role="group" aria-label="Filter by conference">'+
-        conferenceButton('all','All conferences')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div>'
+        conferenceButton('all','All conferences')+conferenceButton(MID_MAJOR_FILTER,'Mid-Major')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div>'
       +'<div class="daily-day-header"><div><span>DAILY SCOREBOARD</span><h2>'+
         formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</h2></div><small>'+
         (resultsLoading?'Updating…':visible.length+' of '+list.length+' games')+'</small></div>'
@@ -1462,7 +1473,7 @@
     Number(value).toLocaleString('en-US',{minimumFractionDigits:places,maximumFractionDigits:places});
   const rankingSearchText=p=>(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase();
   function rankingEligible(p,conference,scope){
-    if(conference!=='all'&&String(p.conference_id)!==String(conference))return false;
+    if(!matchesConferenceFilter(p.conference_id,conference))return false;
     const owned=programOwned(p.id);
     if(scope==='available')return !owned;
     if(scope==='owned')return !!owned;
@@ -1481,7 +1492,7 @@
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(String(conference)===String(id)?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     return '<div class="rank-tools" role="search">'
       +'<label class="rank-search"><span class="rank-search-icon" aria-hidden="true">⌕</span><input id="'+prefix+'-search" type="search" value="'+escapeHTML(query)+'" placeholder="Search schools..." autocomplete="off" aria-label="Search ranked schools" /></label>'
-      +'<label class="rank-conference-select"><span class="sr-only">Conference</span><select id="'+prefix+'-conference" aria-label="Filter by conference"><option value="all">All conferences</option>'+conferences+'</select></label>'
+      +'<label class="rank-conference-select"><span class="sr-only">Conference</span><select id="'+prefix+'-conference" aria-label="Filter by conference"><option value="all">All conferences</option>'+midMajorOption(conference)+conferences+'</select></label>'
       +'<div class="rank-scope" role="group" aria-label="Filter by roster status">'+scopeButtons+'</div>'
       +'</div>';
   }
@@ -1673,7 +1684,7 @@
     };
     eligible.sort(sorters[programSort]||sorters.name);
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
-    const conferenceChips=chip('all','All conferences')+eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
+    const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')+eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
     const sortButtons=[['name','A–Z'],['conference','Conference'],['availability','Available first']]
@@ -1697,7 +1708,7 @@
     let found=0,visible=0;
     document.querySelectorAll('.program-card[data-search]').forEach(card=>{
       const match=card.dataset.search.includes(query)
-        &&(programConference==='all'||card.dataset.conference===programConference)
+        &&matchesConferenceFilter(card.dataset.conference,programConference)
         &&(programOwnership==='all'||(programOwnership==='mine'?card.dataset.manager===me.id:card.dataset.owner===programOwnership))
         &&(programLetter==='all'||card.dataset.letter===programLetter);
       if(match)found++;
@@ -1929,7 +1940,7 @@
     let total=0,visible=0;
     for(const card of cards){
       const matches=card.dataset.search.includes(query)
-        &&(draftConference==='all'||card.dataset.conference===draftConference)
+        &&matchesConferenceFilter(card.dataset.conference,draftConference)
         &&(draftScope!=='queue'||card.dataset.queued==='1');
       if(matches)total++;
       const show=matches&&total<=draftShown;
@@ -2103,7 +2114,7 @@
       +'<p>Star schools to add them to the end of your draft queue. Preview and confirm a school when it is your pick.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">⌕</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
-      +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+confOptions+'</select></label>'
+      +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
       +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','T-Rank')+sortButton('history','5Y Points')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
       +'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+
         (schoolLeadersError?'<button type="button" data-act="draft-history-retry">Retry history</button>':'')+'</div>'
@@ -2770,11 +2781,12 @@
         +'<div class="pool-editor">'
         +'<section class="panel pool-conferences">'+panelHeading('Conferences','Select an entire conference with one click')
         +'<div class="pool-quick-actions"><button type="button" class="btn small secondary" data-act="pool-major" '+(locked?'disabled':'')+'>Major conferences</button>'
-        +'<button type="button" class="btn small ghost" data-act="pool-all-confs" '+(locked?'disabled':'')+'>Select all</button></div>'
+        +'<button type="button" class="btn small secondary" data-act="pool-mid-major" '+(locked?'disabled':'')+'>Mid-major conferences</button>'
+         +'<button type="button" class="btn small ghost" data-act="pool-all-confs" '+(locked?'disabled':'')+'>Select all</button></div>'
         +conferenceRows+'</section>'
         +'<section class="panel pool-schools">'+panelHeading('Individual schools','Override conference selections one school at a time')
         +'<div class="pool-search-tools"><label class="pool-search"><span aria-hidden="true">⌕</span><input type="search" id="pool-search" value="'+escapeHTML(poolQuery)+'" placeholder="Search any Division I school..." autocomplete="off" aria-label="Find a school" /></label>'
-        +'<select id="pool-conf-filter" class="field" aria-label="Filter schools by conference"><option value="all">All conferences</option>'+filterOptions+'</select></div>'
+        +'<select id="pool-conf-filter" class="field" aria-label="Filter schools by conference"><option value="all">All conferences</option>'+midMajorOption(poolConferenceFilter)+filterOptions+'</select></div>'
         +'<div class="pool-scope" role="group" aria-label="Program selection filter">'+scopeButtons+'</div>'
         +(!locked?'<div class="pool-bulk"><span>Matching schools</span><button type="button" data-act="pool-add-visible">Include all</button><button type="button" data-act="pool-remove-visible">Exclude all</button></div>':'')
         +'<div class="pool-school-list '+(locked?'is-locked':'')+'" id="pool-school-results">'+poolSchoolRows()+'</div></section></div>'
@@ -3088,9 +3100,10 @@
       if(id!==adminSection)passwordResetReceipt=null;
       adminSection=id;render();if(id==='data'){loadResults();loadIntegrity();}if(id==='activity')loadActivity();return;
     }
-    if(act==='pool-conf'||act==='pool-major'||act==='pool-all-confs'){
+    if(act==='pool-conf'||act==='pool-major'||act==='pool-mid-major'||act==='pool-all-confs'){
       initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
-      const targets=act==='pool-conf'?[id]:act==='pool-major'?conferenceGroups[0].ids:Object.keys(conferenceNames);
+      const targets=act==='pool-conf'?[id]:act==='pool-major'?conferenceGroups[0].ids:
+         act==='pool-mid-major'?[...midMajorConferenceIds]:Object.keys(conferenceNames);
       const turnOn=act==='pool-conf'?!poolDraftConfs.has(id):true;
       for(const confId of targets){
         if(turnOn)poolDraftConfs.add(confId);else poolDraftConfs.delete(confId);

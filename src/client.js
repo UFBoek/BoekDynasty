@@ -117,11 +117,11 @@
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
   let ratingConference='all',ratingOwnership='all',ratingShown=40;
-  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
+  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='current';
   let programBackScroll=0,managerBackScroll=0;
   let programProfileTab='overview';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
-  let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftCompareExpanded=false,draftQueueDragging='';
+  let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftQueueOpen=false,draftCompareExpanded=false,draftQueueDragging='';
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
   let globalSearchOpen=false,globalSearchQuery='',pendingUiRefresh=false;
@@ -2140,10 +2140,8 @@
       +'<span>'+(draftLive?'Round '+roundLabel+' · Overall pick #'+activePick:
          draftDone?completed+' programs selected':completed+' of '+plannedTotal+' projected selections')+'</span></div></div>'
       +'</div><div class="draft-live-right"><div class="draft-live-stat"><span>'+(yourTurn?'YOUR PICK':'YOUR NEXT PICK')+'</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong><small>'+(nextMine?(yourTurn?'Make your selection now':'Your next selection'):'No picks remaining')+'</small></div>'
-      +'<div class="draft-live-stat"><span>PROGRESS</span><strong>'+completed+' <em>/ '+plannedTotal+'</em></strong><small>'+Math.max(0,plannedTotal-completed)+' picks remaining</small></div>'
       +clock
-      +(settings.trading_enabled&&status!=='finished'?'<button type="button" class="draft-trade-quick" data-act="tab" data-id="trades">⇄ Trade picks <span>›</span></button>':'')
-      +'<button type="button" class="draft-live-cta" data-act="draft-jump-pool">'+(yourTurn?'Choose your program':'Browse available programs')+' <span>›</span></button></div>'
+      +'<button type="button" class="draft-live-cta" data-act="draft-jump-pool">'+(yourTurn?'Draft':'Browse programs')+' <span>›</span></button></div>'
       +'<div class="draft-live-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,plannedTotal))+'%"></span></div>'
       +'</section>';
     const pickInventory='<section class="panel draft-pick-inventory" aria-label="Your unused draft picks">'
@@ -2172,12 +2170,6 @@
       }).join('')+'</section>':'';
     const tracker='<div class="draft-pick-ticker"><div class="draft-pick-ticker-label"><strong>NEXT PICKS</strong><small>Snake order</small></div>'
       +'<div class="draft-pick-ticker-scroll">'+(upNext||'<span class="draft-no-upcoming">Draft order will appear here when the draft opens.</span>')+'</div></div>';
-    const ready=status==='pending'?'<div class="draft-readiness draft-readiness-v2">'
-      +'<span class="'+(managerCount>=2?'good':'')+'">'+(managerCount>=2?'✓':'○')+' '+managerCount+' managers registered</span>'
-      +'<span class="'+(eligiblePrograms().length>=total?'good':'')+'">'
-      +(eligiblePrograms().length>=total?'✓':'○')
-      +' '+eligiblePrograms().length+' eligible programs</span>'
-      +'<strong>'+(managerCount>=2&&available.length>=total?'Ready for commissioner to start':'Waiting for draft setup')+'</strong></div>':'';
     const confOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)))
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(draftConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     const sortButton=(id,label)=>'<button type="button" data-act="draft-pool-sort" data-id="'+id+'" aria-pressed="'+(draftSort===id)+'" class="'+(draftSort===id?'active':'')+'">'+label+'</button>';
@@ -2230,7 +2222,7 @@
     }).join('');
     const pool='<section id="draft-pool-section" class="panel draft-pool-panel">'
       +'<div class="draft-section-heading"><div><span class="draft-section-overline">YOUR DRAFT DESK</span><h2>Available programs</h2>'
-      +'<p>Star schools to add them to the end of your draft queue. Preview and confirm a school when it is your pick.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
+      +'<p>Choose a program to draft, or star it to save for later.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">⌕</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
@@ -2278,9 +2270,9 @@
         +'<button type="button" data-act="draft-queue-down" data-id="'+escapeHTML(id)+'" '+(last?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' down in draft queue" title="Move down">↓</button>'
         +'<button type="button" class="draft-queue-remove" data-act="draft-queue-toggle" data-id="'+escapeHTML(id)+'" aria-label="Remove '+escapeHTML(p.name)+' from draft queue" title="Remove from queue">×</button></div></div>';
     }).join('');
-    const queueManager='<details class="draft-extra-panel draft-queue-details" id="draft-queue-details" open><summary><span>My draft queue</span><small>'+usedQueue.length+' saved schools</small></summary><section class="panel draft-queue-manager" id="draft-queue-section" aria-label="My ordered draft queue">'
+    const queueManager='<details class="draft-extra-panel draft-queue-details" id="draft-queue-details" '+(draftQueueOpen?'open':'')+'><summary><span>Draft queue</span><small>'+usedQueue.length+' saved programs · Tap to '+(draftQueueOpen?'close':'manage')+'</small></summary><section class="panel draft-queue-manager" id="draft-queue-section" aria-label="My ordered draft queue">'
       +'<div class="draft-queue-manager-head"><div class="draft-queue-title"><span class="draft-section-overline">YOUR PRIORITY LIST</span><h2>My draft queue <span>'+usedQueue.length+'</span></h2>'
-      +'<p>Put your top choice at #1. Drag on desktop or use the arrow buttons on mobile. Your priority order syncs across signed-in devices. No automatic picks.</p></div>'
+      +'<p>Put your top choice first. Drag or use the arrows to reorder. Saved across devices; no automatic picks.</p></div>'
       +'<div class="draft-queue-header-actions"><button type="button" data-act="draft-jump-pool" class="draft-queue-find">+ Add schools</button>'
       +(usedQueue.length?'<button type="button" class="draft-queue-games" data-act="results-track-queue">Track games</button>':'')
       +(usedQueue.length>1?'<button type="button" data-act="draft-compare-toggle" class="draft-compare-toggle" aria-expanded="'+draftCompareExpanded+'">'+(draftCompareExpanded?'Hide comparison':'Compare top 4')+'</button>':'')
@@ -2298,12 +2290,9 @@
       return school?'<div class="draft-my-pick" '+draftStyle(school) +'><span class="draft-mini-logo">'+img(school)+'</span><span><strong>'+escapeHTML(school.name)+'</strong><small>Round '+p.round+' · Pick #'+p.overall+'</small></span></div>':'';
     }).join('');
     const sidebar='<aside class="draft-pick-aside"><section class="panel draft-pick-desk">'
-      +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOU ARE ON THE CLOCK':'Preview and queue')+'</strong></div>'
-      +selectedView+'</section>'
-      +'<section class="panel draft-my-picks-panel"><div class="draft-side-title"><span>MY DRAFT</span><strong>'+myPicks.length+' / '+rounds+' programs</strong></div>'
-      +(myPickList||'<p class="draft-side-empty">Your selected programs will appear here as the draft progresses.</p>')
-      +'</section></aside>';
-    const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
+      +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOUR TURN TO DRAFT':'Preview a program')+'</strong></div>'
+      +selectedView+'</section></aside>';
+    const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'current';
     const boardColumns=visualOrder;
     const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1)
       .filter(r=>boardMode!=='mine'||Array.from({length:managerCount},(_,i)=>(r-1)*managerCount+i+1)
@@ -2340,13 +2329,13 @@
     const boardTab=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(boardMode===id?'active':'')+'" aria-pressed="'+(boardMode===id)+'">'+label+'</button>';
     const board='<section class="panel draft-board-panel draft-v2-board" id="draft-board-section">'
       +'<div class="draft-board-toolbar"><div><span class="draft-section-overline">THE FULL LEAGUE</span><h2>Snake draft board</h2>'
-      +'<p>Every snake slot stays in its original position. Traded picks show their current owner.</p></div>'
-      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My rounds')+'</div></div>'
+      +'<p>Live picks and draft order, including traded selections.</p></div>'
+      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','All rounds')+boardTab('current','Current round')+boardTab('mine','My picks')+'</div></div>'
       +'<div class="draft-board-key"><span><i class="selected"></i> Picked programs</span><span><i class="on-clock"></i> On the clock</span>'
       +'<span><i class="mine"></i> My draft column</span><button type="button" data-act="draft-follow-live">Jump to current round ↗</button></div>'
       +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board"><div class="draft-board-grid" style="'+boardWidth+'">'
       +'<div class="draft-board-corner">ROUND</div>'+boardHeaders+boardCells+'</div></div>'
-      +'<div class="draft-board-footer"><span>Rounds alternate direction to maintain the original snake order.</span>'
+      +'<div class="draft-board-footer"><span>Snake draft · Scroll to explore the board.</span>'
       +'<span>'+completed+' / '+plannedTotal+' picks made</span></div></section>';
     const recent=picks().slice(-6).reverse().map(p=>{
       const school=programIndex.get(String(p.program_id)),member=managerIndex.get(String(p.manager_id));
@@ -2360,10 +2349,9 @@
       +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
-    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Track live selections, trade picks and manage your scouting queue.')
-      +'<div class="draft-v2">'+hero+tracker+tradeInbox+ready+queueManager
+    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Follow picks, browse programs and manage your queue.')
+      +'<div class="draft-v2 draft-v3">'+hero+board+tracker+tradeInbox+queueManager
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'
-      +'<details class="draft-extra-panel" id="draft-board-details"><summary><span>Full draft board</span><small>View picks by round</small></summary>'+board+'</details>'
       +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
   }
 
@@ -3320,7 +3308,7 @@
     if(act==='draft-compare-toggle'){draftCompareExpanded=!draftCompareExpanded;render();return;}
     if(act==='draft-queue-collapse'){draftQueueExpanded=!draftQueueExpanded;render();return;}
     if(act==='draft-jump-queue'){
-      draftQueueExpanded=true;render();
+      draftQueueOpen=true;draftQueueExpanded=true;render();
       root.querySelector('#draft-queue-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;
     }
     if(act==='draft-jump-pool'){root.querySelector('#draft-pool-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
@@ -3346,7 +3334,7 @@
       storeDraftQueue();render();return;
     }
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
-    if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();return;}
+    if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();const board=root.querySelector('.draft-board-scroll');if(board)board.scrollTop=0;return;}
     if(act==='results-date'){resultsSelectedDay=button.dataset.date;resultsShown=40;loadResults();return;}
     if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));resultsShown=40;loadResults();return;}
     if(act==='results-today'){resultsSelectedDay=resultsToday();resultsShown=40;loadResults();return;}
@@ -3617,6 +3605,8 @@
     }catch(e){notice(e.message,true);}finally{busy=false;}
   }
   root.addEventListener('click',e=>{
+    const summary=e.target.closest('#draft-queue-details > summary');
+    if(summary){e.preventDefault();draftQueueOpen=!draftQueueOpen;render();return;}
     const b=e.target.closest('[data-act]');
     if(b)action(b);
   });

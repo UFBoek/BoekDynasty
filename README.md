@@ -19,6 +19,42 @@ The live URL above has been migrated off Cloudflare D1. Users must sign in again
 
 GitHub Pages at `https://ufboek.github.io/BoekDynasty/` remains **unpublished** until the repository owner goes to **Settings → Pages → Build and deployment → Source: GitHub Actions** and reruns the Pages deployment. See [deployment notes](docs/GITHUB_MIGRATION.md). Do not tell managers to use the unpublished Pages URL.
 
+## Notification center (2026-27)
+
+**Deployed to the Cloudflare Workers production site**, with private Supabase tables and API routes.
+Managers get a Notifications page, unread counts in the topbar and sidebar, and category preferences for
+trade offers/responses, draft start/on-clock/two-picks-ahead/completion, and commissioner broadcasts.
+Commissioner → **Notifications** offers event switches, delivery stats, individual device counts,
+an announcement composer targeting the whole league or a specific manager, send-test, and retry controls.
+All announcements are persisted and opt-out preferences respected; commissioner announcements are limited
+to eight per 24 hours. Transactional draft and trade actions themselves are not rolled back by transient
+push failures. Notifications are delivered immediately after a successful action, and failed deliveries
+are retried by the existing live/recent scheduled import job.
+
+### Enabling device push
+
+Use **Notifications → Enable on this device**, which prompts browser permission and saves an individual,
+authenticated Push API subscription. Each manager must opt in separately on each phone or computer.
+In particular, iPhone/iPad users must install the website to their Home Screen before enabling push.
+Browser service-worker delivery uses standards-based VAPID ES256 and encrypted aes128gcm Web Push.
+Signing keys are generated once in a restricted Supabase PostgreSQL table; never publish the private
+JWK or subscription authentication secrets in the client or GitHub. Push payloads contain only the
+notification title/body; no login session tokens or personal credentials.
+
+### Email setup (optional, requires administrator configuration)
+
+The application supports **verified opt-in email notifications**, but production email sending is
+disabled until a sender domain and provider are configured. In Supabase Edge Function secrets, set
+`RESEND_API_KEY` to a valid Resend API key and `NOTIFICATION_EMAIL_FROM` to an address on a
+verified sending domain. Managers can then verify their own email by link and enable email alerts.
+Without those credentials the UI honestly says email is unavailable and never claims delivery.
+Push and in-app notifications do not require an email provider.
+
+Notifications schema: `supabase/migrations/20261105000000_cbb_notifications_push_email.sql`.
+Implementation: `supabase/functions/boek-api/notifications.js`, `push.js`,
+`src/service-worker.js`, and the shared client/Worker. Tests include encrypted Web Push
+round-trip, browser UI, commissioner permissions, and compatibility with the draft workflow.
+
 ## Features
 
 - **Configurable manager cap (2–20)**, including the commissioner; PostgreSQL validates capacity at registration with a settings-driven database trigger.

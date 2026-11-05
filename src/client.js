@@ -90,7 +90,7 @@
       ?isMidMajorMenuConference(conferenceId)
       :String(conferenceId)===String(filter));
   const midMajorOption=selected=>'<option value="'+MID_MAJOR_FILTER+'"'+
-    (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major (other conferences)</option>';
+    (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major</option>';
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
   let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';

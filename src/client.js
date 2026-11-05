@@ -2186,7 +2186,7 @@
           '</span>':'')+'</span>'
         +'<span class="draft-pool-stat"><strong>'+(rank?'#'+rank:'—')+'</strong><small>T-RANK</small></span>'
         +'</button>'
-        +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">'Draft <span>›</span></button>'
+        +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
         +(queued?'<span>★</span><small>'+queueNumber+'</small>':'☆')+'</button>'
         +'</article>';

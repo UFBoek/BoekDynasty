@@ -361,6 +361,100 @@
     if(delta<604800)return Math.floor(delta/86400)+'d ago';
     return new Date(Number(seconds)*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
   };
+  async function loadNotifications(force=false){
+    if(!me||notificationLoading||(!force&&Date.now()-notificationFetchedAt<30000))return;
+    notificationLoading=true;
+    try{
+      const previous=Number(notificationSnapshot?.unread||0);
+      notificationSnapshot=await api('notifications/inbox');
+      notificationFetchedAt=Date.now();notificationError='';
+      if(typeof navigator!=='undefined'&&'serviceWorker' in navigator){
+        navigator.serviceWorker.ready.then(reg=>reg.pushManager?.getSubscription())
+          .then(subscription=>{const active=!!subscription;if(active!==pushDeviceActive){pushDeviceActive=active;if(current==='notifications')render();}})
+          .catch(()=>{});
+      }
+      if(typeof navigator!=='undefined'&&'setAppBadge' in navigator){
+        const unread=Number(notificationSnapshot.unread||0);
+        (unread?navigator.setAppBadge(unread):navigator.clearAppBadge?.())?.catch?.(()=>{});
+      }
+      if(current==='notifications'||previous!==Number(notificationSnapshot.unread||0)){
+        const focused=document.activeElement;
+        if(!focused||!['INPUT','SELECT','TEXTAREA'].includes(focused.tagName))render();
+      }
+    }catch(error){notificationError=String(error.message||error);notificationFetchedAt=Date.now();}
+    finally{notificationLoading=false;}
+  }
+  async function loadNotificationAdmin(force=false){
+    if(me?.role!=='commissioner'||notificationAdminLoading||
+       (!force&&Date.now()-notificationAdminFetchedAt<30000))return;
+    notificationAdminLoading=true;
+    try{
+      notificationAdmin=await api('admin/notifications');notificationAdminFetchedAt=Date.now();notificationAdminError='';
+    }catch(error){notificationAdminError=String(error.message||error);notificationAdminFetchedAt=Date.now();}
+    finally{
+      notificationAdminLoading=false;
+      if(current==='commissioner'&&adminSection==='notifications')render();
+    }
+  }
+  const notificationTime=when=>new Date(Number(when)*1000).toLocaleString('en-US',
+    {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  function notificationsPage(){
+    const data=notificationSnapshot,prefs=data?.preferences||{},items=data?.notifications||[];
+    const unread=Number(data?.unread||0),deviceCount=data?.devices?.length||0;
+    const ios=typeof navigator!=='undefined'&&/iPad|iPhone|iPod/i.test(navigator.userAgent||'');
+    const standalone=!!(typeof window!=='undefined'&&(window.matchMedia?.('(display-mode: standalone)')?.matches||
+      navigator?.standalone));
+    const pushSupported=typeof navigator!=='undefined'&&'serviceWorker' in navigator&&
+      typeof window!=='undefined'&&'PushManager' in window&&'Notification' in window&&(!ios||standalone);
+    const permission=typeof Notification!=='undefined'?Notification.permission:'unsupported';
+    const toggle=(field,title,sub)=>'<label class="notification-preference"><div><strong>'+title+'</strong><span>'+sub+
+      '</span></div><input type="checkbox" id="notification-pref-'+field+'" '+(prefs[field]!==false?'checked':'')+'/></label>';
+    const list=items.map(n=>'<article class="notification-item '+(!n.read_at?'unread':'')+'">'
+      +'<span class="notification-event-mark">'+(n.kind.startsWith('trade_')?'⇄':
+        n.kind.startsWith('draft_')?'▤':n.kind==='announcement'?'✦':'✓')+'</span>'
+      +'<div class="notification-item-copy"><div><strong>'+escapeHTML(n.title)+'</strong>'+
+      (!n.read_at?'<span class="notification-new-dot" aria-label="Unread"></span>':'')+'</div>'
+      +'<p>'+escapeHTML(n.body)+'</p><small>'+escapeHTML(notificationTime(n.created_at))+'</small></div>'
+      +'<button class="btn small secondary" type="button" data-act="notification-open" data-id="'+escapeHTML(n.id)+
+        '" data-target="'+escapeHTML(n.target||'notifications')+'">'+(n.read_at?'Open':'View')+'</button></article>').join('');
+    const deviceMessage=!pushSupported?(ios&&!standalone?
+      'On iPhone, use Share → Add to Home Screen, then open the installed app to enable alerts.':
+      'This browser does not support push notifications. In-app alerts remain available.'):
+      permission==='denied'?'Notifications are blocked in browser settings. Enable them there and return here.':
+      pushDeviceActive?'Push enabled on this device. Alerts can arrive when the app is closed.':
+      'Turn on notifications for important league events on this device.';
+    return heading('LEAGUE ALERTS','Notifications','Draft picks, trades, and commissioner messages in one place.')
+      +'<div class="notification-overview"><div><strong>'+unread+'</strong><span>Unread alerts</span></div>'
+      +'<div><strong>'+deviceCount+'</strong><span>Registered devices</span></div>'
+      +'<div><strong>'+items.length+'</strong><span>Recent notifications</span></div></div>'
+      +'<section class="panel notification-permissions">'+panelHeading('Push notifications','Phone lock-screen and desktop alerts')
+      +'<p class="hint">'+escapeHTML(deviceMessage)+'</p><div class="button-row section-gap">'
+      +(pushSupported&&!pushDeviceActive?'<button class="btn" type="button" data-act="notifications-enable-push" '+(permission==='denied'?'disabled':'')+'>Enable on this device</button>':'')
+      +(pushSupported&&pushDeviceActive?'<button class="btn secondary" type="button" data-act="notifications-disable-push">Disable this device</button>':'')
+      +(pushSupported&&pushDeviceActive?'<button class="btn secondary" type="button" data-act="notifications-test">Send test alert</button>':'')
+      +'</div></section>'
+      +'<section class="panel section-gap notification-preferences">'+panelHeading('Your notification settings','Choose which league events notify you')
+      +toggle('trades','Trade offers and responses','New offers, acceptances, declines and cancellations')
+      +toggle('draft','Draft alerts','Draft start, on the clock, two picks away and completion')
+      +toggle('announcements','Commissioner announcements','League updates from your commissioner')
+      +toggle('push_enabled','Browser push delivery','Show alerts on devices you have enabled')
+      +'<div class="notification-email-option"><div><strong>Email alerts</strong><p>'+
+      (data?.email_available?'Optional notifications after confirming your email address.':
+        'Email delivery is not configured yet. Your commissioner must connect an email provider and verified sender domain.')+
+      '</p></div>'
+      +(data?.email_available?'<label class="notification-email-toggle">Email alerts <input type="checkbox" id="notification-pref-email_enabled" '+(prefs.email_enabled?'checked':'')+' '+(!prefs.email_verified_at?'disabled':'')+'/></label>':
+        '<span class="notification-unavailable">Not configured</span>')+'</div>'
+      +(data?.email_available?'<div class="notification-email-form"><input class="field" id="notification-email" type="email" autocomplete="email" placeholder="you@example.com" value="'+escapeHTML(prefs.email_address||'')+'"/>'
+        +'<button class="btn secondary" type="button" data-act="notifications-email-request">'+(prefs.email_verified_at?'Change email':'Verify email')+'</button></div>'
+        +(prefs.email_verified_at?'<p class="notification-verified">Verified email address</p>':''):'')
+      +'<div class="button-row section-gap"><button class="btn" data-act="notifications-save-prefs" type="button">Save preferences</button></div></section>'
+      +'<section class="panel section-gap notification-inbox">'+panelHeading('Inbox',unread+' unread')
+      +(unread?'<div class="notification-inbox-toolbar"><button class="btn small secondary" type="button" data-act="notifications-read-all">Mark all read</button></div>':'')
+      +(notificationError?'<p class="notice">'+escapeHTML(notificationError)+'</p>':'')
+      +(list?'<div class="notification-list">'+list+'</div>':
+        empty(notificationLoading?'Loading notifications':'All caught up','New league alerts appear here, even if you have not enabled push.'))+'</section>';
+  }
+
   function activityMonitorPage(){
     const d=activitySnapshot,s=d?.summary||{},now=d?.now||Math.floor(Date.now()/1000);
     const members=d?.members||[];

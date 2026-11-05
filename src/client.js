@@ -529,7 +529,7 @@
     {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   function notificationsPage(){
     const data=notificationSnapshot,prefs=data?.preferences||{},items=data?.notifications||[];
-    const unread=Number(data?.unread||0),deviceCount=data?.devices?.length||0;
+    const unread=Number(data?.unread||0);
     const ios=typeof navigator!=='undefined'&&/iPad|iPhone|iPod/i.test(navigator.userAgent||'');
     const standalone=!!(typeof window!=='undefined'&&(window.matchMedia?.('(display-mode: standalone)')?.matches||
       navigator?.standalone));
@@ -547,41 +547,41 @@
       +'<button class="btn small secondary" type="button" data-act="notification-open" data-id="'+escapeHTML(n.id)+
         '" data-target="'+escapeHTML(n.target||'notifications')+'">'+(n.read_at?'Open':'View')+'</button></article>').join('');
     const deviceMessage=!pushSupported?(ios&&!standalone?
-      'On iPhone, use Share → Add to Home Screen, then open the installed app to enable alerts.':
-      'This browser does not support push notifications. In-app alerts remain available.'):
-      permission==='denied'?'Notifications are blocked in browser settings. Enable them there and return here.':
-      pushDeviceActive?'Push enabled on this device. Alerts can arrive when the app is closed.':
-      'Turn on notifications for important league events on this device.';
-    return heading('LEAGUE ALERTS','Notifications','Draft picks, trades, and commissioner messages in one place.')
-      +'<div class="notification-overview"><div><strong>'+unread+'</strong><span>Unread alerts</span></div>'
-      +'<div><strong>'+deviceCount+'</strong><span>Registered devices</span></div>'
-      +'<div><strong>'+items.length+'</strong><span>Recent notifications</span></div></div>'
-      +'<section class="panel notification-permissions">'+panelHeading('Push notifications','Phone lock-screen and desktop alerts')
-      +'<p class="hint">'+escapeHTML(deviceMessage)+'</p><div class="button-row section-gap">'
-      +(pushSupported&&!pushDeviceActive?'<button class="btn" type="button" data-act="notifications-enable-push" '+(permission==='denied'?'disabled':'')+'>Enable on this device</button>':'')
-      +(pushSupported&&pushDeviceActive?'<button class="btn secondary" type="button" data-act="notifications-disable-push">Disable this device</button>':'')
-      +(pushSupported&&pushDeviceActive?'<button class="btn secondary" type="button" data-act="notifications-test">Send test alert</button>':'')
-      +'</div></section>'
-      +'<section class="panel section-gap notification-preferences">'+panelHeading('Your notification settings','Choose which league events notify you')
-      +toggle('trades','Trade offers and responses','New offers, acceptances, declines and cancellations')
-      +toggle('draft','Draft alerts','Draft start, on the clock, two picks away and completion')
-      +toggle('announcements','Commissioner announcements','League updates from your commissioner')
-      +toggle('push_enabled','Browser push delivery','Show alerts on devices you have enabled')
-      +'<div class="notification-email-option"><div><strong>Email alerts</strong><p>'+
-      (data?.email_available?'Optional notifications after confirming your email address.':
-        'Email delivery is not configured yet. Your commissioner must connect an email provider and verified sender domain.')+
-      '</p></div>'
-      +(data?.email_available?'<label class="notification-email-toggle">Email alerts <input type="checkbox" id="notification-pref-email_enabled" '+(prefs.email_enabled?'checked':'')+' '+(!prefs.email_verified_at?'disabled':'')+'/></label>':
-        '<span class="notification-unavailable">Not configured</span>')+'</div>'
-      +(data?.email_available?'<div class="notification-email-form"><input class="field" id="notification-email" type="email" autocomplete="email" placeholder="you@example.com" value="'+escapeHTML(prefs.email_address||'')+'"/>'
-        +'<button class="btn secondary" type="button" data-act="notifications-email-request">'+(prefs.email_verified_at?'Change email':'Verify email')+'</button></div>'
-        +(prefs.email_verified_at?'<p class="notification-verified">Verified email address</p>':''):'')
-      +'<div class="button-row section-gap"><button class="btn" data-act="notifications-save-prefs" type="button">Save preferences</button></div></section>'
-      +'<section class="panel section-gap notification-inbox">'+panelHeading('Inbox',unread+' unread')
-      +(unread?'<div class="notification-inbox-toolbar"><button class="btn small secondary" type="button" data-act="notifications-read-all">Mark all read</button></div>':'')
+      'Install to your iPhone home screen to enable push alerts.':
+      'Push unavailable in this browser; in-app alerts still work.'):
+      permission==='denied'?'Notifications blocked in device settings.':
+      pushDeviceActive?'Push alerts enabled on this device.':
+      'Enable push alerts for draft picks, trades and league news.';
+    const pushAction=pushSupported&&!pushDeviceActive?
+      '<button class="btn small" type="button" data-act="notifications-enable-push" '+(permission==='denied'?'disabled':'')+'>Enable alerts</button>':
+      pushSupported&&pushDeviceActive?'<button class="btn small secondary" type="button" data-act="notifications-disable-push">Disable</button>':'';
+    return '<div class="notification-page">'
+      +heading('LEAGUE ALERTS','Notifications','Your league activity, all in one place.')
+      +'<div class="notification-device-strip"><span class="notification-device-indicator '+(pushDeviceActive?'active':'')+'"></span>'
+      +'<span class="notification-device-copy">'+escapeHTML(deviceMessage)+'</span>'+pushAction+'</div>'
+      +'<section class="panel notification-inbox">'
+      +'<div class="notification-inbox-header"><div><h2>Inbox</h2><span class="notification-inbox-count">'+unread+' unread</span></div>'
+      +(unread?'<button class="btn small secondary" type="button" data-act="notifications-read-all">Mark all read</button>':'')+'</div>'
       +(notificationError?'<p class="notice">'+escapeHTML(notificationError)+'</p>':'')
       +(list?'<div class="notification-list">'+list+'</div>':
-        empty(notificationLoading?'Loading notifications':'All caught up','New league alerts appear here, even if you have not enabled push.'))+'</section>';
+        empty(notificationLoading?'Loading notifications':'All caught up','New league alerts will appear here.'))+'</section>'
+      +'<details class="panel notification-settings-disclosure"><summary><span><strong>Notification settings</strong><small>Alert types, push and email preferences</small></span><span class="notification-settings-chevron" aria-hidden="true">⌄</span></summary>'
+      +'<div class="notification-settings-body">'
+      +toggle('trades','Trades','Offers and responses')
+      +toggle('draft','Draft','Pick alerts and draft updates')
+      +toggle('announcements','Announcements','Commissioner messages')
+      +toggle('push_enabled','Push delivery','Send alerts to enabled devices')
+      +(pushSupported&&pushDeviceActive?'<div class="notification-settings-action"><button class="btn small secondary" type="button" data-act="notifications-test">Send test alert</button></div>':'')
+      +'<div class="notification-email-option"><div><strong>Email alerts</strong><p>'+
+      (data?.email_available?'Get optional email updates after verification.':'Email delivery is not configured by the commissioner.')+
+      '</p></div>'
+      +(data?.email_available?'<label class="notification-email-toggle">Email <input type="checkbox" id="notification-pref-email_enabled" '+(prefs.email_enabled?'checked':'')+' '+(!prefs.email_verified_at?'disabled':'')+'/></label>':
+        '<span class="notification-unavailable">Unavailable</span>')+'</div>'
+      +(data?.email_available?'<div class="notification-email-form"><input class="field" id="notification-email" type="email" autocomplete="email" placeholder="Email address" value="'+escapeHTML(prefs.email_address||'')+'"/>'
+        +'<button class="btn small secondary" type="button" data-act="notifications-email-request">'+(prefs.email_verified_at?'Change email':'Verify email')+'</button></div>'
+        +(prefs.email_verified_at?'<p class="notification-verified">Verified email address</p>':''):'')
+      +'<div class="notification-settings-actions"><button class="btn small" data-act="notifications-save-prefs" type="button">Save preferences</button></div>'
+      +'</div></details></div>';
   }
 
   function activityMonitorPage(){

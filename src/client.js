@@ -409,11 +409,12 @@
   // Automatic permission onboarding only runs when launched from an installed
   // iOS/iPadOS or Android Home Screen app, never in a normal browser or on desktop.
   const isInstalledMobileApp=()=>{
-    const ua=navigator?.userAgent||'';
+    const ua=typeof navigator!=='undefined'?navigator.userAgent||'':'';
     const mobile=/Android|iPhone|iPad|iPod/i.test(ua)||
       (/Macintosh/i.test(ua)&&navigator?.maxTouchPoints>1);
-    const installed=window.matchMedia?.('(display-mode: standalone)')?.matches||
-      navigator?.standalone===true;
+    const installed=typeof window!=='undefined'&&!!(
+      window.matchMedia?.('(display-mode: standalone)')?.matches||
+      (typeof navigator!=='undefined'&&navigator.standalone===true));
     return !!(mobile&&installed);
   };
   const notificationGateOpen=()=>!!me&&!!league&&isInstalledMobileApp()&&!['idle','done'].includes(notificationGate);

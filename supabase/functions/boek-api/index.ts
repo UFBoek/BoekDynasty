@@ -18,7 +18,7 @@ const cors = {
   'Vary':'Origin'
 };
 
-const ACTIVITY_PAGES = new Set(['home','team','results','programs','program-detail','manager-detail','draft','trades','league','scoring','commissioner','settings','more','waivers','history']);
+const ACTIVITY_PAGES = new Set(['home','team','results','programs','program-detail','manager-detail','draft','trades','league','scoring','commissioner','settings','more','draft-order','waivers','history']);
 const ACTIVITY_SECTIONS = new Set(['general','programs','draft','scoring','members','data','trades','waivers','seasons','activity']);
 const ACTION_NAMES = {
   'draft/queue':'Updated draft queue','draft/pick':'Selected a draft pick',
@@ -29,6 +29,7 @@ const ACTION_NAMES = {
   'admin/bestball':'Updated best-ball format','admin/scoring-settings':'Updated scoring settings',
   'admin/settings':'Updated program eligibility','admin/program':'Updated program',
   'admin/draft-control':'Changed draft status','admin/draft-order':'Updated draft order',
+  'admin/race/run':'Finalized draft order race','admin/race/reset':'Reset draft order race',
   'admin/clock':'Updated draft clock','admin/trade-settings':'Updated trade settings',
   'admin/waiver-settings':'Updated waiver settings','admin/waiver/review':'Reviewed waiver claim',
   'admin/season/rollover':'Advanced league season','admin/season/champion':'Updated season champion'

@@ -5165,3 +5165,24 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .draft-owned-slot small{font-size:.6rem}
  .draft-trade-quick{width:100%}
 }
+
+
+/* Incoming offers stay actionable without leaving the live draft board. */
+.draft-trade-inbox{padding:18px 20px;border:1px solid #efddc8;border-radius:16px;background:#fffaf5}
+.draft-inbox-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.draft-inbox-head h2{margin:3px 0 0;color:#25374d;font-size:1rem;letter-spacing:-.025em}
+.draft-inbox-head .btn{flex-shrink:0}
+.draft-inbox-offer{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 15px;border:1px solid #eddfce;border-radius:11px;background:#fff;margin-top:9px}
+.draft-inbox-from{display:flex;align-items:center;gap:12px;min-width:0}
+.draft-inbox-from .avatar{flex-shrink:0}
+.draft-inbox-from>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.draft-inbox-from strong{font-size:.8rem;color:#233b58}
+.draft-inbox-from small{font-size:.73rem;color:#72849a;overflow-wrap:anywhere;line-height:1.4}
+.draft-inbox-actions{display:flex;gap:7px;flex-shrink:0}
+.draft-inbox-actions .btn{min-width:72px}
+@media(max-width:580px){
+ .draft-trade-inbox{padding:14px}
+ .draft-inbox-offer{flex-direction:column;align-items:stretch;gap:12px}
+ .draft-inbox-actions{display:grid;grid-template-columns:1fr 1fr}
+ .draft-inbox-actions .btn{width:100%}
+}

@@ -2016,37 +2016,80 @@
   }
 
   function updateTradeSelections(){
-    const give=document.querySelectorAll('input[name="trade-give"]:checked').length;
-    const receive=document.querySelectorAll('input[name="trade-receive"]:checked').length;
-    const giveLabel=document.querySelector('#trade-give-count');
-    const receiveLabel=document.querySelector('#trade-receive-count');
-    const summary=document.querySelector('#trade-selection-summary');
-    const submit=document.querySelector('[data-act="trade-propose"]');
+    const count=side=>document.querySelectorAll('input[name="trade-'+side+'"]:checked,input[name="trade-'+side+'-pick"]:checked').length;
+    const give=count('give'),receive=count('receive');
+    const giveLabel=document.querySelector('#trade-give-count'),receiveLabel=document.querySelector('#trade-receive-count');
+    const summary=document.querySelector('#trade-selection-summary'),submit=document.querySelector('[data-act="trade-propose"]');
     if(giveLabel)giveLabel.textContent=give+' selected';
     if(receiveLabel)receiveLabel.textContent=receive+' selected';
-    if(summary)summary.textContent=give&&receive?give+' sent · '+receive+' requested':'Select schools from both teams';
+    if(summary)summary.textContent=give&&receive?give+' sent · '+receive+' requested':'Select at least one asset on each side';
     if(submit)submit.disabled=!give||!receive;
   }
+  function tradeAssetNames(tradeId,fromId){
+    const schools=(league.trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===fromId)
+      .map(x=>programs().find(p=>p.id===x.program_id)?.name||'Program');
+    const slots=(league.draft_pick_trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===fromId)
+      .map(x=>'Pick #'+x.overall+' (R'+(Math.floor((Number(x.overall)-1)/Math.max(1,order().length))+1)+')');
+    return [...schools,...slots];
+  }
   function tradesPage(){
-    const ready=league.settings.draft_status==='finished'&&league.settings.trading_enabled;
+    const status=league.settings.draft_status,ready=league.settings.trading_enabled;
+    const allowPicks=ready&&status!=='finished'&&order().length>=2&&
+      Array.isArray(league.settings.draft_order)&&league.settings.draft_order.length===members().length;
     const others=members().filter(u=>u.id!==me.id);
     const recipient=others.find(u=>u.id===tradeTargetId)||others[0];
     tradeTargetId=recipient?.id||'';
     const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
-    const theirs=owners().filter(o=>o.manager_id===tradeTargetId).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
-    const selections=(items,side)=>items.length?'<div class="trade-program-list">'+items.map(p=>'<label class="trade-choice"><input type="checkbox" name="'+side+'" value="'+escapeHTML(p.id)+'"/>'+img(p)+'<span>'+escapeHTML(p.name)+'</span></label>').join('')+'</div>':empty('No programs available','This manager does not own any schools.');
-    const offers=league.trades||[],items=league.trade_items||[];
-    const card=(t)=>{
-      const from=members().find(m=>m.id===t.from_manager_id),to=members().find(m=>m.id===t.to_manager_id);
-      const give=items.filter(i=>i.trade_id===t.id&&i.from_manager_id===t.from_manager_id).map(i=>programs().find(p=>p.id===i.program_id)?.name||'Program');
-      const receive=items.filter(i=>i.trade_id===t.id&&i.from_manager_id===t.to_manager_id).map(i=>programs().find(p=>p.id===i.program_id)?.name||'Program');
-      const actions=t.status==='pending'&&league.settings.trading_enabled?(t.to_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept trade</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div>':t.from_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small ghost" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button></div>':''):'';
-      return '<div class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div><div class="trade-exchange"><div class="trade-exchange-side"><span>OFFERING</span><strong>'+escapeHTML(give.join(', ')||'No programs')+'</strong></div><span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>REQUESTING</span><strong>'+escapeHTML(receive.join(', ')||'No programs')+'</strong></div></div>'+actions+'</div>';
+    const theirs=owners().filter(o=>o.manager_id===tradeTargetId)
+      .map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const selections=(schools,ownerId,side)=>{
+      const slots=allowPicks?futureDraftPicks(ownerId):[];
+      const pickOptions=slots.map(slot=>{
+        const from=originalDraftOwner(slot),original=members().find(m=>m.id===from);
+        return '<label class="trade-choice trade-pick-choice"><input type="checkbox" name="trade-'+side+'-pick" value="'+slot+'"/>'
+          +'<span class="trade-pick-icon">#'+slot+'</span><span><strong>'+escapeHTML(draftPickText(slot))+'</strong><small>'
+          +(from!==ownerId?'From '+escapeHTML(original?.display_name||'another manager'):'Original pick')+'</small></span></label>';
+      }).join('');
+      const schoolOptions=schools.map(p=>'<label class="trade-choice"><input type="checkbox" name="trade-'+side+'" value="'+escapeHTML(p.id)+'"/>'
+        +img(p)+'<span>'+escapeHTML(p.name)+'</span></label>').join('');
+      return '<div class="trade-assets">'
+        +(allowPicks?'<div class="trade-asset-group"><h4>Unused draft picks <span>'+slots.length+'</span></h4>'
+          +(pickOptions?'<div class="trade-pick-list">'+pickOptions+'</div>':'<p class="trade-assets-empty">No unused picks</p>')+'</div>':'')
+        +'<div class="trade-asset-group"><h4>Rostered programs <span>'+schools.length+'</span></h4>'
+        +(schoolOptions?'<div class="trade-program-list">'+schoolOptions+'</div>':'<p class="trade-assets-empty">No drafted schools yet</p>')+'</div></div>';
     };
-    return heading('', 'Trades')
-      +(ready?'<section class="panel section-gap">'+panelHeading('Propose trade')+'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'+others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select></div><div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'+selections(mine,'trade-give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'+selections(theirs,'trade-receive')+'</div></div><div class="trade-submit"><div id="trade-selection-summary">Select schools from both teams</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></section>':
-        '<section class="panel section-gap">'+empty(league.settings.trading_enabled?'Trading unavailable':'Trading disabled',league.settings.trading_enabled?'Trading opens after the initial draft.':'The commissioner has disabled new trades.')+'</section>')
-      +'<section class="panel section-gap">'+panelHeading('Trade history')+(offers.length?offers.map(card).join(''):empty('No trades yet',''))+'</section>';
+    const offers=(league.trades||[]).slice().sort((a,b)=>
+      Number(b.status==='pending')-Number(a.status==='pending')||Number(b.offered_at||0)-Number(a.offered_at||0));
+    const card=t=>{
+      const from=members().find(m=>m.id===t.from_manager_id),to=members().find(m=>m.id===t.to_manager_id);
+      const give=tradeAssetNames(t.id,t.from_manager_id),receive=tradeAssetNames(t.id,t.to_manager_id);
+      const actions=t.status==='pending'&&ready?(t.to_manager_id===me.id?
+        '<div class="button-row section-gap"><button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept trade</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div>':
+        t.from_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small ghost" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button></div>':''):'';
+      return '<article class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong>'
+        +'<span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div>'
+        +'<div class="trade-exchange"><div class="trade-exchange-side"><span>SENDING</span><strong>'+escapeHTML(give.join(' · ')||'No assets')+'</strong></div>'
+        +'<span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>RECEIVING</span><strong>'+escapeHTML(receive.join(' · ')||'No assets')+'</strong></div></div>'+actions+'</article>';
+    };
+    const incoming=offers.filter(t=>t.status==='pending'&&t.to_manager_id===me.id).length;
+    return heading('DYNASTY TRANSACTIONS','Trades','Exchange future draft picks and rostered programs with other managers.')
+      +'<section class="trade-overview-strip"><div><strong>'+incoming+'</strong><span>Incoming offers</span></div>'
+      +'<div><strong>'+futureDraftPicks(me.id).length+'</strong><span>Remaining picks</span></div>'
+      +'<div><strong>'+offers.filter(t=>t.status==='accepted').length+'</strong><span>Accepted trades</span></div></section>'
+      +(ready?'<section class="panel trade-builder">'+panelHeading('Build a trade','Mix draft picks and schools in the same offer')
+        +'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'
+        +others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')
+        +'</select></div>'
+        +(!allowPicks&&status!=='finished'?'<p class="trade-note">Pick trading opens when the commissioner saves the final draft order.</p>':'')
+        +'<div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'
+        +selections(mine,me.id,'give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'
+        +selections(theirs,tradeTargetId,'receive')+'</div></div>'
+        +'<div class="trade-submit"><div id="trade-selection-summary">Select at least one asset from each side</div>'
+        +'<button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div>'
+        +'<p class="trade-footnote">The recipient must accept before anything transfers. Live draft picks move instantly on acceptance; used picks are ineligible.</p></section>':
+        '<section class="panel section-gap">'+empty('Trading disabled','The commissioner has paused new trades.')+'</section>')
+      +'<section class="panel section-gap trade-history">'+panelHeading('League trade activity',offers.length+' offers')
+      +(offers.length?offers.map(card).join(''):empty('No trades yet','Pending and completed offers will appear here.'))+'</section>';
   }
 
   const scoringGroups=[

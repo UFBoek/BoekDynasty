@@ -5475,3 +5475,40 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .my-team-page .team-activity-cta{font-size:10px}
  .my-team-page .team-activity-content{padding:9px}
 }
+
+
+/* Refined manager profile settings */
+.settings-refined{grid-template-columns:minmax(0,1.55fr) minmax(255px,.85fr);gap:14px;max-width:1050px}
+.settings-refined .settings-card{padding:22px;border-radius:14px}
+.settings-section-heading{margin-bottom:16px}
+.settings-section-heading h2{font-size:16px;letter-spacing:-.02em;color:#243c58;margin:0}
+.settings-section-heading p{font-size:12px;color:#77889d;margin:5px 0 0}
+.settings-profile-top{display:flex;gap:16px;align-items:center;padding:16px;background:#f7f9fc;border:1px solid #e8edf4;border-radius:12px;margin-bottom:20px}
+.settings-profile-top .avatar{width:70px;height:70px;border-radius:17px;font-size:23px}
+.settings-profile-summary{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:4px}
+.settings-profile-summary>strong{font-size:16px;color:#243c58;overflow-wrap:anywhere}
+.settings-profile-summary>small{font-size:12px;color:#77889d}
+.settings-profile-summary .settings-photo-actions{margin:8px 0 0;gap:7px}
+.settings-photo-hint{font-size:10px;color:#8a99ab}
+.settings-refined .settings-form{gap:17px}
+.settings-refined .settings-field{gap:7px}
+.settings-refined .settings-field .field{min-height:42px;border-radius:9px}
+.settings-refined .settings-colors{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.settings-refined .settings-color-option{gap:5px;padding:8px 2px;border-radius:9px}
+.settings-refined .settings-color-dot{width:23px;height:23px;border-radius:7px}
+.settings-refined .settings-color-option small{font-size:9px}
+.settings-refined .settings-actions{padding-top:4px}
+.settings-secondary{display:grid;gap:13px;align-content:start;min-width:0}
+.settings-security-details{padding:0!important;overflow:hidden}
+.settings-security-details>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;cursor:pointer}
+.settings-security-details>summary::-webkit-details-marker{display:none}
+.settings-security-details>summary>span:first-child{display:flex;flex-direction:column;gap:5px}
+.settings-security-details>summary strong{font-size:13px;color:#243c58}
+.settings-security-details>summary small{font-size:11px;color:#7d8da0}
+.settings-chevron{font-size:22px;color:#7a8ba0}
+.settings-security-details[open] .settings-chevron{transform:rotate(180deg)}
+.settings-security-details .settings-form{border-top:1px solid #edf1f6;padding:17px 20px 20px}
+.settings-account-card .settings-account-footer{margin:0;padding:0;border:0}
+.settings-account-card .settings-sign-out{margin-top:12px;font-size:12px}
+@media(max-width:1000px){.settings-refined{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.settings-refined .settings-card{padding:15px}.settings-refined .settings-form-grid{grid-template-columns:1fr}.settings-profile-top{padding:12px;gap:12px}.settings-profile-top .avatar{width:59px;height:59px;border-radius:13px}.settings-refined .settings-colors{grid-template-columns:repeat(4,minmax(0,1fr))}.settings-security-details>summary{padding:15px}.settings-security-details .settings-form{padding:15px}.settings-profile-summary .settings-photo-actions{gap:4px}}

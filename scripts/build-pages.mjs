@@ -30,11 +30,12 @@ client = client.replace("location.origin+'/?invite='+", "location.origin+SITE_BA
 write('index.html',html);
 write('app.js',client);
 write('style.css',read('src/style.css'));
+write('sw.js',read('src/service-worker.js'));
 const image = Buffer.from(read('src/brand-logo.base64').trim(),'base64');
 if(image.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('Invalid PNG logo.');
 for(const name of ['icon.png','brand-logo.png','apple-touch-icon.png'])write(name,image);
 write('manifest.webmanifest',JSON.stringify({
-  name:'Boek Dynasty',short_name:'Boek Dynasty',id:basePath,start_url:basePath,
+  name:'Boek Dynasty',short_name:'Boek Dynasty',id:basePath,start_url:basePath,scope:basePath,
   display:'standalone',background_color:'#f4f6fa',theme_color:'#f4f6fa',
   icons:[{src:basePath+'icon.png',sizes:'192x192',type:'image/png'}]
 }));

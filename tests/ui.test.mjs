@@ -143,16 +143,51 @@ test('global search finds school profiles, managers and navigation destinations'
  assert.match(app.search('Standings'),/data-id="league"/);
  assert.match(app.page('home'),/data-act="search-open"/);
 });
-test('manager profiles show actual season points and league rank instead of placeholders',()=>{
- league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'2'}];
- const standings={season:'2026-27',standings:[{manager_id:'1',points:88.25},{manager_id:'2',points:54}]};
- const html=app.manager('1',standings);
- assert.match(html,/SEASON POINTS/);
- assert.match(html,/88\.25/);
- assert.match(html,/LEAGUE RANK/);
- assert.match(html,/#1/);
- assert.doesNotMatch(html,/CURRENT POINTS<\/span><strong class="muted">Pending/);
- league.ownership=[];
+test('league manager rosters share My Team design and expose program-level season points',()=>{
+  const oldOwnership=league.ownership;
+  try{
+    league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'2'},{program_id:'59',manager_id:'2'}];
+    const standings={
+      season:'2026-27',program_points:{'57':88.25,'58':11.5,'59':42.5},
+      standings:[{manager_id:'1',points:88.25},{manager_id:'2',points:54}]
+    };
+    const own=app.team(standings);
+    assert.match(own,/Explore rosters/);
+    assert.match(own,/class="tm-directory-card" data-act="open-manager" data-id="2"/);
+    assert.match(own,/Hayden/);
+    const other=app.manager('2',standings);
+    assert.match(other,/tm-opponent-page/);
+    assert.match(other,/tm-masthead/);
+    assert.match(other,/SEASON POINTS/);
+    assert.match(other,/54/);
+    assert.match(other,/2026-27 ROSTER/);
+    assert.match(other,/Explore rosters/);
+    assert.match(other,/data-act="open-manager" data-id="1"/);
+    const table=other.slice(other.indexOf('<table class="tm-table">'));
+    assert.ok(table.indexOf('Houston basketball')<table.indexOf('Duke basketball'));
+    assert.match(table,/42\.5/);
+    assert.match(table,/11\.5/);
+    assert.match(other,/data-act="open-program"/);
+    assert.match(other,/data-id="team"/);
+    assert.doesNotMatch(other,/LEAGUE TITLES|OWNED PROGRAMS|LEAGUE RANK|No archived seasons/);
+  }finally{
+    league.ownership=oldOwnership;
+  }
+});
+test('league rosters handle a pending startup draft cleanly',()=>{
+  const oldOwnership=league.ownership;
+  try{
+    league.ownership=[];
+    const own=app.team(null);
+    assert.match(own,/Explore rosters/);
+    const other=app.manager('2',null);
+    assert.match(other,/Awaiting the draft/);
+    assert.match(other,/Draft pending/);
+    assert.match(other,/data-id="1"/);
+    assert.doesNotMatch(other,/NaN/);
+  }finally{
+    league.ownership=oldOwnership;
+  }
 });
 
 

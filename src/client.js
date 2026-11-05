@@ -1903,7 +1903,7 @@
   const draftQueueKey=()=>me?'boek_dynasty_draft_queue_'+String(me.id):'';
   const draftQueueMigratedKey=()=>draftQueueKey()+'_account_synced_v1';
   const normalizeDraftQueue=rows=>Array.isArray(rows)
-    ?[...new Set(rows.filter(id=>typeof id==='string'||typeof id==='number').map(String))].slice(0,120):[];
+    ?[...new Set(rows.filter(id=>typeof id==='string'||typeof id==='number').map(String))].slice(0,365):[];
   function writeLocalDraftQueue(){
     if(!me)return;
     try{localStorage.setItem(draftQueueKey(),JSON.stringify(draftWatchlist));}catch(e){}
@@ -3318,12 +3318,12 @@
       const programId=String(id),index=draftWatchlist.indexOf(programId);
       if(index>=0)draftWatchlist.splice(index,1);
       else if(draftAvailable().some(p=>String(p.id)===programId)){
-        if(draftWatchlist.length>=120){notice('The draft queue holds up to 120 schools.',true);return;}
+        if(draftWatchlist.length>=365){notice('The draft queue holds up to 365 schools.',true);return;}
         const wasEmpty=draftWatchlist.length===0;
         draftWatchlist.push(programId);
         if(wasEmpty)draftQueueExpanded=true;
       }
-      draftWatchlist=draftWatchlist.slice(0,120);
+      draftWatchlist=draftWatchlist.slice(0,365);
       storeDraftQueue();render();return;
     }
     if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}

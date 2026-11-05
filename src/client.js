@@ -2136,7 +2136,8 @@
           (history.eligibleForSort?'5Y AVG '+historicalPointLabel(history.avg)+' pts · '+history.count+'/'+history.totalYears+' seasons':'History: '+history.count+' season'+(history.count===1?'':'s'))+
           '</span>':'')+'</span>'
         +'<span class="draft-pool-stat"><strong>'+(rank?'#'+rank:'—')+'</strong><small>T-RANK</small></span>'
-        +'<span class="draft-pool-arrow">›</span></button>'
+        +'</button>'
+        +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">'+(yourTurn?'Draft team':'View team')+' <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
         +(queued?'<span>★</span><small>'+queueNumber+'</small>':'☆')+'</button>'
         +'</article>';
@@ -2191,7 +2192,7 @@
         +'<button type="button" data-act="draft-queue-down" data-id="'+escapeHTML(id)+'" '+(last?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' down in draft queue" title="Move down">↓</button>'
         +'<button type="button" class="draft-queue-remove" data-act="draft-queue-toggle" data-id="'+escapeHTML(id)+'" aria-label="Remove '+escapeHTML(p.name)+' from draft queue" title="Remove from queue">×</button></div></div>';
     }).join('');
-    const queueManager='<section class="panel draft-queue-manager" id="draft-queue-section" aria-label="My ordered draft queue">'
+    const queueManager='<details class="draft-extra-panel draft-queue-details" id="draft-queue-details" open><summary><span>My draft queue</span><small>'+usedQueue.length+' saved schools</small></summary><section class="panel draft-queue-manager" id="draft-queue-section" aria-label="My ordered draft queue">'
       +'<div class="draft-queue-manager-head"><div class="draft-queue-title"><span class="draft-section-overline">YOUR PRIORITY LIST</span><h2>My draft queue <span>'+usedQueue.length+'</span></h2>'
       +'<p>Put your top choice at #1. Drag on desktop or use the arrow buttons on mobile. Your priority order syncs across signed-in devices. No automatic picks.</p></div>'
       +'<div class="draft-queue-header-actions"><button type="button" data-act="draft-jump-pool" class="draft-queue-find">+ Add schools</button>'
@@ -2205,7 +2206,7 @@
         :'<div class="draft-queue-empty"><span class="draft-queue-empty-icon">☆</span><div><strong>Start your queue</strong><p>Tap the star on any available school to add it here. Rearrange your picks whenever you like.</p></div>'
           +'<button type="button" data-act="draft-jump-pool">Browse available schools ›</button></div>')
       +'<div class="draft-queue-sync" role="status" aria-live="polite">'+escapeHTML(draftQueueSyncMessage())+'</div>'
-      +'</section>';
+      +'</section></details>';
     const myPickList=myPicks.slice(0,4).map(p=>{
       const school=programIndex.get(String(p.program_id));
       return school?'<div class="draft-my-pick" '+draftStyle(school) +'><span class="draft-mini-logo">'+img(school)+'</span><span><strong>'+escapeHTML(school.name)+'</strong><small>Round '+p.round+' · Pick #'+p.overall+'</small></span></div>':'';
@@ -2274,8 +2275,10 @@
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
     return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Track live selections, trade picks and manage your scouting queue.')
-      +'<div class="draft-v2">'+hero+tracker+tradeInbox+pickInventory+ready+queueManager
-      +'<div class="draft-workspace">'+pool+sidebar+'</div>'+board+foot+'</div>'+sheet;
+      +'<div class="draft-v2">'+hero+tracker+tradeInbox+ready+queueManager
+      +'<div class="draft-workspace">'+pool+sidebar+'</div>'
+      +'<details class="draft-extra-panel" id="draft-board-details"><summary><span>Full draft board</span><small>View picks by round</small></summary>'+board+'</details>'
+      +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
   }
 
   function updateTradeSelections(){

@@ -107,7 +107,11 @@ export default (function makeWorker(){
       league_name:map.league_name||'Boek Dynasty',max_managers:Number(map.max_managers||10),
       trading_enabled:map.trading_enabled!=='0',draft_order:JSON.parse(map.draft_order||'[]'),
       draft_clock_seconds:Number(map.draft_clock_seconds||0),draft_deadline:Number(map.draft_deadline||0),
-      waivers_enabled:map.waivers_enabled==='1',scoring:scoringFrom(map.scoring_rules)};
+      waivers_enabled:map.waivers_enabled==='1',scoring:scoringFrom(map.scoring_rules),
+      draft_race:(()=>{try{
+        const race=JSON.parse(map.draft_race||'null');
+        return race&&typeof race.id==='string'&&Array.isArray(race.order)&&Array.isArray(race.lanes)?race:null;
+      }catch{return null;}})()};
   }
   async function setSetting(env,key,value){
     await q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',key,String(value)).run();
@@ -324,6 +328,7 @@ export default (function makeWorker(){
       if(!entry)return failure('This invitation is invalid, expired or already used.',403);
       const setting=await getSettings(env);
       if(setting.draft_status!=='pending')return failure('New members cannot join after the draft has started.',409);
+      if(setting.draft_race)return failure('The draft order race is finalized. Ask the commissioner to reset it before inviting more managers.',409);
       if((await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first()).n>0)
         return failure('The draft order is locked following a pick trade.',409);
       const num=await q(env,'SELECT count(*) AS total FROM users').first();
@@ -806,11 +811,59 @@ export default (function makeWorker(){
       await setSetting(env,'trading_enabled',data.trading_enabled?'1':'0');
       return response({ok:true});
     }
+
+    if(path==='admin/race/run'){
+      const settings=await getSettings(env);
+      const picks=Number((await q(env,'SELECT count(*) AS n FROM picks').first())?.n||0);
+      const trades=Number((await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first())?.n||0);
+      if(settings.draft_status!=='pending'||picks>0||trades>0)
+        return failure('The race cannot run after the draft begins or draft picks are traded.',409);
+      if(settings.draft_race)return failure('The official race has already been run. Reset it in Commissioner settings to run a new race.',409);
+      const allUsers=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results||[];
+      if(allUsers.length<2)return failure('At least two managers must be registered.',409);
+      const ids=resolvedOrder(allUsers,settings);
+      const race={
+        id:crypto.randomUUID(),
+        order:ids,
+        lanes:allUsers.map(u=>u.id),
+        started_at:timestamp(),
+        duration_ms:9400,
+        stagger_ms:460
+      };
+      // One atomic statement: only the first race claim may save the official
+      // snake draft order. Concurrent attempts cannot overwrite the result.
+      const sql="WITH claimed AS (INSERT INTO settings(key,value) VALUES('draft_race',?) "
+        +"ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE settings.value IN ('null','') RETURNING value), "
+        +"official AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM claimed "
+        +"ON CONFLICT(key) DO UPDATE SET value=excluded.value RETURNING value) "
+        +"SELECT (SELECT count(*) FROM official)::integer AS saved";
+      const result=await q(env,sql,JSON.stringify(race),JSON.stringify(ids)).first();
+      if(Number(result?.saved)!==1)return failure('The race has already been finalized. Reload to view it.',409);
+      return response({ok:true,race,order:ids});
+    }
+    if(path==='admin/race/reset'){
+      const settings=await getSettings(env);
+      const picks=Number((await q(env,'SELECT count(*) AS n FROM picks').first())?.n||0);
+      const trades=Number((await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first())?.n||0);
+      if(settings.draft_status!=='pending'||picks>0||trades>0)
+        return failure('The race cannot be reset after the draft begins or draft picks are traded.',409);
+      if(!settings.draft_race)return failure('No completed race to reset.',409);
+      const signupOrder=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results.map(u=>u.id);
+      const sql="WITH cleared AS (UPDATE settings SET value='null' WHERE key='draft_race' "
+        +"AND value NOT IN ('null','') RETURNING value), "
+        +"restored AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM cleared "
+        +"ON CONFLICT(key) DO UPDATE SET value=excluded.value RETURNING value) "
+        +"SELECT (SELECT count(*) FROM restored)::integer AS saved";
+      const result=await q(env,sql,JSON.stringify(signupOrder)).first();
+      if(Number(result?.saved)!==1)return failure('The race was already reset. Reload the page.',409);
+      return response({ok:true,order:signupOrder});
+    }
     if(path==='admin/draft-order'){
       const settings=await getSettings(env);
       const havePicks=(await q(env,'SELECT count(*) AS n FROM picks').first()).n;
       if(settings.draft_status!=='pending'||havePicks>0||(await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first()).n>0)
         return failure('Draft order is locked after an accepted pick trade or draft start.',409);
+      if(settings.draft_race)return failure('The draft order is final. Reset the race before changing the order.',409);
       const actual=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results.map(u=>u.id);
       const ids=Array.isArray(data.order)?data.order.map(String):[];
       if(ids.length!==actual.length||new Set(ids).size!==ids.length||ids.some(id=>!actual.includes(id)))

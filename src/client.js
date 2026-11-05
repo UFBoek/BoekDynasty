@@ -1750,6 +1750,7 @@
       ?Array.from({length:Math.max(0,total-completed)},(_,i)=>i+completed+1)
         .find(slot=>draftSelectionOrder(slot,fullOrder)===me.id)||null:null;
     const myPicks=picks().filter(p=>p.manager_id===me.id).slice().sort((a,b)=>Number(b.overall)-Number(a.overall));
+    const myFuturePicks=futureDraftPicks(me.id);
     const metricsYear=ratingYear(season());
     const historyIndex=draftHistoricalIndex();
     const historyOf=p=>p?historyIndex.byId.get(String(p.id)):null;
@@ -1788,9 +1789,19 @@
       +'</div><div class="draft-live-right"><div class="draft-live-stat"><span>'+(yourTurn?'YOUR PICK':'YOUR NEXT PICK')+'</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong><small>'+(nextMine?(yourTurn?'Make your selection now':'Your next selection'):'No picks remaining')+'</small></div>'
       +'<div class="draft-live-stat"><span>PROGRESS</span><strong>'+completed+' <em>/ '+plannedTotal+'</em></strong><small>'+Math.max(0,plannedTotal-completed)+' picks remaining</small></div>'
       +clock
+      +(settings.trading_enabled&&status!=='finished'?'<button type="button" class="draft-trade-quick" data-act="tab" data-id="trades">⇄ Trade picks <span>›</span></button>':'')
       +'<button type="button" class="draft-live-cta" data-act="draft-jump-pool">'+(yourTurn?'Choose your program':'Browse available programs')+' <span>›</span></button></div>'
       +'<div class="draft-live-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,plannedTotal))+'%"></span></div>'
       +'</section>';
+    const pickInventory='<section class="panel draft-pick-inventory" aria-label="Your unused draft picks">'
+      +'<div class="draft-pick-inventory-title"><div><span class="draft-section-overline">YOUR DRAFT CAPITAL</span><h2>Upcoming picks</h2>'
+      +'<p>Selections stay in their original snake slots, even when they change hands.</p></div>'
+      +'<button class="btn small secondary" type="button" data-act="tab" data-id="trades">Trade a pick ›</button></div>'
+      +(myFuturePicks.length?'<div class="draft-owned-slot-grid">'+myFuturePicks.map(slot=>{
+        const acquired=originalDraftOwner(slot)!==me.id;
+        return '<div class="draft-owned-slot'+(acquired?' acquired':'')+'"><strong>#'+slot+'</strong><span>R'+(Math.floor((slot-1)/Math.max(1,managerCount))+1)+'</span>'
+          +'<small>'+(acquired?'Acquired':'Original')+'</small></div>';
+      }).join('')+'</div>':'<p class="draft-owned-none">You have no unused picks. You can still trade for one.</p>')+'</section>';
     const tracker='<div class="draft-pick-ticker"><div class="draft-pick-ticker-label"><strong>NEXT PICKS</strong><small>Snake order</small></div>'
       +'<div class="draft-pick-ticker-scroll">'+(upNext||'<span class="draft-no-upcoming">Draft order will appear here when the draft opens.</span>')+'</div></div>';
     const ready=status==='pending'?'<div class="draft-readiness draft-readiness-v2">'
@@ -1924,8 +1935,10 @@
       +(myPickList||'<p class="draft-side-empty">Your selected programs will appear here as the draft progresses.</p>')
       +'</section></aside>';
     const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
-    const boardColumns=boardMode==='mine'?visualOrder.filter(id=>id===me.id):visualOrder;
-    const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1);
+    const boardColumns=visualOrder;
+    const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1)
+      .filter(r=>boardMode!=='mine'||Array.from({length:managerCount},(_,i)=>(r-1)*managerCount+i+1)
+        .some(slot=>draftOwner(slot)===me.id));
     const boardWidth='grid-template-columns:72px repeat('+Math.max(1,boardColumns.length)+',minmax(163px,1fr));min-width:'+(72+Math.max(1,boardColumns.length)*163)+'px';
     const boardHeaders=boardColumns.map(id=>{
       const member=managerIndex.get(id),vacant=id.startsWith('open-seat-');
@@ -1939,14 +1952,17 @@
         const vacant=id.startsWith('open-seat-'),pos=visualOrder.indexOf(id);
         const overall=(round-1)*Math.max(1,visualCount)+(round%2===1?pos+1:visualCount-pos);
         const picked=pickMap.get(overall),p=programIndex.get(String(picked?.program_id||''));
-        const onClock=draftLive&&overall===activePick,mine=id===me.id;
+        const slotOwner=draftOwner(overall,visualOrder),holder=managerIndex.get(slotOwner);
+        const traded=!vacant&&slotOwner&&slotOwner!==id;
+        const onClock=draftLive&&overall===activePick,mine=slotOwner===me.id;
         const state=p?'selected':onClock?'on-clock':vacant?'vacant':'open';
         return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'"'+(p?draftStyle(p):'')+' data-pick="'+overall+'" '+(onClock?'id="draft-current-slot"':'')+'>'
           +'<div class="draft-cell-meta"><span>#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON THE CLOCK</strong>':p?'<span class="draft-cell-done">LOCKED</span>':'')+'</div>'
+          +(traded?'<div class="draft-pick-owner-label">⇄ '+escapeHTML(holder?.display_name||'Traded pick')+'</div>':'')
           +(p?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
             +'<span class="draft-cell-logo">'+img(p)+'</span><span class="draft-cell-team"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
             :onClock?'<button type="button" class="draft-cell-open '+(mine?'take-pick':'')+'" data-act="draft-jump-pool">'
-              +'<strong>'+(mine?'Your pick is live':'Awaiting pick')+'</strong><small>'+(mine?'Choose a school ›':escapeHTML(managerIndex.get(id)?.display_name||'Manager')+' is selecting')+'</small></button>'
+              +'<strong>'+(mine?'Your pick is live':'Awaiting pick')+'</strong><small>'+(mine?'Choose a school ›':escapeHTML(holder?.display_name||'Manager')+' is selecting')+'</small></button>'
             :'<div class="draft-cell-placeholder">'+(vacant?'Open seat':'AVAILABLE PICK')+'</div>')
           +'</div>';
       }).join('');
@@ -1955,8 +1971,8 @@
     const boardTab=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(boardMode===id?'active':'')+'" aria-pressed="'+(boardMode===id)+'">'+label+'</button>';
     const board='<section class="panel draft-board-panel draft-v2-board" id="draft-board-section">'
       +'<div class="draft-board-toolbar"><div><span class="draft-section-overline">THE FULL LEAGUE</span><h2>Snake draft board</h2>'
-      +'<p>All managers, every round, every permanent selection. Click a picked school to view its profile.</p></div>'
-      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My picks')+'</div></div>'
+      +'<p>Every snake slot stays in its original position. Traded picks show their current owner.</p></div>'
+      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My rounds')+'</div></div>'
       +'<div class="draft-board-key"><span><i class="selected"></i> Picked programs</span><span><i class="on-clock"></i> On the clock</span>'
       +'<span><i class="mine"></i> My draft column</span><button type="button" data-act="draft-follow-live">Jump to current round ↗</button></div>'
       +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board"><div class="draft-board-grid" style="'+boardWidth+'">'
@@ -1975,8 +1991,8 @@
       +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
-    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Build your priority queue, make your selections and follow every pick as it happens.')
-      +'<div class="draft-v2">'+hero+tracker+ready+queueManager
+    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Track live selections, trade picks and manage your scouting queue.')
+      +'<div class="draft-v2">'+hero+tracker+pickInventory+ready+queueManager
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'+board+foot+'</div>'+sheet;
   }
 

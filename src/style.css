@@ -5319,3 +5319,20 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .notification-setup-benefits span{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.notification-setup-overlay{backdrop-filter:none;-webkit-backdrop-filter:none}}
+
+
+/* Draft room: clearly signposted selection and optional secondary panels. */
+.draft-pool-card{position:relative}
+.draft-pool-draft{display:flex;align-items:center;justify-content:center;gap:.45rem;min-height:46px;margin:0 12px 12px;padding:10px 16px;border:1px solid var(--accent,#176dcd);border-radius:10px;background:var(--accent,#176dcd);color:#fff;font:inherit;font-weight:800;cursor:pointer;transition:filter .15s,transform .15s}
+.draft-pool-draft:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.draft-pool-draft:focus-visible,.draft-extra-panel summary:focus-visible{outline:3px solid #f49c38;outline-offset:3px}
+.draft-pool-draft span{font-size:1.25rem}
+.draft-extra-panel{min-width:0;margin:14px 0;border:1px solid var(--line,rgba(130,150,175,.3));border-radius:14px;overflow:hidden}
+.draft-extra-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;list-style:none;cursor:pointer;font-weight:800}
+.draft-extra-panel>summary::-webkit-details-marker{display:none}
+.draft-extra-panel>summary:after{content:'⌄';font-size:1.3rem;transition:transform .15s}
+.draft-extra-panel[open]>summary:after{transform:rotate(180deg)}
+.draft-extra-panel>summary small{margin-left:auto;font-size:.8rem;font-weight:500;opacity:.75}
+.draft-extra-panel>section{margin:0;border:0;border-radius:0}
+.draft-queue-details>section{padding-top:8px}
+@media(max-width:700px){.draft-pool-draft{min-height:52px;margin:0 10px 10px}.draft-extra-panel>summary{padding:14px}.draft-extra-panel>summary small{font-size:.72rem}}

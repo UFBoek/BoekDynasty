@@ -117,19 +117,36 @@ export default (function makeWorker(){
     const saved=Array.isArray(settings.draft_order)?settings.draft_order:[];
     return [...new Set([...saved.filter(id=>ids.includes(id)),...ids])];
   };
+  const originalPickOwner=(slot,ids)=>{
+    if(!ids.length||slot<1)return null;
+    const pos=slot-1,round=Math.floor(pos/ids.length),index=pos%ids.length;
+    return ids[round%2===0?index:ids.length-1-index]||null;
+  };
+  const currentPickOwner=(slot,ids,owners)=>owners.get(slot)||originalPickOwner(slot,ids);
+  const tradeError=(message,status=409)=>Object.assign(new Error(message),{tradeStatus:status});
+  async function pickInventory(env,settings){
+    const users=(await q(env,'SELECT id FROM users ORDER BY created_at,id').all()).results||[];
+    const ids=resolvedOrder(users,settings);
+    const rows=(await q(env,'SELECT overall,owner_manager_id FROM draft_pick_owners').all()).results||[];
+    const owners=new Map(rows.map(x=>[Number(x.overall),x.owner_manager_id]));
+    const picked=Number((await q(env,'SELECT count(*) AS total FROM picks').first())?.total||0);
+    return {ids,owners,picked,total:ids.length*settings.rounds};
+  }
   const parseDraftQueue=row=>{
     let items=[];
     try{items=JSON.parse(row?.program_ids||'[]');}catch(e){}
     return {items:Array.isArray(items)?items.map(String).slice(0,120):[],version:Number(row?.revision)||0};
   };
   async function getState(env,user){
-    const [users,teams,picks,ownership,trades,tradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves,draftQueueRow]=await Promise.all([
+    const [users,teams,picks,ownership,trades,tradeItems,pickOwners,pickTradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves,draftQueueRow]=await Promise.all([
       q(env,"SELECT id,username,display_name,role,created_at,avatar_data,accent_color,favorite_program_id FROM users ORDER BY created_at,id").all(),
       q(env,'SELECT id,name,abbr,conference_id,logo FROM programs ORDER BY name').all(),
       q(env,'SELECT overall,round,manager_id,program_id,picked_at FROM picks ORDER BY overall').all(),
       q(env,'SELECT program_id,manager_id,acquired_at FROM program_owners').all(),
       q(env,'SELECT id,from_manager_id,to_manager_id,status,offered_at,resolved_at FROM trades ORDER BY offered_at DESC LIMIT 100').all(),
       q(env,'SELECT trade_id,program_id,from_manager_id,to_manager_id FROM trade_items WHERE trade_id IN (SELECT id FROM trades ORDER BY offered_at DESC LIMIT 100)').all(),
+      q(env,'SELECT overall,owner_manager_id FROM draft_pick_owners ORDER BY overall').all(),
+      q(env,'SELECT trade_id,overall,from_manager_id,to_manager_id FROM draft_pick_trade_items WHERE trade_id IN (SELECT id FROM trades ORDER BY offered_at DESC LIMIT 100)').all(),
       getSettings(env),
       q(env,'SELECT season,archived_at,champion_manager_id FROM season_archives ORDER BY season DESC').all(),
       q(env,'SELECT season,manager_id,program_id FROM season_rosters ORDER BY season DESC').all(),
@@ -140,7 +157,7 @@ export default (function makeWorker(){
     ]);
     const allUsers=users.results||[];
     const order=resolvedOrder(allUsers,settings);
-    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season,archives:archives.results||[],archived_rosters:archivedRosters.results||[],season_records:seasonRecords.results||[],waiver_claims:waiverClaims.results||[],roster_transactions:rosterMoves.results||[],draft_queue:parseDraftQueue(draftQueueRow)};
+    return {user,users:allUsers,programs:teams.results||[],picks:picks.results||[],ownership:ownership.results||[],trades:trades.results||[],trade_items:tradeItems.results||[],draft_pick_owners:pickOwners.results||[],draft_pick_trade_items:pickTradeItems.results||[],settings,draft_order:order,max_managers:settings.max_managers,season:settings.current_season,archives:archives.results||[],archived_rosters:archivedRosters.results||[],season_records:seasonRecords.results||[],waiver_claims:waiverClaims.results||[],roster_transactions:rosterMoves.results||[],draft_queue:parseDraftQueue(draftQueueRow)};
   }
   function parseBody(req){
     if(!(req.headers.get('Content-Type')||'').toLowerCase().includes('application/json'))throw new Error('JSON request required.');
@@ -307,6 +324,8 @@ export default (function makeWorker(){
       if(!entry)return failure('This invitation is invalid, expired or already used.',403);
       const setting=await getSettings(env);
       if(setting.draft_status!=='pending')return failure('New members cannot join after the draft has started.',409);
+      if((await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first()).n>0)
+        return failure('The draft order is locked following a pick trade.',409);
       const num=await q(env,'SELECT count(*) AS total FROM users').first();
       if(num.total>=setting.max_managers)return failure('This league is full ('+setting.max_managers+' managers).',409);
       const user=await createUser(env,data,'manager');
@@ -415,45 +434,76 @@ export default (function makeWorker(){
       return response({ok:true});
     }
     if(path==='draft/pick'){
-      const settings=await getSettings(env);
-      if(settings.draft_status!=='live')return failure('The draft is not live.',409);
-      const users=resolvedOrder((await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results,settings).map(id=>({id}));
-      const count=(await q(env,'SELECT count(*) AS total FROM picks').first()).total;
-      const roundIndex=Math.floor(count/users.length);
-      if(roundIndex>=settings.rounds)return failure('Draft already finished.',409);
-      const idx=count%users.length,up=users[roundIndex%2===0?idx:users.length-1-idx].id;
-      if(user.id!==up)return failure('It is not your turn to draft.',403);
       const programId=String(data.program_id||'');
-      const selected=(await q(env,'SELECT conference_id FROM programs WHERE id=?',programId).first());
-      if(!eligibleProgram({id:programId,conference_id:selected?.conference_id},settings))return failure('This program is not eligible.',400);
-      await q(env,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',count+1,roundIndex+1,user.id,programId).run();
-      if(count+1===users.length*settings.rounds){
-        await env.DB.batch([q(env,"UPDATE settings SET value='finished' WHERE key='draft_status'"),q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")]);
-      }else if(settings.draft_clock_seconds>0)await setSetting(env,'draft_deadline',timestamp()+settings.draft_clock_seconds);
-      return response({ok:true,overall:count+1});
+      try{
+        const slot=await env.DB.transaction(async DB=>{
+          const tx={...env,DB};
+          await q(tx,"SELECT value FROM settings WHERE key='draft_status' FOR UPDATE").first();
+          const settings=await getSettings(tx);
+          if(settings.draft_status!=='live')throw tradeError('The draft is not live.');
+          const inv=await pickInventory(tx,settings);
+          if(!inv.ids.length||inv.picked>=inv.total)throw tradeError('The draft is already finished.');
+          const overall=inv.picked+1,owner=currentPickOwner(overall,inv.ids,inv.owners);
+          if(owner!==user.id)throw tradeError('This pick belongs to another manager.',403);
+          const school=await q(tx,'SELECT id,conference_id FROM programs WHERE id=?',programId).first();
+          if(!eligibleProgram(school,settings))throw tradeError('This school is not eligible.',400);
+          if(await q(tx,'SELECT id FROM picks WHERE program_id=?',programId).first())throw tradeError('This school has been drafted.');
+          await q(tx,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',
+            overall,Math.floor(inv.picked/inv.ids.length)+1,user.id,programId).run();
+          if(overall===inv.total){
+            await q(tx,"UPDATE settings SET value='finished' WHERE key='draft_status'").run();
+            await q(tx,"UPDATE settings SET value='0' WHERE key='draft_deadline'").run();
+            await q(tx,`UPDATE trades SET status='cancelled',resolved_at=unixepoch()
+              WHERE status='pending' AND EXISTS (SELECT 1 FROM draft_pick_trade_items d WHERE d.trade_id=trades.id)`).run();
+          }else if(settings.draft_clock_seconds>0)
+            await q(tx,"UPDATE settings SET value=? WHERE key='draft_deadline'",String(timestamp()+settings.draft_clock_seconds)).run();
+          return overall;
+        });
+        return response({ok:true,overall:slot});
+      }catch(error){
+        if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+        if(error.code==='23505')return failure('Another manager just drafted that school. Refresh.',409);
+        throw error;
+      }
     }
-    // Program ownership is perpetual. The draft board records original picks, not current owners.
     if(path==='trade/propose'){
       const settings=await getSettings(env);
-      if(settings.draft_status!=='finished')return failure('Trading opens after the initial draft is complete.',409);
       if(!settings.trading_enabled)return failure('Trades are disabled by the commissioner.',409);
       const recipient=String(data.to_manager_id||'');
       const other=await q(env,'SELECT id FROM users WHERE id=?',recipient).first();
-      if(!other||recipient===user.id)return failure('Choose another league manager.',400);
+      if(!other||recipient===user.id)return failure('Choose another manager.',400);
       const give=Array.isArray(data.give_ids)?data.give_ids.map(String):[];
       const receive=Array.isArray(data.receive_ids)?data.receive_ids.map(String):[];
-      const ids=[...give,...receive];
-      if(!give.length||!receive.length||ids.length>40||ids.some(id=>!id||id.length>120)||new Set(ids).size!==ids.length)
-        return failure('Select unique programs from both teams (maximum 20 per side).',400);
-      if(give.length>20||receive.length>20)return failure('Maximum 20 programs from each team.',400);
-      const rows=(await q(env,'SELECT program_id,manager_id FROM program_owners WHERE program_id IN ('+ids.map(()=>'?').join(',')+')',...ids).all()).results||[];
-      const owned=new Map(rows.map(p=>[p.program_id,p.manager_id]));
-      if(give.some(id=>owned.get(id)!==user.id)||receive.some(id=>owned.get(id)!==recipient))
-        return failure('One of the selected programs is no longer owned by the expected manager.',409);
+      const givePicks=Array.isArray(data.give_picks)?data.give_picks.map(Number):[];
+      const receivePicks=Array.isArray(data.receive_picks)?data.receive_picks.map(Number):[];
+      const ids=[...give,...receive],slots=[...givePicks,...receivePicks];
+      if(give.length+givePicks.length<1||receive.length+receivePicks.length<1||
+        give.length+givePicks.length>20||receive.length+receivePicks.length>20||
+        ids.some(id=>!id||id.length>120)||new Set(ids).size!==ids.length||
+        slots.some(n=>!Number.isSafeInteger(n)||n<1)||new Set(slots).size!==slots.length)
+        return failure('Select unique picks or programs on both sides, up to 20 assets per side.',400);
+      if(slots.length){
+        if(settings.draft_status==='finished')return failure('Draft picks cannot be traded after the draft.',409);
+        const inv=await pickInventory(env,settings);
+        if(settings.draft_order.length!==inv.ids.length||inv.ids.length<2)
+          return failure('The commissioner must set the final draft order before pick trading.',409);
+        if(slots.some(n=>n<=inv.picked||n>inv.total)||
+          givePicks.some(n=>currentPickOwner(n,inv.ids,inv.owners)!==user.id)||
+          receivePicks.some(n=>currentPickOwner(n,inv.ids,inv.owners)!==recipient))
+          return failure('A draft pick has already been used or changed owners.',409);
+      }
+      if(ids.length){
+        const rows=(await q(env,'SELECT program_id,manager_id FROM program_owners WHERE program_id IN ('+ids.map(()=>'?').join(',')+')',...ids).all()).results||[];
+        const held=new Map(rows.map(p=>[p.program_id,p.manager_id]));
+        if(give.some(id=>held.get(id)!==user.id)||receive.some(id=>held.get(id)!==recipient))
+          return failure('A selected program has changed owners.',409);
+      }
       const id=crypto.randomUUID();
       const statements=[q(env,'INSERT INTO trades(id,from_manager_id,to_manager_id) VALUES(?,?,?)',id,user.id,recipient)];
-      for(const programId of give)statements.push(q(env,'INSERT INTO trade_items(trade_id,program_id,from_manager_id,to_manager_id) VALUES(?,?,?,?)',id,programId,user.id,recipient));
-      for(const programId of receive)statements.push(q(env,'INSERT INTO trade_items(trade_id,program_id,from_manager_id,to_manager_id) VALUES(?,?,?,?)',id,programId,recipient,user.id));
+      for(const school of give)statements.push(q(env,'INSERT INTO trade_items(trade_id,program_id,from_manager_id,to_manager_id) VALUES(?,?,?,?)',id,school,user.id,recipient));
+      for(const school of receive)statements.push(q(env,'INSERT INTO trade_items(trade_id,program_id,from_manager_id,to_manager_id) VALUES(?,?,?,?)',id,school,recipient,user.id));
+      for(const slot of givePicks)statements.push(q(env,'INSERT INTO draft_pick_trade_items(trade_id,overall,from_manager_id,to_manager_id) VALUES(?,?,?,?)',id,slot,user.id,recipient));
+      for(const slot of receivePicks)statements.push(q(env,'INSERT INTO draft_pick_trade_items(trade_id,overall,from_manager_id,to_manager_id) VALUES(?,?,?,?)',id,slot,recipient,user.id));
       await env.DB.batch(statements);
       return response({ok:true,id});
     }
@@ -465,37 +515,53 @@ export default (function makeWorker(){
         if(!result.meta?.changes)return failure('This offer is no longer pending or was not sent to you.',409);
         return response({ok:true});
       }
-      const settings=await getSettings(env);
-      if(settings.draft_status!=='finished')return failure('Trading is not available until the draft finishes.',409);
-      if(!settings.trading_enabled)return failure('Trades are disabled by the commissioner.',409);
-      const nonce=rand(18);
-      // D1 batch statements run in one transaction. A unique acceptance nonce makes
-      // ownership transfers conditional on this request actually accepting the offer.
-      const results=await env.DB.batch([
-        q(env,`UPDATE trades SET status='accepted',resolved_at=unixepoch(),acceptance_token=?
-          WHERE id=? AND to_manager_id=? AND status='pending'
-          AND NOT EXISTS (
-            SELECT 1 FROM trade_items ti LEFT JOIN program_owners po ON po.program_id=ti.program_id
-            WHERE ti.trade_id=? AND (po.manager_id IS NULL OR po.manager_id<>ti.from_manager_id)
-          )`,nonce,id,user.id,id),
-        q(env,`UPDATE program_owners
-          SET manager_id=(SELECT ti.to_manager_id FROM trade_items ti WHERE ti.trade_id=? AND ti.program_id=program_owners.program_id),
-              acquired_at=unixepoch()
-          WHERE program_id IN (SELECT program_id FROM trade_items WHERE trade_id=?)
-          AND EXISTS (SELECT 1 FROM trades WHERE id=? AND status='accepted' AND acceptance_token=?)`,id,id,id,nonce)
-      ]);
-      if(results[0].meta?.changes!==1)return failure('Trade cannot be accepted. It may have expired or program ownership changed.',409);
-      const expected=await q(env,'SELECT count(*) AS n FROM trade_items WHERE trade_id=?',id).first();
-      if(results[1].meta?.changes!==Number(expected?.n||0))
-        return failure('Trade accepted, but the program transfer needs commissioner review.',500);
-      return response({ok:true});
+      try{
+        await env.DB.transaction(async DB=>{
+          const tx={...env,DB};
+          // Serialize transfers against actual draft selections.
+          await q(tx,"SELECT value FROM settings WHERE key='draft_status' FOR UPDATE").first();
+          const settings=await getSettings(tx);
+          if(!settings.trading_enabled)throw tradeError('Trades are disabled by the commissioner.');
+          const trade=await q(tx,'SELECT id,from_manager_id,to_manager_id,status FROM trades WHERE id=? FOR UPDATE',id).first();
+          if(!trade||trade.status!=='pending'||trade.to_manager_id!==user.id)
+            throw tradeError('This offer is no longer pending or was not sent to you.');
+          const programs=(await q(tx,'SELECT program_id,from_manager_id,to_manager_id FROM trade_items WHERE trade_id=? ORDER BY program_id',id).all()).results||[];
+          const picks=(await q(tx,'SELECT overall,from_manager_id,to_manager_id FROM draft_pick_trade_items WHERE trade_id=? ORDER BY overall',id).all()).results||[];
+          if(!programs.length&&!picks.length)throw tradeError('This offer is empty.');
+          if(programs.length){
+            const ids=programs.map(p=>p.program_id);
+            const rows=(await q(tx,'SELECT program_id,manager_id FROM program_owners WHERE program_id IN ('+ids.map(()=>'?').join(',')+') ORDER BY program_id FOR UPDATE',...ids).all()).results||[];
+            const held=new Map(rows.map(row=>[row.program_id,row.manager_id]));
+            if(programs.some(p=>held.get(p.program_id)!==p.from_manager_id))
+              throw tradeError('A school changed owners. Request a new offer.');
+          }
+          if(picks.length){
+            if(settings.draft_status==='finished')throw tradeError('The draft has ended; these picks can no longer be traded.');
+            const inv=await pickInventory(tx,settings);
+            if(settings.draft_order.length!==inv.ids.length||
+              picks.some(p=>Number(p.overall)<=inv.picked||Number(p.overall)>inv.total||
+                currentPickOwner(Number(p.overall),inv.ids,inv.owners)!==p.from_manager_id))
+              throw tradeError('A pick has been used or changed owners. Request a new offer.');
+          }
+          for(const p of programs)
+            await q(tx,'UPDATE program_owners SET manager_id=?,acquired_at=unixepoch() WHERE program_id=?',p.to_manager_id,p.program_id).run();
+          for(const p of picks)
+            await q(tx,`INSERT INTO draft_pick_owners(overall,owner_manager_id,updated_at)
+              VALUES(?,?,unixepoch()) ON CONFLICT(overall) DO UPDATE
+              SET owner_manager_id=excluded.owner_manager_id,updated_at=excluded.updated_at`,Number(p.overall),p.to_manager_id).run();
+          await q(tx,"UPDATE trades SET status='accepted',resolved_at=unixepoch() WHERE id=? AND status='pending'",id).run();
+        });
+        return response({ok:true});
+      }catch(error){
+        if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+        throw error;
+      }
     }
     if(path==='trade/cancel'){
       const result=await q(env,"UPDATE trades SET status='cancelled',resolved_at=unixepoch() WHERE id=? AND from_manager_id=? AND status='pending'",String(data.trade_id||''),user.id).run();
       if(!result.meta?.changes)return failure('Only the sender can cancel a pending offer.',409);
       return response({ok:true});
     }
-
     if(path==='waiver/claim'){
       const settings=await getSettings(env);
       if(settings.draft_status!=='finished'||!settings.waivers_enabled)return failure('Waiver claims are closed.',409);
@@ -743,7 +809,8 @@ export default (function makeWorker(){
     if(path==='admin/draft-order'){
       const settings=await getSettings(env);
       const havePicks=(await q(env,'SELECT count(*) AS n FROM picks').first()).n;
-      if(settings.draft_status!=='pending'||havePicks>0)return failure('Draft order is locked once the draft begins.',409);
+      if(settings.draft_status!=='pending'||havePicks>0||(await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first()).n>0)
+        return failure('Draft order is locked after an accepted pick trade or draft start.',409);
       const actual=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results.map(u=>u.id);
       const ids=Array.isArray(data.order)?data.order.map(String):[];
       if(ids.length!==actual.length||new Set(ids).size!==ids.length||ids.some(id=>!actual.includes(id)))
@@ -755,6 +822,8 @@ export default (function makeWorker(){
       const picksCount=(await q(env,'SELECT count(*) AS total FROM picks').first()).total;
       const settings=await getSettings(env);
       if(picksCount>0||settings.draft_status!=='pending')return failure('Cannot edit the draft pool after the draft begins.',409);
+      if((await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first()).n>0&&Number(data.rounds??settings.rounds)!==settings.rounds)
+        return failure('Rounds are locked following a pick trade.',409);
       const conferences=Array.isArray(data.conferences)?[...new Set(data.conferences.map(String))]:settings.conferences;
       const included=Array.isArray(data.included_programs)?[...new Set(data.included_programs.map(String))]:settings.included_programs;
       const excluded=Array.isArray(data.excluded_programs)?[...new Set(data.excluded_programs.map(String))]:settings.excluded_programs;

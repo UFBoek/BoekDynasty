@@ -22,7 +22,7 @@ const ACTIVITY_PAGES = new Set(['home','team','results','programs','program-deta
 const ACTIVITY_SECTIONS = new Set(['general','programs','draft','scoring','members','data','trades','waivers','seasons','activity']);
 const ACTION_NAMES = {
   'draft/queue':'Updated draft queue','draft/pick':'Selected a draft pick',
-  'trade/propose':'Proposed a trade','trade/respond':'Responded to a trade','trade/cancel':'Cancelled a trade',
+  'trade/propose':'Proposed a program/pick trade','trade/respond':'Responded to a program/pick trade','trade/cancel':'Cancelled a trade',
   'waiver/claim':'Submitted a waiver claim','waiver/cancel':'Cancelled a waiver claim','waiver/drop':'Dropped a program',
   'account/profile':'Updated profile','account/password':'Changed password',
   'admin/invite':'Created an invitation','admin/general':'Updated league settings',

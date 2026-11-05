@@ -6,6 +6,7 @@ const injection=`  return {
  set:(user,state)=>{me=user;league=state;standingsData=null;},
  search:query=>{globalSearchQuery=query;return globalSearchDialog();},
  manager:(id,data)=>{selectedManagerId=id;standingsData=data;standingsFetchedAt=Date.now();return managerProfilePage();},
+ team:data=>{standingsData=data;return myTeamPage();},
  page:page=>{current=page;render();return root.innerHTML;},
  section:section=>{adminSection=section;return commissionerPage();},
  mode:mode=>{draftRoundView=mode;},
@@ -152,4 +153,34 @@ test('manager profiles show actual season points and league rank instead of plac
  assert.match(html,/#1/);
  assert.doesNotMatch(html,/CURRENT POINTS<\/span><strong class="muted">Pending/);
  league.ownership=[];
+});
+
+
+test('My Team prioritizes scored programs and keeps trades and waivers behind one disclosure',()=>{
+  const oldOwnership=league.ownership,oldStatus=league.settings.draft_status;
+  const oldWaivers=league.settings.waivers_enabled,oldBest=league.settings.scoring.best_programs;
+  try{
+    league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'1'}];
+    league.settings.draft_status='finished';league.settings.waivers_enabled=true;
+    league.settings.scoring.best_programs=1;
+    const html=app.team({season:'2026-27',
+      program_points:{'57':12.25,'58':40.5},
+      standings:[{manager_id:'1',points:40.5,counted_programs:1,counted_program_ids:['58']}]});
+    const table=html.slice(html.indexOf('<table class="team-roster-table">'));
+    assert.match(html,/SEASON POINTS/);
+    assert.match(table,/Duke basketball/);
+    assert.match(table,/Florida basketball/);
+    assert.ok(table.indexOf('Duke basketball')<table.indexOf('Florida basketball'));
+    assert.match(table,/40\.5/);
+    assert.match(table,/12\.25/);
+    assert.match(table,/team-roster-badge counts">Counting/);
+    assert.match(table,/team-roster-badge ">Reserve/);
+    assert.match(html,/<details class="team-activity-drawer">/);
+    assert.match(html,/data-id="trades"/);
+    assert.match(html,/data-id="waivers"/);
+    assert.doesNotMatch(html,/team-program-grid|data-act="team-drop"/);
+  }finally{
+    league.ownership=oldOwnership;league.settings.draft_status=oldStatus;
+    league.settings.waivers_enabled=oldWaivers;league.settings.scoring.best_programs=oldBest;
+  }
 });

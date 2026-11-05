@@ -54,6 +54,7 @@ export function createD1(pg) {
   }
   return {
     prepare,
+    async transaction(callback){return pg.begin(async tx=>callback(createD1(tx)));},
     async batch(statements){
       return pg.begin(async tx=>{
         const out=[];

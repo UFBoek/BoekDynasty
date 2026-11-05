@@ -247,7 +247,15 @@ export function createNotificationEngine(db){
     if(method==='GET'&&subpath==='admin/notifications'){
       if(actor.role!=='commissioner')return fail('Commissioner only.',403);
       const [devices,unread,total,announcements,delivery]=await Promise.all([
-        db.prepare('SELECT u.id,u.display_name,count(d.endpoint)::integer AS devices FROM users u LEFT JOIN cbb_push_devices d ON d.user_id=u.id GROUP BY u.id,u.display_name ORDER BY u.display_name').all(),
+        db.prepare(`SELECT u.id,u.display_name,
+          (SELECT count(*)::integer FROM cbb_push_devices d WHERE d.user_id=u.id) AS devices,
+          COALESCE(p.push_enabled,true) AS push_enabled,
+          COALESCE(p.trades,true) AS trades,
+          COALESCE(p.draft,true) AS draft,
+          COALESCE(p.announcements,true) AS announcements,
+          (COALESCE(p.email_enabled,false) AND p.email_verified_at IS NOT NULL) AS email_active
+          FROM users u LEFT JOIN cbb_notification_preferences p ON p.user_id=u.id
+          ORDER BY lower(u.display_name),u.id`).all(),
         db.prepare('SELECT count(*) AS n FROM cbb_notifications WHERE read_at IS NULL').first(),
         db.prepare('SELECT count(*) AS n FROM cbb_notifications').first(),
         db.prepare("SELECT title,body,reference_id,created_at,count(*)::integer AS recipients FROM cbb_notifications WHERE kind='announcement' GROUP BY title,body,reference_id,created_at ORDER BY created_at DESC LIMIT 12").all(),

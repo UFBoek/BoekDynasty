@@ -66,6 +66,7 @@ test('trade desk supports unused selections on both sides and records transferre
   league.draft_pick_trade_items=[{trade_id:'trade-1',overall:2,from_manager_id:'a',to_manager_id:'b'}];
   assert.match(app.trades(),/Pick #2 \(R1\)/);
   assert.match(app.trades(),/Cancel offer/);
+  app.set(members[1],league); // The recipient receives the in-draft offer alert.
   const inDraft=app.draft();
   assert.match(inDraft,/draft-trade-inbox/);
   assert.match(inDraft,/data-act="trade-accept" data-id="trade-1"/);

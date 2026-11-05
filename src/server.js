@@ -91,7 +91,7 @@ export default (function makeWorker(){
   const parseDraftQueue=row=>{
     let items=[];
     try{items=JSON.parse(row?.program_ids||'[]');}catch(e){}
-    return {items:Array.isArray(items)?items.map(String).slice(0,120):[],version:Number(row?.revision)||0};
+    return {items:Array.isArray(items)?items.map(String).slice(0,365):[],version:Number(row?.revision)||0};
   };
   async function getState(env,user){
     const [users,teams,picks,ownership,trades,tradeItems,settings,archives,archivedRosters,seasonRecords,waiverClaims,rosterMoves,draftQueueRow]=await Promise.all([
@@ -234,8 +234,8 @@ export default (function makeWorker(){
     if(path==='draft/queue'){
       const ids=data?.program_ids;
       const version=Number(data?.version);
-      if(!Array.isArray(ids)||ids.length>120||ids.some(id=>!((typeof id==='string'||typeof id==='number')&&/^[A-Za-z0-9_-]{1,40}$/.test(String(id)))))
-        return failure('Invalid draft queue. Choose up to 120 programs.');
+      if(!Array.isArray(ids)||ids.length>365||ids.some(id=>!((typeof id==='string'||typeof id==='number')&&/^[A-Za-z0-9_-]{1,40}$/.test(String(id)))))
+        return failure('Invalid draft queue. Choose up to 365 programs.');
       const items=ids.map(String);
       if(new Set(items).size!==items.length)return failure('Draft queue cannot contain duplicates.');
       if(!Number.isInteger(version)||version<0||version>2147483646)

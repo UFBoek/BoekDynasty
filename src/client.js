@@ -70,6 +70,7 @@
   let notificationSnapshot=null,notificationLoading=false,notificationFetchedAt=0,notificationError='';
   let notificationAdmin=null,notificationAdminLoading=false,notificationAdminFetchedAt=0,notificationAdminError='';
   let pushDeviceActive=false,pushDeviceChecking=false;
+  let notificationGate='idle',notificationGateMessage='',notificationGateChecking=false;
 
   let poolDraftConfs=null,poolDraftSchools=null,poolDirty=false;
   let poolQuery='',poolConferenceFilter='all',poolScope='all',poolShown=70;
@@ -361,6 +362,77 @@
     if(delta<604800)return Math.floor(delta/86400)+'d ago';
     return new Date(Number(seconds)*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
   };
+  // Mandatory opt-in prompt on each device. Incompatible/blocked browsers retain an escape hatch.
+  const gateKey=()=>me?.id?'boek-notification-onboarding-exception-v1:'+me.id:'';
+  const gateDismissed=()=>{
+    try{return localStorage.getItem(gateKey())==='1';}catch{return false;}
+  };
+  const notificationGateOpen=()=>!!me&&!!league&&!['idle','done'].includes(notificationGate);
+  const iphoneNeedsInstall=()=>/iPhone|iPad|iPod/i.test(navigator?.userAgent||'')&&
+    !(window.matchMedia?.('(display-mode: standalone)')?.matches||navigator?.standalone);
+  const canPush=()=>typeof Notification!=='undefined'&&'serviceWorker' in navigator&&'PushManager' in window;
+  function notificationOnboarding(){
+    const kind=notificationGate,ios=kind==='ios',blocked=kind==='blocked',
+      unsupported=kind==='unsupported',failed=kind==='error',checking=kind==='checking';
+    const title=ios?'Add CBB Dynasty to your Home Screen':blocked?'Allow notifications in browser settings':
+      unsupported?'Your browser cannot receive push alerts':failed?'Device setup needs attention':
+      'Enable your dynasty notifications';
+    const message=ios?'iPhone requires a Home Screen web app to receive push notifications. Follow these steps, then open the installed app to enable alerts.':
+      blocked?'Notifications are blocked for this site. Change that permission in your browser settings, then try again.':
+      unsupported?'This browser does not support Web Push. You can still receive every message in the CBB Dynasty notification inbox.':
+      failed?(notificationGateMessage||'We could not finish registering your device. Check your connection and try again.'):
+      checking?'Checking whether notifications are already enabled on this device…':
+      'Get alerts when you are on the clock, receive trade offers, or have a new commissioner announcement.';
+    const details=ios?'<div class="notification-setup-steps"><div><b>1</b><span>In Safari, tap <strong>Share</strong></span></div>'
+      +'<div><b>2</b><span>Select <strong>Add to Home Screen</strong></span></div>'
+      +'<div><b>3</b><span>Open the installed app and tap Enable Notifications</span></div></div>':
+      '<div class="notification-setup-benefits"><span>Draft clock</span><span>Trade offers</span><span>League updates</span></div>';
+    const main=checking?'<button class="btn" type="button" disabled>Checking device…</button>':
+      unsupported?'':ios?'<button class="btn" type="button" data-act="notification-setup-recheck">I installed the app — Check again</button>':
+      blocked||failed?'<button class="btn" type="button" data-act="notification-setup-recheck">Try again</button>':
+      '<button class="btn" type="button" data-act="notifications-enable-push">Enable notifications</button>';
+    const exception=['ios','blocked','unsupported','error'].includes(kind)?
+      '<button class="notification-setup-exception" type="button" data-act="notification-setup-unavailable">Continue without push on this device</button>':'';
+    return '<div class="notification-setup-overlay"><section class="notification-setup-modal" role="dialog" aria-modal="true" aria-labelledby="notification-setup-title" aria-describedby="notification-setup-desc">'
+      +'<div class="notification-setup-mark">'+iconSVG('notifications')+'</div>'
+      +'<span class="notification-setup-eyebrow">CBB DYNASTY · ACCOUNT SETUP</span>'
+      +'<h2 id="notification-setup-title">'+escapeHTML(title)+'</h2>'
+      +'<p id="notification-setup-desc">'+escapeHTML(message)+'</p>'
+      +details+'<div class="notification-setup-actions">'+main+exception+'</div>'
+      +'<p class="notification-setup-privacy">Your browser controls whether notifications are allowed. We cannot turn them on without your permission.</p>'
+      +'<button type="button" class="notification-setup-signout" data-act="logout">Sign out</button>'
+      +'</section></div>';
+  }
+  async function checkNotificationOnboarding(){
+    if(!me||!league||notificationGateChecking)return;
+    if(gateDismissed()){notificationGate='done';render();return;}
+    if(iphoneNeedsInstall()){notificationGate='ios';render();return;}
+    if(!canPush()){notificationGate='unsupported';render();return;}
+    if(Notification.permission==='denied'){notificationGate='blocked';render();return;}
+    const userId=me.id;notificationGate='checking';notificationGateChecking=true;render();
+    try{
+      const base=typeof SITE_BASE!=='undefined'?SITE_BASE:'/';
+      const registration=await navigator.serviceWorker.register(base+'sw.js',{scope:base});
+      const subscription=await registration.pushManager.getSubscription();
+      const data=notificationSnapshot?.devices?notificationSnapshot:await api('notifications/inbox');
+      if(me?.id!==userId)return;
+      pushDeviceActive=!!subscription&&Notification.permission==='granted'&&
+        !!data.devices?.some(device=>device.endpoint===subscription.endpoint);
+      notificationGate=pushDeviceActive?'done':'prompt';
+      notificationGateMessage='';
+    }catch(error){
+      if(me?.id!==userId)return;
+      notificationGate='error';notificationGateMessage=String(error?.message||error).slice(0,160);
+    }finally{notificationGateChecking=false;if(me?.id===userId)render();}
+  }
+  function enterNotificationSetup(){
+    if(!me||!league)return;
+    notificationGate=gateDismissed()?'done':'checking';
+    notificationGateMessage='';
+    render();
+    if(notificationGate!=='done')checkNotificationOnboarding();
+  }
+
   async function loadNotifications(force=false){
     if(!me||notificationLoading||(!force&&Date.now()-notificationFetchedAt<30000))return;
     notificationLoading=true;

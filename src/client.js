@@ -31,6 +31,7 @@
       team:'<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
       programs:'<path d="M3 21h18M5 21V8l7-4 7 4v13M9 12h1m4 0h1M9 16h1m4 0h1"/>',
       draft:'<path d="M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01"/>',
+      'draft-order':'<path d="M4 19h16M4 12l3-3 4 3 4-3 5 3M4 5h16"/>',
       league:'<path d="M4 20h16M7 17v-5h3v5m2 0V5h3v12m2 0V9h3v8"/>',
       results:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4m-4 4h6m3-5h2m-2 4h2"/>',
       trades:'<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
@@ -42,7 +43,7 @@
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
   };
-  const names={home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',settings:'My Settings',more:'More',waivers:'Waivers',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
+  const names={home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',settings:'My Settings',more:'More','draft-order':'Draft Order',waivers:'Waivers',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -61,6 +62,8 @@
   let avatarDraft=null;
   let inviteLink='', passwordResetReceipt=null, busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
+  let raceState={phase:'ready',mode:'fair',order:[],progress:{},run:0};
+  let raceFrame=0;
   let activitySnapshot=null,activityLoading=false,activityError='',activityRange='7d',activityMemberFilter='all',activityFetchedAt=0;
   let activityLastPage='',activityLastPing=0;
 
@@ -518,7 +521,7 @@
     if(current==='commissioner'&&adminSection==='data'&&!integrityLoading&&(!integrityFetchedAt||Date.now()-integrityFetchedAt>60000))loadIntegrity();
     const tabs=['home','team','results','programs','draft','more'];
     const mobileLabels={home:'League',team:'My Team',results:'Results',programs:'Schools',draft:'Draft',more:'More'};
-    const activeMobile=(['trades','commissioner','waivers','history','scoring','settings'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
+    const activeMobile=(['trades','commissioner','waivers','history','scoring','settings','draft-order'].includes(current))?'more':current==='program-detail'?'programs':current==='manager-detail'?'league':current;
     const liveGames=liveResultsCount(),liveDraft=draftIsLive();
     const pendingTradeOffers=(league.trades||[]).filter(t=>t.status==='pending'&&t.to_manager_id===me.id).length;
     const eventLink=liveDraft?'<button type="button" class="topbar-event is-live" data-act="tab" data-id="draft"><span class="topbar-event-dot" aria-hidden="true"></span><span>Draft live</span></button>':
@@ -527,7 +530,7 @@
     const draftBoardPosition=oldDraftBoard?[oldDraftBoard.scrollLeft,oldDraftBoard.scrollTop]:null;
     const oldQueueList=current==='draft'?root.querySelector('.draft-queue-list'):null;
     const queueScrollPosition=oldQueueList?.scrollTop||0;
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>⌘K</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&pendingTradeOffers?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>⌘K</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&pendingTradeOffers?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
     if(current==='draft'){
@@ -875,7 +878,7 @@
   function morePage(){
     const groups=[
       ['Your account',[['settings','Profile & settings','Team name, photo, colors and password']]],
-      ['League information',[['league','Standings','Current fantasy scores'],['scoring','Scoring rules','Point values explained'],['history','Dynasty history','Past seasons and champions']]],
+      ['League information',[['league','Standings','Current fantasy scores'],['draft-order','Draft order','Horse race and selection positions'],['scoring','Scoring rules','Point values explained'],['history','Dynasty history','Past seasons and champions']]],
       ['League tools',[['trades','Trades','Offers and completed deals'],['waivers','Waivers','Claim or release programs'],['results','Daily results','Scores and schedules']]]
     ];
     if(me.role==='commissioner')groups.push(['Administration',[['commissioner','Commissioner settings','League setup and manager controls']]]);
@@ -887,6 +890,103 @@
         ).join('')+'</section>').join('')+'</div>'
       +'<section class="panel more-account section-gap"><div>'+avatar(me)+'<div class="grow"><strong>'+escapeHTML(me.display_name)+'</strong><small>@'+escapeHTML(me.username)+'</small></div></div><button class="btn secondary" data-act="logout">Sign out</button></section>';
   }
+
+  // A race is a visual simulation only. A genuine lottery uses an unbiased,
+  // cryptographically secure Fisher-Yates shuffle and never promises winners.
+  function randomRaceIndex(max){
+    const range=max+1,limit=Math.floor(4294967296/range)*range;
+    let value;
+    do{value=crypto.getRandomValues(new Uint32Array(1))[0];}while(value>=limit);
+    return value%range;
+  }
+  function fairRaceOrder(){
+    const ids=members().map(u=>String(u.id));
+    for(let i=ids.length-1;i>0;i--){
+      const j=randomRaceIndex(i);
+      [ids[i],ids[j]]=[ids[j],ids[i]];
+    }
+    return ids;
+  }
+  function startDraftRace(mode){
+    const racers=members();
+    if(racers.length<2){notice('At least two registered managers are needed.',true);return;}
+    let raceOrder=fairRaceOrder();
+    if(mode==='showcase'){
+      const findName=name=>racers.find(u=>[u.display_name,u.username].some(v=>String(v||'').trim().toLowerCase().includes(name)));
+      const boek=findName('boek'),winston=findName('winston');
+      if(!boek||!winston||boek.id===winston.id){
+        notice('The showcase needs registered managers named Boek and Winston.',true);return;
+      }
+      raceOrder=[String(boek.id),String(winston.id),...raceOrder.filter(id=>id!==String(boek.id)&&id!==String(winston.id))];
+    }
+    cancelAnimationFrame(raceFrame);
+    const run=raceState.run+1;
+    raceState={phase:'running',mode,order:raceOrder,progress:Object.fromEntries(raceOrder.map(id=>[id,0])),run};
+    render();
+    const duration=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?1200:9200;
+    const stagger=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?90:480;
+    const begin=performance.now();
+    const animate=now=>{
+      if(raceState.run!==run)return;
+      const elapsed=now-begin;
+      for(const [position,id] of raceOrder.entries()){
+        const finishAt=duration+position*stagger;
+        const fraction=Math.min(1,elapsed/finishAt);
+        const sway=Math.sin(elapsed/520+position*2.4)*4.5*Math.sin(Math.PI*fraction);
+        const progress=elapsed>=finishAt?100:Math.min(97,Math.max(0,96*fraction+sway));
+        raceState.progress[id]=progress;
+        const horse=root.querySelector('[data-race-runner="'+CSS.escape(id)+'"] .race-horse');
+        if(horse)horse.style.left=progress+'%';
+        const row=horse?.closest('.race-runner');
+        if(row)row.classList.toggle('race-finished',progress>=100);
+      }
+      if(elapsed>=duration+(raceOrder.length-1)*stagger){
+        raceState.phase='complete';render();return;
+      }
+      raceFrame=requestAnimationFrame(animate);
+    };
+    raceFrame=requestAnimationFrame(animate);
+  }
+  function draftOrderPage(){
+    const all=members(),userById=new Map(all.map(u=>[String(u.id),u]));
+    const saved=order().filter(id=>userById.has(String(id)));
+    const locked=league.settings.draft_status!=='pending'||picks().length>0;
+    const isComplete=raceState.phase==='complete'&&raceState.order.length===all.length&&
+      raceState.order.every(id=>userById.has(String(id)));
+    const running=raceState.phase==='running';
+    const showOrder=isComplete?raceState.order:[];
+    const row=(id,index)=>{const u=userById.get(String(id));return u?
+      '<div class="race-result-row"><span class="race-result-rank">'+(index+1)+'</span>'+avatar(u)+
+      '<span class="race-result-name">'+escapeHTML(u.display_name)+'</span>'+(index===0?'<span class="race-result-first">1st pick</span>':'')+'</div>':'';};
+    const lanes=all.map((u,index)=>{
+      const progress=Number(raceState.progress[String(u.id)]||0);
+      const tint=/^#[0-9a-fA-F]{6}$/.test(u.accent_color||'')?u.accent_color:'#d9611e';
+      return '<div class="race-runner" data-race-runner="'+escapeHTML(u.id)+'" style="--race-accent:'+tint+'">'+
+        '<div class="race-runner-label"><span class="race-lane-number">'+String(index+1).padStart(2,'0')+'</span>'+avatar(u)+
+        '<strong>'+escapeHTML(u.display_name)+'</strong></div>'+
+        '<div class="race-track"><span class="race-track-finish" aria-hidden="true"></span>'+
+        '<span class="race-horse" style="left:'+progress+'%" aria-hidden="true">🐎</span></div></div>';
+    }).join('');
+    const odds=all.length?(100/all.length).toFixed(all.length===2?0:1)+'%':'—';
+    return heading('LEAGUE TOOLS','Draft Order','Watch every manager compete for the opening pick.')
+      +'<section class="panel draft-race-panel"><div class="race-panel-head"><div><span class="race-section-kicker">THE STARTING GATE</span><h2>Draft lottery horse race</h2><p>Every manager has the same chance in a fair race. Each position is drawn without replacement.</p></div>'
+      +'<div class="race-odds"><strong>'+odds+'</strong><span>Chance of 1st per manager</span></div></div>'
+      +'<div class="race-toolbar"><button type="button" class="btn race-start-button" data-act="race-start" '+(running||all.length<2?'disabled':'')+'>'+(running?'Race in progress':'Run fair race')+'</button>'
+      +'<button type="button" class="btn secondary" data-act="race-showcase" '+(running?'disabled':'')+'>Watch scripted showcase</button>'
+      +'<span class="race-mode-caption">'+(running?'Racing to the finish…':isComplete?(raceState.mode==='showcase'?'Scripted exhibition · not a lottery':'Fair randomized simulation complete'):'Fair race is randomized; showcase is a preset demonstration.')+'</span></div>'
+      +'<div class="race-course" aria-label="Horse race with '+all.length+' managers"><div class="race-course-header"><strong>THE TRACK</strong><span>FINISH <span aria-hidden="true">🏁</span></span></div>'
+      +(lanes||empty('Waiting for managers','Registered managers appear here automatically.'))+'</div>'
+      +(isComplete?'<div class="race-finish-card"><div class="race-finish-heading"><span class="race-section-kicker">'+(raceState.mode==='showcase'?'EXHIBITION RESULTS':'SIMULATED FINISH')+'</span><h3>Photo finish</h3></div>'
+        +'<div class="race-results-grid">'+showOrder.map(row).join('')+'</div>'
+        +'<p class="hint">'+(raceState.mode==='showcase'?'This race is scripted for demonstration and does not determine the draft order.':
+          'This is a standalone, equal-odds simulation. It does not change the official draft order.')+'</p></div>':'')
+      +'</section>'
+      +'<section class="panel race-saved-panel section-gap">'+panelHeading('Current official draft order','First-round selections; round two reverses for the snake draft',
+        me.role==='commissioner'&&!locked?'<button type="button" class="btn secondary small" data-act="race-settings">Edit in commissioner settings</button>':'')
+      +'<div class="race-results-grid">'+(saved.length?saved.map(row).join(''):empty('Waiting for draft order'))+'</div>'
+      +'<p class="hint section-gap">'+(locked?'Order is locked now that drafting has started.':'Only the commissioner can publish a new official order through Draft settings. Running a race here does not change picks.')+'</p></section>';
+  }
+
   function overviewScoreboard(){
     const today=resultsToday(),isReady=overviewGamesDay===today;
     const eligible=new Set(eligiblePrograms().map(p=>String(p.id)));
@@ -2449,6 +2549,9 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(act==='race-start'){startDraftRace('fair');return;}
+    if(act==='race-showcase'){startDraftRace('showcase');return;}
+    if(act==='race-settings'){adminSection='draft';current='commissioner';render();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='activity-refresh'){loadActivity(true);return;}
     if(act==='search-open'){toggleGlobalSearch(true);return;}
     if(act==='search-close'){toggleGlobalSearch(false);return;}

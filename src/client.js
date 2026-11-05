@@ -1424,7 +1424,6 @@
     const scoring=standingsData?.season===season()?standingsData:null;
     const pointMap=scoring?.program_points||{};
     const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(me.id));
-    const counted=new Set((managerScore?.counted_program_ids||[]).map(String));
     const formatPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
     const owned=myPrograms().slice().sort((a,b)=>
       scoring?(Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
@@ -1433,7 +1432,6 @@
     const canTrade=league.settings.trading_enabled;
     const canWaive=draftFinished&&league.settings.waivers_enabled;
     const bestCount=Number(league.settings.scoring?.best_programs||8);
-    const titles=(league.archives||[]).filter(a=>a.champion_manager_id===me.id).length;
     const allOffers=(league.trades||[]).filter(t=>t.from_manager_id===me.id||t.to_manager_id===me.id);
     const offers=allOffers.sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||Number(b.offered_at||0)-Number(a.offered_at||0));
     const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id)
@@ -1461,56 +1459,54 @@
         +(actions?'<div class="team-offer-actions">'+actions+'</div>':'')+'</div>';
     }).join('');
     const roster=owned.map((p,index)=>{
-      const programPoints=scoring?formatPoints(pointMap[String(p.id)]):'—';
-      const isCounting=!!managerScore&&counted.has(String(p.id));
-      const status=!scoring||!managerScore?'Awaiting scores':isCounting?'Counting':'Reserve';
-      return '<tr class="team-roster-row'+(isCounting?' is-counting':'')+'">'
-        +'<td class="team-roster-rank">'+String(index+1).padStart(2,'0')+'</td>'
-        +'<td class="team-roster-school"><button type="button" class="team-roster-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="View '+escapeHTML(p.name)+'">'
-        +img(p)+'<span class="team-roster-school-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
-        +'<span class="team-roster-chevron" aria-hidden="true">›</span></button></td>'
-        +'<td class="team-roster-points"><strong>'+programPoints+'</strong><small>pts</small></td>'
-        +'<td class="team-roster-status"><span class="team-roster-badge '+(isCounting?'counts':'')+'">'+escapeHTML(status)+'</span></td>'
+      const value=scoring?formatPoints(pointMap[String(p.id)]):'—';
+      return '<tr class="tm-roster-row">'
+        +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
+        +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
+        +'<span class="tm-school-logo">'+img(p)+'</span>'
+        +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<span class="tm-school-chevron" aria-hidden="true">›</span></button></td>'
+        +'<td class="tm-points"><strong>'+value+'</strong></td>'
         +'</tr>';
     }).join('');
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
     const currentPoints=managerScore&&owned.length?formatPoints(managerScore.points):scoring&&owned.length?'0':'—';
-    const countingTotal=managerScore?Number(managerScore.counted_programs||0):'—';
-    const pendingLabel=pendingActivity?pendingActivity+' pending item'+(pendingActivity===1?'':'s'):'Trade offers, claims and roster moves';
-    return '<div class="my-team-page">'
-      +heading('YOUR FRANCHISE','My Team','Your programs, season performance and dynasty history.')
-      +'<header class="team-hero panel team-hero-fresh">'+avatar(me)
-      +'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h2>'+escapeHTML(me.display_name)+'</h2>'
-      +'<p>@'+escapeHTML(me.username)+' · '+escapeHTML(season())+' season</p></div>'
-      +'<div class="team-hero-schools">'+(owned.length?owned.slice(0,8).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):
-        '<span class="team-draft-prompt">Your roster begins at the draft</span>')+'</div></header>'
-      +'<section class="team-stats team-stats-refined" aria-label="Team season summary">'
-      +'<div class="team-stat team-season-score"><span>SEASON POINTS</span><strong>'+currentPoints+'</strong><small>Best '+bestCount+' programs count</small></div>'
-      +'<div class="team-stat"><span>OWNED PROGRAMS</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong>'
-      +'<div class="team-roster-progress" aria-hidden="true"><i style="width:'+Math.min(100,100*owned.length/Math.max(1,Number(league.settings.rounds)))+'%"></i></div></div>'
-      +'<div class="team-stat"><span>CURRENTLY COUNTING</span><strong>'+countingTotal+'</strong><small>Top '+bestCount+' by season points</small></div>'
-      +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div></section>'
-      +'<div class="team-actions">'
-      +(!draftFinished?'<button type="button" class="btn" data-act="tab" data-id="draft">Draft room</button>':'')
-      +'<button type="button" class="btn secondary" data-act="tab" data-id="programs">Browse schools</button>'
-      +'<button type="button" class="btn ghost" data-act="tab" data-id="settings">Edit profile</button></div>'
-      +'<section class="panel team-roster-panel"><div class="team-roster-top"><div>'
-      +'<span class="eyebrow">PERMANENT ROSTER</span><h2>Your programs</h2>'
-      +'<p>'+(owned.length?owned.length+' schools · Ranked by '+(scoring?'season points':'name'):'Your drafted schools will appear here')+'</p>'
-      +'</div><span class="team-roster-top-count">'+owned.length+' / '+Number(league.settings.rounds)+'</span></div>'
-      +(owned.length?'<div class="team-roster-table-wrap"><table class="team-roster-table">'
-        +'<thead><tr><th class="team-roster-rank">#</th><th>PROGRAM</th><th class="team-roster-points">SEASON POINTS</th><th class="team-roster-status">BEST BALL</th></tr></thead>'
+    const pendingLabel=pendingActivity?pendingActivity+' pending '+(pendingActivity===1?'item':'items'):'Offers, claims and roster moves';
+    const seasonLabel=escapeHTML(season());
+    const actions='<div class="tm-actions">'
+      +(!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Draft room <span aria-hidden="true">↗</span></button>':'')
+      +'<button type="button" class="tm-action" data-act="tab" data-id="programs">Browse programs <span aria-hidden="true">↗</span></button>'
+      +'<button type="button" class="tm-action" data-act="tab" data-id="settings">Edit profile <span aria-hidden="true">↗</span></button></div>';
+    return '<main class="my-team-page tm-v3">'
+      +'<header class="tm-masthead">'
+      +'<div class="tm-masthead-top"><span class="tm-label">MY TEAM</span><span class="tm-year">'+seasonLabel+' SEASON</span></div>'
+      +'<div class="tm-masthead-inner"><div class="tm-identity">'
+      +'<div class="tm-avatar">'+avatar(me)+'</div><div class="tm-identity-copy">'
+      +'<h1>'+escapeHTML(me.display_name)+'</h1>'
+      +'<p>@'+escapeHTML(me.username)+' <span aria-hidden="true">·</span> Dynasty franchise</p></div></div>'
+      +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
+      +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div>'
+      +'</div></header>'
+      +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
+      +'<div class="tm-roster-heading"><div><span class="tm-overline">2026–27 ROSTER</span>'
+      +'<h2 id="tm-roster-title">Your Programs</h2><p>'
+      +(owned.length?owned.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
+        'Your permanent program roster will appear here after the draft')+'</p></div>'+actions+'</div>'
+      +(owned.length?'<div class="tm-roster-scroll"><table class="tm-table">'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
         +'<tbody>'+roster+'</tbody></table></div>'
-        :empty('Build your permanent roster','Your schools will appear here after you draft them.'))
-      +'<div class="team-roster-note">'+(scoring?'Season points update with verified results. Only your best '+bestCount+' programs contribute to the standings.':
-        'Season points and counting status will appear when live scoring becomes available.')+'</div></section>'
-      +'<details class="team-activity-drawer"><summary><span class="team-activity-symbol" aria-hidden="true">↔</span>'
-      +'<span class="team-activity-title"><strong>Trades &amp; waivers</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
-      +(pendingActivity?'<span class="team-activity-count">'+pendingActivity+'</span>':'')
-      +'<span class="team-activity-cta">View activity</span><span class="team-activity-chevron" aria-hidden="true">⌄</span></summary>'
-      +'<div class="team-activity-content"><div class="team-aside"><section class="panel team-offers-panel">'
+        :'<div class="tm-empty">'+empty('Your roster is ready to build','Schools selected in the inaugural draft will appear here.')+
+        (!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Go to the draft room <span aria-hidden="true">↗</span></button>':'')+'</div>')
+      +'<footer class="tm-roster-footer"><span>Programs stay with your franchise from season to season.</span>'
+      +'<span>'+(scoring?'Season points reflect the current standings.':'Season totals appear once scoring is available.')+'</span></footer>'
+      +'</section>'
+      +'<details class="tm-transactions"><summary><span class="tm-transactions-symbol" aria-hidden="true">⇄</span>'
+      +'<span class="tm-transactions-copy"><strong>Trades &amp; Waivers</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
+      +(pendingActivity?'<span class="tm-transactions-count">'+pendingActivity+'</span>':'')
+      +'<span class="tm-transactions-open">Manage <span aria-hidden="true">⌄</span></span></summary>'
+      +'<div class="tm-transactions-body"><div class="team-aside"><section class="panel team-offers-panel">'
       +panelHeading('Your trades',pendingTrades+' pending · '+allOffers.length+' total')
       +(offers.length?offerCards:empty('No trades yet','Trade offers and completed deals will appear here.'))
       +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="trades">'+(canTrade?'Propose or view trades':'View trade history')+'</button></div></section>'
@@ -1518,7 +1514,7 @@
       +(claims.length?waiverRows:empty('No waiver claims','Your claims and roster moves will appear here.'))
       +(transactionRows?'<h3 class="team-subhead">Recent roster moves</h3>'+transactionRows:'')
       +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="waivers">'+(canWaive?'Manage waivers':'View waivers')+'</button></div></section>'
-      +'</div></div></details></div>';
+      +'</div></div></details></main>';
   }
   function leaderboard(){
     return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><button class="table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</button>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';

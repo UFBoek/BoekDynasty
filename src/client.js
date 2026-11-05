@@ -384,6 +384,19 @@
     }catch(error){notificationError=String(error.message||error);notificationFetchedAt=Date.now();}
     finally{notificationLoading=false;}
   }
+  async function verifyPendingNotificationEmail(){
+    const token=new URLSearchParams(location.search).get('verify_email');
+    if(!token||!me)return;
+    try{
+      await api('notifications/email/verify',{token});
+      notice('Your notification email is verified.');
+      current='notifications';loadNotifications(true);render();
+    }catch(error){notice(String(error.message||error),true);}
+    finally{
+      const next=new URL(location.href);next.searchParams.delete('verify_email');
+      if(typeof history!=='undefined')history.replaceState({},'',next.pathname+next.search+next.hash);
+    }
+  }
   async function loadNotificationAdmin(force=false){
     if(me?.role!=='commissioner'||notificationAdminLoading||
        (!force&&Date.now()-notificationAdminFetchedAt<30000))return;
@@ -516,7 +529,7 @@
     try{
       const next=await api('state'); me=next.user;league=next;reconcileDraftQueue();
       if(new URLSearchParams(location.search).has('notifications'))current='notifications';
-      render();loadNotifications(true);
+      render();loadNotifications(true);verifyPendingNotificationEmail();
       startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
@@ -1009,7 +1022,7 @@
   }
   function morePage(){
     const groups=[
-      ['Your account',[['settings','Profile & settings','Team name, photo, colors and password']]],
+      ['Your account',[['settings','Profile & settings','Team name, photo, colors and password'],['notifications','Notifications','Inbox, push alerts and preferences']]],
       ['League information',[['league','Standings','Current fantasy scores'],['draft-order','Draft order','Horse race and selection positions'],['scoring','Scoring rules','Point values explained'],['history','Dynasty history','Past seasons and champions']]],
       ['League tools',[['trades','Trades','Offers and completed deals'],['waivers','Waivers','Claim or release programs'],['results','Daily results','Scores and schedules']]]
     ];
@@ -2771,6 +2784,75 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(act==='notifications-enable-push'){
+      try{
+        if(!('serviceWorker' in navigator)||typeof Notification==='undefined'||!('PushManager' in window))
+          throw new Error('Push notifications are not supported by this browser.');
+        // Required user gesture: prompt before any other awaited network operation.
+        const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+        if(permission!=='granted')throw new Error('Allow notifications in your device settings to enable alerts.');
+        const base=typeof SITE_BASE!=='undefined'?SITE_BASE:'/';
+        const reg=await navigator.serviceWorker.register(base+'sw.js',{scope:base});
+        const config=notificationSnapshot||await api('notifications/inbox');
+        if(!config.public_key)throw new Error('Push configuration is temporarily unavailable.');
+        const raw=config.public_key.replace(/-/g,'+').replace(/_/g,'/');
+        const bytes=Uint8Array.from(atob(raw+'='.repeat((4-raw.length%4)%4)),x=>x.charCodeAt(0));
+        let subscription=await reg.pushManager.getSubscription();
+        if(!subscription)subscription=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+        await api('notifications/subscribe',{subscription:subscription.toJSON(),user_agent:navigator.userAgent});
+        pushDeviceActive=true;await loadNotifications(true);render();
+        notice('Push notifications enabled on this device.');
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-disable-push'){
+      try{
+        const reg=await navigator.serviceWorker.ready,subscription=await reg.pushManager.getSubscription();
+        if(subscription){
+          await api('notifications/unsubscribe',{endpoint:subscription.endpoint});
+          await subscription.unsubscribe();
+        }
+        pushDeviceActive=false;await loadNotifications(true);render();
+        notice('Push alerts disabled on this device.');
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-test'){
+      try{await api('notifications/test',{});notice('Test alert sent. Check your notifications.');loadNotifications(true);}
+      catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-read-all'){
+      try{await api('notifications/read',{id:'all'});await loadNotifications(true);}
+      catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notification-open'){
+      try{
+        await api('notifications/read',{id});
+        const allowed=['trades','draft','notifications'];
+        current=allowed.includes(button.dataset.target)?button.dataset.target:'notifications';
+        await loadNotifications(true);render();
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-save-prefs'){
+      const next={};
+      for(const key of ['trades','draft','announcements','push_enabled','email_enabled']){
+        const input=document.querySelector('#notification-pref-'+key);
+        next[key]=input?!!input.checked:!!notificationSnapshot?.preferences?.[key];
+      }
+      try{await api('notifications/preferences',next);await loadNotifications(true);notice('Notification preferences saved.');}
+      catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-email-request'){
+      try{
+        await api('notifications/email/request',{email:v('#notification-email')});
+        notice('Verification email sent. Open the link to activate email alerts.');
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
     if(act==='race-replay'){startDraftRacePlayback(false);return;}
     if(act==='race-settings'){adminSection='draft';current='commissioner';render();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='activity-refresh'){loadActivity(true);return;}
@@ -3284,12 +3366,12 @@
         if(!res.token)throw new Error('Unable to establish a session. Try signing in again.');
         saveSignedInToken(res.token,data.remember_device);
         selectedInvite='';
-        if(location.search)history.replaceState({},'',location.pathname);
+        if(location.search&&!new URLSearchParams(location.search).has('verify_email'))history.replaceState({},'',location.pathname);
         me=res.user;await refresh();
         startPolling();
         notice(data.remember_device?'Signed in. This device will be remembered.':'Signed in for this browser session.');
         if(me?.role==='commissioner')autoImportPrograms();
-        loadNotifications(true);
+        loadNotifications(true);verifyPendingNotificationEmail();
       }
     }catch(err){notice(err.message,true);}finally{busy=false;}
   });

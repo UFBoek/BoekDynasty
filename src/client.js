@@ -442,7 +442,8 @@
       notificationFetchedAt=Date.now();notificationError='';
       if(typeof navigator!=='undefined'&&'serviceWorker' in navigator){
         navigator.serviceWorker.ready.then(reg=>reg.pushManager?.getSubscription())
-          .then(subscription=>{const active=!!subscription;if(active!==pushDeviceActive){pushDeviceActive=active;if(current==='notifications')render();}})
+          .then(subscription=>{const active=!!subscription&&!!notificationSnapshot?.devices?.some(d=>d.endpoint===subscription.endpoint);
+            if(active!==pushDeviceActive){pushDeviceActive=active;if(current==='notifications')render();}})
           .catch(()=>{});
       }
       if(typeof navigator!=='undefined'&&'setAppBadge' in navigator){
@@ -601,7 +602,7 @@
     try{
       const next=await api('state'); me=next.user;league=next;reconcileDraftQueue();
       if(new URLSearchParams(location.search).has('notifications'))current='notifications';
-      render();loadNotifications(true);verifyPendingNotificationEmail();
+      enterNotificationSetup();loadNotifications(true);verifyPendingNotificationEmail();
       startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
@@ -747,7 +748,9 @@
     const unreadNotifications=Math.min(99,Number(notificationSnapshot?.unread||0));
     const notificationBell='<button type="button" class="topbar-bell" data-act="tab" data-id="notifications" title="Notifications" aria-label="Notifications'+(unreadNotifications?', '+unreadNotifications+' unread':'')+'">'+iconSVG('notifications')
       +(unreadNotifications?'<span class="notification-bell-count">'+unreadNotifications+'</span>':'')+'</button>';
-    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>⌘K</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
+    root.innerHTML='<div class="shell">'+sidebar()+'<main class="main"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>⌘K</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'')+(notificationGateOpen()?notificationOnboarding():'');
+    const mainShell=root.querySelector('.shell');
+    if(mainShell)mainShell.inert=!!notificationGateOpen();
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
     if(current==='draft'){
@@ -2896,6 +2899,18 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(notificationGateOpen()&&!['notifications-enable-push','notification-setup-recheck','notification-setup-unavailable','logout'].includes(act))return;
+    if(act==='notification-setup-recheck'){
+      checkNotificationOnboarding();
+      return;
+    }
+    if(act==='notification-setup-unavailable'){
+      if(!['ios','blocked','unsupported','error'].includes(notificationGate))return;
+      try{localStorage.setItem(gateKey(),'1');}catch{}
+      notificationGate='done';render();
+      notice('In-app alerts stay active. You can enable push later from the Notifications page.');
+      return;
+    }
     if(act==='notifications-enable-push'){
       try{
         if(!('serviceWorker' in navigator)||typeof Notification==='undefined'||!('PushManager' in window))
@@ -2912,9 +2927,17 @@
         let subscription=await reg.pushManager.getSubscription();
         if(!subscription)subscription=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
         await api('notifications/subscribe',{subscription:subscription.toJSON(),user_agent:navigator.userAgent});
-        pushDeviceActive=true;await loadNotifications(true);render();
+        pushDeviceActive=true;notificationGate='done';notificationGateMessage='';
+        await loadNotifications(true);render();
         notice('Push notifications enabled on this device.');
-      }catch(error){notice(String(error.message||error),true);}
+      }catch(error){
+        if(notificationGateOpen()){
+          notificationGate=typeof Notification!=='undefined'&&Notification.permission==='denied'?'blocked':'error';
+          notificationGateMessage=String(error.message||error);
+          render();
+        }
+        notice(String(error.message||error),true);
+      }
       return;
     }
     if(act==='notifications-disable-push'){
@@ -3504,8 +3527,9 @@
         const pendingLink=new URLSearchParams(location.search);
         const openInbox=pendingLink.has('notifications');
         if(location.search&&!pendingLink.has('verify_email'))history.replaceState({},'',location.pathname);
-        me=res.user;await refresh();
+        me=res.user;notificationGate='checking';await refresh();
         if(openInbox){current='notifications';render();}
+        enterNotificationSetup();
         startPolling();
         notice(data.remember_device?'Signed in. This device will be remembered.':'Signed in for this browser session.');
         if(me?.role==='commissioner')autoImportPrograms();

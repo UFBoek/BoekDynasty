@@ -1408,7 +1408,14 @@
       +'</section></div>';
   }
   function myTeamPage(){
-    const owned=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
+    const scoring=standingsData?.season===season()?standingsData:null;
+    const pointMap=scoring?.program_points||{};
+    const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(me.id));
+    const counted=new Set((managerScore?.counted_program_ids||[]).map(String));
+    const formatPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
+    const owned=myPrograms().slice().sort((a,b)=>
+      scoring?(Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
+        a.name.localeCompare(b.name)):a.name.localeCompare(b.name));
     const draftFinished=league.settings.draft_status==='finished';
     const canTrade=league.settings.trading_enabled;
     const canWaive=draftFinished&&league.settings.waivers_enabled;
@@ -1419,6 +1426,9 @@
     const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id)
       .sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||Number(b.created_at||0)-Number(a.created_at||0));
     const transactions=(league.roster_transactions||[]).filter(t=>t.manager_id===me.id).slice(0,5);
+    const pendingTrades=offers.filter(t=>t.status==='pending').length;
+    const pendingClaims=claims.filter(c=>c.status==='pending').length;
+    const pendingActivity=pendingTrades+pendingClaims;
     const getName=id=>programs().find(p=>p.id===id)?.name||'Program';
     const offerCards=offers.slice(0,8).map(t=>{
       const otherId=t.from_manager_id===me.id?t.to_manager_id:t.from_manager_id;
@@ -1437,35 +1447,65 @@
         +'<div class="team-offer-detail"><span>You receive</span><strong>'+escapeHTML(receive.join(', ')||'No assets')+'</strong></div>'
         +(actions?'<div class="team-offer-actions">'+actions+'</div>':'')+'</div>';
     }).join('');
-    const roster=owned.map(p=>'<div class="team-program"><button class="team-program-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
-      +img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span class="team-program-arrow">›</span></button>'
-      +(canWaive?'<button class="team-drop" type="button" data-act="team-drop" data-id="'+escapeHTML(p.id)+'" title="Release '+escapeHTML(p.name)+'">Release</button>':'')+'</div>').join('');
+    const roster=owned.map((p,index)=>{
+      const programPoints=scoring?formatPoints(pointMap[String(p.id)]):'—';
+      const isCounting=!!managerScore&&counted.has(String(p.id));
+      const status=!scoring||!managerScore?'Awaiting scores':isCounting?'Counting':'Reserve';
+      return '<tr class="team-roster-row'+(isCounting?' is-counting':'')+'">'
+        +'<td class="team-roster-rank">'+String(index+1).padStart(2,'0')+'</td>'
+        +'<td class="team-roster-school"><button type="button" class="team-roster-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="View '+escapeHTML(p.name)+'">'
+        +img(p)+'<span class="team-roster-school-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<span class="team-roster-chevron" aria-hidden="true">›</span></button></td>'
+        +'<td class="team-roster-points"><strong>'+programPoints+'</strong><small>pts</small></td>'
+        +'<td class="team-roster-status"><span class="team-roster-badge '+(isCounting?'counts':'')+'">'+escapeHTML(status)+'</span></td>'
+        +'</tr>';
+    }).join('');
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
-    return heading('YOUR FRANCHISE', 'My Team',owned.length?'Your permanent collection of college basketball programs.':'Your dynasty starts with the inaugural program draft.')
-      +'<div class="team-hero panel team-hero-fresh">'+avatar(me)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h2>'+escapeHTML(me.display_name)+'</h2><p>@'+escapeHTML(me.username)+' · '+escapeHTML(season())+' season</p></div>'
-      +'<div class="team-hero-schools">'+(owned.length?owned.slice(0,9).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):'<span class="team-draft-prompt">Waiting for your first selection</span>')+'</div></div>'
-      +'<div class="team-stats team-stats-refined"><div class="team-stat"><span>ROSTER</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong><div class="team-roster-progress"><i style="width:'+Math.min(100,100*owned.length/Math.max(1,Number(league.settings.rounds)))+'%"></i></div></div>'
-      +'<div class="team-stat"><span>COUNTING PROGRAMS</span><strong>Best '+bestCount+'</strong><small>Season-long best ball</small></div>'
-      +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div>'
-      +'<div class="team-stat team-season-score"><span>SEASON POINTS</span><strong>'+(standingsData?.season===season()?Number(standingsData.standings?.find(x=>x.manager_id===me.id)?.points||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—')+'</strong><small>Best '+bestCount+' programs</small></div></div>'
+    const currentPoints=managerScore&&owned.length?formatPoints(managerScore.points):scoring&&owned.length?'0':'—';
+    const countingTotal=managerScore?Number(managerScore.counted_programs||0):'—';
+    const pendingLabel=pendingActivity?pendingActivity+' pending item'+(pendingActivity===1?'':'s'):'Trade offers, claims and roster moves';
+    return '<div class="my-team-page">'
+      +heading('YOUR FRANCHISE','My Team','Your programs, season performance and dynasty history.')
+      +'<header class="team-hero panel team-hero-fresh">'+avatar(me)
+      +'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h2>'+escapeHTML(me.display_name)+'</h2>'
+      +'<p>@'+escapeHTML(me.username)+' · '+escapeHTML(season())+' season</p></div>'
+      +'<div class="team-hero-schools">'+(owned.length?owned.slice(0,8).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):
+        '<span class="team-draft-prompt">Your roster begins at the draft</span>')+'</div></header>'
+      +'<section class="team-stats team-stats-refined" aria-label="Team season summary">'
+      +'<div class="team-stat team-season-score"><span>SEASON POINTS</span><strong>'+currentPoints+'</strong><small>Best '+bestCount+' programs count</small></div>'
+      +'<div class="team-stat"><span>OWNED PROGRAMS</span><strong>'+owned.length+' <small>/ '+Number(league.settings.rounds)+'</small></strong>'
+      +'<div class="team-roster-progress" aria-hidden="true"><i style="width:'+Math.min(100,100*owned.length/Math.max(1,Number(league.settings.rounds)))+'%"></i></div></div>'
+      +'<div class="team-stat"><span>CURRENTLY COUNTING</span><strong>'+countingTotal+'</strong><small>Top '+bestCount+' by season points</small></div>'
+      +'<div class="team-stat"><span>LEAGUE TITLES</span><strong>'+titles+'</strong><small>Dynasty championships</small></div></section>'
       +'<div class="team-actions">'
-      +(canTrade?'<button class="btn" data-act="tab" data-id="trades">Propose a trade</button>':
-        !draftFinished?'<button class="btn" data-act="tab" data-id="draft">Open draft room</button>':'')
-      +(canWaive?'<button class="btn secondary" data-act="tab" data-id="waivers">Manage waivers</button>':'')
-      +'<button class="btn secondary" data-act="tab" data-id="programs">Browse schools</button>'
-      +'<button class="btn ghost" data-act="tab" data-id="settings">Edit profile</button></div>'
-      +'<div class="team-layout"><section class="panel team-roster-panel">'+panelHeading('Your programs',owned.length+' permanently owned schools','<button class="btn small ghost" data-act="tab" data-id="programs">Browse schools</button>')
-      +(owned.length?'<div class="team-program-grid">'+roster+'</div>':empty('Your roster is ready to build','Once the draft begins, your selected schools will appear here with their logos and season records.'))
-      +(owned.length&&!standingsData?'<p class="team-footnote">Season points appear above once live standings finish loading.</p>':'')+'</section>'
-      +'<div class="team-aside"><section class="panel team-offers-panel">'+panelHeading('Your trades',offers.filter(t=>t.status==='pending').length+' pending · '+allOffers.length+' total')
-      +(offers.length?offerCards:empty('No trades yet','Proposals and completed deals will appear here.'))
-      +'<div class="team-panel-footer"><button class="btn secondary small" data-act="tab" data-id="trades">View all trades</button></div></section>'
-      +'<section class="panel team-waivers-panel">'+panelHeading('Waiver activity',claims.filter(c=>c.status==='pending').length+' pending claims')
-      +(claims.length?waiverRows:empty('Nothing on waivers','Your pending claims and completed waiver moves will appear here.'))
+      +(!draftFinished?'<button type="button" class="btn" data-act="tab" data-id="draft">Draft room</button>':'')
+      +'<button type="button" class="btn secondary" data-act="tab" data-id="programs">Browse schools</button>'
+      +'<button type="button" class="btn ghost" data-act="tab" data-id="settings">Edit profile</button></div>'
+      +'<section class="panel team-roster-panel"><div class="team-roster-top"><div>'
+      +'<span class="eyebrow">PERMANENT ROSTER</span><h2>Your programs</h2>'
+      +'<p>'+(owned.length?owned.length+' schools · Ranked by '+(scoring?'season points':'name'):'Your drafted schools will appear here')+'</p>'
+      +'</div><span class="team-roster-top-count">'+owned.length+' / '+Number(league.settings.rounds)+'</span></div>'
+      +(owned.length?'<div class="team-roster-table-wrap"><table class="team-roster-table">'
+        +'<thead><tr><th class="team-roster-rank">#</th><th>PROGRAM</th><th class="team-roster-points">SEASON POINTS</th><th class="team-roster-status">BEST BALL</th></tr></thead>'
+        +'<tbody>'+roster+'</tbody></table></div>'
+        :empty('Build your permanent roster','Your schools will appear here after you draft them.'))
+      +'<div class="team-roster-note">'+(scoring?'Season points update with verified results. Only your best '+bestCount+' programs contribute to the standings.':
+        'Season points and counting status will appear when live scoring becomes available.')+'</div></section>'
+      +'<details class="team-activity-drawer"><summary><span class="team-activity-symbol" aria-hidden="true">↔</span>'
+      +'<span class="team-activity-title"><strong>Trades &amp; waivers</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
+      +(pendingActivity?'<span class="team-activity-count">'+pendingActivity+'</span>':'')
+      +'<span class="team-activity-cta">View activity</span><span class="team-activity-chevron" aria-hidden="true">⌄</span></summary>'
+      +'<div class="team-activity-content"><div class="team-aside"><section class="panel team-offers-panel">'
+      +panelHeading('Your trades',pendingTrades+' pending · '+allOffers.length+' total')
+      +(offers.length?offerCards:empty('No trades yet','Trade offers and completed deals will appear here.'))
+      +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="trades">'+(canTrade?'Propose or view trades':'View trade history')+'</button></div></section>'
+      +'<section class="panel team-waivers-panel">'+panelHeading('Waiver activity',pendingClaims+' pending claims')
+      +(claims.length?waiverRows:empty('No waiver claims','Your claims and roster moves will appear here.'))
       +(transactionRows?'<h3 class="team-subhead">Recent roster moves</h3>'+transactionRows:'')
-      +'<div class="team-panel-footer"><button class="btn secondary small" data-act="tab" data-id="waivers">Manage waivers</button></div></section></div></div>';
+      +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="waivers">'+(canWaive?'Manage waivers':'View waivers')+'</button></div></section>'
+      +'</div></div></details></div>';
   }
   function leaderboard(){
     return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><button class="table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</button>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';

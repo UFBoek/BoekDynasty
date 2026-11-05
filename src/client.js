@@ -2583,12 +2583,50 @@
       '<details class="section-gap"><summary>Scoring rule changes</summary>'+(revisionRows||'<p class="hint">No revisions recorded yet.</p>')+'</details>'+
       '</section>';
   }
+  function notificationAdminPage(){
+    const d=notificationAdmin||{},cfg=d.settings||{};
+    const controls=[['trades','Trade alerts','Offers, acceptances and declines'],['draft','Draft alerts','Draft start, on-clock and soon-up notifications'],['announcements','Commissioner announcements','League-wide messages']];
+    const opts=controls.map(([key,title,detail])=>'<label class="notification-admin-toggle"><span><strong>'+title+'</strong><small>'+detail+'</small></span>'
+      +'<input id="admin-notification-'+key+'" type="checkbox" '+(cfg[key]!==false?'checked':'')+'/></label>').join('');
+    const recipientOptions=members().map(m=>'<option value="'+escapeHTML(m.id)+'">'+escapeHTML(m.display_name)+'</option>').join('');
+    const stats=(d.devices||[]).map(m=>'<div class="notification-device-person"><span><strong>'+escapeHTML(m.display_name)+'</strong><small>'
+      +Number(m.devices||0)+' opted-in device(s)</small></span><span class="'+(Number(m.devices||0)?'notification-device-on':'notification-device-off')+'">'
+      +(Number(m.devices||0)?'Enabled':'Not enrolled')+'</span></div>').join('');
+    const recent=(d.announcements||[]).map(a=>'<div class="notification-admin-announcement"><strong>'+escapeHTML(a.title)+'</strong><small>'
+      +escapeHTML(notificationTime(a.created_at))+' · '+Number(a.recipients||0)+' recipients</small><p>'+escapeHTML(a.body)+'</p></div>').join('');
+    return '<section class="panel setting-panel notification-admin-panel">'+panelHeading('Notification Center','Control league alerts and send messages')
+      +'<div class="notification-admin-metrics">'
+      +[['Sent',d.total||0],['Unread',d.unread||0],['Pending delivery',d.pending_delivery||0],
+        ['Push devices',(d.devices||[]).reduce((a,b)=>a+Number(b.devices||0),0)]].map(([label,value])=>
+          '<div><strong>'+Number(value).toLocaleString()+'</strong><span>'+label+'</span></div>').join('')+'</div>'
+      +(notificationAdminError?'<p class="notice">'+escapeHTML(notificationAdminError)+'</p>':'')
+      +'<div class="button-row section-gap"><button class="btn small secondary" data-act="notification-admin-refresh">Refresh</button>'
+      +'<button class="btn small secondary" data-act="notifications-test">Send test to me</button>'
+      +'<button class="btn small ghost" data-act="notification-admin-retry">Retry pending</button></div></section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Send an announcement','Push to opted-in devices and every selected manager\'s inbox')
+      +'<div class="form-row"><label for="notification-recipient">Send to</label><select class="field" id="notification-recipient">'
+      +'<option value="all">Everyone in the league</option>'+recipientOptions+'</select></div>'
+      +'<div class="form-row"><label for="notification-announcement-title">Title</label>'
+      +'<input class="field" id="notification-announcement-title" maxlength="90" placeholder="League announcement" /></div>'
+      +'<div class="form-row"><label for="notification-announcement-message">Message</label>'
+      +'<textarea class="field" id="notification-announcement-message" rows="4" maxlength="650" placeholder="Write your update…"></textarea></div>'
+      +'<button class="btn" type="button" data-act="notification-admin-send">Send announcement</button>'
+      +'<p class="hint section-gap">A maximum of eight announcements can be sent every 24 hours.</p></section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Automatic notifications','League-wide event switches')+opts
+      +'<div class="button-row section-gap"><button class="btn secondary" data-act="notification-admin-save">Save settings</button></div></section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Delivery and manager devices')
+      +'<p class="hint">Push: each manager opts in independently. Email: '+(d.email_available?'Provider connected':
+        'Not configured. A verified sender and RESEND_API_KEY/NOTIFICATION_EMAIL_FROM Supabase secrets are required.')+'</p>'
+      +'<div class="notification-device-list">'+(stats||'<p class="hint">Loading device registrations…</p>')+'</div></section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Recent announcements')
+      +(recent||'<p class="hint">No announcements sent yet.</p>')+'</section>';
+  }
   function commissionerPage(){
     if(me.role!=='commissioner')return '';
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','Accounts & invites'],['activity','Activity','Visits & actions'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
+    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','Accounts & invites'],['activity','Activity','Visits & actions'],['notifications','Notifications','Broadcasts & delivery'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -2749,6 +2787,8 @@
         +fields.map(([key,label])=>'<div class="form-row"><label for="score-'+key+'">'+escapeHTML(label)+'</label><input class="field" id="score-'+key+'" type="number" min="0" max="100" step="0.25" value="'+Number(r[key]||0)+'"/></div>').join('')+'</div></div>').join('')
         +'<p class="settings-hint">Q1A is its own +2.5 win category, separate from +1.5 Q1 wins. The PAC-12 &amp; MID-MAJOR BONUSES section covers every eligible non-Power school, including individually added teams; Gonzaga is excluded. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
         +'<div class="button-row section-gap"><button class="btn" data-act="save-scoring">Save scoring</button><button class="btn secondary" data-act="tab" data-id="scoring">View rules</button></div></section>';
+    }else if(adminSection==='notifications'){
+      body=notificationAdminPage();
     }else if(adminSection==='trades'){
       body='<section class="panel setting-panel">'+panelHeading('Trading')
         +'<label class="settings-toggle" for="trading-enabled"><div><strong>Allow program trades</strong><span>Managers can propose and accept trades after the initial draft.</span></div><input id="trading-enabled" type="checkbox" '+(settings.trading_enabled?'checked':'')+'/></label>'
@@ -2856,6 +2896,29 @@
     if(act==='race-replay'){startDraftRacePlayback(false);return;}
     if(act==='race-settings'){adminSection='draft';current='commissioner';render();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='activity-refresh'){loadActivity(true);return;}
+    if(act==='notification-admin-refresh'){loadNotificationAdmin(true);return;}
+    if(act==='notification-admin-retry'){
+      try{const d=await api('admin/notifications/retry',{});notice('Retried '+Number(d.examined||0)+' deliveries.');await loadNotificationAdmin(true);}
+      catch(e){notice(String(e.message||e),true);}return;
+    }
+    if(act==='notification-admin-save'){
+      const values={};
+      for(const k of ['trades','draft','announcements'])values[k]=!!document.querySelector('#admin-notification-'+k)?.checked;
+      try{await api('admin/notifications/settings',values);await loadNotificationAdmin(true);notice('Notification settings saved.');}
+      catch(e){notice(String(e.message||e),true);}return;
+    }
+    if(act==='notification-admin-send'){
+      const title=v('#notification-announcement-title').trim(),message=v('#notification-announcement-message').trim();
+      const recipient=v('#notification-recipient')||'all';
+      if(title.length<3||message.length<4){notice('Enter a title and message.',true);return;}
+      const who=recipient==='all'?'all '+members().length+' managers':
+        (members().find(m=>m.id===recipient)?.display_name||'this manager');
+      if(!window.confirm('Send this announcement to '+who+'?'))return;
+      try{
+        const r=await api('admin/notifications/announce',{title,message,recipient});
+        notice('Sent to '+Number(r.recipients||0)+' inboxes.');await Promise.all([loadNotificationAdmin(true),loadNotifications(true)]);
+      }catch(e){notice(String(e.message||e),true);}return;
+    }
     if(act==='search-open'){toggleGlobalSearch(true);return;}
     if(act==='search-close'){toggleGlobalSearch(false);return;}
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}

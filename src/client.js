@@ -62,12 +62,35 @@
   // major-conference filter consistent with the existing conference selector.
   const MID_MAJOR_FILTER='mid-major';
   const midMajorConferenceIds=new Set(conferenceGroups.slice(1).flatMap(group=>group.ids));
+  // A conference gets its own tab only when every school in the directory is
+  // eligible. Conferences with individual inclusions appear under Mid-Major.
+  // This grouping is display-only: school subtitles retain their real league.
+  let conferenceMenuCache=null;
+  function conferenceMenuGroups(){
+    if(conferenceMenuCache?.league===league)return conferenceMenuCache;
+    const totals=new Map(),enabled=new Map();
+    for(const school of programs()){
+      const id=String(school.conference_id||'');
+      if(!id)continue;
+      totals.set(id,(totals.get(id)||0)+1);
+      if(programEligible(school))enabled.set(id,(enabled.get(id)||0)+1);
+    }
+    const full=new Set([...totals.keys()].filter(id=>
+      totals.get(id)>1&&enabled.get(id)===totals.get(id)));
+    const partial=new Set([...enabled.keys()].filter(id=>!full.has(id)));
+    conferenceMenuCache={league,full,partial};
+    return conferenceMenuCache;
+  }
+  const isMidMajorMenuConference=id=>{
+    const key=String(id);
+    return midMajorConferenceIds.has(key)||conferenceMenuGroups().partial.has(key);
+  };
   const matchesConferenceFilter=(conferenceId,filter)=>
     filter==='all'||(filter===MID_MAJOR_FILTER
-      ?midMajorConferenceIds.has(String(conferenceId))
+      ?isMidMajorMenuConference(conferenceId)
       :String(conferenceId)===String(filter));
   const midMajorOption=selected=>'<option value="'+MID_MAJOR_FILTER+'"'+
-    (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major (all conferences)</option>';
+    (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major (other conferences)</option>';
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
   let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';
@@ -117,7 +140,8 @@
   const programEligible=p=>!!p&&!excludedSchools().includes(String(p.id))&&
     (activeConfs().includes(String(p.conference_id))||includedSchools().includes(String(p.id)));
   const eligiblePrograms=()=>programs().filter(programEligible);
-  const eligibleConferenceIds=()=>[...new Set(eligiblePrograms().map(p=>String(p.conference_id)))];
+  // Only completely enabled conferences receive independent filter controls.
+  const eligibleConferenceIds=()=>[...conferenceMenuGroups().full];
   function initPoolDraft(){
     if(poolDraftConfs!==null&&poolDraftSchools!==null)return;
     poolDraftConfs=new Set(activeConfs().map(String));
@@ -2770,7 +2794,7 @@
             +'<span class="pool-check" aria-hidden="true">'+(active?'✓':'')+'</span><span class="pool-conf-name">'+escapeHTML(conf(id))+'</span>'
             +'<span class="pool-conf-count">'+count+'/'+all.length+'</span></button>';
         }).join('')+'</div>').join('');
-      const filterOptions=[...new Set(programs().map(p=>String(p.conference_id)))].sort((a,b)=>conf(a).localeCompare(conf(b)))
+      const filterOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)))
         .map(id=>'<option value="'+id+'" '+(poolConferenceFilter===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
       const scopeButtons=[['all','All schools'],['included','Included'],['excluded','Not included']]
         .map(([id,label])=>'<button type="button" data-act="pool-scope" data-id="'+id+'" class="'+(poolScope===id?'active':'')+'" aria-pressed="'+(poolScope===id)+'">'+label+'</button>').join('');

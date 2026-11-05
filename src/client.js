@@ -1119,38 +1119,36 @@
     const favorite=String(me.favorite_program_id||'');
     const eligible=eligiblePrograms().sort((a,b)=>a.name.localeCompare(b.name));
     const colors=teamAccentChoices.map(([hex,label])=>
-      '<label class="settings-color-option" title="'+label+'"><input type="radio" name="accent_color" value="'+hex+'" '+(accent.toUpperCase()===hex?'checked':'')+'/><span class="settings-color-dot" style="background:'+hex+'"></span><small>'+label+'</small></label>'
+      '<label class="profile-color-choice" title="'+label+'"><input type="radio" name="accent_color" value="'+hex+'" '+(accent.toUpperCase()===hex?'checked':'')+'/><span class="profile-color-swatch" style="background:'+hex+'"></span><span class="profile-color-name">'+label+'</span></label>'
     ).join('');
-    return heading('YOUR ACCOUNT','Edit Profile','Manage your team identity and account details.')
-      +'<div class="settings-layout settings-refined">'
-      +'<section class="panel settings-card settings-primary">'
-      +'<div class="settings-section-heading"><div><h2>Team profile</h2><p>How other managers see you across the league.</p></div></div>'
-      +'<div class="settings-profile-top"><div class="settings-avatar-preview">'+avatar({...me,avatar_data:selectedAvatar})+'</div>'
-      +'<div class="settings-profile-summary"><strong>'+escapeHTML(me.display_name)+'</strong><small>@'+escapeHTML(me.username)+'</small>'
-      +'<div class="settings-photo-actions"><label for="settings-photo-input" class="btn secondary small">Change photo</label>'
-      +'<input id="settings-photo-input" class="settings-photo-input" type="file" accept="image/jpeg,image/png,image/webp"/>'
-      +'<button type="button" class="btn small ghost" data-act="settings-remove-photo">Remove</button></div>'
-      +'<span id="photo-hint" class="settings-photo-hint">JPG, PNG or WebP</span></div></div>'
-      +'<form data-form="account-profile" class="settings-form">'
+    return '<div class="account-profile-page">'
+      +'<div class="account-page-intro"><div><span class="account-eyebrow">ACCOUNT SETTINGS</span><h1>Edit profile</h1><p>Customize your identity across CBB Dynasty.</p></div><span class="account-role-tag">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</span></div>'
+      +'<div class="account-hero"><div class="account-hero-banner"><div class="account-hero-kicker">MANAGER PROFILE</div><span class="account-hero-brand">CBB <b>DYNASTY</b></span></div>'
+      +'<div class="account-hero-details"><div class="account-hero-avatar">'+avatar({...me,avatar_data:selectedAvatar})+'</div><div class="account-hero-name"><strong>'+escapeHTML(me.display_name)+'</strong><span>@'+escapeHTML(me.username)+'</span></div>'
+      +'<span class="account-hero-public">Visible to league members</span></div></div>'
+      +'<div class="account-settings-grid"><div class="account-settings-main">'
+      +'<section class="panel account-edit-panel"><div class="account-section-title"><span class="account-section-icon">'+iconSVG('team')+'</span><div><h2>Profile information</h2><p>Update the details shown on your manager profile.</p></div></div>'
+      +'<div class="account-photo-row"><div><strong>Profile picture</strong><p>Use a clear photo or logo for your team.</p></div><div class="account-photo-buttons"><label for="settings-photo-input" class="btn secondary small">Upload photo</label><input id="settings-photo-input" class="settings-photo-input" type="file" accept="image/jpeg,image/png,image/webp"/><button type="button" class="btn small ghost" data-act="settings-remove-photo">Remove</button></div></div>'
+      +'<span id="photo-hint" class="account-photo-hint">JPG, PNG or WebP. Image will be optimized automatically.</span>'
+      +'<form data-form="account-profile" class="account-edit-form">'
       +'<div class="settings-form-grid"><label class="settings-field"><span>Team name</span><input class="field" name="display_name" required minlength="2" maxlength="40" autocomplete="organization" value="'+escapeHTML(me.display_name)+'"/></label>'
       +'<label class="settings-field"><span>Username</span><div class="settings-username-wrap"><span>@</span><input class="field" name="username" required pattern="[a-zA-Z0-9_]{3,24}" maxlength="24" minlength="3" autocomplete="username" autocapitalize="off" value="'+escapeHTML(me.username)+'"/></div></label></div>'
-      +'<div class="settings-field"><span>Profile color</span><div class="settings-colors" role="radiogroup" aria-label="Profile color">'+colors+'</div></div>'
-      +'<label class="settings-field"><span>Favorite program</span><select class="field settings-select" name="favorite_program_id"><option value="">None selected</option>'
+      +'<label class="settings-field"><span>Favorite program</span><select class="field settings-select" name="favorite_program_id"><option value="">Select a program (optional)</option>'
       +eligible.map(p=>'<option value="'+escapeHTML(p.id)+'" '+(favorite===String(p.id)?'selected':'')+'>'+escapeHTML(p.name)+'</option>').join('')
-      +'</select><small>Displayed on your public manager profile.</small></label>'
-      +'<div class="settings-actions"><button class="btn" type="submit">Save changes</button></div>'
-      +'</form></section>'
-      +'<div class="settings-secondary">'
-      +'<details class="panel settings-card settings-security-details"><summary><span><strong>Password & security</strong><small>Update your account password</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>'
-      +'<form class="settings-form" data-form="account-password" autocomplete="off">'
+      +'</select><small>Your favorite school appears on your public profile.</small></label>'
+      +'<div class="account-color-section"><div class="account-color-heading"><strong>Team accent color</strong><span>Choose the color used on your profile.</span></div>'
+      +'<div class="account-color-options" role="radiogroup" aria-label="Team accent color">'+colors+'</div></div>'
+      +'<div class="account-save-bar"><span>Changes are visible to other members after saving.</span><button class="btn" type="submit">Save profile</button></div>'
+      +'</form></section></div>'
+      +'<aside class="account-settings-side"><section class="panel account-side-panel"><div class="account-side-heading"><span class="account-side-icon">'+iconSVG('settings')+'</span><div><h2>Security</h2><p>Password and account access</p></div></div>'
+      +'<details class="account-password-details"><summary>Change password <span aria-hidden="true">⌄</span></summary><form class="settings-form" data-form="account-password" autocomplete="off">'
       +'<label class="settings-field"><span>Current password</span><input class="field" type="password" name="current_password" autocomplete="current-password" required minlength="8"/></label>'
       +'<label class="settings-field"><span>New password</span><input class="field" type="password" name="new_password" autocomplete="new-password" required minlength="8" maxlength="128"/></label>'
-      +'<label class="settings-field"><span>Confirm new password</span><input class="field" type="password" name="confirm_password" autocomplete="new-password" required minlength="8" maxlength="128"/></label>'
-      +'<div class="settings-actions"><button class="btn secondary" type="submit">Update password</button></div>'
-      +'<p class="settings-security-note">Other devices will be signed out after a password change.</p></form></details>'
-      +'<section class="panel settings-card settings-account-card"><div class="settings-account-footer"><span>League role</span><strong>'+(me.role==='commissioner'?'Commissioner':'Manager')+'</strong></div>'
-      +'<button class="btn ghost settings-sign-out" data-act="logout">Sign out</button></section>'
-      +'</div></div>';
+      +'<label class="settings-field"><span>Confirm password</span><input class="field" type="password" name="confirm_password" autocomplete="new-password" required minlength="8" maxlength="128"/></label>'
+      +'<button class="btn secondary" type="submit">Update password</button><p class="settings-security-note">Other sessions will be signed out.</p></form></details></section>'
+      +'<section class="panel account-side-panel account-session-panel"><div class="account-side-heading"><span class="account-side-icon">'+iconSVG('more')+'</span><div><h2>Account</h2><p>Signed in as @'+escapeHTML(me.username)+'</p></div></div>'
+      +'<div class="account-role-row"><span>League role</span><strong>'+(me.role==='commissioner'?'Commissioner':'Manager')+'</strong></div>'
+      +'<button class="account-signout" type="button" data-act="logout">'+iconSVG('more')+'<span>Sign out of account</span></button></section></aside></div></div>';
   }
 
   function morePage(){

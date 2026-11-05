@@ -45,3 +45,13 @@ test('an older state response cannot overwrite a more recent account queue',()=>
   app.reconcile();
   assert.deepEqual([...app.queue()],['57','84']);
 });
+
+test('a 130-school saved queue survives server reconciliation without truncation',()=>{
+  const ids=Array.from({length:130},(_,i)=>String(1000+i));
+  const {app}=create();
+  app.set(user,{draft_queue:{items:ids,version:271}});
+  app.reconcile();
+  assert.deepEqual([...app.queue()],ids);
+  assert.equal(app.version(),271);
+  assert.equal(app.dirty(),false);
+});

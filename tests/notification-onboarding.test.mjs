@@ -16,8 +16,9 @@ const end=`  return {
 const shell={inert:false};
 const root={innerHTML:'',addEventListener(){},querySelector(sel){return sel==='.shell'?shell:null;},querySelectorAll(){return [];}};
 const document={querySelector:id=>id==='#app'?root:null,querySelectorAll:()=>[],activeElement:null};
-const window={matchMedia:()=>({matches:false})};
-const navigator={userAgent:'node-test'};
+let installed=true;
+const window={matchMedia:()=>({matches:installed}),scrollTo(){}};
+const navigator={userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',standalone:false};
 const app=new Function('document','location','URLSearchParams','window','navigator',
   'return '+source.replace(boot,end))(document,{search:'',pathname:'/'},URLSearchParams,window,navigator);
 app.init({id:'commissioner',display_name:'Commissioner',role:'commissioner',username:'commissioner'},
@@ -43,18 +44,20 @@ test('Navigation cannot advance while push setup is unresolved',async()=>{
 test('Denied notifications expose browser settings and a fail-safe continuation path',()=>{
   app.setGate('blocked');
   const html=app.dialog();
-  assert.match(html,/Allow notifications in browser settings/);
+  assert.match(html,/Allow notifications in app settings/);
   assert.match(html,/notification-setup-recheck/);
   assert.match(html,/notification-setup-unavailable/);
   app.setGate('error');
   assert.match(app.dialog(),/notification-setup-unavailable/);
 });
-test('iPhone without Home Screen install displays installation steps, not an impossible permission prompt',()=>{
-  app.setGate('ios');
-  const html=app.dialog();
-  assert.match(html,/Add to Home Screen/);
-  assert.match(html,/In Safari/);
-  assert.doesNotMatch(html,/data-act="notifications-enable-push"/);
+test('Mobile browser without Home Screen install does not show an automatic permission dialog',()=>{
+  installed=false;
+  app.setGate('prompt');
+  const {html,inert}=app.screen();
+  assert.doesNotMatch(html,/notification-setup-overlay/);
+  assert.equal(inert,false);
+  assert.equal(app.gateOpen(),false);
+  installed=true;
 });
 test('Already enabled notifications do not block the app',()=>{
   app.setGate('done');

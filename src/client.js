@@ -406,31 +406,34 @@
   const gateDismissed=()=>{
     try{return localStorage.getItem(gateKey())==='1';}catch{return false;}
   };
-  const notificationGateOpen=()=>!!me&&!!league&&!['idle','done'].includes(notificationGate);
-  const iphoneNeedsInstall=()=>/iPhone|iPad|iPod/i.test(navigator?.userAgent||'')&&
-    !(window.matchMedia?.('(display-mode: standalone)')?.matches||navigator?.standalone);
+  // Automatic permission onboarding only runs when launched from an installed
+  // iOS/iPadOS or Android Home Screen app, never in a normal browser or on desktop.
+  const isInstalledMobileApp=()=>{
+    const ua=navigator?.userAgent||'';
+    const mobile=/Android|iPhone|iPad|iPod/i.test(ua)||
+      (/Macintosh/i.test(ua)&&navigator?.maxTouchPoints>1);
+    const installed=window.matchMedia?.('(display-mode: standalone)')?.matches||
+      navigator?.standalone===true;
+    return !!(mobile&&installed);
+  };
+  const notificationGateOpen=()=>!!me&&!!league&&isInstalledMobileApp()&&!['idle','done'].includes(notificationGate);
   const canPush=()=>typeof Notification!=='undefined'&&'serviceWorker' in navigator&&'PushManager' in window;
   function notificationOnboarding(){
-    const kind=notificationGate,ios=kind==='ios',blocked=kind==='blocked',
+    const kind=notificationGate,blocked=kind==='blocked',
       unsupported=kind==='unsupported',failed=kind==='error',checking=kind==='checking';
-    const title=ios?'Add CBB Dynasty to your Home Screen':blocked?'Allow notifications in browser settings':
-      unsupported?'Your browser cannot receive push alerts':failed?'Device setup needs attention':
+    const title=blocked?'Allow notifications in app settings':
+      unsupported?'This device cannot receive push alerts':failed?'Device setup needs attention':
       'Enable your dynasty notifications';
-    const message=ios?'iPhone requires a Home Screen web app to receive push notifications. Follow these steps, then open the installed app to enable alerts.':
-      blocked?'Notifications are blocked for this site. Change that permission in your browser settings, then try again.':
-      unsupported?'This browser does not support Web Push. You can still receive every message in the CBB Dynasty notification inbox.':
+    const message=blocked?'Notifications are blocked for this app. Change that permission in your device settings, then try again.':
+      unsupported?'This installed app does not support Web Push. You can still receive every message in the CBB Dynasty notification inbox.':
       failed?(notificationGateMessage||'We could not finish registering your device. Check your connection and try again.'):
       checking?'Checking whether notifications are already enabled on this device…':
       'Get alerts when you are on the clock, receive trade offers, or have a new commissioner announcement.';
-    const details=ios?'<div class="notification-setup-steps"><div><b>1</b><span>In Safari, tap <strong>Share</strong></span></div>'
-      +'<div><b>2</b><span>Select <strong>Add to Home Screen</strong></span></div>'
-      +'<div><b>3</b><span>Open the installed app and tap Enable Notifications</span></div></div>':
-      '<div class="notification-setup-benefits"><span>Draft clock</span><span>Trade offers</span><span>League updates</span></div>';
+    const details='<div class="notification-setup-benefits"><span>Draft clock</span><span>Trade offers</span><span>League updates</span></div>';
     const main=checking?'<button class="btn" type="button" disabled>Checking device…</button>':
-      unsupported?'':ios?'<button class="btn" type="button" data-act="notification-setup-recheck">I installed the app — Check again</button>':
-      blocked||failed?'<button class="btn" type="button" data-act="notification-setup-recheck">Try again</button>':
+      unsupported?'':blocked||failed?'<button class="btn" type="button" data-act="notification-setup-recheck">Try again</button>':
       '<button class="btn" type="button" data-act="notifications-enable-push">Enable notifications</button>';
-    const exception=['ios','blocked','unsupported','error'].includes(kind)?
+    const exception=['blocked','unsupported','error'].includes(kind)?
       '<button class="notification-setup-exception" type="button" data-act="notification-setup-unavailable">Continue without push on this device</button>':'';
     return '<div class="notification-setup-overlay"><section class="notification-setup-modal" role="dialog" aria-modal="true" aria-labelledby="notification-setup-title" aria-describedby="notification-setup-desc">'
       +'<div class="notification-setup-mark">'+iconSVG('notifications')+'</div>'
@@ -438,14 +441,14 @@
       +'<h2 id="notification-setup-title">'+escapeHTML(title)+'</h2>'
       +'<p id="notification-setup-desc">'+escapeHTML(message)+'</p>'
       +details+'<div class="notification-setup-actions">'+main+exception+'</div>'
-      +'<p class="notification-setup-privacy">Your browser controls whether notifications are allowed. We cannot turn them on without your permission.</p>'
+      +'<p class="notification-setup-privacy">Your device controls whether notifications are allowed. We cannot turn them on without your permission.</p>'
       +'<button type="button" class="notification-setup-signout" data-act="logout">Sign out</button>'
       +'</section></div>';
   }
   async function checkNotificationOnboarding(){
     if(!me||!league||notificationGateChecking)return;
+    if(!isInstalledMobileApp()){notificationGate='done';render();return;}
     if(gateDismissed()){notificationGate='done';render();return;}
-    if(iphoneNeedsInstall()){notificationGate='ios';render();return;}
     if(!canPush()){notificationGate='unsupported';render();return;}
     if(Notification.permission==='denied'){notificationGate='blocked';render();return;}
     const userId=me.id;notificationGate='checking';notificationGateChecking=true;render();
@@ -466,6 +469,7 @@
   }
   function enterNotificationSetup(){
     if(!me||!league)return;
+    if(!isInstalledMobileApp()){notificationGate='done';render();return;}
     notificationGate=gateDismissed()?'done':'checking';
     notificationGateMessage='';
     render();
@@ -2945,7 +2949,7 @@
       return;
     }
     if(act==='notification-setup-unavailable'){
-      if(!['ios','blocked','unsupported','error'].includes(notificationGate))return;
+      if(!['blocked','unsupported','error'].includes(notificationGate))return;
       try{localStorage.setItem(gateKey(),'1');}catch{}
       notificationGate='done';render();
       notice('In-app alerts stay active. You can enable push later from the Notifications page.');

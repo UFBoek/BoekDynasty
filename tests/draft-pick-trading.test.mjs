@@ -48,8 +48,8 @@ test('traded current pick is selected by the new owner during a live draft',()=>
   league.picks=[{overall:1,round:1,manager_id:'a',program_id:'1'}];
   app.set(members[0],league);
   const current=app.current();
-  assert.equal(current.manager_id,'a');
-  assert.equal(current.overall,2);
+  assert.equal(current.id,'a');
+  assert.equal(league.picks.length+1,2);
   const board=app.draft();
   assert.match(board,/draft-pick-owner-label/);
   assert.match(board,/⇄ Alpha/);

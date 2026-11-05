@@ -3429,8 +3429,11 @@
         if(!res.token)throw new Error('Unable to establish a session. Try signing in again.');
         saveSignedInToken(res.token,data.remember_device);
         selectedInvite='';
-        if(location.search&&!new URLSearchParams(location.search).has('verify_email'))history.replaceState({},'',location.pathname);
+        const pendingLink=new URLSearchParams(location.search);
+        const openInbox=pendingLink.has('notifications');
+        if(location.search&&!pendingLink.has('verify_email'))history.replaceState({},'',location.pathname);
         me=res.user;await refresh();
+        if(openInbox){current='notifications';render();}
         startPolling();
         notice(data.remember_device?'Signed in. This device will be remembered.':'Signed in for this browser session.');
         if(me?.role==='commissioner')autoImportPrograms();

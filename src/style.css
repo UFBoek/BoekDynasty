@@ -5870,3 +5870,21 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(prefers-reduced-motion:reduce){
  .tm-v3 .tm-directory-card{transition:none}
 }
+
+/* Commissioner notification enrollment: compact status list, visible before sending alerts. */
+.notification-member-panel{padding:21px}
+.notification-member-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:18px 0 12px}
+.notification-member-toolbar strong{font-size:14px;color:#243c59;letter-spacing:-.015em}
+.notification-member-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.notification-member-row{display:flex;gap:10px;align-items:center;min-width:0;border:1px solid #e4eaf1;border-radius:11px;padding:12px;background:#fff}
+.notification-member-avatar{width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;background:#edf2f8;border:1px solid #e1e9f3;border-radius:10px;color:#3d5672;font-size:11px;font-weight:800}
+.notification-member-info{min-width:0;display:flex;flex:1;flex-direction:column;gap:3px}
+.notification-member-info strong{color:#263f5a;font-size:12px;font-weight:750;overflow-wrap:anywhere}
+.notification-member-info small{font-size:11px;color:#8190a3;line-height:1.35}
+.notification-member-state{display:inline-flex;gap:6px;align-items:center;flex-shrink:0;color:#77879b;font-size:11px;font-weight:750;white-space:nowrap}
+.notification-member-state i{width:7px;height:7px;background:#aab5c2;border-radius:50%;display:block}
+.notification-member-state.is-enabled{color:#258359}
+.notification-member-state.is-enabled i{background:#32a66e}
+.notification-member-note{margin-top:13px;line-height:1.55}
+@media(max-width:780px){.notification-member-list{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:440px){.notification-member-panel{padding:16px}.notification-member-row{padding:10px;gap:9px}.notification-member-toolbar{align-items:flex-start}.notification-member-toolbar strong{font-size:12px}.notification-member-info strong{font-size:12px}.notification-member-state{font-size:10px}}

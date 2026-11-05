@@ -2834,9 +2834,30 @@
     const opts=controls.map(([key,title,detail])=>'<label class="notification-admin-toggle"><span><strong>'+title+'</strong><small>'+detail+'</small></span>'
       +'<input id="admin-notification-'+key+'" type="checkbox" '+(cfg[key]!==false?'checked':'')+'/></label>').join('');
     const recipientOptions=members().map(m=>'<option value="'+escapeHTML(m.id)+'">'+escapeHTML(m.display_name)+'</option>').join('');
-    const stats=(d.devices||[]).map(m=>'<div class="notification-device-person"><span><strong>'+escapeHTML(m.display_name)+'</strong><small>'
-      +Number(m.devices||0)+' opted-in device(s)</small></span><span class="'+(Number(m.devices||0)?'notification-device-on':'notification-device-off')+'">'
-      +(Number(m.devices||0)?'Enabled':'Not enrolled')+'</span></div>').join('');
+    const enrolled=(d.devices||[]).map(m=>{
+      const devices=Math.max(0,Number(m.devices)||0);
+      const muted=['trades','draft','announcements'].every(key=>m[key]===false);
+      const push=devices>0&&m.push_enabled!==false&&!muted;
+      const email=m.email_active===true&&!muted;
+      return {...m,devices,push,email,muted,enabled:push||email};
+    });
+    const enabledCount=enrolled.filter(m=>m.enabled).length;
+    const managerRows=enrolled.map(m=>{
+      const label=m.enabled?(m.push&&m.email?'Push + email':m.push?'Push enabled':'Email enabled'):
+        m.muted?'Alerts muted':m.devices&&m.push_enabled===false?'Push paused':'Not enabled';
+      const devices=m.devices?m.devices+' registered '+(m.devices===1?'device':'devices'):'No push devices registered';
+      const detail=devices+(m.email?' · Verified email alerts':'');
+      return '<div class="notification-member-row"><span class="notification-member-avatar" aria-hidden="true">'+escapeHTML(initials(m.display_name))+'</span>'
+        +'<span class="notification-member-info"><strong>'+escapeHTML(m.display_name)+'</strong><small>'+escapeHTML(detail)+'</small></span>'
+        +'<span class="notification-member-state '+(m.enabled?'is-enabled':'is-disabled')+'"><i aria-hidden="true"></i>'+escapeHTML(label)+'</span></div>';
+    }).join('');
+    const managerOverview='<section class="panel setting-panel section-gap notification-member-panel">'+panelHeading('Manager notification status','See who can receive push or verified email alerts')
+      +(Array.isArray(d.devices)?'<div class="notification-member-toolbar"><strong>'+enabledCount+' of '+enrolled.length+' managers enabled</strong>'
+        +'<button type="button" class="btn small secondary" data-act="notification-admin-refresh">Refresh status</button></div>'
+        +'<div class="notification-member-list">'+managerRows+'</div>':
+          '<p class="hint section-gap">'+(notificationAdminLoading?'Checking manager registrations…':'Manager notification status is unavailable. Use Refresh to try again.')+'</p>')
+      +'<p class="hint notification-member-note">Enabled means a registered push device with push delivery allowed, or verified email alerts. Device permissions and delivery may still vary.</p>'
+      +'</section>';
     const recent=(d.announcements||[]).map(a=>'<div class="notification-admin-announcement"><strong>'+escapeHTML(a.title)+'</strong><small>'
       +escapeHTML(notificationTime(a.created_at))+' · '+Number(a.recipients||0)+' recipients</small><p>'+escapeHTML(a.body)+'</p></div>').join('');
     return '<section class="panel setting-panel notification-admin-panel">'+panelHeading('Notification Center','Control league alerts and send messages')
@@ -2848,6 +2869,7 @@
       +'<div class="button-row section-gap"><button class="btn small secondary" data-act="notification-admin-refresh">Refresh</button>'
       +'<button class="btn small secondary" data-act="notifications-test">Send test to me</button>'
       +'<button class="btn small ghost" data-act="notification-admin-retry">Retry pending</button></div></section>'
+      +managerOverview
       +'<section class="panel setting-panel section-gap">'+panelHeading('Send an announcement','Push to opted-in devices and every selected manager\'s inbox')
       +'<div class="form-row"><label for="notification-recipient">Send to</label><select class="field" id="notification-recipient">'
       +'<option value="all">Everyone in the league</option>'+recipientOptions+'</select></div>'
@@ -2859,10 +2881,7 @@
       +'<p class="hint section-gap">A maximum of eight announcements can be sent every 24 hours.</p></section>'
       +'<section class="panel setting-panel section-gap">'+panelHeading('Automatic notifications','League-wide event switches')+opts
       +'<div class="button-row section-gap"><button class="btn secondary" data-act="notification-admin-save">Save settings</button></div></section>'
-      +'<section class="panel setting-panel section-gap">'+panelHeading('Delivery and manager devices')
-      +'<p class="hint">Push: each manager opts in independently. Email: '+(d.email_available?'Provider connected':
-        'Not configured. A verified sender and RESEND_API_KEY/NOTIFICATION_EMAIL_FROM Supabase secrets are required.')+'</p>'
-      +'<div class="notification-device-list">'+(stats||'<p class="hint">Loading device registrations…</p>')+'</div></section>'
+
       +'<section class="panel setting-panel section-gap">'+panelHeading('Recent announcements')
       +(recent||'<p class="hint">No announcements sent yet.</p>')+'</section>';
   }

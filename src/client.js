@@ -1163,7 +1163,7 @@
   function myTeamPage(){
     const owned=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
     const draftFinished=league.settings.draft_status==='finished';
-    const canTrade=draftFinished&&league.settings.trading_enabled;
+    const canTrade=league.settings.trading_enabled;
     const canWaive=draftFinished&&league.settings.waivers_enabled;
     const bestCount=Number(league.settings.scoring?.best_programs||8);
     const titles=(league.archives||[]).filter(a=>a.champion_manager_id===me.id).length;
@@ -1178,15 +1178,16 @@
       const other=members().find(m=>m.id===otherId);
       const incoming=t.to_manager_id===me.id;
       const items=(league.trade_items||[]).filter(x=>x.trade_id===t.id);
-      const give=items.filter(x=>x.from_manager_id===me.id).map(x=>getName(x.program_id));
-      const receive=items.filter(x=>x.to_manager_id===me.id).map(x=>getName(x.program_id));
+      const give=tradeAssetNames(t.id,me.id);
+      const receive=items.filter(x=>x.to_manager_id===me.id).map(x=>getName(x.program_id))
+        .concat((league.draft_pick_trade_items||[]).filter(x=>x.trade_id===t.id&&x.to_manager_id===me.id).map(x=>'Pick #'+x.overall));
       const actions=t.status==='pending'
         ?(incoming&&canTrade?'<button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button>':
           !incoming?'<button class="btn small secondary" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button>':'')
         :'';
       return '<div class="team-offer"><div class="team-offer-head"><strong>'+escapeHTML(incoming?'Incoming from ':'Sent to ')+escapeHTML(other?.display_name||'Manager')+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div>'
-        +'<div class="team-offer-detail"><span>You send</span><strong>'+escapeHTML(give.join(', ')||'No programs')+'</strong></div>'
-        +'<div class="team-offer-detail"><span>You receive</span><strong>'+escapeHTML(receive.join(', ')||'No programs')+'</strong></div>'
+        +'<div class="team-offer-detail"><span>You send</span><strong>'+escapeHTML(give.join(', ')||'No assets')+'</strong></div>'
+        +'<div class="team-offer-detail"><span>You receive</span><strong>'+escapeHTML(receive.join(', ')||'No assets')+'</strong></div>'
         +(actions?'<div class="team-offer-actions">'+actions+'</div>':'')+'</div>';
     }).join('');
     const roster=owned.map(p=>'<div class="team-program"><button class="team-program-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
@@ -2964,12 +2965,16 @@
       }else if(act==='trade-propose'){
         const give_ids=[...document.querySelectorAll('input[name="trade-give"]:checked')].map(x=>x.value);
         const receive_ids=[...document.querySelectorAll('input[name="trade-receive"]:checked')].map(x=>x.value);
-        if(!give_ids.length||!receive_ids.length)throw Error('Select at least one program from each team.');
-        if(!window.confirm('Send this trade offer? The other manager must accept before any programs move.')){busy=false;return;}
-        await api('trade/propose',{to_manager_id:tradeTargetId,give_ids,receive_ids});notice('Trade offer sent.');
+        const give_picks=[...document.querySelectorAll('input[name="trade-give-pick"]:checked')].map(x=>Number(x.value));
+        const receive_picks=[...document.querySelectorAll('input[name="trade-receive-pick"]:checked')].map(x=>Number(x.value));
+        if(!(give_ids.length+give_picks.length)||!(receive_ids.length+receive_picks.length))
+          throw Error('Select at least one asset from both teams.');
+        if(!window.confirm('Send this offer? The other manager must accept before picks or programs move.')){busy=false;return;}
+        await api('trade/propose',{to_manager_id:tradeTargetId,give_ids,receive_ids,give_picks,receive_picks});
+        notice('Trade offer sent.');
       }else if(act==='trade-accept'){
-        if(!window.confirm('Accept this trade and permanently exchange the selected programs?')){busy=false;return;}
-        await api('trade/respond',{trade_id:id,mode:'accept'});notice('Trade accepted. Rosters updated.');
+        if(!window.confirm('Accept this trade? All included draft picks and programs will transfer immediately.')){busy=false;return;}
+        await api('trade/respond',{trade_id:id,mode:'accept'});notice('Trade accepted. Pick and program ownership updated.');
       }else if(act==='trade-decline'){
         await api('trade/respond',{trade_id:id,mode:'decline'});notice('Trade declined.');
       }else if(act==='trade-cancel'){
@@ -3201,7 +3206,7 @@
     if(e.target?.id==='draft-pool-conference'){draftConference=e.target.value;draftShown=30;filterDraftPool();}
     if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
     if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;resultsShown=40;loadResults();}
-    if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"]'))updateTradeSelections();
+    if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"], input[name="trade-give-pick"], input[name="trade-receive-pick"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
     if(e.target?.id==='global-search-input'){globalSearchQuery=e.target.value;const list=root.querySelector('#global-search-list');if(list)list.innerHTML=globalSearchResults();return;}

@@ -68,26 +68,30 @@
   let conferenceMenuCache=null;
   function conferenceMenuGroups(){
     if(conferenceMenuCache?.league===league)return conferenceMenuCache;
-    const totals=new Map(),enabled=new Map();
+    const totals=new Map(),enabled=new Map(),eligibleIds=new Set();
     for(const school of programs()){
       const id=String(school.conference_id||'');
       if(!id)continue;
       totals.set(id,(totals.get(id)||0)+1);
-      if(programEligible(school))enabled.set(id,(enabled.get(id)||0)+1);
+      if(programEligible(school)){
+        enabled.set(id,(enabled.get(id)||0)+1);
+        eligibleIds.add(String(school.id));
+      }
     }
     const full=new Set([...totals.keys()].filter(id=>
       totals.get(id)>1&&enabled.get(id)===totals.get(id)));
     const partial=new Set([...enabled.keys()].filter(id=>!full.has(id)));
-    conferenceMenuCache={league,full,partial};
+    conferenceMenuCache={league,full,partial,eligibleIds};
     return conferenceMenuCache;
   }
-  const isMidMajorMenuConference=id=>{
-    const key=String(id);
-    return midMajorConferenceIds.has(key)||conferenceMenuGroups().partial.has(key);
+  const isMidMajorMenuConference=(id,schoolId=null)=>{
+    const key=String(id),groups=conferenceMenuGroups();
+    return midMajorConferenceIds.has(key)||
+      (groups.partial.has(key)&&(schoolId===null||groups.eligibleIds.has(String(schoolId))));
   };
-  const matchesConferenceFilter=(conferenceId,filter)=>
+  const matchesConferenceFilter=(conferenceId,filter,schoolId=null)=>
     filter==='all'||(filter===MID_MAJOR_FILTER
-      ?isMidMajorMenuConference(conferenceId)
+      ?isMidMajorMenuConference(conferenceId,schoolId)
       :String(conferenceId)===String(filter));
   const midMajorOption=selected=>'<option value="'+MID_MAJOR_FILTER+'"'+
     (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major</option>';
@@ -1031,7 +1035,7 @@
     const scoped=all.filter(g=>{
       const homeConf=String(g.home_conference_id||''),awayConf=String(g.away_conference_id||'');
       return matchScoreboardScope(g,resultsScope,enrolled,owned,watched,pollRanks)&&
-        (matchesConferenceFilter(homeConf,resultsConference)||matchesConferenceFilter(awayConf,resultsConference))&&
+        (matchesConferenceFilter(homeConf,resultsConference,g.home_id)||matchesConferenceFilter(awayConf,resultsConference,g.away_id))&&
         (!query||((g.home_name||'')+' '+(g.away_name||'')).toLowerCase().includes(query));
     });
     const statusCounts={live:0,upcoming:0,final:0};

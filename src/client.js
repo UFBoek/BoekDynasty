@@ -3184,7 +3184,7 @@
       draftOrderPreview=list;render();return;
     }
     if(act==='auth-mode'){authMode=button.dataset.mode;renderAuth();return;}
-    if(act==='logout'){passwordResetReceipt=null;await api('logout',{});forgetSignedInToken();me=null;league=null;inviteLink='';await loadPublic();renderAuth();return;}
+    if(act==='logout'){passwordResetReceipt=null;await api('logout',{});forgetSignedInToken();me=null;league=null;inviteLink='';notificationSnapshot=null;notificationGate='idle';pushDeviceActive=false;notificationFetchedAt=0;await loadPublic();renderAuth();return;}
     if(busy)return;
     busy=true;
     try{
@@ -3478,7 +3478,7 @@
   });
   document.addEventListener?.('visibilitychange',()=>{if(!document.hidden){pingActivity(true);loadNotifications(true);}});
   document.addEventListener?.('keydown',e=>{
-    if(!me||!league)return;
+    if(!me||!league||notificationGateOpen())return;
     const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'')||e.target?.isContentEditable;
     if(((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k')||(!typing&&!globalSearchOpen&&e.key==='/')){
       e.preventDefault();toggleGlobalSearch(true);return;
@@ -3527,7 +3527,7 @@
         const pendingLink=new URLSearchParams(location.search);
         const openInbox=pendingLink.has('notifications');
         if(location.search&&!pendingLink.has('verify_email'))history.replaceState({},'',location.pathname);
-        me=res.user;notificationGate='checking';await refresh();
+        me=res.user;notificationSnapshot=null;notificationFetchedAt=0;pushDeviceActive=false;notificationGate='checking';await refresh();
         if(openInbox){current='notifications';render();}
         enterNotificationSetup();
         startPolling();

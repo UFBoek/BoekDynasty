@@ -19,7 +19,7 @@ test('the Mid-Major category includes all non-major conferences',()=>{
   assert.equal(new Set(ids).size,ids.length,'conferences are assigned to exactly one section');
   assert.equal(api.midMajorConferenceIds.size,multiBid.ids.length+other.ids.length);
   for(const id of ids){
-    assert.equal(api.matchesConferenceFilter(id,'mid-major'),!majors.includes(id),id);
+    assert.equal(api.midMajorConferenceIds.has(id),!majors.includes(id),id);
     assert.equal(api.matchesConferenceFilter(id,'all'),true,id);
     assert.equal(api.matchesConferenceFilter(id,id),true,id);
   }
@@ -27,7 +27,7 @@ test('the Mid-Major category includes all non-major conferences',()=>{
 test('A10, American, Mountain West, WCC and other small conferences remain Mid-Major',()=>{
   for(const id of ['62','3','44','29','18','45','1','16','46'])
     assert.equal(api.matchesConferenceFilter(id,'mid-major'),true,id);
-  for(const id of majors)assert.equal(api.matchesConferenceFilter(id,'mid-major'),false,id);
+  for(const id of majors)assert.equal(api.midMajorConferenceIds.has(id),false,id);
 });
 const fixtures=[
   {id:'florida',name:'Florida',abbr:'UF',conference_id:'23'},

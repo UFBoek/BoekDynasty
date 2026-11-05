@@ -1420,6 +1420,48 @@
         +'<button type="button" class="overview-text-link" data-act="tab" data-id="draft">Visit draft room ›</button></div>')
       +'</section></div>';
   }
+  // One roster treatment for your franchise and every other league manager.
+  function teamProgramRows(roster,scoring,pointMap){
+    const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+    return roster.map((p,index)=>'<tr class="tm-roster-row">'
+      +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
+      +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
+      +'<span class="tm-school-logo">'+img(p)+'</span>'
+      +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+      +'<span class="tm-school-chevron" aria-hidden="true">›</span></button></td>'
+      +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong></td>'
+      +'</tr>').join('');
+  }
+  // Visible on every roster; a single click switches between managers.
+  function teamLeagueSwitcher(activeId){
+    const others=members().filter(u=>String(u.id)!==String(activeId));
+    if(!others.length)return '';
+    const scoring=standingsData?.season===season()?standingsData:null;
+    const scoreIndex=new Map((scoring?.standings||[]).map(x=>[String(x.manager_id),x]));
+    const ownedBy=new Map();
+    const programIndex=new Map(programs().map(p=>[String(p.id),p]));
+    for(const o of owners()){
+      const id=String(o.manager_id),p=programIndex.get(String(o.program_id));
+      if(p){if(!ownedBy.has(id))ownedBy.set(id,[]);ownedBy.get(id).push(p);}
+    }
+    others.sort((a,b)=>scoring?
+      Number(scoreIndex.get(String(b.id))?.points||0)-Number(scoreIndex.get(String(a.id))?.points||0)||
+      a.display_name.localeCompare(b.display_name):a.display_name.localeCompare(b.display_name));
+    const cards=others.map(u=>{
+      const owned=ownedBy.get(String(u.id))||[],score=scoreIndex.get(String(u.id));
+      const points=score&&owned.length?Number(score.points||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—';
+      const mini=owned.length?owned.slice(0,3).map(p=>'<span class="tm-directory-logo" title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):'<span class="tm-directory-awaiting">Draft pending</span>';
+      return '<button type="button" class="tm-directory-card" data-act="open-manager" data-id="'+escapeHTML(u.id)+'" aria-label="View '+escapeHTML(u.display_name)+' roster">'
+        +'<span class="tm-directory-top">'+avatar(u)+'<span class="tm-directory-person"><strong>'+escapeHTML(u.display_name)+'</strong>'
+        +'<small>'+(scoring&&owned.length?points+' pts':owned.length?'Roster available':'Awaiting draft')+'</small></span>'
+        +'<span class="tm-directory-arrow" aria-hidden="true">↗</span></span>'
+        +'<span class="tm-directory-bottom">'+mini+'</span></button>';
+    }).join('');
+    return '<nav class="tm-directory" aria-label="Browse league managers">'
+      +'<div class="tm-directory-heading"><div><span class="tm-directory-eyebrow">THE LEAGUE</span><h2>Explore rosters</h2></div>'
+      +'<button type="button" class="tm-directory-all" data-act="tab" data-id="league">League standings <span aria-hidden="true">↗</span></button></div>'
+      +'<div class="tm-directory-scroll">'+cards+'</div></nav>';
+  }
   function myTeamPage(){
     const scoring=standingsData?.season===season()?standingsData:null;
     const pointMap=scoring?.program_points||{};
@@ -1458,17 +1500,7 @@
         +'<div class="team-offer-detail"><span>You receive</span><strong>'+escapeHTML(receive.join(', ')||'No assets')+'</strong></div>'
         +(actions?'<div class="team-offer-actions">'+actions+'</div>':'')+'</div>';
     }).join('');
-    const roster=owned.map((p,index)=>{
-      const value=scoring?formatPoints(pointMap[String(p.id)]):'—';
-      return '<tr class="tm-roster-row">'
-        +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
-        +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
-        +'<span class="tm-school-logo">'+img(p)+'</span>'
-        +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
-        +'<span class="tm-school-chevron" aria-hidden="true">›</span></button></td>'
-        +'<td class="tm-points"><strong>'+value+'</strong></td>'
-        +'</tr>';
-    }).join('');
+    const roster=teamProgramRows(owned,scoring,pointMap);
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
@@ -1489,6 +1521,7 @@
       +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
       +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div>'
       +'</div></header>'
+      +teamLeagueSwitcher(me.id)
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
       +'<div class="tm-roster-heading"><div><span class="tm-overline">'+seasonLabel+' ROSTER</span>'
       +'<h2 id="tm-roster-title">Your Programs</h2><p>'
@@ -2684,21 +2717,59 @@
       '</div>';
   }
   function managerProfilePage(){
-    const u=members().find(m=>m.id===selectedManagerId);
+    const u=members().find(m=>String(m.id)===String(selectedManagerId));
     if(!u)return heading('', 'Manager unavailable')+profileBack();
-    const roster=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
-    const records=(league.season_records||[]).filter(x=>x.manager_id===u.id).sort((a,b)=>b.season.localeCompare(a.season));
-    const titles=(league.archives||[]).filter(x=>x.champion_manager_id===u.id).length;
-    const favorite=programs().find(p=>String(p.id)===String(u.favorite_program_id||''));
+    // The owner's own profile uses the same visual language as My Team, without editing controls.
     const scoring=standingsData?.season===season()?standingsData:null;
+    const pointMap=scoring?.program_points||{};
     const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(u.id));
-    const livePoints=managerScore&&roster.length?Number(managerScore.points||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—';
-    const ranking=(scoring?.standings||[]).slice().sort((a,b)=>Number(b.points||0)-Number(a.points||0));
-    const liveRank=managerScore&&roster.length?'#'+(1+ranking.findIndex(x=>Number(x.points||0)===Number(managerScore.points||0))):'—';
-    const rows=roster.map(p=>'<button class="profile-roster-row" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span>›</span></button>').join('');
-    return profileBack()+'<div class="profile-hero manager-hero">'+avatar(u)+'<div class="grow"><span class="eyebrow">DYNASTY MANAGER</span><h1>'+escapeHTML(u.display_name)+'</h1><div class="profile-subline">@'+escapeHTML(u.username)+(u.id===me.id?' · Your team':'')+(favorite?' · Favorite: '+escapeHTML(favorite.name):'')+'</div></div></div>'
-      +'<div class="profile-stats"><div><span>OWNED PROGRAMS</span><strong>'+roster.length+'</strong></div><div><span>SEASON POINTS</span><strong>'+livePoints+'</strong></div><div><span>LEAGUE RANK</span><strong>'+liveRank+'</strong></div><div><span>LEAGUE TITLES</span><strong>'+titles+'</strong></div></div>'
-      +'<div class="profile-panels"><section class="panel">'+panelHeading('Current roster',roster.length+' permanently owned program'+(roster.length===1?'':'s'))+(rows||empty('No programs owned'))+'</section><section class="panel">'+panelHeading('Dynasty seasons')+(records.length?records.map(x=>{const saved=(league.archived_rosters||[]).filter(a=>a.season===x.season&&a.manager_id===u.id);return '<details class="archived-roster"><summary><strong>'+escapeHTML(x.season)+'</strong><span>'+x.programs_count+' schools · '+(x.fantasy_points==null?'Score unavailable':Number(x.fantasy_points).toLocaleString('en-US',{maximumFractionDigits:2})+' pts')+'</span></summary><div class="archive-schools">'+(saved.map(a=>{const p=programs().find(p=>p.id===a.program_id);return p?'<button class="table-user" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button>':'';}).join('')||'No programs archived')+'</div></details>';}).join(''):empty('No archived seasons'))+'</section></div>';
+    const programIndex=new Map(programs().map(p=>[String(p.id),p]));
+    const roster=owners().filter(o=>String(o.manager_id)===String(u.id))
+      .map(o=>programIndex.get(String(o.program_id))).filter(Boolean)
+      .sort((a,b)=>scoring?
+        Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
+        a.name.localeCompare(b.name):a.name.localeCompare(b.name));
+    const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+    const points=managerScore&&roster.length?fmt(managerScore.points):scoring&&roster.length?'0':'—';
+    const bestCount=Number(league.settings.scoring?.best_programs||8);
+    const records=(league.season_records||[]).filter(x=>String(x.manager_id)===String(u.id))
+      .sort((a,b)=>String(b.season).localeCompare(String(a.season)));
+    const archived=records.length?'<details class="tm-archive"><summary><span>Past seasons</span><small>'+records.length+' archived <span aria-hidden="true">⌄</span></small></summary>'
+      +'<div class="tm-archive-body">'+records.map(x=>{
+        const saved=(league.archived_rosters||[]).filter(a=>String(a.season)===String(x.season)&&String(a.manager_id)===String(u.id));
+        return '<details class="archived-roster"><summary><strong>'+escapeHTML(x.season)+'</strong><span>'
+          +(x.fantasy_points==null?'Score unavailable':fmt(x.fantasy_points)+' pts')+'</span></summary>'
+          +'<div class="archive-schools">'+(saved.map(a=>{
+            const p=programIndex.get(String(a.program_id));
+            return p?'<button type="button" class="table-user" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button>':'';
+          }).join('')||'No programs archived')+'</div></details>';
+      }).join('')+'</div></details>':'';
+    const mine=String(u.id)===String(me.id);
+    return '<main class="my-team-page tm-v3 tm-opponent-page">'
+      +'<div class="tm-backline">'+profileBack()+'<span>LEAGUE ROSTERS <span aria-hidden="true">/</span> '+escapeHTML(u.display_name)+'</span></div>'
+      +'<header class="tm-masthead">'
+      +'<div class="tm-masthead-top"><span class="tm-label">'+(mine?'YOUR FRANCHISE':'DYNASTY FRANCHISE')+'</span><span class="tm-year">'+escapeHTML(season())+' SEASON</span></div>'
+      +'<div class="tm-masthead-inner"><div class="tm-identity">'
+      +'<div class="tm-avatar">'+avatar(u)+'</div><div class="tm-identity-copy">'
+      +'<h1>'+escapeHTML(u.display_name)+'</h1>'
+      +'<p>@'+escapeHTML(u.username||'manager')+' <span aria-hidden="true">·</span> '+(mine?'Your franchise':'League manager')+'</p></div></div>'
+      +'<div class="tm-score"><span>SEASON POINTS</span><strong>'+points+'</strong><small>'
+      +(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div></div></header>'
+      +teamLeagueSwitcher(u.id)
+      +'<section class="tm-roster" aria-labelledby="tm-opponent-roster-title">'
+      +'<div class="tm-roster-heading"><div><span class="tm-overline">'+escapeHTML(season())+' ROSTER</span>'
+      +'<h2 id="tm-opponent-roster-title">'+escapeHTML(u.display_name)+'&#39;s Programs</h2>'
+      +'<p>'+(roster.length?roster.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
+        'No programs drafted yet')+'</p></div>'
+      +'<div class="tm-actions"><button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="team">My Team <span aria-hidden="true">↗</span></button>'
+      +'<button type="button" class="tm-action" data-act="tab" data-id="league">Standings <span aria-hidden="true">↗</span></button></div></div>'
+      +(roster.length?'<div class="tm-roster-scroll"><table class="tm-table">'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<tbody>'+teamProgramRows(roster,scoring,pointMap)+'</tbody></table></div>'
+        :'<div class="tm-empty">'+empty('Awaiting the draft','Programs will appear here when this manager makes selections.')+'</div>')
+      +'<footer class="tm-roster-footer"><span>Programs are permanently owned unless traded or dropped.</span>'
+      +'<span>'+(scoring?'Points update with the current season standings.':'Season totals will appear once scoring is available.')+'</span></footer>'
+      +'</section>'+archived+'</main>';
   }
   function historyPage(){
     const archives=league.archives||[];

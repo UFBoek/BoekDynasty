@@ -62,7 +62,7 @@
   let avatarDraft=null;
   let inviteLink='', passwordResetReceipt=null, busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
-  let raceState={phase:'ready',mode:'fair',order:[],progress:{},run:0};
+  let raceState={phase:'idle',id:'',order:[],progress:{},run:0};
   let raceFrame=0;
   let activitySnapshot=null,activityLoading=false,activityError='',activityRange='7d',activityMemberFilter='all',activityFetchedAt=0;
   let activityLastPage='',activityLastPing=0;
@@ -281,6 +281,7 @@
       const editing=silent&&!busy&&document.activeElement&&
         /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
       const previousFingerprint=stateFingerprint(me,league);
+      const previousRaceId=officialRace()?.id||'';
       const next=await api('state');
       const changed=previousFingerprint!==stateFingerprint(next.user,next);
       const oldScoringState=league?JSON.stringify([league.season,league.settings?.scoring,league.ownership]):'';
@@ -295,6 +296,12 @@
           pendingUiRefresh=false;
           render();if(current==='programs')filterPrograms();
           if(current==='program-detail')loadProgramResults(selectedProgramId);
+        }
+        if(current==='draft-order'&&officialRace()?.id&&officialRace().id!==previousRaceId)
+          startDraftRacePlayback(true);
+        if(current==='draft-order'&&!officialRace()&&raceState.id){
+          if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
+          raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};render();
         }
         if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000)&&!overviewGamesLoading)loadOverviewGames();
@@ -394,7 +401,7 @@
       pingActivity();
       if(!me||busy||syncActive||current==='commissioner'||current==='settings'||document.hidden)return;
       const onMobile=window.matchMedia?.('(max-width: 850px)').matches||false;
-      const interval=onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
+      const interval=current==='draft-order'&&!officialRace()?6000:onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
       const now=Date.now();
       if(now-lastAutoPoll<interval)return;
       lastAutoPoll=now;
@@ -900,100 +907,112 @@
       +'<section class="panel more-account section-gap"><div>'+avatar(me)+'<div class="grow"><strong>'+escapeHTML(me.display_name)+'</strong><small>@'+escapeHTML(me.username)+'</small></div></div><button class="btn secondary" data-act="logout">Sign out</button></section>';
   }
 
-  // A race is a visual simulation only. A genuine lottery uses an unbiased,
-  // cryptographically secure Fisher-Yates shuffle and never promises winners.
-  function randomRaceIndex(max){
-    const range=max+1,limit=Math.floor(4294967296/range)*range;
-    let value;
-    do{value=crypto.getRandomValues(new Uint32Array(1))[0];}while(value>=limit);
-    return value%range;
-  }
-  function fairRaceOrder(){
-    const ids=members().map(u=>String(u.id));
-    for(let i=ids.length-1;i>0;i--){
-      const j=randomRaceIndex(i);
-      [ids[i],ids[j]]=[ids[j],ids[i]];
-    }
-    return ids;
-  }
-  function startDraftRace(mode){
-    const racers=members();
-    if(racers.length<2){notice('At least two registered managers are needed.',true);return;}
-    let raceOrder=fairRaceOrder();
-    if(mode==='showcase'){
-      const findName=name=>racers.find(u=>[u.display_name,u.username].some(v=>String(v||'').trim().toLowerCase().includes(name)));
-      const boek=findName('boek'),winston=findName('winston');
-      if(!boek||!winston||boek.id===winston.id){
-        notice('The showcase needs registered managers named Boek and Winston.',true);return;
-      }
-      raceOrder=[String(boek.id),String(winston.id),...raceOrder.filter(id=>id!==String(boek.id)&&id!==String(winston.id))];
-    }
-    cancelAnimationFrame(raceFrame);
+
+  const officialRace=()=>league?.settings?.draft_race||null;
+  const raceTotalMs=race=>Number(race?.duration_ms||9400)
+    +Math.max(0,(race?.order?.length||1)-1)*Number(race?.stagger_ms||460);
+
+  // Every manager replays the exact same server-persisted timeline.
+  // Animation does not select the winner: it reveals the saved order.
+  function startDraftRacePlayback(syncToLive=false){
+    const race=officialRace();
+    if(!race||!Array.isArray(race.order)||!race.order.length)return;
+    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
     const run=raceState.run+1;
-    raceState={phase:'running',mode,order:raceOrder,progress:Object.fromEntries(raceOrder.map(id=>[id,0])),run};
+    raceState={phase:'playing',id:race.id,order:race.order.slice(),
+      progress:Object.fromEntries(race.order.map(id=>[String(id),0])),run};
+    const elapsedBeforeStart=syncToLive?Math.max(0,Date.now()-Number(race.started_at)*1000):0;
+    const total=raceTotalMs(race);
+    if(elapsedBeforeStart>=total){
+      raceState.phase='complete';render();return;
+    }
     render();
-    const duration=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?1200:9200;
-    const stagger=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?90:480;
     const begin=performance.now();
-    const animate=now=>{
-      if(raceState.run!==run)return;
-      const elapsed=now-begin;
-      for(const [position,id] of raceOrder.entries()){
-        const finishAt=duration+position*stagger;
-        const fraction=Math.min(1,elapsed/finishAt);
+    const duration=Number(race.duration_ms||9400),stagger=Number(race.stagger_ms||460);
+    const tick=now=>{
+      if(raceState.run!==run||officialRace()?.id!==race.id)return;
+      const elapsed=elapsedBeforeStart+now-begin;
+      for(const [position,id] of race.order.entries()){
+        const target=duration+position*stagger;
+        const fraction=Math.min(1,Math.max(0,elapsed/target));
         const sway=Math.sin(elapsed/520+position*2.4)*4.5*Math.sin(Math.PI*fraction);
-        const progress=elapsed>=finishAt?100:Math.min(97,Math.max(0,96*fraction+sway));
-        raceState.progress[id]=progress;
-        const horse=root.querySelector('[data-race-runner="'+CSS.escape(id)+'"] .race-horse');
-        if(horse)horse.style.left=progress+'%';
-        const row=horse?.closest('.race-runner');
-        if(row)row.classList.toggle('race-finished',progress>=100);
+        const value=elapsed>=target?100:Math.min(97,Math.max(0,96*fraction+sway));
+        raceState.progress[String(id)]=value;
+        if(current==='draft-order'){
+          const horse=root.querySelector('[data-race-runner="'+CSS.escape(String(id))+'"] .race-horse');
+          if(horse)horse.style.left=value+'%';
+          const row=horse?.closest('.race-runner');
+          if(row)row.classList.toggle('race-finished',value>=100);
+        }
       }
-      if(elapsed>=duration+(raceOrder.length-1)*stagger){
-        raceState.phase='complete';render();return;
+      if(elapsed>=total){
+        raceState.phase='complete';
+        if(current==='draft-order')render();
+        return;
       }
-      raceFrame=requestAnimationFrame(animate);
+      if(current==='draft-order')raceFrame=requestAnimationFrame(tick);
+      else raceState.phase='complete';
     };
-    raceFrame=requestAnimationFrame(animate);
+    raceFrame=requestAnimationFrame(tick);
   }
   function draftOrderPage(){
     const all=members(),userById=new Map(all.map(u=>[String(u.id),u]));
-    const saved=order().filter(id=>userById.has(String(id)));
+    const race=officialRace();
     const locked=league.settings.draft_status!=='pending'||picks().length>0;
-    const isComplete=raceState.phase==='complete'&&raceState.order.length===all.length&&
-      raceState.order.every(id=>userById.has(String(id)));
-    const running=raceState.phase==='running';
-    const showOrder=isComplete?raceState.order:[];
-    const row=(id,index)=>{const u=userById.get(String(id));return u?
-      '<div class="race-result-row"><span class="race-result-rank">'+(index+1)+'</span>'+avatar(u)+
-      '<span class="race-result-name">'+escapeHTML(u.display_name)+'</span>'+(index===0?'<span class="race-result-first">1st pick</span>':'')+'</div>':'';};
-    const lanes=all.map((u,index)=>{
-      const progress=Number(raceState.progress[String(u.id)]||0);
+    const playing=!!race&&raceState.phase==='playing'&&raceState.id===race.id;
+    const finished=!!race&&!playing;
+    const raceOrder=race?.order||[];
+    const lanes=(race?.lanes||all.map(u=>u.id)).map(id=>userById.get(String(id))).filter(Boolean);
+    const row=(id,index)=>{
+      const u=userById.get(String(id));
+      return u?'<div class="race-result-row"><span class="race-result-rank">'+(index+1)+'</span>'
+        +avatar(u)+'<span class="race-result-name">'+escapeHTML(u.display_name)+'</span>'
+        +(index===0?'<span class="race-result-first">1st pick</span>':'')+'</div>':'';
+    };
+    const track=lanes.map((u,index)=>{
+      const progress=race?(playing?Number(raceState.progress[String(u.id)]||0):100):0;
       const tint=/^#[0-9a-fA-F]{6}$/.test(u.accent_color||'')?u.accent_color:'#d9611e';
-      return '<div class="race-runner" data-race-runner="'+escapeHTML(u.id)+'" style="--race-accent:'+tint+'">'+
-        '<div class="race-runner-label"><span class="race-lane-number">'+String(index+1).padStart(2,'0')+'</span>'+avatar(u)+
-        '<strong>'+escapeHTML(u.display_name)+'</strong></div>'+
-        '<div class="race-track"><span class="race-track-finish" aria-hidden="true"></span>'+
-        '<span class="race-horse" style="left:'+progress+'%" aria-hidden="true">🐎</span></div></div>';
+      return '<div class="race-runner" data-race-runner="'+escapeHTML(u.id)+'" style="--race-accent:'+tint+'">'
+        +'<div class="race-runner-label"><span class="race-lane-number">'+String(index+1).padStart(2,'0')+'</span>'
+        +avatar(u)+'<strong>'+escapeHTML(u.display_name)+'</strong></div>'
+        +'<div class="race-track"><span class="race-track-finish" aria-hidden="true"></span>'
+        +'<span class="race-horse" style="left:'+progress+'%" aria-hidden="true">🐎</span></div></div>';
     }).join('');
-    const odds=all.length?(100/all.length).toFixed(all.length===2?0:1)+'%':'—';
-    return heading('LEAGUE TOOLS','Draft Order','Watch every manager compete for the opening pick.')
-      +'<section class="panel draft-race-panel"><div class="race-panel-head"><div><span class="race-section-kicker">THE STARTING GATE</span><h2>Draft lottery horse race</h2><p>Every manager has the same chance in a fair race. Each position is drawn without replacement.</p></div>'
-      +'<div class="race-odds"><strong>'+odds+'</strong><span>Chance of 1st per manager</span></div></div>'
-      +'<div class="race-toolbar"><button type="button" class="btn race-start-button" data-act="race-start" '+(running||all.length<2?'disabled':'')+'>'+(running?'Race in progress':'Run fair race')+'</button>'
-      +'<button type="button" class="btn secondary" data-act="race-showcase" '+(running?'disabled':'')+'>Watch scripted showcase</button>'
-      +'<span class="race-mode-caption">'+(running?'Racing to the finish…':isComplete?(raceState.mode==='showcase'?'Scripted exhibition · not a lottery':'Fair randomized simulation complete'):'Fair race is randomized; showcase is a preset demonstration.')+'</span></div>'
-      +'<div class="race-course" aria-label="Horse race with '+all.length+' managers"><div class="race-course-header"><strong>THE TRACK</strong><span>FINISH <span aria-hidden="true">🏁</span></span></div>'
-      +(lanes||empty('Waiting for managers','Registered managers appear here automatically.'))+'</div>'
-      +(isComplete?'<div class="race-finish-card"><div class="race-finish-heading"><span class="race-section-kicker">'+(raceState.mode==='showcase'?'EXHIBITION RESULTS':'SIMULATED FINISH')+'</span><h3>Photo finish</h3></div>'
-        +'<div class="race-results-grid">'+showOrder.map(row).join('')+'</div>'
-        +'<p class="hint">'+(raceState.mode==='showcase'?'This race is scripted for demonstration and does not determine the draft order.':
-          'This is a standalone, equal-odds simulation. It does not change the official draft order.')+'</p></div>':'')
+    const canRun=me.role==='commissioner'&&!race&&!locked&&all.length>=2;
+    return heading('LEAGUE TOOLS','Draft Order','The official first-round draft order, revealed on the racetrack.')
+      +'<section class="panel draft-race-panel"><div class="race-panel-head"><div>'
+      +'<span class="race-section-kicker">DRAFT ORDER REVEAL</span>'
+      +'<h2>The manager horse race</h2>'
+      +'<p>'+(race?'The official draft order has been finalized. Every manager can watch the same race again.':
+        'The commissioner sets the draft order in Draft settings and starts one race to reveal it to the league.')+'</p>'
+      +'</div><div class="race-odds"><strong>'+(race?'FINAL':'READY')+'</strong>'
+      +'<span>'+(race?'Official order saved':all.length+' managers on the track')+'</span></div></div>'
+      +'<div class="race-toolbar">'
+      +(race?'<button type="button" class="btn race-start-button" data-act="race-replay">'
+        +(playing?'Restart replay':'Replay race')+'</button>'
+        :me.role==='commissioner'?'<button type="button" class="btn race-start-button" data-act="race-start" '
+          +(canRun?'':'disabled')+'>Run race</button>'
+        :'<span class="race-wait-message">Waiting for the commissioner to run the race.</span>')
+      +'<span class="race-mode-caption">'+(playing?'Racing to the finish…':race?'Race complete · order locked':
+         'All registered managers will see the same race and finish.')+'</span></div>'
+      +'<div class="race-course" aria-label="Draft order horse race"><div class="race-course-header">'
+      +'<strong>THE TRACK</strong><span>FINISH <span aria-hidden="true">🏁</span></span></div>'
+      +(track||empty('Waiting for managers','Registered managers appear here automatically.'))+'</div>'
+      +(finished?'<div class="race-finish-card"><div class="race-finish-heading">'
+        +'<span class="race-section-kicker">OFFICIAL RESULTS</span><h3>Photo finish</h3></div>'
+        +'<div class="race-results-grid">'+raceOrder.map(row).join('')+'</div>'
+        +'<p class="hint">The race reveals the commissioner-set draft order. This is the official first-round order.</p></div>':'')
       +'</section>'
-      +'<section class="panel race-saved-panel section-gap">'+panelHeading('Current official draft order','First-round selections; round two reverses for the snake draft',
-        me.role==='commissioner'&&!locked?'<button type="button" class="btn secondary small" data-act="race-settings">Edit in commissioner settings</button>':'')
-      +'<div class="race-results-grid">'+(saved.length?saved.map(row).join(''):empty('Waiting for draft order'))+'</div>'
-      +'<p class="hint section-gap">'+(locked?'Order is locked now that drafting has started.':'Only the commissioner can publish a new official order through Draft settings. Running a race here does not change picks.')+'</p></section>';
+      +(race?'<section class="panel race-saved-panel section-gap">'+panelHeading('Official snake draft order',
+        'First-round picks follow this order. Round two reverses it.')
+        +'<div class="race-results-grid">'+raceOrder.map(row).join('')+'</div>'
+        +'<p class="hint section-gap">Saved for every manager. Only the commissioner can reset this race in Draft settings, before the draft begins.</p>'
+        +'</section>'
+      :'<section class="panel race-saved-panel section-gap">'
+        +panelHeading('Awaiting official draft order','The draft order appears here once the commissioner runs the race.')
+        +(me.role==='commissioner'?
+          '<button class="btn secondary" data-act="race-settings">Configure draft order</button>':'')
+        +'</section>');
   }
 
   function overviewScoreboard(){
@@ -2399,10 +2418,11 @@
         +'</section>';
     }else if(adminSection==='draft'){
       if(draftOrderPreview.length!==members().length||draftOrderPreview.some(id=>!members().some(u=>u.id===id)))draftOrderPreview=order().slice();
+      const orderLocked=locked||!!settings.draft_race;
       const rows=draftOrderPreview.map((id,index)=>{
         const person=members().find(u=>u.id===id);
         return '<div class="draft-order-row"><span class="draft-order-number">'+(index+1)+'</span>'+avatar(person)+'<strong class="grow">'+escapeHTML(person.display_name)+'</strong>'
-          +(locked?'':'<span class="draft-order-buttons"><button data-act="move-draft" data-index="'+index+'" data-dir="-1" '+(index===0?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' up">↑</button><button data-act="move-draft" data-index="'+index+'" data-dir="1" '+(index===draftOrderPreview.length-1?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' down">↓</button></span>')
+          +(orderLocked?'':'<span class="draft-order-buttons"><button data-act="move-draft" data-index="'+index+'" data-dir="-1" '+(index===0?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' up">↑</button><button data-act="move-draft" data-index="'+index+'" data-dir="1" '+(index===draftOrderPreview.length-1?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' down">↓</button></span>')
           +'</div>';
       }).join('');
       body='<section class="panel setting-panel">'+panelHeading('Draft settings')
@@ -2414,7 +2434,13 @@
         +'<p class="hint section-gap">The countdown resets after each pick. Time running out does not automatically make a selection.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Draft order')
         +(rows||empty('Waiting for managers'))
-        +(locked?'':'<div class="button-row section-gap"><button class="btn secondary" data-act="shuffle-draft" '+(members().length<2?'disabled':'')+'>Shuffle</button><button class="btn ghost" data-act="signup-draft">Signup order</button><button class="btn" data-act="save-draft-order" '+(members().length<2?'disabled':'')+'>Save order</button></div>')+'</section>'
+        +(orderLocked?'':'<div class="button-row section-gap"><button class="btn secondary" data-act="shuffle-draft" '+(members().length<2?'disabled':'')+'>Shuffle</button><button class="btn ghost" data-act="signup-draft">Signup order</button><button class="btn" data-act="save-draft-order" '+(members().length<2?'disabled':'')+'>Save order</button></div>')+'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Race controls',settings.draft_race?'The official order is locked':'Set the order above before starting the race')
+        +(settings.draft_race?'<p class="hint">The result is saved for every manager. You can reset the race before the draft starts, which also restores signup order.</p>'
+          +'<div class="button-row section-gap"><button class="btn danger" data-act="race-reset" '+(locked?'disabled':'')+'>Reset race</button></div>':
+          '<p class="hint">Once you run the race, this becomes the official first-round order and cannot be changed without resetting.</p>'
+          +'<div class="button-row section-gap"><button class="btn secondary" data-act="tab" data-id="draft-order">Open race</button></div>')
+        +'</section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('Draft controls')+'<div class="button-row">'
         +'<button class="btn" data-act="start" '+(settings.draft_status==='live'||settings.draft_status==='finished'?'disabled':'')+'>Start / resume</button>'
         +'<button class="btn secondary" data-act="pause" '+(settings.draft_status!=='live'?'disabled':'')+'>Pause draft</button>'
@@ -2570,8 +2596,7 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
-    if(act==='race-start'){startDraftRace('fair');return;}
-    if(act==='race-showcase'){startDraftRace('showcase');return;}
+    if(act==='race-replay'){startDraftRacePlayback(false);return;}
     if(act==='race-settings'){adminSection='draft';current='commissioner';render();window.scrollTo({top:0,behavior:'smooth'});return;}
     if(act==='activity-refresh'){loadActivity(true);return;}
     if(act==='search-open'){toggleGlobalSearch(true);return;}
@@ -2596,7 +2621,9 @@
     if(act==='tab'){
       globalSearchOpen=false;globalSearchQuery='';
       if(id==='programs'&&current!=='programs')ratingSeason=season();
-      current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
+      current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();
+      if(current==='draft-order'&&officialRace()&&raceState.id!==officialRace().id&&Date.now()-officialRace().started_at*1000<raceTotalMs(officialRace()))startDraftRacePlayback(true);
+      window.scrollTo({top:0,behavior:'smooth'});return;
     }
     if(act==='program-profile-tab'){programProfileTab=id;render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
     if(act==='program-show-history'){selectedProgramSeason=season();programProfileTab='history';render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
@@ -2872,6 +2899,19 @@
       }else if(act==='save-trades'){
         await api('admin/trade-settings',{trading_enabled:!!document.querySelector('#trading-enabled')?.checked});
         notice('Trading settings saved.');
+      }else if(act==='race-start'){
+        if(me.role!=='commissioner')throw new Error('Only the commissioner can start the race.');
+        if(!window.confirm('Start the official race now? The current commissioner-set draft order will become final and all managers can replay it.')){busy=false;return;}
+        await api('admin/race/run',{});
+        notice('Race started. The draft order is now final.');
+      }else if(act==='race-reset'){
+        if(me.role!=='commissioner')throw new Error('Commissioner access required.');
+        if(!window.confirm('Reset the official race and restore signup order? All managers will lose the current replay. This is only allowed before drafting begins.')){busy=false;return;}
+        await api('admin/race/reset',{});
+        if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
+        raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};
+        draftOrderPreview=[];
+        notice('Race reset. You can configure and run a new official race.');
       }else if(act==='save-draft-order'){
         await api('admin/draft-order',{order:draftOrderPreview});
         notice('Draft order saved.');

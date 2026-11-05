@@ -272,7 +272,11 @@ export function createNotificationEngine(db){
       const sent=(await db.prepare("SELECT count(distinct reference_id)::integer AS n FROM cbb_notifications WHERE kind='announcement' AND created_at>?")
         .bind(now()-86400).first())?.n||0;
       if(Number(sent)>=8)return fail('Announcement limit reached (8 per 24 hours).',429);
-      const recipients=await allMembers(),reference='announce:'+crypto.randomUUID();
+      const members=await allMembers(),recipient=String(body?.recipient||'all');
+      if(recipient!=='all'&&!members.some(m=>m.id===recipient))
+        return fail('Choose a registered manager or everyone.',400);
+      const recipients=recipient==='all'?members:members.filter(m=>m.id===recipient);
+      const reference='announce:'+crypto.randomUUID();
       const results=await Promise.allSettled(recipients.map(m=>emit(m.id,'announcement',title,message,'notifications',reference)));
       return ok({ok:true,recipients:results.filter(r=>r.status==='fulfilled'&&r.value).length});
     }

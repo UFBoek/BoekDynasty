@@ -307,7 +307,10 @@
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000)&&!overviewGamesLoading)loadOverviewGames();
         if(['home','league','team','manager-detail'].includes(current)&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
       }
-      if(chosen.length)document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
+      if(chosen.length){
+        document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
+        updateTradeSelections();
+      }
     }catch(e){
       if(String(e.message).includes('Sign in required')){
         me=null;league=null;forgetSignedInToken();
@@ -1822,6 +1825,21 @@
         return '<div class="draft-owned-slot'+(acquired?' acquired':'')+'"><strong>#'+slot+'</strong><span>R'+(Math.floor((slot-1)/Math.max(1,managerCount))+1)+'</span>'
           +'<small>'+(acquired?'Acquired':'Original')+'</small></div>';
       }).join('')+'</div>':'<p class="draft-owned-none">You have no unused picks. You can still trade for one.</p>')+'</section>';
+    const incomingOffers=settings.trading_enabled?(league.trades||[]).filter(t=>t.status==='pending'&&t.to_manager_id===me.id):[];
+    const tradeInbox=incomingOffers.length?'<section class="draft-trade-inbox panel" aria-label="Incoming trade offers">'
+      +'<div class="draft-inbox-head"><div><span class="draft-section-overline">LIVE TRADE DESK</span><h2>'
+      +incomingOffers.length+' incoming offer'+(incomingOffers.length===1?'':'s')+'</h2></div>'
+      +'<button type="button" class="btn small secondary" data-act="tab" data-id="trades">All trades ›</button></div>'
+      +incomingOffers.slice(0,3).map(t=>{
+        const from=managerIndex.get(String(t.from_manager_id));
+        const theySend=tradeAssetNames(t.id,t.from_manager_id),youSend=tradeAssetNames(t.id,me.id);
+        return '<div class="draft-inbox-offer"><div class="draft-inbox-from">'+avatar(from||{display_name:'?'})
+          +'<span><strong>'+escapeHTML(from?.display_name||'Manager')+' sent an offer</strong>'
+          +'<small>Receive: '+escapeHTML(theySend.join(' · ')||'No assets')+'</small>'
+          +'<small>Give: '+escapeHTML(youSend.join(' · ')||'No assets')+'</small></span></div>'
+          +'<div class="draft-inbox-actions"><button type="button" class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept</button>'
+          +'<button type="button" class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div></div>';
+      }).join('')+'</section>':'';
     const tracker='<div class="draft-pick-ticker"><div class="draft-pick-ticker-label"><strong>NEXT PICKS</strong><small>Snake order</small></div>'
       +'<div class="draft-pick-ticker-scroll">'+(upNext||'<span class="draft-no-upcoming">Draft order will appear here when the draft opens.</span>')+'</div></div>';
     const ready=status==='pending'?'<div class="draft-readiness draft-readiness-v2">'
@@ -2012,7 +2030,7 @@
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
     return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Track live selections, trade picks and manage your scouting queue.')
-      +'<div class="draft-v2">'+hero+tracker+pickInventory+ready+queueManager
+      +'<div class="draft-v2">'+hero+tracker+tradeInbox+pickInventory+ready+queueManager
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'+board+foot+'</div>'+sheet;
   }
 

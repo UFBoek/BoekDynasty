@@ -834,7 +834,7 @@ export default (function makeWorker(){
       // snake draft order. Concurrent attempts cannot overwrite the result.
       const sql="WITH claimed AS (INSERT INTO settings(key,value) VALUES('draft_race',?) "
         +"ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE settings.value IN ('null','') RETURNING value), "
-        +"official AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM claimed "
+        +"official AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM claimed WHERE true "
         +"ON CONFLICT(key) DO UPDATE SET value=excluded.value RETURNING value) "
         +"SELECT (SELECT count(*) FROM official)::integer AS saved";
       const result=await q(env,sql,JSON.stringify(race),JSON.stringify(ids)).first();
@@ -851,7 +851,7 @@ export default (function makeWorker(){
       const signupOrder=(await q(env,'SELECT id FROM users ORDER BY created_at,rowid').all()).results.map(u=>u.id);
       const sql="WITH cleared AS (UPDATE settings SET value='null' WHERE key='draft_race' "
         +"AND value NOT IN ('null','') RETURNING value), "
-        +"restored AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM cleared "
+        +"restored AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM cleared WHERE true "
         +"ON CONFLICT(key) DO UPDATE SET value=excluded.value RETURNING value) "
         +"SELECT (SELECT count(*) FROM restored)::integer AS saved";
       const result=await q(env,sql,JSON.stringify(signupOrder)).first();

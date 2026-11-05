@@ -31,7 +31,7 @@ const mock=({awards,games})=>({DB:{prepare(sql){return {bind(){return {all:async
 
 test('Pac-12 and mid-major schools earn both bonuses, Gonzaga earns neither',async()=>{
   const scored=await pipeline.historicalLeaders(mock(fixture()),{
-    ncaa_seed_9_12:5,ncaa_tournament_win:3,ncaa_at_large_bid:5,ncaa_upset_per_seed:1
+    ncaa_seed_9:5,ncaa_tournament_win:3,ncaa_at_large_bid:5,ncaa_upset_per_seed:1
   },'2026-27');
   const school=id=>scored.rows.find(r=>r.program_id===id && r.season===season);
   assert.equal(school('pac').points,20); // 5 seed + 3 win + 5 at-large + 7 upset

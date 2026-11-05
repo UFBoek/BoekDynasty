@@ -1664,21 +1664,25 @@
       const id=String(item.program_id),history=byId.get(id)||new Map();
       history.set(item.season,item);byId.set(id,history);
     }
-    const entries=(all.directory||[]).filter(p=>rankingEligible(p,leaderConference,leaderOwnership)).map(p=>{
+    // Compute ranks against the full national field before applying conference or roster filters.
+    const nationalEntries=(all.directory||[]).map(p=>{
       const history=byId.get(String(p.id))||new Map();
       const values=years.map(y=>history.get(y)?.points??null);
       const known=values.filter(x=>x!==null);
       const total=known.length?known.reduce((sum,x)=>sum+Number(x),0):null;
       return {p,history,values,total,selected:period==='all'?total:(history.get(period)?.points??null)};
     });
-    const byPoints=entries.slice().sort((a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
+    const byPoints=nationalEntries.slice().sort((a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
     let previous,rank=0;
     const ranks=new Map();
     byPoints.forEach((row,i)=>{
       if(row.selected!==previous){rank=i+1;previous=row.selected;}
       ranks.set(String(row.p.id),rank);
     });
-    const rows=(leaderOrder==='name'?entries.sort((a,b)=>a.p.name.localeCompare(b.p.name)):byPoints);
+    const entries=nationalEntries.filter(row=>rankingEligible(row.p,leaderConference,leaderOwnership));
+    const rows=entries.slice().sort(leaderOrder==='name'
+      ?(a,b)=>a.p.name.localeCompare(b.p.name)
+      :(a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
     const format=value=>rankingNumber(value,2).replace(/\.00$/,'');
     const previewYears=[...new Set([...(period==='all'?[]:[period]),...years.slice(-3).reverse()])].slice(0,4);
     const thYears=years.slice().map(y=>'<th class="rank-year-cell '+(period===y?'active':'')+'"><button type="button" data-act="leaders-season" data-id="'+escapeHTML(y)+'" title="Rank by '+escapeHTML(y)+'">'+escapeHTML(y.slice(2))+'</button></th>').join('');

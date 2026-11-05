@@ -5512,3 +5512,98 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .settings-account-card .settings-sign-out{margin-top:12px;font-size:12px}
 @media(max-width:1000px){.settings-refined{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:650px){.settings-refined .settings-card{padding:15px}.settings-refined .settings-form-grid{grid-template-columns:1fr}.settings-profile-top{padding:12px;gap:12px}.settings-profile-top .avatar{width:59px;height:59px;border-radius:13px}.settings-refined .settings-colors{grid-template-columns:repeat(4,minmax(0,1fr))}.settings-security-details>summary{padding:15px}.settings-security-details .settings-form{padding:15px}.settings-profile-summary .settings-photo-actions{gap:4px}}
+
+/* Product finish · navigation, feedback, responsive readability (Nov 2026) */
+.skip-link{
+  position:fixed;top:10px;left:14px;z-index:10020;transform:translateY(-160%);
+  border-radius:9px;background:#173f68;color:#fff;padding:11px 16px;
+  font-size:13px;font-weight:750;box-shadow:0 9px 24px #0a284438;
+}
+.skip-link:focus{transform:translateY(0);outline:3px solid #ff9c53;outline-offset:2px}
+#main-content:focus{outline:none}
+.sidebar{
+  min-height:0;overflow-y:auto;overscroll-behavior-y:contain;
+  scrollbar-width:thin;scrollbar-color:#cfdae6 transparent;
+  padding-top:19px;padding-bottom:16px;gap:17px;
+}
+.sidebar .brand{padding:0 5px 15px;border-bottom:1px solid #e8eef5}
+.sidebar .nav{gap:3px}
+.sidebar .nav-label{margin:11px 11px 7px;font-size:9px;letter-spacing:.1em}
+.sidebar .nav-label-secondary{border-top:1px solid #e8eef5;padding-top:14px;margin-top:14px}
+.sidebar .nav button{
+  min-height:40px;padding:9px 11px;gap:10px;font-size:12px;
+  transition:background-color .14s,border-color .14s,color .14s;
+}
+.sidebar .nav button.active{font-weight:800}
+.sidebar .nav button svg{width:18px;height:18px;flex-shrink:0}
+.sidebar .side-foot{flex-shrink:0;margin-top:auto}
+.topbar{
+  position:sticky;top:0;z-index:32;height:66px;min-height:66px;
+  padding-inline:clamp(18px,2.6vw,34px);
+  box-shadow:0 1px 0 rgba(27,67,107,.035);
+}
+.topbar-heading{flex:1;min-width:0}
+.topbar .topbar-league{color:#637891;font-weight:650}
+.topbar .topbar-page{color:#173d62;font-weight:800}
+.topbar .sep{color:#bdc9d4}
+.top-right{flex-shrink:0}
+.content{padding-top:26px}
+.page-heading{margin-bottom:20px}
+.panel-head h2{line-height:1.35}
+.empty{background:#fbfcfe;border-color:#dae5f0;min-height:100px}
+.empty strong{color:#244663;font-weight:800}
+.table tbody tr{transition:background-color .12s}
+.table tbody tr:hover td{background:#f7fbff}
+:where(.table,.standings-table,.team-roster-table) td:last-child{font-variant-numeric:tabular-nums}
+.field:focus-visible{
+  outline:0;border-color:#2e78b5;
+  box-shadow:0 0 0 3px rgba(39,112,176,.13);
+}
+:where(button,a,summary,[role="button"]):focus-visible{
+  outline:2px solid #2669a9;outline-offset:3px;
+}
+.toast{
+  max-width:min(400px,calc(100vw - 30px));padding:13px 17px;
+  border-radius:11px;border-left:3px solid #ff914d;
+  font-size:12.5px;font-weight:650;line-height:1.5;
+  box-shadow:0 12px 34px rgba(16,44,74,.18);
+}
+.toast.error{border-left-color:#d54756}
+.more-menu-item,.global-search-result{transition:background-color .12s}
+.more-menu-item:focus-visible,.global-search-result:focus-visible{
+  outline:2px solid #2772b4;outline-offset:-3px;
+  background:#f0f7fd;
+}
+@media(max-height:700px) and (min-width:851px){
+  .sidebar{gap:10px}
+  .sidebar .brand{padding-bottom:10px}
+  .sidebar .nav button{min-height:36px;padding:7px 10px}
+  .sidebar .nav-label{margin-top:7px;margin-bottom:4px}
+  .sidebar .nav-label-secondary{padding-top:8px;margin-top:8px}
+  .sidebar .side-foot{padding:10px}
+}
+@media(max-width:850px){
+  .topbar{height:58px;min-height:58px;padding-inline:15px}
+  .content{padding-top:20px}
+  .bottom button{min-height:54px;border-radius:10px}
+  .bottom button span{font-size:10px;line-height:1.2;letter-spacing:-.015em}
+  .bottom button svg{width:21px;height:21px}
+  .bottom button.active{background:#ebf4fd}
+}
+@media(max-width:620px){
+  .topbar .topbar-league,.topbar .sep{display:none}
+  .topbar .topbar-page{font-size:13px;overflow:hidden;text-overflow:ellipsis}
+  .topbar-heading .title{white-space:nowrap;min-width:0}
+  .content{padding-inline:13px}
+}
+@media(max-width:410px){
+  .topbar .chip{display:none}
+  .bottom button span{font-size:9.5px}
+  .topbar{padding-inline:11px}
+}
+@media(prefers-reduced-motion:reduce){
+  .sidebar .nav button,.table tbody tr,.more-menu-item,.global-search-result{
+    transition:none!important;
+  }
+}
+

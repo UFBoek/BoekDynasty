@@ -22,7 +22,7 @@ test('notification inbox handles unseen alerts and personal preference controls'
     preferences:{trades:true,draft:true,announcements:false,push_enabled:true,email_enabled:false},
     notifications:[{id:'123e4567-e89b-12d3-a456-426614174000',kind:'draft_turn',title:"You're on the clock!",
       body:'Make pick #2.',target:'draft',created_at:1780000000,read_at:null}]});
-  assert.match(html,/draft_turn|Draft alerts/);
+  assert.match(html,/notification-pref-draft/);
   assert.match(html,/notification-pref-trades/);
   assert.match(html,/notification-pref-announcements/);
   assert.match(html,/notification-email-option/);

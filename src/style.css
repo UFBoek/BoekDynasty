@@ -6922,7 +6922,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 }
 @media(max-width:650px){
  .tm-v4 .tm-masthead{border-radius:8px;margin-bottom:10px}
- .tm-v4 .tm-year{font-size:8px;letter-spacing:.045em;text-align:right}
+ .tm-v4 .tm-year{font-size:8px;letter-spacing:.045em;text-align:right;max-width:140px;line-height:1.35}
+ .tm-v4 .tm-label{font-size:8px;white-space:nowrap;gap:5px}
  .tm-v4 .tm-roster{border-radius:8px}
  .tm-v4 .tm-roster-heading{padding:15px 12px 12px;gap:10px}
  .tm-v4 .tm-roster-heading h2{font-size:17px}

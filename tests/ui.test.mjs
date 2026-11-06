@@ -394,3 +394,33 @@ test('Results game center groups matchups and retains ranking, quadrant and navi
  assert.match(html,/Box score/);
  assert.equal((html.match(/class="daily-game-card /g)||[]).length,2);
 });
+test('My Team v4 keeps scoring and actions while adding compact scouting columns',()=>{
+  const oldOwnership=league.ownership,oldStatus=league.settings.draft_status;
+  try{
+    league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'1'}];
+    league.settings.draft_status='pending';
+    const html=app.team({season:'2026-27',program_points:{'57':12.25,'58':40.5},
+      standings:[{manager_id:'1',points:52.75,counted_programs:2,counted_program_ids:['57','58']}]});
+    const table=html.slice(html.indexOf('<table class="tm-table">'));
+    assert.match(html,/my-team-page tm-v3 tm-v4/);
+    assert.match(html,/FRANCHISE HQ/);
+    assert.match(html,/SEASON POINTS/);
+    assert.match(html,/52\.75/);
+    assert.ok(html.indexOf('tm-roster"')<html.indexOf('class="tm-directory"'),
+      'The owned roster should precede the league switcher');
+    assert.match(table,/BART TORVIK/);
+    assert.match(table,/5Y RANK/);
+    assert.match(table,/class="tm-stat-rank"/);
+    assert.match(table,/class="tm-stat-rank tm-historical-rank"/);
+    assert.ok(table.indexOf('Duke basketball')<table.indexOf('Florida basketball'));
+    for(const action of ['open-program','open-manager','tab'])assert.match(html,new RegExp('data-act="'+action+'"'));
+    assert.match(html,/class="tm-transactions"/);
+    assert.doesNotMatch(html,/<details class="tm-transactions" open/);
+    assert.match(html,/data-id="draft"/);
+    assert.match(html,/data-id="programs"/);
+    assert.match(html,/data-id="settings"/);
+    assert.match(html,/data-id="trades"/);
+    assert.match(html,/data-id="waivers"/);
+    assert.doesNotMatch(html,/CURRENTLY COUNTING|OWNED PROGRAMS|LEAGUE TITLES/);
+  }finally{league.ownership=oldOwnership;league.settings.draft_status=oldStatus;}
+});

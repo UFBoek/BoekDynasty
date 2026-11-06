@@ -177,6 +177,39 @@ test('draft board keeps pick details and shows compact scouting metrics for draf
   }
 });
 
+test('model-only schools show N/A for financial rank and cost across draft views',()=>{
+  const modelSchool={id:'2439',name:'UNLV basketball',abbr:'UNLV',conference_id:'23',logo:null};
+  const originalPrograms=league.programs,originalPicks=league.picks,originalOwnership=league.ownership;
+  try{
+    league.programs=[...originalPrograms,modelSchool];
+    league.picks=[];league.ownership=[];
+    app.sortDraft('cost');
+    const html=app.page('draft');
+    const cards=html.slice(html.indexOf('<div class="draft-pool-grid">'));
+    const modelCard=cards.split('data-program="2439"')[1]?.split('</article>')[0];
+    assert.ok(modelCard,'model-only school should appear in draft pool');
+    assert.match(modelCard,/draft-pool-financial-rank is-unreported"><strong>N\/A<\/strong>/);
+    assert.match(modelCard,/draft-pool-financial-cost is-unreported"><strong>N\/A<\/strong>/);
+    assert.match(modelCard,/Independent model only/);
+    assert.doesNotMatch(modelCard,/\$5\.9M|#93<\/strong>/);
+    // Source-supported Florida still displays its published-tier sorting estimate.
+    const florida=cards.split('data-program="57"')[1]?.split('</article>')[0];
+    assert.match(florida,/#2<\/strong><small>\$ RANK<\/small>/);
+    assert.match(florida,/~\$27M/);
+    league.picks=[{overall:1,round:1,program_id:'2439',manager_id:'1'}];
+    league.ownership=[{program_id:'2439',manager_id:'1'}];
+    const board=app.page('draft');
+    const pickedCell=board.split('data-pick="1"')[1]?.split('</div></div>')[0]||'';
+    assert.match(board,/UNLV basketball/);
+    assert.match(board,/is-unreported/);
+    assert.match(board,/<small>ROSTER \$<\/small><b>N\/A<\/b>/);
+    assert.doesNotMatch(board,/\$5\.9M/);
+  }finally{
+    league.programs=originalPrograms;league.picks=originalPicks;league.ownership=originalOwnership;
+    app.sortDraft('power');
+  }
+});
+
 test('Results exposes touch-friendly conference buttons, not a select menu',()=>{
   const html=app.page('results');
   assert.match(html,/class="daily-conference-tabs"/);

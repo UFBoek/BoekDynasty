@@ -308,7 +308,7 @@
     finally{
       delete ratingLoading[year];
       if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft')render();
+      else if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft'||current==='team')render();
     }
   }
   const ratingExternalLinks=(year=ratingYear(season()))=>'<div class="rating-source-links">'
@@ -693,6 +693,12 @@
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
+    // The My Team roster shares verified national scouting data with the Draft Desk.
+    if(current==='team'){
+      const year=ratingYear(season());
+      if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
+      if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
+    }
     if(current==='programs'&&programMode==='directory'&&typeof window!=='undefined'){
       const year=ratingYear(season());
       if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
@@ -1553,6 +1559,7 @@
       schoolLeadersLoading=false;
       if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}
       else if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
+      else if(current==='team')render();
       else if(current==='draft'&&document.activeElement?.id!=='draft-pool-search')render();
     }
   }

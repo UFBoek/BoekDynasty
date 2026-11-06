@@ -171,7 +171,7 @@ test('draft board keeps pick details and shows compact scouting metrics for draf
     assert.match(html,/<small>TORVIK<\/small>/);
     assert.match(html,/<small>5Y RANK<\/small>/);
     assert.match(html,/<small>ROSTER \$<\/small>/);
-    assert.match(html,/~\$27M/);
+    assert.match(html,/\$25M\+/);
     assert.match(html,/2026 roster spending is estimated|Roster costs are estimates/);
     assert.match(html,/data-act="draft-board-mode" data-mode="current"/);
     assert.match(html,/data-act="draft-board-mode" data-mode="mine"/);
@@ -197,10 +197,10 @@ test('model-only schools show N/A for financial rank and cost across draft views
     assert.match(modelCard,/draft-pool-financial-cost is-unreported"><strong>N\/A<\/strong>/);
     assert.match(modelCard,/Independent model only/);
     assert.doesNotMatch(modelCard,/\$5\.9M|#93<\/strong>/);
-    // Source-supported Florida still displays its published-tier sorting estimate.
+    // Florida has a separately reported CBS valuation north of $25M.
     const florida=cards.split('data-program="57"')[1]?.split('</article>')[0];
     assert.match(florida,/#2<\/strong><small>\$ RANK<\/small>/);
-    assert.match(florida,/~\$27M/);
+    assert.match(florida,/\$25M\+/);
     league.picks=[{overall:1,round:1,program_id:'2439',manager_id:'1'}];
     league.ownership=[{program_id:'2439',manager_id:'1'}];
     const board=app.page('draft');
@@ -211,6 +211,36 @@ test('model-only schools show N/A for financial rank and cost across draft views
     assert.doesNotMatch(board,/\$5\.9M/);
   }finally{
     league.programs=originalPrograms;league.picks=originalPicks;league.ownership=originalOwnership;
+    app.sortDraft('power');
+  }
+});
+
+test('CBS $20M+ tier reports only the published threshold across draft views',()=>{
+  const duke={id:'150',name:'Duke Blue Devils',abbr:'Duke',conference_id:'2',logo:null};
+  const illinois={id:'356',name:'Illinois Fighting Illini',abbr:'Illinois',conference_id:'2',logo:null};
+  const prevPrograms=league.programs,prevPicks=league.picks,prevOwnership=league.ownership;
+  try{
+    league.programs=[...prevPrograms,duke,illinois];
+    league.picks=[];league.ownership=[];
+    app.sortDraft('cost');
+    const html=app.page('draft');
+    const pool=html.slice(html.indexOf('<div class="draft-pool-grid">'));
+    for(const id of ['150','356']){
+      const card=pool.split('data-program="'+id+'"')[1]?.split('</article>')[0];
+      assert.ok(card,'CBS tier school '+id+' must be eligible');
+      assert.match(card,/<strong>\$20M\+<\/strong><small>EST. COST<\/small>/);
+      assert.match(card,/CBS spending tier: \$20M\+/);
+      assert.doesNotMatch(card,/\$2[1-9]M|~\$20M|~\$27M/);
+    }
+    const florida=pool.split('data-program="57"')[1]?.split('</article>')[0];
+    assert.match(florida,/<strong>\$25M\+<\/strong><small>EST. COST<\/small>/);
+    league.picks=[{overall:1,round:1,program_id:'150',manager_id:'1'}];
+    league.ownership=[{program_id:'150',manager_id:'1'}];
+    const draft=app.page('draft');
+    assert.match(draft,/<small>ROSTER \$<\/small><b>\$20M\+<\/b>/);
+    assert.doesNotMatch(draft,/~\$27M/);
+  }finally{
+    league.programs=prevPrograms;league.picks=prevPicks;league.ownership=prevOwnership;
     app.sortDraft('power');
   }
 });
@@ -332,7 +362,7 @@ test('Schools index is a compact scouting table with full search, filter and pro
     assert.match(html,/data-act="open-manager"/);
     assert.match(html,/program-dir-open/);
     assert.match(html,/RANK #1/);
-    assert.match(html,/~\$27M/);
+    assert.match(html,/\$25M\+/);
     assert.doesNotMatch(html,/>#0<\/b>/,'Missing Torvik rankings must never appear as #0');
     assert.match(html,/id="program-search"/);
     assert.match(html,/id="program-results"/);

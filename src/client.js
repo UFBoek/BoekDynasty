@@ -2209,9 +2209,6 @@
         +'<button type="button" class="draft-pool-open" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" title="Select '+escapeHTML(p.name)+'">'
         +'<span class="draft-pool-logo">'+img(p)+'</span><span class="draft-pool-info"><strong>'+escapeHTML(p.name)+'</strong>'
         +'<small>'+escapeHTML(conf(p.conference_id))+'</small>'
-        +(history?'<span class="draft-pool-history'+(history.eligibleForSort?'':' limited')+'">'+
-          (history.eligibleForSort?'5Y AVG '+historicalPointLabel(history.avg)+' pts · '+history.count+'/'+history.totalYears+' seasons':'History: '+history.count+' season'+(history.count===1?'':'s'))+
-          '</span>':'')
         +(costView&&cost?'<span class="draft-pool-cost-source">'+escapeHTML(rosterCostEvidence2026(cost))+'</span>':'')+'</span>'
         +(costView
           ?'<span class="draft-pool-stat draft-pool-financial-rank'+(!cost?.rank?' is-unreported':'')+'"><strong>'+(cost?.rank?'#'+cost.rank:'N/A')+'</strong><small>$ RANK</small></span>'
@@ -2219,7 +2216,7 @@
           :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'BART TORVIK')+'</small></span>')
         +'</button>'
         +'<div class="draft-scouting-strip"><span><small>BART TORVIK</small><strong>'+(rank?'#'+rank:'—')+'</strong></span>'
-        +'<span><small>5Y AVG PTS</small><strong>'+(history?.eligibleForSort?historicalPointLabel(history.avg):'—')+'</strong></span>'
+        +'<span title="Overall five-year fantasy rank across eligible programs"><small>5Y RANK</small><strong>'+(history?.rank?'#'+history.rank:'—')+'</strong></span>'
         +'<span class="'+(!cost?.rank?'is-unreported':'')+'" title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><small>EST. ROSTER $</small><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong></span></div>'
         +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'

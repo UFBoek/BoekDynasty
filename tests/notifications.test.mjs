@@ -48,7 +48,8 @@ test('commissioner notifications controls show broadcasts, member devices and al
   assert.match(html,/data-act="notification-admin-retry"/);
   assert.match(html,/Everyone in the league/);
   assert.match(html,/Manager/);
-  assert.match(html,/Not enrolled/);
+  assert.match(html,/Not enabled/);
+  assert.match(html,/No push devices registered/);
 });
 test('service worker displays and routes real push events without credentials',()=>{
   const source=readFileSync(new URL('../src/service-worker.js',import.meta.url),'utf8');

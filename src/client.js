@@ -2192,7 +2192,1585 @@
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">'+iconSVG('search')+'</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
-      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster $')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
+      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster +'</div></div>'
+      +(draftSort==='cost'
+        ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · National rank out of 143 eligible schools, including drafted programs. CBS reported tiers and mid-major reporting are supplemented with unverified model estimates; amounts are not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
+        :'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+
+          (schoolLeadersError?'<button type="button" data-act="draft-history-retry">Retry history</button>':'')+'</div>')
+      +'<div class="draft-pool-subbar"><div class="draft-pool-scope"><button type="button" data-act="draft-pool-scope" data-id="all" class="'+(draftScope==='all'?'active':'')+'">All available</button>'
+      +'<button type="button" data-act="draft-pool-scope" data-id="queue" class="'+(draftScope==='queue'?'active':'')+'">★ My queue <span>'+usedQueue.length+'</span></button></div>'
+      +'<button type="button" class="draft-queue-shortcut" data-act="draft-jump-queue">Reorder queue ↗</button>'
+      +'<span id="draft-pool-count">'+available.length+' programs</span></div>'
+      +'<div class="draft-pool-grid">'+cards+'</div>'
+      +'<div class="draft-pool-empty" id="draft-pool-empty" hidden>No matching schools. Try another search or show all available.</div>'
+      +'<div class="draft-pool-bottom"><button id="draft-pool-more" type="button" data-act="draft-pool-more" hidden>Show more programs</button></div>'
+      +'</section>';
+    const selectedRank=chosen?programRank(chosen):null;
+    const selectedHistory=chosen?historyOf(chosen):null;
+    const selectedRosterCost=chosen?rosterCost2026(chosen):null;
+    const selectedView=chosen?'<div class="draft-selection-preview">'
+      +'<div class="draft-selection-team" '+draftStyle(chosen)+'><div class="draft-selection-team-art">'+img(chosen)+'</div>'
+      +'<div class="draft-selection-team-info"><span>SELECTED PROGRAM</span><h3>'+escapeHTML(chosen.name)+'</h3>'
+      +'<p>'+escapeHTML(conf(chosen.conference_id))+(selectedRank?' · National Bart Torvik #'+selectedRank:'')+'</p></div></div>'
+      +'<div class="draft-selection-facts"><div><span>STATUS</span><strong>Available</strong></div><div><span>YOUR PICK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong></div></div>'
+      +(selectedRosterCost?'<div class="draft-roster-cost-preview"><span>2026–27 ROSTER COST</span><strong>#'+selectedRosterCost.rank+' of 143 · '+escapeHTML(rosterCostAmount2026(selectedRosterCost))+'</strong><small>'+escapeHTML(rosterCostEvidence2026(selectedRosterCost))+'</small></div>':'')
+      +(selectedHistory?'<div class="draft-history-snapshot"><span>HISTORICAL FANTASY</span><strong>'+historicalPointLabel(selectedHistory.avg)+' avg pts</strong><strong>'+historicalPointLabel(selectedHistory.best)+' peak</strong><small>'+selectedHistory.count+'/'+selectedHistory.totalYears+' seasons</small></div>':'')
+      +(yourTurn?'<p class="draft-selection-explainer">Your selection is permanent for the dynasty. Confirm to add this program to your roster.</p>'
+        :'<p class="draft-selection-explainer">Save this school to your draft queue. Only the manager on the clock can submit the next pick.</p>')
+      +'<button type="button" class="draft-confirm-action" data-act="draft-confirm" data-id="'+escapeHTML(chosen.id)+'" '+(!yourTurn?'disabled':'')+'>'
+      +(yourTurn?'Confirm pick: '+escapeHTML(chosen.name):'Waiting for your turn')+' <span>›</span></button>'
+      +'<div class="draft-preview-actions"><button type="button" data-act="draft-queue-toggle" data-id="'+escapeHTML(chosen.id)+'">'
+      +(queuePosition.has(String(chosen.id))?'★ Remove from queue (#'+queuePosition.get(String(chosen.id))+')':'☆ Add to draft queue')+'</button>'
+      +'<button type="button" data-act="open-program" data-id="'+escapeHTML(chosen.id)+'">View school details ›</button></div>'
+      +'<button type="button" class="draft-selection-clear" data-act="draft-clear-selection">Change selection</button></div>'
+      :'<div class="draft-selection-idle"><div class="draft-idle-mark">'+iconSVG('draft')+'</div><span class="draft-idle-eyebrow">ON YOUR RADAR</span><strong>'+(yourTurn?'Your selection is waiting':'Scout your next pick')+'</strong>'
+      +'<p>Tap a program to preview its details. '+(yourTurn?'Confirm it here when you are ready.':'Build an ordered draft queue while other managers pick.')+'</p></div>';
+    const queueItems=usedQueue.map((id,i)=>{
+      const p=programIndex.get(id),rank=p?programRank(p):null,history=historyOf(p);
+      if(!p)return '';
+      const first=i===0,last=i===usedQueue.length-1;
+      return '<div class="draft-queue-row '+(first?'top-priority':'')+(chosen?.id===p.id?' is-selected':'')+'" data-queue-id="'+escapeHTML(id)+'" '+draftStyle(p)+'>'
+        +'<span class="draft-queue-position" aria-label="Priority '+(i+1)+'">'+(i+1)+'</span>'
+        +'<span class="draft-queue-grip" data-id="'+escapeHTML(id)+'" draggable="true" title="Drag to reorder '+escapeHTML(p.name)+'" aria-hidden="true">⠿</span>'
+        +'<button type="button" class="draft-queue-team" data-act="draft-select" data-id="'+escapeHTML(id)+'" title="Preview '+escapeHTML(p.name)+'">'
+        +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · Bart Torvik #'+rank:'')+
+        (history?.eligibleForSort?' · 5Y '+historicalPointLabel(history.avg)+' pts':'')+'</small></span>'
+        +'<span class="draft-queue-pick">Preview ›</span></button>'
+        +'<div class="draft-queue-controls"><button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
+        +'<button type="button" data-act="draft-queue-down" data-id="'+escapeHTML(id)+'" '+(last?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' down in draft queue" title="Move down">↓</button>'
+        +'<button type="button" class="draft-queue-remove" data-act="draft-queue-toggle" data-id="'+escapeHTML(id)+'" aria-label="Remove '+escapeHTML(p.name)+' from draft queue" title="Remove from queue">×</button></div></div>';
+    }).join('');
+    const queueManager='<details class="draft-extra-panel draft-queue-details" id="draft-queue-details" '+(draftQueueOpen?'open':'')+'><summary><span>Draft queue</span><small>'+usedQueue.length+' saved programs · Tap to '+(draftQueueOpen?'close':'manage')+'</small></summary><section class="panel draft-queue-manager" id="draft-queue-section" aria-label="My ordered draft queue">'
+      +'<div class="draft-queue-manager-head"><div class="draft-queue-title"><span class="draft-section-overline">YOUR PRIORITY LIST</span><h2>My draft queue <span>'+usedQueue.length+'</span></h2>'
+      +'<p>Put your top choice first. Drag or use the arrows to reorder. Saved across devices; no automatic picks.</p></div>'
+      +'<div class="draft-queue-header-actions"><button type="button" data-act="draft-jump-pool" class="draft-queue-find">+ Add schools</button>'
+      +(usedQueue.length?'<button type="button" class="draft-queue-games" data-act="results-track-queue">Track games</button>':'')
+      +(usedQueue.length>1?'<button type="button" data-act="draft-compare-toggle" class="draft-compare-toggle" aria-expanded="'+draftCompareExpanded+'">'+(draftCompareExpanded?'Hide comparison':'Compare top 4')+'</button>':'')
+      +(usedQueue.length?'<button type="button" data-act="draft-queue-collapse" class="draft-queue-collapse" aria-expanded="'+draftQueueExpanded+'">'+(draftQueueExpanded?'Collapse':'Expand queue')+'</button>':'')+'</div></div>'
+      +(usedQueue.length
+        ?'<div class="draft-queue-topline"><span>FIRST CHOICE</span><strong>#1 '+escapeHTML(programIndex.get(usedQueue[0])?.name||'School')+'</strong><span>'+escapeHTML(queueLabel)+'</span></div>'
+          +(draftCompareExpanded&&usedQueue.length>1?'<div class="draft-compare-section"><div class="draft-compare-heading"><strong>Compare your top '+Math.min(4,usedQueue.length)+' choices</strong><span>Current Bart Torvik + 5-year fantasy history</span></div><div class="draft-compare-grid">'+compareCards+'</div><small>Fantasy averages use archived scoring, not projections. Higher WAB and offense are better; lower defensive efficiency is better.</small></div>':'')
+          +(draftQueueExpanded?'<div class="draft-queue-list" aria-label="Draft priority order">'+queueItems+'</div>':'')
+        :'<div class="draft-queue-empty"><span class="draft-queue-empty-icon">☆</span><div><strong>Start your queue</strong><p>Tap the star on any available school to add it here. Rearrange your picks whenever you like.</p></div>'
+          +'<button type="button" data-act="draft-jump-pool">Browse available schools ›</button></div>')
+      +'<div class="draft-queue-sync" role="status" aria-live="polite">'+escapeHTML(draftQueueSyncMessage())+'</div>'
+      +'</section></details>';
+    const myPickList=myPicks.slice(0,4).map(p=>{
+      const school=programIndex.get(String(p.program_id));
+      return school?'<div class="draft-my-pick" '+draftStyle(school) +'><span class="draft-mini-logo">'+img(school)+'</span><span><strong>'+escapeHTML(school.name)+'</strong><small>Round '+p.round+' · Pick #'+p.overall+'</small></span></div>':'';
+    }).join('');
+    const sidebar='<aside class="draft-pick-aside"><section class="panel draft-pick-desk">'
+      +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOUR TURN TO DRAFT':'Preview a program')+'</strong></div>'
+      +selectedView+'</section>'
+      +(usedQueue.length?'<section class="panel draft-radar-panel"><div class="draft-radar-heading"><span>TOP OF YOUR QUEUE</span><button type="button" data-act="draft-jump-queue">Manage ↗</button></div>'
+        +usedQueue.slice(0,3).map((id,i)=>{const p=programIndex.get(id);return '<button type="button" class="draft-radar-program" data-act="draft-select" data-id="'+escapeHTML(id)+'"><span class="draft-radar-number">0'+(i+1)+'</span>'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span aria-hidden="true">↗</span></button>';}).join('')+'</section>':'')
+      +(myPickList?'<section class="panel draft-roster-panel"><div class="draft-radar-heading"><span>YOUR LATEST PICKS</span><strong>'+myPicks.length+' / '+rounds+'</strong></div>'+myPickList+'</section>':'')+'</aside>';
+
+    // Compact manager-based draft board. Ranks are always national, not a filtered subset.
+    const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
+    const boardColumns=visualOrder;
+    const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1)
+      .filter(r=>boardMode!=='mine'||Array.from({length:managerCount},(_,i)=>(r-1)*managerCount+i+1)
+        .some(slot=>draftOwner(slot)===me.id));
+    const boardWidth='grid-template-columns:62px repeat('+Math.max(1,boardColumns.length)+',minmax(188px,1fr));min-width:'+(62+Math.max(1,boardColumns.length)*188)+'px';
+    const managerPickedCount=id=>picks().filter(p=>String(p.manager_id)===String(id)).length;
+    const boardHeaders=boardColumns.map((id,pos)=>{
+      const member=managerIndex.get(id),vacant=id.startsWith('open-seat-');
+      return '<div class="draft-board-manager '+(id===me.id?'mine':vacant?'vacant':'')+'">'
+        +'<span class="draft-board-avatar">'+avatar(member||{display_name:'+'})+'</span>'
+        +'<div class="draft-board-owner"><strong>'+escapeHTML(member?.display_name||'Open seat')+'</strong>'
+        +'<small>'+(id===me.id?'YOUR TEAM · ':'SLOT '+(pos+1)+' · ')+(vacant?'VACANT':managerPickedCount(id)+' PICKED')+'</small></div></div>';
+    }).join('');
+    const boardCells=boardRows.map(round=>{
+      const slots=boardColumns.map(id=>{
+        const vacant=id.startsWith('open-seat-'),pos=visualOrder.indexOf(id);
+        const overall=(round-1)*Math.max(1,visualCount)+(round%2===1?pos+1:visualCount-pos);
+        const picked=pickMap.get(overall),p=programIndex.get(String(picked?.program_id||''));
+        const slotOwner=draftOwner(overall,visualOrder),holder=managerIndex.get(slotOwner);
+        const traded=!vacant&&slotOwner&&slotOwner!==id;
+        const onClock=draftLive&&overall===activePick,mine=slotOwner===me.id;
+        const state=p?'selected':onClock?'on-clock':vacant?'vacant':'open';
+        const torvik=p?programRank(p):null,history=p?historyOf(p):null,cost=p?rosterCost2026(p):null;
+        const fiveYearRank=history?.eligibleForSort?history.rank:null;
+        const costLabel=cost?rosterCostAmount2026(cost):'—';
+        const detail=p?'Bart Torvik: '+(torvik?'#'+torvik:'not available')
+          +' · 5Y history: '+(fiveYearRank?'#'+fiveYearRank+' ('+historicalPointLabel(history.avg)+' points/season)':'not available')
+          +' · 2026 roster cost: '+costLabel+' · '+rosterCostEvidence2026(cost):'';
+        const scouting=p?'<div class="draft-cell-scout" aria-label="National rankings and spending">'
+          +'<span title="Bart Torvik national ranking"><small>TORVIK</small><b>'+(torvik?'#'+torvik:'—')+'</b></span>'
+          +'<span title="5-year historical fantasy rank"><small>5Y RANK</small><b>'+(fiveYearRank?'#'+fiveYearRank:'—')+'</b></span>'
+          +'<span title="Estimated 2026–27 roster cost"><small>ROSTER $</small><b>'+escapeHTML(costLabel)+'</b></span>'
+          +'</div>':'';
+        return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'"'+(p?draftStyle(p):'')+' data-pick="'+overall+'" '+(onClock?'id="draft-current-slot"':'')+'>'
+          +'<div class="draft-cell-meta"><span class="draft-pick-number">PICK #'+overall+'</span>'
+          +(onClock?'<strong class="draft-cell-live">● ON CLOCK</strong>':p?'<span class="draft-cell-done">SELECTED</span>':'<span class="draft-cell-pending">UPCOMING</span>')+'</div>'
+          +(traded?'<div class="draft-pick-owner-label" title="Draft pick traded to '+escapeHTML(holder?.display_name||'another manager')+'">⇄ '+escapeHTML(holder?.display_name||'Traded pick')+'</div>':'')
+          +(p?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="'+escapeHTML(detail)+'">'
+            +'<span class="draft-cell-logo">'+img(p)+'</span><span class="draft-cell-team"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
+            +scouting
+            :onClock?'<button type="button" class="draft-cell-open '+(mine?'take-pick':'')+'" data-act="draft-jump-pool">'
+              +'<strong>'+(mine?'Your selection':'On the clock')+'</strong><small>'+(mine?'Choose a program ›':escapeHTML(holder?.display_name||'Manager')+' is picking')+'</small></button>'
+            :'<div class="draft-cell-placeholder">'+(vacant?'Unclaimed slot':'Awaiting selection')+'</div>')
+          +'</div>';
+      }).join('');
+      return '<div class="draft-board-round '+(round===activeRound?'current':'')+'"><strong>R'+round+'</strong><span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
+    }).join('');
+    const boardTab=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(boardMode===id?'active':'')+'" aria-pressed="'+(boardMode===id)+'">'+label+'</button>';
+    const board='<section class="panel draft-board-panel draft-v2-board" id="draft-board-section">'
+      +'<div class="draft-board-toolbar"><div class="draft-board-title"><span class="draft-section-overline">LIVE LEAGUE DRAFT</span><h2>Draft board</h2>'
+      +'<p>Every manager, pick and scouting metric in one view.</p></div>'
+      +'<div class="draft-board-toolbar-right"><div class="draft-board-progress"><span>ROUND <strong>'+activeRound+' / '+rounds+'</strong></span>'
+      +'<span>PICKS <strong>'+completed+' / '+plannedTotal+'</strong></span></div>'
+      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My slots')+'</div></div></div>'
+      +'<div class="draft-board-key"><span><i class="selected"></i> Drafted</span><span><i class="on-clock"></i> On clock</span>'
+      +'<span><i class="mine"></i> Your slots</span><span class="draft-board-metric-key">BART TORVIK · 5Y RANK · EST. ROSTER $</span>'
+      +'<button type="button" data-act="draft-follow-live">Jump to live pick ↗</button></div>'
+      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board with pick numbers, Bart Torvik rankings, five-year history and estimated roster costs"><div class="draft-board-grid" style="'+boardWidth+'">'
+      +'<div class="draft-board-corner">ROUND</div>'+boardHeaders+boardCells+'</div></div>'
+      +'<div class="draft-board-footer"><span>Scroll across managers · Select any school for its full profile.</span>'
+      +'<span>Roster costs are estimates, not verified payrolls.</span></div></section>';
+    const recent=picks().slice(-6).reverse().map(p=>{
+      const school=programIndex.get(String(p.program_id)),member=managerIndex.get(String(p.manager_id));
+      return school?'<button type="button" class="draft-recent-card" data-act="open-program" data-id="'+escapeHTML(school.id)+'" '+draftStyle(school)+'>'
+        +'<span class="draft-recent-logo">'+img(school)+'</span><span><small>PICK #'+p.overall+' · ROUND '+p.round+'</small>'
+        +'<strong>'+escapeHTML(school.name)+'</strong><small>'+escapeHTML(member?.display_name||'Manager')+'</small></span></button>':'';
+    }).join('');
+    const foot='<section class="draft-recent-section"><div><span class="draft-section-overline">JUST OFF THE BOARD</span><h2>Recent selections</h2></div>'
+      +(recent?'<div class="draft-recent-grid">'+recent+'</div>':'<p>No picks yet. Your dynasty draft history begins here.</p>')+'</section>';
+    const sheet=chosen?'<div class="draft-selection-sheet draft-sheet-v5" role="dialog" aria-modal="true" aria-label="Selected draft program">'
+      +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
+      +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
+      +selectedView+'</div></div>':'';
+    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Follow picks, browse programs and manage your queue.')
+      +'<div class="draft-v2 draft-v3 draft-v4 draft-v5">'+hero+tracker+board+tradeInbox+queueManager
+      +'<div class="draft-workspace">'+pool+sidebar+'</div>'
+      +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
+  }
+
+  function updateTradeSelections(){
+    const count=side=>document.querySelectorAll('input[name="trade-'+side+'"]:checked,input[name="trade-'+side+'-pick"]:checked').length;
+    const give=count('give'),receive=count('receive');
+    const giveLabel=document.querySelector('#trade-give-count'),receiveLabel=document.querySelector('#trade-receive-count');
+    const summary=document.querySelector('#trade-selection-summary'),submit=document.querySelector('[data-act="trade-propose"]');
+    if(giveLabel)giveLabel.textContent=give+' selected';
+    if(receiveLabel)receiveLabel.textContent=receive+' selected';
+    if(summary)summary.textContent=give&&receive?give+' sent · '+receive+' requested':'Select at least one asset on each side';
+    if(submit)submit.disabled=!give||!receive;
+  }
+  function tradeAssetNames(tradeId,fromId){
+    const schools=(league.trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===fromId)
+      .map(x=>programs().find(p=>p.id===x.program_id)?.name||'Program');
+    const slots=(league.draft_pick_trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===fromId)
+      .map(x=>'Pick #'+x.overall+' (R'+(Math.floor((Number(x.overall)-1)/Math.max(1,order().length))+1)+')');
+    return [...schools,...slots];
+  }
+  function tradesPage(){
+    const status=league.settings.draft_status,ready=league.settings.trading_enabled;
+    const allowPicks=ready&&status!=='finished'&&order().length>=2&&
+      Array.isArray(league.settings.draft_order)&&league.settings.draft_order.length===members().length;
+    const others=members().filter(u=>u.id!==me.id);
+    const recipient=others.find(u=>u.id===tradeTargetId)||others[0];
+    tradeTargetId=recipient?.id||'';
+    const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
+    const theirs=owners().filter(o=>o.manager_id===tradeTargetId)
+      .map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const selections=(schools,ownerId,side)=>{
+      const slots=allowPicks?futureDraftPicks(ownerId):[];
+      const pickOptions=slots.map(slot=>{
+        const from=originalDraftOwner(slot),original=members().find(m=>m.id===from);
+        return '<label class="trade-choice trade-pick-choice"><input type="checkbox" name="trade-'+side+'-pick" value="'+slot+'"/>'
+          +'<span class="trade-pick-icon">#'+slot+'</span><span><strong>'+escapeHTML(draftPickText(slot))+'</strong><small>'
+          +(from!==ownerId?'From '+escapeHTML(original?.display_name||'another manager'):'Original pick')+'</small></span></label>';
+      }).join('');
+      const schoolOptions=schools.map(p=>'<label class="trade-choice"><input type="checkbox" name="trade-'+side+'" value="'+escapeHTML(p.id)+'"/>'
+        +img(p)+'<span>'+escapeHTML(p.name)+'</span></label>').join('');
+      return '<div class="trade-assets">'
+        +(allowPicks?'<div class="trade-asset-group"><h4>Unused draft picks <span>'+slots.length+'</span></h4>'
+          +(pickOptions?'<div class="trade-pick-list">'+pickOptions+'</div>':'<p class="trade-assets-empty">No unused picks</p>')+'</div>':'')
+        +'<div class="trade-asset-group"><h4>Rostered programs <span>'+schools.length+'</span></h4>'
+        +(schoolOptions?'<div class="trade-program-list">'+schoolOptions+'</div>':'<p class="trade-assets-empty">No drafted schools yet</p>')+'</div></div>';
+    };
+    const offers=(league.trades||[]).slice().sort((a,b)=>
+      Number(b.status==='pending')-Number(a.status==='pending')||Number(b.offered_at||0)-Number(a.offered_at||0));
+    const card=t=>{
+      const from=members().find(m=>m.id===t.from_manager_id),to=members().find(m=>m.id===t.to_manager_id);
+      const give=tradeAssetNames(t.id,t.from_manager_id),receive=tradeAssetNames(t.id,t.to_manager_id);
+      const actions=t.status==='pending'&&ready?(t.to_manager_id===me.id?
+        '<div class="button-row section-gap"><button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept trade</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div>':
+        t.from_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small ghost" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button></div>':''):'';
+      return '<article class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong>'
+        +'<span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div>'
+        +'<div class="trade-exchange"><div class="trade-exchange-side"><span>SENDING</span><strong>'+escapeHTML(give.join(' · ')||'No assets')+'</strong></div>'
+        +'<span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>RECEIVING</span><strong>'+escapeHTML(receive.join(' · ')||'No assets')+'</strong></div></div>'+actions+'</article>';
+    };
+    const incoming=offers.filter(t=>t.status==='pending'&&t.to_manager_id===me.id).length;
+    return heading('DYNASTY TRANSACTIONS','Trades','Exchange future draft picks and rostered programs with other managers.')
+      +'<section class="trade-overview-strip"><div><strong>'+incoming+'</strong><span>Incoming offers</span></div>'
+      +'<div><strong>'+futureDraftPicks(me.id).length+'</strong><span>Remaining picks</span></div>'
+      +'<div><strong>'+offers.filter(t=>t.status==='accepted').length+'</strong><span>Accepted trades</span></div></section>'
+      +(ready?'<section class="panel trade-builder">'+panelHeading('Build a trade','Mix draft picks and schools in the same offer')
+        +'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'
+        +others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')
+        +'</select></div>'
+        +(!allowPicks&&status!=='finished'?'<p class="trade-note">Pick trading opens when the commissioner saves the final draft order.</p>':'')
+        +'<div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'
+        +selections(mine,me.id,'give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'
+        +selections(theirs,tradeTargetId,'receive')+'</div></div>'
+        +'<div class="trade-submit"><div id="trade-selection-summary">Select at least one asset from each side</div>'
+        +'<button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div>'
+        +'<p class="trade-footnote">The recipient must accept before anything transfers. Live draft picks move instantly on acceptance; used picks are ineligible.</p></section>':
+        '<section class="panel section-gap">'+empty('Trading disabled','The commissioner has paused new trades.')+'</section>')
+      +'<section class="panel section-gap trade-history">'+panelHeading('League trade activity',offers.length+' offers')
+      +(offers.length?offers.map(card).join(''):empty('No trades yet','Pending and completed offers will appear here.'))+'</section>';
+  }
+
+  const scoringGroups=[
+    ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win'],['quad_1a_win','Quad 1A win']]],
+    ['Conference championships',[['conference_regular_title','Regular-season champion'],['conference_tournament_title','Tournament champion']]],
+    ['NCAA Tournament seeding',Array.from({length:16},(_,i)=>['ncaa_seed_'+(i+1),'Seed #'+(i+1)])],
+    ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]],
+    ['PAC-12 & MID-MAJOR BONUSES',[['ncaa_at_large_bid','NCAA at-large bid'],['ncaa_upset_per_seed','NCAA upset bonus per seed line']]]
+  ];
+  const scoreRules=()=>league?.settings?.scoring||{};
+  function scoringPage(){
+    const r=scoreRules(),count=Number(r.best_programs||8);
+    return heading('', 'Scoring')
+      +'<section class="panel scoring-lead"><div><span class="eyebrow">SEASON-LONG BEST BALL</span><h2>Best '+count+' programs count</h2><p>Every program remains owned year after year. Only the highest-scoring '+count+' programs on each roster contribute to the annual standings.</p></div><strong>'+count+'</strong></section>'
+      +'<div class="scoring-grid">'+scoringGroups.map(([title,fields])=>'<section class="panel scoring-panel'+(title==='NCAA Tournament seeding'?' scoring-panel-seeding':'')+'">'+panelHeading(escapeHTML(title))
+      +(title==='NCAA Tournament seeding'?'<div class="seed-scale-grid">':'')
+      +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')
+      +(title==='NCAA Tournament seeding'?'</div><p class="hint section-gap">Each seed receives its own appearance bonus once per NCAA Tournament.</p>':'')
+      +(title==='PAC-12 & MID-MAJOR BONUSES'?'<p class="hint section-gap">Applies to every eligible non-Power school, including individually selected programs and Pac-12 schools, <strong>excluding Gonzaga</strong>. The at-large bonus is awarded for an NCAA bid without winning the conference tournament (+5 per selection), after automatic bids are verified. Upset points are earned only by beating a better-seeded NCAA opponent (+1 per seed line, no cap). Both stack with normal tournament and quadrant points.</p>':'')+'</section>').join('')+'</div>'
+      +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
+      +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A is a separate +2.5 win category and does not stack with Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
+      +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins. See the dedicated Pac-12 &amp; Mid-Major Bonuses section for at-large and upset eligibility.</p>'
+      +'<p>Regular-season games earn their normal win points; conference tournament wins earn +2 and NCAA Tournament wins earn their configured postseason points. Those wins can additionally earn quadrant bonuses. There is no AP Poll or KenPom bonus.</p>'
+      +'<p class="muted">Provisional Bart Torvik-based points can change. Completed archived seasons use official final NET rankings.</p></section>';
+  }
+
+  function leaguePage(){
+    const scoring=standingsData?.season===season()?standingsData:null;
+    const scoreIndex=new Map((scoring?.standings||[]).map(x=>[x.manager_id,x]));
+    const users=members().slice();
+    if(scoring)users.sort((a,b)=>(scoreIndex.get(b.id)?.points||0)-(scoreIndex.get(a.id)?.points||0)||a.display_name.localeCompare(b.display_name));
+    const fmtPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
+    const rows=users.map((u,index)=>{
+      const manager=scoreIndex.get(u.id);
+      const schools=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
+      const schoolPreview=schools.length?'<span class="standings-mini-roster">'+schools.slice(0,5).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+(schools.length>5?'<span class="standings-roster-more">+'+(schools.length-5)+'</span>':'')+'</span>':'<span class="standings-roster-pending">Draft pending</span>';
+      const points=manager&&schools.length?'<strong>'+fmtPoints(manager.points)+'</strong><small class="muted"> · '+manager.counted_programs+' counting</small>':
+        schools.length?'<span class="pending-score">Loading</span>':'<span class="pending-score">—</span>';
+      return '<tr class="standing-row'+(u.id===me.id?' is-mine':'')+'"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
+        +(scoring&&owners().length?'<span class="standings-position-index">#'+String(1+users.findIndex(x=>Number(scoreIndex.get(x.id)?.points||0)===Number(scoreIndex.get(u.id)?.points||0)))+'</span>':'')
+        +avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':'View team profile')+'</small></div></button></td>'
+        +'<td class="standing-school-cell">'+schoolPreview+'</td><td class="numerical">'+points+'</td></tr>';
+    }).join('');
+    const note=standingsError?'Unable to refresh standings: '+escapeHTML(standingsError):
+      !scoring?'Calculating the current fantasy scores from verified games and awards...':
+      !owners().length?'Managers earn points after drafting their schools.':
+      scoring.quadrant_source==='torvik'?'Live fantasy points include provisional Q1/Q1A/Q2 bonuses using Bart Torvik. NCAA NET will replace these calculations automatically.':
+      scoring.quadrant_source==='pending'?'Live fantasy scores. Quadrant bonuses begin once complete Bart Torvik or NCAA NET rankings are available.':
+      'Live scores reflect regular-season wins, NET quadrant bonuses and confirmed postseason awards.';
+    return heading('SEASON '+escapeHTML(season()),'Standings','Dynasty standings for the current season.')
+      +'<section class="panel standings-panel">'
+      +panelHeading('League standings','Best '+Number(league.settings.scoring?.best_programs||8)+' programs count toward each manager’s total')
+      +'<div class="standings-notice">'+note+'</div>'
+      +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>MANAGER</th><th>ROSTERED SCHOOLS</th><th class="numerical">FANTASY POINTS</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'</section>';
+  }
+
+  function profileBack(){return '<button class="profile-back" data-act="profile-back">← Back</button>';}
+  function programSeasonSchedule(p){
+    const data=programScheduleCache[String(p.id)];
+    const loading=!!programScheduleLoading[p.id],error=programScheduleError[p.id];
+    const all=data?.season===season()?data.games:[];
+    const upcoming=all.filter(g=>g.status==='scheduled'||g.status==='live');
+    const complete=all.filter(g=>g.status==='final');
+    const shown=programScheduleView==='upcoming'?upcoming:programScheduleView==='completed'?complete:all;
+    const tab=(id,label,n)=>'<button type="button" data-act="schedule-view" data-id="'+id+'"'+
+      ' class="'+(programScheduleView===id?'active':'')+'" aria-pressed="'+(programScheduleView===id)+'">'+
+      label+' <span>'+n+'</span></button>';
+    const date=g=>g.start_utc?new Date(g.start_utc).toLocaleDateString('en-US',{
+      timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'}):g.game_date;
+    const time=g=>g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{
+      timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'TBD';
+    const rows=shown.map(g=>{
+      const ownHome=String(g.home_id)===String(p.id);
+      const ownScore=ownHome?g.home_score:g.away_score,oppScore=ownHome?g.away_score:g.home_score;
+      const opponent=programs().find(x=>String(x.id)===String(g.opponent_id));
+      const score=g.status==='final'&&ownScore!==null&&oppScore!==null
+        ?(Number(ownScore)>Number(oppScore)?'W ':Number(ownScore)<Number(oppScore)?'L ':'T ')+ownScore+'–'+oppScore:
+        g.status==='live'?'LIVE '+(ownScore??'–')+'–'+(oppScore??'–'):
+        g.status==='scheduled'?time(g):String(g.status||'TBD').toUpperCase();
+      const quad=quadLabel(g.quad,g.q1a),bonus=quadBonusText(g.quad,g.q1a);
+      const venue=g.venue==='neutral'?'Neutral':g.venue==='away'?'Away':'Home';
+      const note=(g.conference_game?'Conference':'Nonconference')+(Number(g.season_type)===1?' · Exhibition':'');
+      const hasLink=/^\d+$/.test(String(g.game_id||''));
+      return '<div class="program-schedule-row '+(g.status==='final'?'is-completed':g.status==='live'?'is-live':'')+'">'+
+        '<time>'+escapeHTML(date(g))+'</time>'+
+        '<span class="program-schedule-venue">'+escapeHTML(venue)+'</span>'+
+        '<span class="program-schedule-opponent">'+scoreboardLogo(g.opponent_id)+
+          '<span><strong>'+escapeHTML(g.opponent_name||'Opponent TBD')+'</strong><small>'+escapeHTML(note)+'</small></span></span>'+
+        '<span class="program-schedule-quad" title="'+escapeHTML(quadMeaning(g.quad,g.q1a,data?.rankings_source==='torvik'))+'">'+
+          quad+(bonus?'<small>'+bonus+'</small>':'')+'</span>'+
+        '<span class="program-schedule-result">'+escapeHTML(score)+'</span>'+
+        (hasLink?'<a class="program-schedule-link" href="https://www.espn.com/mens-college-basketball/game/_/gameId/'+
+          escapeHTML(g.game_id)+'" target="_blank" rel="noopener noreferrer" aria-label="Game details">↗</a>':'')+
+        '</div>';
+    }).join('');
+    const message=error||data?.source_error?
+      'ESPN team schedule is temporarily unavailable. Only previously imported games may be shown.':
+      data?.source==='ESPN published schedule'?
+        'Published ESPN schedule combined with verified results. Unannounced tournament matchups are added when confirmed.':
+        'Only imported fixtures are available. Published future games will appear when the team schedule is available.';
+    return '<section id="program-schedule" class="panel program-full-schedule">'+
+      '<div class="program-schedule-heading"><div><span class="eyebrow">COMPLETE PUBLISHED SLATE</span><h2>'+
+      escapeHTML(season())+' Schedule</h2><p>Every announced matchup, venue and potential quadrant win bonus</p></div>'+
+      '<button type="button" class="btn small secondary" data-act="schedule-retry" data-id="'+escapeHTML(p.id)+'">'+
+        (loading?'Loading…':'↻ Refresh schedule')+'</button></div>'+
+      '<div class="program-schedule-tabs" role="group" aria-label="Schedule game filters">'+
+      tab('all','All',all.length)+tab('upcoming','Upcoming',upcoming.length)+
+      tab('completed','Completed',complete.length)+'</div>'+
+      (rows?'<div class="program-schedule-list">'+rows+'</div>':
+        '<div class="program-schedule-placeholder">'+escapeHTML(loading?'Loading published 2026–27 schedule…':
+          error||'No games match this filter.')+'</div>')+
+      '<p class="program-schedule-note">'+escapeHTML(message)+
+      (data?.rankings_source==='torvik'?' Quadrants are provisional until official NCAA NET is published.':
+        data?.rankings_source==='pending'?' Quadrants will appear when team rankings are available.':'')+
+      ' Bonus points are earned only for wins.</p></section>';
+  }
+  function programProfilePage(){
+    const p=programs().find(x=>String(x.id)===String(selectedProgramId))||
+      (schoolLeaders?.directory||[]).find(x=>String(x.id)===String(selectedProgramId));
+    if(!p)return heading('', 'Program unavailable')+profileBack();
+
+    const report=programResultCache[p.id]?.season===season()?programResultCache[p.id]:null;
+    const history=report?.history?.seasons||[];
+    const selected=selectedProgramSeason||season();
+    const selectedStats=history.find(x=>x.season===selected);
+    const currentStats=history.find(x=>x.season===season());
+    const owner=programOwned(p.id);
+    const manager=members().find(m=>m.id===owner?.manager_id);
+    const selection=picks().find(x=>x.program_id===p.id);
+    const games=(report?.games||[]).slice().sort((a,b)=>String(b.game_date).localeCompare(String(a.game_date)));
+    const activity=(league.roster_transactions||[]).filter(x=>x.program_id===p.id).slice(0,8);
+    const trades=(league.trade_items||[]).filter(x=>x.program_id===p.id).filter(item=>
+      (league.trades||[]).some(t=>t.id===item.trade_id&&t.status==='accepted'));
+    const points=x=>x?.points===null||x?.points===undefined?'—':
+      Number(x.points).toLocaleString('en-US',{maximumFractionDigits:2});
+    const rank=x=>x?.rank>0&&x?.rank_total>0&&x?.status!=='not_applicable'
+      ?(x.rank_tied?'T-':'')+'#'+Number(x.rank)+' / '+Number(x.rank_total):'—';
+    const record=x=>x?.games>0?x.wins+'–'+x.losses:'—';
+    const labelStat=(name,value)=>'<div class="pp-mini-stat"><span>'+escapeHTML(name)+'</span><strong>'+
+      escapeHTML(value)+'</strong></div>';
+    const rankValue=report?.net?.net_rank?'#'+report.net.net_rank:'—';
+    const currentRecord=report?.record?.played?report.record.wins+'–'+report.record.losses:record(currentStats);
+    const ratingLabel=report?.ranking_source==='torvik'?'Bart Torvik (prelim)':'NET rank';
+    const state=programProfileTab==='schedule'||programProfileTab==='history'||programProfileTab==='ratings'
+      ?programProfileTab:'overview';
+    const tabs=[['overview','Overview'],['schedule','Schedule'],['history','History'],['ratings','Ratings']];
+    const tabNav='<nav id="program-profile-navigation" class="pp-tabs" role="tablist" aria-label="Program profile sections">'+
+      tabs.map(([id,name])=>'<button type="button" role="tab" id="pp-tab-'+id+'" aria-controls="pp-content" aria-selected="'+
+      (state===id)+'" class="'+(state===id?'active':'')+'" data-act="program-profile-tab" data-id="'+id+'">'+
+      name+'</button>').join('')+'</nav>';
+
+    const earned=(currentStats?.breakdown||[]).filter(item=>Number(item.points||0)>0);
+    const shortBreakdown=earned.length?earned.slice(0,6).map(item=>
+      '<div class="pp-breakdown-row"><span>'+escapeHTML(item.label)+'</span><strong>+'+
+      Number(item.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join(''):
+      '<p class="pp-empty-copy">No fantasy points have been recorded yet.</p>';
+    const recent=games.length?games.slice(0,5).map(g=>resultGameRow(g,p.id)).join(''):
+      '<p class="pp-empty-copy">Results will appear here when games are completed.</p>';
+
+    const overview='<div class="pp-overview-grid">'+
+      '<section class="panel pp-section pp-scoring"><div class="pp-section-head"><div><h2>Fantasy scoring</h2>'+
+      '<p>'+escapeHTML(season())+' season · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
+      '<strong class="pp-section-points">'+points(currentStats)+' <small>pts</small></strong></div>'+
+      '<div class="pp-fact-strip pp-fact-four">'+
+      labelStat('Regular wins',currentStats?.games?currentStats.regular_wins:'—')+
+      labelStat('Q1 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1??'—')+
+      labelStat('Q1A wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1a??'—')+
+      labelStat('Q2 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q2??'—')+
+      '</div><div class="pp-list-title">POINTS BY CATEGORY</div><div class="pp-breakdown">'+shortBreakdown+'</div>'+
+      '<button type="button" class="pp-text-action" data-act="program-show-history">Full scoring breakdown <span aria-hidden="true">›</span></button>'+
+      '</section>'+
+      '<section class="panel pp-section pp-recent"><div class="pp-section-head"><div><h2>Recent results</h2><p>Latest completed and recorded games</p></div>'+
+      '<button type="button" class="pp-text-action" data-act="program-profile-tab" data-id="schedule">All games ›</button></div>'+
+      '<div class="pp-recent-list">'+recent+'</div></section></div>'+
+      '<div class="pp-overview-foot"><span>'+escapeHTML(conf(p.conference_id))+'</span>'+
+      '<span>'+(selection?'Draft pick #'+selection.overall+' · Round '+selection.round:'Undrafted')+'</span>'+
+      (report?.ranking_date?'<span>'+escapeHTML(ratingLabel)+' updated '+escapeHTML(report.ranking_date)+'</span>':'')+
+      '</div>';
+
+    const firstYear=Number(season().slice(0,4));
+    const rows=Array.from({length:Math.max(1,firstYear-2021+1)},(_,i)=>{
+      const year=firstYear-i,yearLabel=year+'-'+String((year+1)%100).padStart(2,'0');
+      const data=history.find(x=>x.season===yearLabel);
+      const chosen=selected===yearLabel;
+      return '<button type="button" class="pp-history-row'+(chosen?' active':'')+'" data-act="program-season" data-id="'+
+        escapeHTML(yearLabel)+'" aria-pressed="'+chosen+'" aria-label="View '+escapeHTML(yearLabel)+' season">'+
+        '<strong>'+escapeHTML(yearLabel)+'</strong><span class="pp-history-record">'+escapeHTML(record(data))+'</span>'+
+        '<span class="pp-history-rank">'+escapeHTML(rank(data))+'</span><strong class="pp-history-points">'+
+        points(data)+' <small>pts</small></strong></button>';
+    }).join('');
+    const items=selectedStats?.breakdown||[];
+    const fullBreakdown=items.length?items.map(item=>
+      '<div class="pp-breakdown-row"><span><strong>'+escapeHTML(item.label)+'</strong>'+
+      '<small>'+Number(item.count||0)+' × '+Number(item.rate||0).toLocaleString('en-US',{maximumFractionDigits:2})+' pts</small></span>'+
+      '<strong class="'+(Number(item.points||0)>0?'is-earned':'')+'">'+
+      (Number(item.points||0)>0?'+':'')+Number(item.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+
+      '</strong></div>').join(''):'<p class="pp-empty-copy">No scoring details are available for this season yet.</p>';
+    const historyDetail='<section class="panel pp-section pp-history-detail"><div class="pp-section-head">'+
+      '<div><h2>'+escapeHTML(selected)+' breakdown</h2><p>'+
+      (selectedStats?.status==='complete'?'Final verified results':selectedStats?.status==='partial'?'Live totals may change':'Recorded fantasy scoring')+
+      '</p></div><strong class="pp-section-points">'+points(selectedStats)+' <small>pts</small></strong></div>'+
+      '<div class="pp-history-compact"><span>National league rank <strong>'+escapeHTML(rank(selectedStats))+'</strong></span>'+
+      '<button type="button" class="pp-text-action" data-act="view-historical-rank" data-season="'+escapeHTML(selected)+
+      '">View rankings ›</button></div>'+
+      '<div class="pp-fact-strip pp-fact-four">'+
+      labelStat('Regular wins',selectedStats?.games?selectedStats.regular_wins:'—')+
+      labelStat('Q1 wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q1??'—')+
+      labelStat('Q1A wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q1a??'—')+
+      labelStat('Q2 wins',selectedStats?.quadrant_source==='pending'?'Pending':selectedStats?.q2??'—')+
+      '</div><div class="pp-list-title">COMPLETE POINT BREAKDOWN</div><div class="pp-breakdown pp-breakdown-full">'+
+      fullBreakdown+'</div>'+
+      (selectedStats?.quadrant_provisional?'<p class="pp-data-note">Quadrant totals are provisional pending official NCAA NET rankings.</p>':'')+
+      '</section>';
+    const transactions=activity.map(t=>'<div class="pp-history-event"><strong>'+
+      escapeHTML(t.action==='claim'?'Acquired':'Released')+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('')+
+      trades.map(t=>'<div class="pp-history-event"><strong>Traded</strong><span>'+
+      escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+
+      escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join('');
+    const extra='<div class="pp-history-extra">'+
+      (report?.awards?.length?'<details class="panel pp-disclosure"><summary>Verified achievements <span>'+report.awards.length+' ›</span></summary>'+
+      report.awards.map(a=>'<div class="pp-history-event"><strong>'+escapeHTML(a.award_type.replaceAll('_',' '))+
+      '</strong><span>'+escapeHTML(a.value)+' · '+escapeHTML(a.source_note)+'</span></div>').join('')+'</details>':'')+
+      (transactions?'<details class="panel pp-disclosure"><summary>Ownership & transactions <span>'+
+      (activity.length+trades.length)+' ›</span></summary>'+transactions+'</details>':'')+
+      '</div>';
+    const historical='<section class="panel pp-section pp-history-list"><div class="pp-section-head"><div>'+
+      '<h2>Season history</h2><p>Select a year to see its complete scoring details</p></div></div>'+
+      '<div class="pp-history-head"><span>SEASON</span><span class="pp-history-record">RECORD</span>'+
+      '<span class="pp-history-rank">RANK</span><span>POINTS</span></div>'+
+      '<div class="pp-history-rows">'+rows+'</div></section>'+historyDetail+extra+
+      (report?.history_error?'<p class="pp-data-note">'+escapeHTML(report.history_error)+'</p>':'');
+
+    const metricsYear=ratingYear(selected),metrics=ratingOf(p,metricsYear);
+    const decimal=(value,d=1)=>value===null||value===undefined?'—':Number(value).toFixed(d);
+    const ratingCard=(title,value,note='')=>'<div class="pp-rating-card"><span>'+escapeHTML(title)+'</span>'+
+      '<strong>'+escapeHTML(value)+'</strong>'+(note?'<small>'+escapeHTML(note)+'</small>':'')+'</div>';
+    const ratings='<section class="panel pp-section pp-ratings"><div class="pp-section-head"><div>'+
+      '<h2>Power ratings</h2><p>Bart Torvik · '+escapeHTML(selected)+'</p></div></div>'+
+      '<div class="pp-rating-seasons">'+Array.from({length:Math.max(1,firstYear-2021+1)},(_,i)=>{
+        const year=firstYear-i,label=year+'-'+String((year+1)%100).padStart(2,'0');
+        return '<button type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" class="'+
+          (label===selected?'active':'')+'" aria-pressed="'+(label===selected)+'">'+escapeHTML(label)+'</button>';
+      }).join('')+'</div>'+
+      (metrics?'<div class="pp-ratings-grid">'+
+        ratingCard('National Bart Torvik','#'+metrics.rank)+
+        ratingCard('Barthag',decimal(metrics.barthag,3))+
+        ratingCard('Adjusted offense',decimal(metrics.adj_o),metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Points / 100 possessions')+
+        ratingCard('Adjusted defense',decimal(metrics.adj_d),metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Points / 100 possessions')+
+        ratingCard('Wins above bubble',decimal(metrics.wab))+
+        ratingCard('Adjusted tempo',decimal(metrics.tempo))+
+        '</div>':'<p class="pp-empty-copy">'+escapeHTML(ratingError[metricsYear]||
+          (ratingLoading[metricsYear]?'Loading verified Bart Torvik ratings…':'No verified Bart Torvik data for this season.'))+'</p>')+
+      '<div class="pp-rating-links">'+ratingExternalLinks(metricsYear)+
+      '<button class="pp-text-action" type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+
+      '">Compare all programs ›</button></div></section>';
+
+    const panel=state==='schedule'?programSeasonSchedule(p):
+      state==='history'?historical:state==='ratings'?ratings:overview;
+    const ownerMarkup=manager?'<button type="button" class="program-profile-owner-link" data-act="open-manager" data-id="'+
+      escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' ›</button>':
+      '<span>Unowned</span>';
+    return '<div class="pp-page">'+profileBack()+
+      '<header class="pp-hero">'+
+      '<div class="pp-identity">'+img(p)+'<div class="pp-identity-text"><span class="pp-conference">'+
+      escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1>'+
+      '<div class="pp-owner">Dynasty owner: '+ownerMarkup+'</div></div></div>'+
+      '<span class="pp-status '+(owner?'is-rostered':'is-available')+'">'+
+      (owner?'Rostered':'Available')+'</span></header>'+
+      '<div class="pp-statbar">'+
+      '<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+points(currentStats)+'</strong></div>'+
+      '<div><span>PROGRAM RANK</span><strong>'+escapeHTML(rank(currentStats))+'</strong></div>'+
+      '<div><span>SEASON RECORD</span><strong>'+escapeHTML(currentRecord)+'</strong></div>'+
+      '<div><span>'+escapeHTML(ratingLabel.toUpperCase())+'</span><strong>'+escapeHTML(rankValue)+'</strong></div>'+
+      '</div>'+tabNav+
+      '<div id="pp-content" class="pp-content" role="tabpanel" aria-labelledby="pp-tab-'+state+'">'+panel+'</div>'+
+      '</div>';
+  }
+  function managerProfilePage(){
+    const u=members().find(m=>String(m.id)===String(selectedManagerId));
+    if(!u)return heading('', 'Manager unavailable')+profileBack();
+    // The owner's own profile uses the same visual language as My Team, without editing controls.
+    const scoring=standingsData?.season===season()?standingsData:null;
+    const pointMap=scoring?.program_points||{};
+    const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(u.id));
+    const programIndex=new Map(programs().map(p=>[String(p.id),p]));
+    const roster=owners().filter(o=>String(o.manager_id)===String(u.id))
+      .map(o=>programIndex.get(String(o.program_id))).filter(Boolean)
+      .sort((a,b)=>scoring?
+        Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
+        a.name.localeCompare(b.name):a.name.localeCompare(b.name));
+    const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+    const points=managerScore&&roster.length?fmt(managerScore.points):scoring&&roster.length?'0':'—';
+    const bestCount=Number(league.settings.scoring?.best_programs||8);
+    const records=(league.season_records||[]).filter(x=>String(x.manager_id)===String(u.id))
+      .sort((a,b)=>String(b.season).localeCompare(String(a.season)));
+    const archived=records.length?'<details class="tm-archive"><summary><span>Past seasons</span><small>'+records.length+' archived <span aria-hidden="true">⌄</span></small></summary>'
+      +'<div class="tm-archive-body">'+records.map(x=>{
+        const saved=(league.archived_rosters||[]).filter(a=>String(a.season)===String(x.season)&&String(a.manager_id)===String(u.id));
+        return '<details class="archived-roster"><summary><strong>'+escapeHTML(x.season)+'</strong><span>'
+          +(x.fantasy_points==null?'Score unavailable':fmt(x.fantasy_points)+' pts')+'</span></summary>'
+          +'<div class="archive-schools">'+(saved.map(a=>{
+            const p=programIndex.get(String(a.program_id));
+            return p?'<button type="button" class="table-user" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button>':'';
+          }).join('')||'No programs archived')+'</div></details>';
+      }).join('')+'</div></details>':'';
+    const mine=String(u.id)===String(me.id);
+    return '<main class="my-team-page tm-v3 tm-opponent-page">'
+      +'<div class="tm-backline">'+profileBack()+'<span>LEAGUE ROSTERS <span aria-hidden="true">/</span> '+escapeHTML(u.display_name)+'</span></div>'
+      +'<header class="tm-masthead">'
+      +'<div class="tm-masthead-top"><span class="tm-label">'+(mine?'YOUR FRANCHISE':'DYNASTY FRANCHISE')+'</span><span class="tm-year">'+escapeHTML(season())+' SEASON</span></div>'
+      +'<div class="tm-masthead-inner"><div class="tm-identity">'
+      +'<div class="tm-avatar">'+avatar(u)+'</div><div class="tm-identity-copy">'
+      +'<h1>'+escapeHTML(u.display_name)+'</h1>'
+      +'<p>@'+escapeHTML(u.username||'manager')+' <span aria-hidden="true">·</span> '+(mine?'Your franchise':'League manager')+'</p></div></div>'
+      +'<div class="tm-score"><span>SEASON POINTS</span><strong>'+points+'</strong><small>'
+      +(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div></div></header>'
+      +teamLeagueSwitcher(u.id)
+      +'<section class="tm-roster" aria-labelledby="tm-opponent-roster-title">'
+      +'<div class="tm-roster-heading"><div><span class="tm-overline">'+escapeHTML(season())+' ROSTER</span>'
+      +'<h2 id="tm-opponent-roster-title">'+escapeHTML(u.display_name)+'&#39;s Programs</h2>'
+      +'<p>'+(roster.length?roster.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
+        'No programs drafted yet')+'</p></div>'
+      +'<div class="tm-actions"><button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="team">My Team <span aria-hidden="true">↗</span></button>'
+      +'<button type="button" class="tm-action" data-act="tab" data-id="league">Standings <span aria-hidden="true">↗</span></button></div></div>'
+      +(roster.length?'<div class="tm-roster-scroll"><table class="tm-table">'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<tbody>'+teamProgramRows(roster,scoring,pointMap)+'</tbody></table></div>'
+        :'<div class="tm-empty">'+empty('Awaiting the draft','Programs will appear here when this manager makes selections.')+'</div>')
+      +'<footer class="tm-roster-footer"><span>Programs are permanently owned unless traded or dropped.</span>'
+      +'<span>'+(scoring?'Points update with the current season standings.':'Season totals will appear once scoring is available.')+'</span></footer>'
+      +'</section>'+archived+'</main>';
+  }
+  function historyPage(){
+    const archives=league.archives||[];
+    const chosen=archives.find(a=>a.season===selectedHistorySeason)||archives[0];
+    if(chosen)selectedHistorySeason=chosen.season;
+    const entries=chosen?(league.season_records||[]).filter(r=>r.season===chosen.season):[];
+    const historyRows=entries.map(r=>{
+      const m=members().find(u=>u.id===r.manager_id);
+      return '<button class="history-team" data-act="open-manager" data-id="'+escapeHTML(r.manager_id)+'"><strong>'+escapeHTML(m?.display_name||'Manager')+'</strong><span>'+r.programs_count+' programs</span><span>'+(r.fantasy_points==null?'Score unavailable':Number(r.fantasy_points).toLocaleString('en-US',{maximumFractionDigits:2})+' pts')+'</span></button>';
+    }).join('');
+    return heading('', 'Dynasty history')
+      +'<div class="archive-intro">Program ownership carries into every new season. Archived rosters stay available for historical reference.</div>'
+      +'<section class="panel">'+panelHeading('Completed seasons')
+      +(archives.length?'<div class="form-row"><label for="history-season">Season</label><select id="history-season" class="field">'+archives.map(a=>'<option value="'+escapeHTML(a.season)+'" '+(a.season===selectedHistorySeason?'selected':'')+'>'+escapeHTML(a.season)+'</option>').join('')+'</select></div>'
+        +'<div class="archive-champion"><span>CHAMPION</span><strong>'+escapeHTML(members().find(u=>u.id===chosen.champion_manager_id)?.display_name||'Not recorded')+'</strong></div>'
+        +'<div class="history-team-list">'+historyRows+'</div>'
+        +'<p class="hint section-gap">Scoring and final positions will populate after the scoring system is configured.</p>':empty('No seasons archived','The inaugural season is still in progress.'))+'</section>';
+  }
+  function waiversPage(){
+    const enabled=league.settings.waivers_enabled&&league.settings.draft_status==='finished';
+    const eligible=eligiblePrograms().filter(p=>!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
+    const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
+    const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
+    const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+    const drop='<option value="">No drop ('+mine.length+'/'+league.settings.rounds+' owned)</option>'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+    return heading('', 'Waivers')
+      +(enabled?'<section class="panel">'+panelHeading('Submit a waiver claim')+'<div class="form-row"><label for="waiver-program">Available program</label><select id="waiver-program" class="field">'+opts+'</select></div><div class="form-row"><label for="waiver-drop">Release program (optional if roster not full)</label><select id="waiver-drop" class="field">'+drop+'</select></div><button class="btn" data-act="waiver-claim" '+(!eligible.length?'disabled':'')+'>Submit claim</button><p class="hint section-gap">Claims are reviewed by the commissioner. Approvals are not automatic.</p></section>'
+          +'<section class="panel section-gap">'+panelHeading('Release a program')+'<div class="form-row"><label for="waiver-release">Your roster</label><select id="waiver-release" class="field">'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div><button class="btn secondary" data-act="waiver-drop" '+(!mine.length?'disabled':'')+'>Drop selected program</button></section>'
+          :'<section class="panel">'+empty('Waivers are closed',league.settings.draft_status==='finished'?'The commissioner has not enabled waivers.':'Waivers begin after the inaugural draft.')+'</section>')
+      +'<section class="panel section-gap">'+panelHeading('Your claims')+(claims.length?claims.map(c=>{const p=programs().find(p=>p.id===c.program_id);return '<div class="history-row"><div><strong>'+escapeHTML(p?.name||'Program')+'</strong><small>'+escapeHTML(c.status)+'</small></div>'+(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>';}).join(''):empty('No waiver claims'))+'</section>';
+  }
+  function backendHealthPanel(){
+    const scan=integritySnapshot?.latest,metrics=scan?.metrics||{},issues=scan?.issues||[];
+    const label=scan?.severity||'pending',at=scan?.scanned_at?new Date(scan.scanned_at).toLocaleString():'Not yet scanned';
+    const issueRows=issues.map(x=>'<div class="data-run"><span class="failed">'+Number(x.count||0)+'</span><div><strong>'+escapeHTML(x.message||x.code)+'</strong><small>'+escapeHTML(x.code||'')+'</small></div></div>').join('');
+    const revisionRows=(integritySnapshot?.revisions||[]).slice(0,6).map(x=>{
+      const manager=members().find(u=>u.id===x.actor_id);
+      return '<div class="data-run"><span>RULES</span><div><strong>'+escapeHTML(manager?.display_name||'Commissioner')+'</strong><small>'+escapeHTML(new Date(x.changed_at).toLocaleString())+' · Revision #'+Number(x.id||0)+'</small></div></div>';
+    }).join('');
+    const scanRows=(integritySnapshot?.history||[]).slice(0,6).map(x=>'<div class="data-run"><span>'+escapeHTML(x.severity)+'</span><div><strong>'+escapeHTML(new Date(x.scanned_at).toLocaleString())+'</strong><small>'+Number(x.critical_count||0)+' critical · '+Number(x.warning_count||0)+' warnings</small></div></div>').join('');
+    const score=scoringAudit?'<p class="hint section-gap">'+(scoringAudit.valid?'Scoring verification passed':'Scoring exceptions detected')+' · '+Number(scoringAudit.program_seasons||0)+' program-seasons checked · '+(scoringAudit.invalid||[]).length+' invalid entries.</p>':'';
+    return '<section class="panel setting-panel backend-center">'+panelHeading('Backend control center','Hourly integrity checks · commissioner only')+
+      '<div class="backend-summary"><div><span class="backend-severity '+escapeHTML(label)+'">'+escapeHTML(label.toUpperCase())+'</span><p class="hint">Last scan: '+escapeHTML(at)+'</p></div>'+
+      '<div class="backend-severity-metrics"><strong>'+Number(scan?.critical_count||0)+'</strong><small>Critical</small><strong>'+Number(scan?.warning_count||0)+'</strong><small>Warnings</small></div></div>'+
+      '<div class="data-kpis"><div><span>ALL GAMES</span><strong>'+Number(metrics.game_count||0).toLocaleString()+'</strong></div><div><span>STALLED JOBS</span><strong>'+Number(metrics.stalled_jobs||0)+'</strong></div><div><span>FAILED / 24H</span><strong>'+Number(metrics.failed_24h||0)+'</strong></div></div>'+
+      (integrityError?'<p class="data-error section-gap">'+escapeHTML(integrityError)+'</p>':'')+
+      (issueRows?'<div class="backend-issues section-gap">'+issueRows+'</div>':'<p class="hint section-gap">No outstanding integrity exceptions.</p>')+
+      '<div class="button-row section-gap"><button class="btn" data-act="data-integrity-scan">Run integrity scan</button><button class="btn secondary" data-act="data-repair-interrupted">Retry interrupted imports</button><button class="btn secondary" data-act="data-verify-scoring">Verify scoring totals</button></div>'+
+      '<p class="hint section-gap">Scans do not modify game scores. Recovery retries up to two dates, with cooldowns and logged outcomes. Scoring verification recalculates using the shared scoring engine and never changes rules.</p>'+
+      score+
+      '<details class="section-gap"><summary>Scan history</summary>'+(scanRows||'<p class="hint">No scans.</p>')+'</details>'+
+      '<details class="section-gap"><summary>Scoring rule changes</summary>'+(revisionRows||'<p class="hint">No revisions recorded yet.</p>')+'</details>'+
+      '</section>';
+  }
+  function notificationAdminPage(){
+    const d=notificationAdmin||{},cfg=d.settings||{};
+    const controls=[['trades','Trade alerts','Offers, acceptances and declines'],['draft','Draft alerts','Draft start, on-clock and soon-up notifications'],['announcements','Commissioner announcements','League-wide messages']];
+    const opts=controls.map(([key,title,detail])=>'<label class="notification-admin-toggle"><span><strong>'+title+'</strong><small>'+detail+'</small></span>'
+      +'<input id="admin-notification-'+key+'" type="checkbox" '+(cfg[key]!==false?'checked':'')+'/></label>').join('');
+    const recipientOptions=members().map(m=>'<option value="'+escapeHTML(m.id)+'">'+escapeHTML(m.display_name)+'</option>').join('');
+    const enrolled=(d.devices||[]).map(m=>{
+      const devices=Math.max(0,Number(m.devices)||0);
+      const muted=['trades','draft','announcements'].every(key=>m[key]===false);
+      const push=devices>0&&m.push_enabled!==false&&!muted;
+      const email=m.email_active===true&&d.email_available===true&&!muted;
+      return {...m,devices,push,email,muted,enabled:push||email};
+    });
+    const enabledCount=enrolled.filter(m=>m.enabled).length;
+    const managerRows=enrolled.map(m=>{
+      const label=m.enabled?(m.push&&m.email?'Push + email':m.push?'Push enabled':'Email enabled'):
+        m.muted?'Alerts muted':m.devices&&m.push_enabled===false?'Push paused':'Not enabled';
+      const devices=m.devices?m.devices+' registered '+(m.devices===1?'device':'devices'):'No push devices registered';
+      const detail=devices+(m.email?' · Verified email alerts':'');
+      return '<div class="notification-member-row"><span class="notification-member-avatar" aria-hidden="true">'+escapeHTML(initials(m.display_name))+'</span>'
+        +'<span class="notification-member-info"><strong>'+escapeHTML(m.display_name)+'</strong><small>'+escapeHTML(detail)+'</small></span>'
+        +'<span class="notification-member-state '+(m.enabled?'is-enabled':'is-disabled')+'"><i aria-hidden="true"></i>'+escapeHTML(label)+'</span></div>';
+    }).join('');
+    const managerOverview='<section class="panel setting-panel section-gap notification-member-panel">'+panelHeading('Manager notification status','See who can receive push or verified email alerts')
+      +(Array.isArray(d.devices)?'<div class="notification-member-toolbar"><strong>'+enabledCount+' of '+enrolled.length+' managers enabled</strong>'
+        +'<button type="button" class="btn small secondary" data-act="notification-admin-refresh">Refresh status</button></div>'
+        +'<div class="notification-member-list">'+managerRows+'</div>':
+          '<p class="hint section-gap">'+(notificationAdminLoading?'Checking manager registrations…':'Manager notification status is unavailable. Use Refresh to try again.')+'</p>')
+      +'<p class="hint notification-member-note">Enabled means a registered push device with push delivery allowed, or verified email alerts. Device permissions and delivery may still vary.</p>'
+      +'</section>';
+    const recent=(d.announcements||[]).map(a=>'<div class="notification-admin-announcement"><strong>'+escapeHTML(a.title)+'</strong><small>'
+      +escapeHTML(notificationTime(a.created_at))+' · '+Number(a.recipients||0)+' recipients</small><p>'+escapeHTML(a.body)+'</p></div>').join('');
+    return '<section class="panel setting-panel notification-admin-panel">'+panelHeading('Notification Center','Control league alerts and send messages')
+      +'<div class="notification-admin-metrics">'
+      +[['Sent',d.total||0],['Unread',d.unread||0],['Pending delivery',d.pending_delivery||0],
+        ['Push devices',(d.devices||[]).reduce((a,b)=>a+Number(b.devices||0),0)]].map(([label,value])=>
+          '<div><strong>'+Number(value).toLocaleString()+'</strong><span>'+label+'</span></div>').join('')+'</div>'
+      +(notificationAdminError?'<p class="notice">'+escapeHTML(notificationAdminError)+'</p>':'')
+      +'<div class="button-row section-gap"><button class="btn small secondary" data-act="notification-admin-refresh">Refresh</button>'
+      +'<button class="btn small secondary" data-act="notifications-test">Send test to me</button>'
+      +'<button class="btn small ghost" data-act="notification-admin-retry">Retry pending</button></div></section>'
+      +managerOverview
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Send an announcement','Push to opted-in devices and every selected manager\'s inbox')
+      +'<div class="form-row"><label for="notification-recipient">Send to</label><select class="field" id="notification-recipient">'
+      +'<option value="all">Everyone in the league</option>'+recipientOptions+'</select></div>'
+      +'<div class="form-row"><label for="notification-announcement-title">Title</label>'
+      +'<input class="field" id="notification-announcement-title" maxlength="90" placeholder="League announcement" /></div>'
+      +'<div class="form-row"><label for="notification-announcement-message">Message</label>'
+      +'<textarea class="field" id="notification-announcement-message" rows="4" maxlength="650" placeholder="Write your update…"></textarea></div>'
+      +'<button class="btn" type="button" data-act="notification-admin-send">Send announcement</button>'
+      +'<p class="hint section-gap">A maximum of eight announcements can be sent every 24 hours.</p></section>'
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Automatic notifications','League-wide event switches')+opts
+      +'<div class="button-row section-gap"><button class="btn secondary" data-act="notification-admin-save">Save settings</button></div></section>'
+
+      +'<section class="panel setting-panel section-gap">'+panelHeading('Recent announcements')
+      +(recent||'<p class="hint">No announcements sent yet.</p>')+'</section>';
+  }
+  function commissionerPage(){
+    if(me.role!=='commissioner')return '';
+    const settings=league.settings;
+    const locked=settings.draft_status!=='pending'||picks().length>0;
+    const cap=Number(settings.max_managers||10);
+    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','Accounts & invites'],['activity','Activity','Visits & actions'],['notifications','Notifications','Broadcasts & delivery'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
+    const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
+      '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
+    ).join('')+'</nav>';
+    let body='';
+    if(adminSection==='general'){
+      body='<section class="panel setting-panel">'+panelHeading('General')
+        +'<div class="settings-grid"><div class="form-row"><label for="league-name">League name</label><input id="league-name" class="field" type="text" maxlength="40" value="'+escapeHTML(settings.league_name||'Boek Dynasty')+'"/></div>'
+        +'<div class="form-row"><label for="manager-limit">Maximum managers</label><input id="manager-limit" class="field" type="number" min="'+Math.max(2,members().length)+'" max="20" step="1" value="'+cap+'" '+(locked?'disabled':'')+'/></div></div>'
+        +'<p class="settings-hint">'+members().length+' of '+cap+' spots filled'+(locked?' · Capacity locked once drafting begins':' · Allowed: 2–20 managers')+'</p>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-general">Save changes</button></div>'
+        +'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Best-ball lineup','Season scoring format')
+        +'<div class="bestball-setting-row"><div><strong>Counting programs</strong><p>Only the highest-scoring programs on each manager’s roster count toward the annual standings. The others remain owned.</p></div><div class="bestball-input"><label for="bestball-count">Best of '+settings.rounds+'</label><input id="bestball-count" class="field" type="number" min="1" max="'+settings.rounds+'" step="1" value="'+Number(settings.scoring?.best_programs||8)+'"/></div></div>'
+        +'<div class="button-row"><button class="btn" data-act="save-bestball">Save best-ball format</button></div>'
+        +'</section>';
+    }else if(adminSection==='draft'){
+      if(draftOrderPreview.length!==members().length||draftOrderPreview.some(id=>!members().some(u=>u.id===id)))draftOrderPreview=order().slice();
+      const orderLocked=locked||!!settings.draft_race;
+      const rows=draftOrderPreview.map((id,index)=>{
+        const person=members().find(u=>u.id===id);
+        return '<div class="draft-order-row"><span class="draft-order-number">'+(index+1)+'</span>'+avatar(person)+'<strong class="grow">'+escapeHTML(person.display_name)+'</strong>'
+          +(orderLocked?'':'<span class="draft-order-buttons"><button data-act="move-draft" data-index="'+index+'" data-dir="-1" '+(index===0?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' up">↑</button><button data-act="move-draft" data-index="'+index+'" data-dir="1" '+(index===draftOrderPreview.length-1?'disabled':'')+' aria-label="Move '+escapeHTML(person.display_name)+' down">↓</button></span>')
+          +'</div>';
+      }).join('');
+      body='<section class="panel setting-panel">'+panelHeading('Draft settings')
+        +'<div class="settings-grid"><div class="form-row"><label for="rounds">Rounds per manager</label><input class="field" id="rounds" type="number" min="1" max="20" value="'+settings.rounds+'" '+(locked?'disabled':'')+'/></div>'
+        +'<div class="settings-static"><span>Draft format</span><strong>Snake</strong><small>Status: '+escapeHTML(settings.draft_status)+'</small></div></div>'
+        +'<button class="btn" data-act="save-rounds" '+(locked?'disabled':'')+'>Save rounds</button>'
+        +'<div class="form-row section-gap"><label for="clock-duration">Draft clock</label><select id="clock-duration" class="field">'+[[0,'Off'],[60,'1 minute'],[120,'2 minutes'],[180,'3 minutes'],[300,'5 minutes'],[600,'10 minutes'],[900,'15 minutes'],[1800,'30 minutes']].map(([seconds,label])=>'<option value="'+seconds+'" '+(settings.draft_clock_seconds===seconds?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'
+        +'<div class="button-row"><button class="btn secondary" data-act="save-clock" '+(!['pending','paused'].includes(settings.draft_status)?'disabled':'')+'>Save clock</button></div>'
+        +'<p class="hint section-gap">The countdown resets after each pick. Time running out does not automatically make a selection.</p></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Draft order')
+        +(rows||empty('Waiting for managers'))
+        +(orderLocked?'':'<div class="button-row section-gap"><button class="btn secondary" data-act="shuffle-draft" '+(members().length<2?'disabled':'')+'>Shuffle</button><button class="btn ghost" data-act="signup-draft">Signup order</button><button class="btn" data-act="save-draft-order" '+(members().length<2?'disabled':'')+'>Save order</button></div>')+'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Race controls',settings.draft_race?'The official order is locked':'Set the order above before starting the race')
+        +(settings.draft_race?'<p class="hint">The result is saved for every manager. You can reset the race before the draft starts, which also restores signup order.</p>'
+          +'<div class="button-row section-gap"><button class="btn danger" data-act="race-reset" '+(locked?'disabled':'')+'>Reset race</button></div>':
+          '<p class="hint">Once you run the race, this becomes the official first-round order and cannot be changed without resetting.</p>'
+          +'<div class="button-row section-gap"><button class="btn secondary" data-act="tab" data-id="draft-order">Open race</button></div>')
+        +'</section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Draft controls')+'<div class="button-row">'
+        +'<button class="btn" data-act="start" '+(settings.draft_status==='live'||settings.draft_status==='finished'?'disabled':'')+'>Start / resume</button>'
+        +'<button class="btn secondary" data-act="pause" '+(settings.draft_status!=='live'?'disabled':'')+'>Pause draft</button>'
+        +'<button class="btn danger" data-act="reset" '+(settings.draft_status==='finished'?'disabled':'')+'>Reset picks</button>'
+        +'</div></section>';
+    }else if(adminSection==='programs'){
+      initPoolDraft();
+      const total=programs().length,selected=poolDraftSchools.size,required=members().length*Number(settings.rounds);
+      const conferenceRows=conferenceGroups.map(group=>'<div class="pool-conference-group"><h3>'+escapeHTML(group.name)+'</h3>'+
+        group.ids.map(id=>{
+          const all=programs().filter(p=>String(p.conference_id)===id);
+          const count=all.filter(p=>poolDraftSchools.has(String(p.id))).length;
+          const active=poolDraftConfs.has(id);
+          return '<button type="button" class="pool-conference '+(active?'is-selected':'')+'" data-act="pool-conf" data-id="'+id+'" aria-pressed="'+active+'" '+(locked?'disabled':'')+'>'
+            +'<span class="pool-check" aria-hidden="true">'+(active?'✓':'')+'</span><span class="pool-conf-name">'+escapeHTML(conf(id))+'</span>'
+            +'<span class="pool-conf-count">'+count+'/'+all.length+'</span></button>';
+        }).join('')+'</div>').join('');
+      const filterOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)))
+        .map(id=>'<option value="'+id+'" '+(poolConferenceFilter===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
+      const scopeButtons=[['all','All schools'],['included','Included'],['excluded','Not included']]
+        .map(([id,label])=>'<button type="button" data-act="pool-scope" data-id="'+id+'" class="'+(poolScope===id?'active':'')+'" aria-pressed="'+(poolScope===id)+'">'+label+'</button>').join('');
+      body='<div class="pool-intro"><div><span class="pool-kicker">DRAFT POOL BUILDER</span><h2>Choose eligible programs</h2>'
+        +'<p>Start with conferences, then fine-tune individual schools. Changes affect the draft pool, school directory, and historical rankings.</p></div>'
+        +'<div class="pool-stat"><strong>'+selected+'</strong><span>of '+total+' programs selected</span></div></div>'
+        +(locked?'<div class="pool-lock-note">The inaugural draft has started. Program eligibility is locked to protect existing picks and dynasty rosters.</div>':'')
+        +'<div class="pool-editor">'
+        +'<section class="panel pool-conferences">'+panelHeading('Conferences','Select an entire conference with one click')
+        +'<div class="pool-quick-actions"><button type="button" class="btn small secondary" data-act="pool-major" '+(locked?'disabled':'')+'>Major conferences</button>'
+        +'<button type="button" class="btn small secondary" data-act="pool-mid-major" '+(locked?'disabled':'')+'>Mid-major conferences</button>'
+         +'<button type="button" class="btn small ghost" data-act="pool-all-confs" '+(locked?'disabled':'')+'>Select all</button></div>'
+        +conferenceRows+'</section>'
+        +'<section class="panel pool-schools">'+panelHeading('Individual schools','Override conference selections one school at a time')
+        +'<div class="pool-search-tools"><label class="pool-search"><span aria-hidden="true">⌕</span><input type="search" id="pool-search" value="'+escapeHTML(poolQuery)+'" placeholder="Search any Division I school..." autocomplete="off" aria-label="Find a school" /></label>'
+        +'<select id="pool-conf-filter" class="field" aria-label="Filter schools by conference"><option value="all">All conferences</option>'+midMajorOption(poolConferenceFilter)+filterOptions+'</select></div>'
+        +'<div class="pool-scope" role="group" aria-label="Program selection filter">'+scopeButtons+'</div>'
+        +(!locked?'<div class="pool-bulk"><span>Matching schools</span><button type="button" data-act="pool-add-visible">Include all</button><button type="button" data-act="pool-remove-visible">Exclude all</button></div>':'')
+        +'<div class="pool-school-list '+(locked?'is-locked':'')+'" id="pool-school-results">'+poolSchoolRows()+'</div></section></div>'
+        +'<div class="pool-footer"><div><strong id="pool-selected-count">'+selected+' selected</strong><small id="pool-save-state">'+(poolDirty?'Unsaved changes':'All changes saved')+'</small>'
+        +(selected<required?'<small class="pool-warning">Need at least '+required+' programs for a full '+settings.rounds+'-round draft.</small>':'')+'</div>'
+        +'<div class="pool-footer-actions"><button type="button" class="btn ghost" data-act="pool-reset" '+(locked||!poolDirty?'disabled':'')+'>Reset</button>'
+        +'<button type="button" class="btn" data-act="save-pool" '+(locked||!poolDirty?'disabled':'')+'>Save eligible programs</button></div></div>'
+        +(importError?'<p class="notice section-gap">'+escapeHTML(importError)+'</p>':'')
+        +'<details class="panel pool-advanced"><summary>Advanced: add a custom school or resync conference data</summary><div class="pool-advanced-content">'
+        +'<p>All '+total+' verified 2026–27 schools are already listed above. Only use these tools for corrections or new schools.</p>'
+        +'<form data-form="program">'+input('Program name','name','text','School name')+input('Abbreviation','abbr','text','e.g. UF')
+        +'<div class="form-row"><label for="conference_id">Conference</label><select class="field" id="conference_id" name="conference_id">'
+        +Object.keys(conferenceNames).sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>'<option value="'+id+'">'+escapeHTML(conf(id))+'</option>').join('')+'</select></div>'
+        +'<button class="btn secondary" type="submit" '+(locked?'disabled':'')+'>Add custom school</button></form>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="sync" '+(locked||syncActive?'disabled':'')+'>Resync enabled conferences</button></div></div></details>';
+    }else if(adminSection==='data'){
+      const runs=resultsStatus?.recent_runs||[];
+      const latest=runs.find(x=>x.status==='ok');
+      const failure=runs.find(x=>x.status==='error');
+      const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/New_York'}),coverage=resultsStatus?.coverage;
+      const progOptions=eligiblePrograms().sort((a,b)=>a.name.localeCompare(b.name))
+        .map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+      const awardOptions=[['conference_regular_champion','Conference regular-season champion'],['conference_tournament_champion','Conference tournament champion'],['ncaa_seed','NCAA Tournament seed'],['ncaa_wins','NCAA Tournament wins'],['national_champion','National champion'],['kenpom_final_rank','Final KenPom rank']];
+      const archivedYears=resultsStatus?.historical||[];
+      const historicalRows=archivedYears.map(h=>'<div class="data-run"><span>'+escapeHTML(h.season)+'</span><div><strong>'+Number(h.checked_dates||0)+' dates checked</strong><small>'+Number(h.primary_events||0)+' ESPN games · '+(h.net_teams>=350?'NET verified ('+h.net_teams+' teams)':'NET missing')+' · '+Number(h.award_count||0)+' achievements</small></div></div>').join('');
+      body=backendHealthPanel()+'<section class="panel setting-panel section-gap">'+panelHeading('Results pipeline','ESPN scoreboards · current season')
+        +'<div class="data-kpis"><div><span>GAMES</span><strong>'+Number(resultsStatus?.game_count||0)+'</strong></div><div><span>VERIFIED DAYS</span><strong>'+(coverage?coverage.checked_dates:'—')+'</strong></div><div><span>MISSING DAYS</span><strong>'+(coverage?coverage.missing_dates:'—')+'</strong></div></div>'
+        +(resultsError?'<p class="notice section-gap">'+escapeHTML(resultsError)+'</p>':'')
+        +(failure?'<p class="data-error section-gap">Latest error: '+escapeHTML(failure.error_text)+'</p>':'')
+        +'<label class="settings-toggle section-gap" for="data-auto"><div><strong>Automatic results collection</strong><span>Every 15 minutes during game hours, plus daily reconciliation.</span></div><input id="data-auto" type="checkbox" '+(resultsStatus?.auto_enabled!==false?'checked':'')+'/></label>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-auto-save">Save automation setting</button></div>'
+        +'<div class="form-row section-gap"><label for="data-date">Check specific game date</label><input class="field" id="data-date" type="date" value="'+escapeHTML(today)+'"/></div>'
+        +'<div class="button-row"><button class="btn" data-act="data-sync">Import date</button><button class="btn secondary" data-act="data-backfill">Recheck past 7 days</button><button class="btn secondary" data-act="data-upcoming">Import next 3 days</button><button class="btn secondary" data-act="data-fill-missing">Repair missing dates</button><button class="btn secondary" data-act="data-ap-refresh">Sync AP Top 25</button><button class="btn ghost" data-act="data-health-refresh">Refresh status</button></div>'
+        +'<p class="hint section-gap">Verified final game results feed fantasy scoring; ranking and achievement inputs determine their bonuses. Import errors are kept in the audit log.</p></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Historical seasons','2021–22 through 2025–26')
+        +'<p class="hint">Historical games import across all five years every minute, independently of live scores. NET standings and verified achievements are required for complete fantasy totals.</p>'
+        +(historicalRows||empty('Historical import has not started'))
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-history-backfill">Import 8 historical dates</button></div>'
+        +'<div class="form-row section-gap"><label for="history-net-season">Historical NET season</label><select class="field" id="history-net-season">'+['2025-26','2024-25','2023-24','2022-23','2021-22'].map(year=>'<option value="'+year+'">'+year+'</option>').join('')+'</select></div>'
+        +'<button class="btn secondary" data-act="data-history-net">Import archived NET rankings</button></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='torvik'?'Bart Torvik · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET active':'Awaiting Bart Torvik rankings')
+        +'<p class="hint">Until official NCAA NET is available, Bart Torvik serves as the provisional ranking for Q1/Q1A/Q2 points. League standings recalculate automatically when verified NCAA NET replaces it. Historical seasons are unchanged.</p>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-torvik-refresh" '+(resultsStatus?.quadrant_source==='net'?'disabled':'')+'>Sync preliminary Bart Torvik</button></div></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
+        +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
+        +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
+        +'<div class="form-row"><label for="data-net-csv">NET ranking rows (ESPN ID, rank)</label><textarea class="field data-csv" id="data-net-csv" rows="5" placeholder="57,4&#10;150,1"></textarea></div>'
+        +'<div class="button-row"><button class="btn secondary" data-act="data-net-import">Import verified rankings</button><button class="btn secondary" data-act="data-net-fetch" '+(today<season().slice(0,4)+'-12-08'?'disabled':'')+'>Fetch NCAA NET</button></div></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Verified season achievements')
+        +'<details class="data-award"><summary>Add a confirmed conference or postseason result</summary>'
+        +'<div class="form-row section-gap"><label for="data-award-season">Season</label><select class="field" id="data-award-season">'+Array.from({length:Number(season().slice(0,4))-2021+1},(_,i)=>{const y=Number(season().slice(0,4))-i;const label=y+'-'+String((y+1)%100).padStart(2,'0');return '<option value="'+label+'">'+label+'</option>';}).join('')+'</select></div>'
+        +'<div class="form-row"><label for="data-award-school">Program</label><select class="field" id="data-award-school">'+progOptions+'</select></div>'
+        +'<div class="form-row"><label for="data-award-type">Achievement</label><select class="field" id="data-award-type">'+awardOptions.map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('')+'</select></div>'
+        +'<div class="form-row"><label for="data-award-value">Value (1 for titles, seed/rank for rankings)</label><input class="field" type="number" id="data-award-value" min="0" max="400" value="1"/></div>'
+        +'<div class="form-row"><label for="data-award-source">Source or official reference</label><input class="field" id="data-award-source" placeholder="Official conference / NCAA bracket URL"/></div>'
+        +'<button class="btn" data-act="data-award-save">Save verified achievement</button></details></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Import log')
+        +(runs.length?runs.map(run=>'<div class="data-run"><span class="'+(run.status==='error'?'failed':'')+'">'+escapeHTML(run.status.toUpperCase())+'</span><div><strong>'+escapeHTML(run.target_date||'—')+'</strong><small>'+escapeHTML(run.job)+' · '+Number(run.matched||0)+' games, '+Number(run.changed||0)+' changed</small>'+(run.error_text?'<small class="data-error">'+escapeHTML(run.error_text)+'</small>':'')+'</div></div>').join(''):empty('No imports yet'))+'</section>';
+    }else if(adminSection==='activity'){
+      body=activityMonitorPage();
+    }else if(adminSection==='members'){
+      body='<section class="panel setting-panel">'+panelHeading('Account management',members().length+' / '+cap+' accounts')
+        +'<p class="hint">Usernames are visible to the commissioner. Passwords are securely hashed and cannot be viewed. Reset a manager to create a new temporary password and sign out their existing devices.</p>'
+        +members().map(u=>'<div class="manager-card account-manager-row">'+avatar(u)
+        +'<div class="grow"><strong>'+escapeHTML(u.display_name)+'</strong><small>@'+escapeHTML(u.username)+'</small></div>'
+        +(u.role==='manager'?'<button class="btn small secondary" type="button" data-act="admin-reset-member-password" data-id="'+escapeHTML(u.id)+'">Reset password</button>':
+          '<span class="status wait">COMMISSIONER</span>')+'</div>').join('')
+        +(passwordResetReceipt?'<div class="account-reset-receipt" role="status">'
+          +'<strong>Temporary password for @'+escapeHTML(passwordResetReceipt.username)+'</strong>'
+          +'<p>Copy and share privately with '+escapeHTML(passwordResetReceipt.display_name)+'. Their previous password and all existing sessions are now invalid. This password cannot be retrieved again after you dismiss it or leave this page.</p>'
+          +'<div class="account-reset-credential"><code>'+escapeHTML(passwordResetReceipt.temporary_password)+'</code></div>'
+          +'<div class="button-row"><button class="btn small" type="button" data-act="copy-reset-password">Copy password</button>'
+          +'<button class="btn small secondary" type="button" data-act="dismiss-reset-password">Dismiss</button></div>'
+          +'</div>':'')
+        +'<p class="hint section-gap">Managers can set their own permanent password in My Settings after signing in with the temporary password.</p>'
+        +'</section><section class="panel setting-panel section-gap">'+panelHeading('Invitations')
+        +'<p class="hint">Each invite link expires after 7 days and works once.</p>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="invite" '+(members().length>=cap||settings.draft_status!=='pending'?'disabled':'')+'>Generate invite</button></div>'
+        +(inviteLink?'<div class="invite-result section-gap"><span>'+escapeHTML(inviteLink)+'</span><button class="btn small secondary" data-act="copy-invite">Copy</button></div>':'')+'</section>';
+    }else if(adminSection==='scoring'){
+      const r=scoreRules();
+      body='<section class="panel setting-panel">'+panelHeading('Scoring settings')
+        +'<p class="settings-hint">Best-ball format: top '+Number(r.best_programs||8)+' counting programs. Change that number in Commissioner → General.</p>'
+        +scoringGroups.map(([title,fields])=>'<div class="section-gap"><h3 class="subhead">'+escapeHTML(title)+'</h3><div class="settings-grid">'
+        +fields.map(([key,label])=>'<div class="form-row"><label for="score-'+key+'">'+escapeHTML(label)+'</label><input class="field" id="score-'+key+'" type="number" min="0" max="100" step="0.25" value="'+Number(r[key]||0)+'"/></div>').join('')+'</div></div>').join('')
+        +'<p class="settings-hint">Q1A is its own +2.5 win category, separate from +1.5 Q1 wins. The PAC-12 &amp; MID-MAJOR BONUSES section covers every eligible non-Power school, including individually added teams; Gonzaga is excluded. No KenPom or AP Poll points. Changing a scoring weight does not import game results.</p>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-scoring">Save scoring</button><button class="btn secondary" data-act="tab" data-id="scoring">View rules</button></div></section>';
+    }else if(adminSection==='notifications'){
+      body=notificationAdminPage();
+    }else if(adminSection==='trades'){
+      body='<section class="panel setting-panel">'+panelHeading('Trading')
+        +'<label class="settings-toggle" for="trading-enabled"><div><strong>Allow program trades</strong><span>Managers can propose and accept trades after the initial draft.</span></div><input id="trading-enabled" type="checkbox" '+(settings.trading_enabled?'checked':'')+'/></label>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-trades">Save trading settings</button></div></section>';
+    }else if(adminSection==='waivers'){
+      const pending=(league.waiver_claims||[]).filter(c=>c.status==='pending');
+      const pendingRows=pending.map(c=>{
+        const u=members().find(m=>m.id===c.manager_id);
+        const p=programs().find(p=>p.id===c.program_id);
+        const drop=programs().find(p=>p.id===c.drop_program_id);
+        return '<div class="claim-review"><div class="grow"><strong>'+escapeHTML(p?.name||'Program')+'</strong><small>'+escapeHTML(u?.display_name||'Manager')+(drop?' · Drops '+escapeHTML(drop.name):'')+'</small></div><div class="button-row"><button class="btn small" data-act="waiver-review" data-id="'+escapeHTML(c.id)+'" data-mode="approve">Approve</button><button class="btn small secondary" data-act="waiver-review" data-id="'+escapeHTML(c.id)+'" data-mode="deny">Deny</button></div></div>';
+      }).join('');
+      body='<section class="panel setting-panel">'+panelHeading('Waivers')
+        +'<label class="settings-toggle" for="waivers-enabled"><div><strong>Enable waivers</strong><span>Managers can request unrostered schools after the inaugural draft. Claims require commissioner approval.</span></div><input id="waivers-enabled" type="checkbox" '+(settings.waivers_enabled?'checked':'')+'/></label>'
+        +'<div class="button-row section-gap"><button class="btn" data-act="save-waivers">Save setting</button></div></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Pending claims',pending.length+' awaiting review')+(pendingRows||empty('No pending claims'))+'</section>';
+    }else if(adminSection==='seasons'){
+      const archives=league.archives||[];
+      const options='<option value="">Not recorded</option>'+members().map(u=>'<option value="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</option>').join('');
+      body='<section class="panel setting-panel">'+panelHeading('Current season')
+        +'<div class="season-current"><strong>'+escapeHTML(season())+'</strong><span>'+owners().length+' programs · '+members().length+' managers</span></div>'
+        +'<p class="hint section-gap">Archiving preserves each roster and creates the next season without another draft. Existing ownership and trades remain intact.</p>'
+        +'<div class="button-row section-gap"><button class="btn danger" data-act="season-rollover" '+(settings.draft_status!=='finished'?'disabled':'')+'>Archive season & advance</button></div></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Archived seasons')+(archives.length?archives.map(a=>'<div class="season-archive-item"><div class="grow"><strong>'+escapeHTML(a.season)+'</strong><small>Champion: '+escapeHTML(members().find(u=>u.id===a.champion_manager_id)?.display_name||'Not recorded')+'</small></div><select class="field season-champion-select" data-season="'+escapeHTML(a.season)+'">'+options.replace('<option value="'+escapeHTML(a.champion_manager_id||'')+'"','<option selected value="'+escapeHTML(a.champion_manager_id||'')+'"')+'</select><button class="btn small secondary" data-act="season-champion" data-id="'+escapeHTML(a.season)+'">Save</button></div>').join(''):empty('No archived seasons'))+'</section>';
+
+    }
+    return heading('COMMISSIONER CONSOLE','League settings','Make changes to your league from one organized workspace.')
+      +'<div class="commissioner-overview"><div><span>CURRENT SEASON</span><strong>'+escapeHTML(season())+'</strong></div>'
+      +'<div><span>LEAGUE MEMBERS</span><strong>'+members().length+' / '+cap+'</strong></div>'
+      +'<div><span>ELIGIBLE PROGRAMS</span><strong>'+eligiblePrograms().length+'</strong></div>'
+      +'<div><span>DRAFT STATUS</span><strong class="admin-draft-state">'+escapeHTML(settings.draft_status)+'</strong></div></div>'
+      +'<div class="commissioner-layout">'+menu+'<div class="commissioner-body">'+body+'</div></div>';
+  }
+  async function action(button){
+    const act=button.dataset.act,id=button.dataset.id;
+    if(act==='notifications-enable-push'){
+      try{
+        if(!('serviceWorker' in navigator)||typeof Notification==='undefined'||!('PushManager' in window))
+          throw new Error('Push notifications are not supported by this browser.');
+        // Required user gesture: prompt before any other awaited network operation.
+        const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+        if(permission!=='granted')throw new Error('Allow notifications in your device settings to enable alerts.');
+        const base=typeof SITE_BASE!=='undefined'?SITE_BASE:'/';
+        const reg=await navigator.serviceWorker.register(base+'sw.js',{scope:base});
+        const config=notificationSnapshot||await api('notifications/inbox');
+        if(!config.public_key)throw new Error('Push configuration is temporarily unavailable.');
+        const raw=config.public_key.replace(/-/g,'+').replace(/_/g,'/');
+        const bytes=Uint8Array.from(atob(raw+'='.repeat((4-raw.length%4)%4)),x=>x.charCodeAt(0));
+        let subscription=await reg.pushManager.getSubscription();
+        if(!subscription)subscription=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+        await api('notifications/subscribe',{subscription:subscription.toJSON(),user_agent:navigator.userAgent});
+        pushDeviceActive=true;
+        await loadNotifications(true);render();
+        notice('Push notifications enabled on this device.');
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-disable-push'){
+      try{
+        const reg=await navigator.serviceWorker.ready,subscription=await reg.pushManager.getSubscription();
+        if(subscription){
+          await api('notifications/unsubscribe',{endpoint:subscription.endpoint});
+          await subscription.unsubscribe();
+        }
+        pushDeviceActive=false;await loadNotifications(true);render();
+        notice('Push alerts disabled on this device.');
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-test'){
+      try{await api('notifications/test',{});notice('Test alert sent. Check your notifications.');loadNotifications(true);}
+      catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-read-all'){
+      try{await api('notifications/read',{id:'all'});await loadNotifications(true);}
+      catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notification-open'){
+      try{
+        await api('notifications/read',{id});
+        const allowed=['trades','draft','notifications'];
+        current=allowed.includes(button.dataset.target)?button.dataset.target:'notifications';
+        await loadNotifications(true);render();
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-save-prefs'){
+      const next={};
+      for(const key of ['trades','draft','announcements','push_enabled','email_enabled']){
+        const input=document.querySelector('#notification-pref-'+key);
+        next[key]=input?!!input.checked:!!notificationSnapshot?.preferences?.[key];
+      }
+      try{await api('notifications/preferences',next);await loadNotifications(true);notice('Notification preferences saved.');}
+      catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='notifications-email-request'){
+      try{
+        await api('notifications/email/request',{email:v('#notification-email')});
+        notice('Verification email sent. Open the link to activate email alerts.');
+      }catch(error){notice(String(error.message||error),true);}
+      return;
+    }
+    if(act==='race-replay'){startDraftRacePlayback(false);return;}
+    if(act==='race-settings'){adminSection='draft';current='commissioner';render();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(act==='activity-refresh'){loadActivity(true);return;}
+    if(act==='notification-admin-refresh'){loadNotificationAdmin(true);return;}
+    if(act==='notification-admin-retry'){
+      try{const d=await api('admin/notifications/retry',{});notice('Retried '+Number(d.examined||0)+' deliveries.');await loadNotificationAdmin(true);}
+      catch(e){notice(String(e.message||e),true);}return;
+    }
+    if(act==='notification-admin-save'){
+      const values={};
+      for(const k of ['trades','draft','announcements'])values[k]=!!document.querySelector('#admin-notification-'+k)?.checked;
+      try{await api('admin/notifications/settings',values);await loadNotificationAdmin(true);notice('Notification settings saved.');}
+      catch(e){notice(String(e.message||e),true);}return;
+    }
+    if(act==='notification-admin-send'){
+      const title=v('#notification-announcement-title').trim(),message=v('#notification-announcement-message').trim();
+      const recipient=v('#notification-recipient')||'all';
+      if(title.length<3||message.length<4){notice('Enter a title and message.',true);return;}
+      const who=recipient==='all'?'all '+members().length+' managers':
+        (members().find(m=>m.id===recipient)?.display_name||'this manager');
+      if(!window.confirm('Send this announcement to '+who+'?'))return;
+      try{
+        const r=await api('admin/notifications/announce',{title,message,recipient});
+        notice('Sent to '+Number(r.recipients||0)+' inboxes.');await Promise.all([loadNotificationAdmin(true),loadNotifications(true)]);
+      }catch(e){notice(String(e.message||e),true);}return;
+    }
+    if(act==='search-open'){toggleGlobalSearch(true);return;}
+    if(act==='search-close'){toggleGlobalSearch(false);return;}
+    if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
+    if(act==='results-track-queue'){
+      resultsSelectedDay=resultsToday();resultsScope='queue';resultsConference='all';resultsStatusFilter='all';
+      resultsSearch='';resultsShown=40;current='results';render();loadResults();
+      window.scrollTo({top:0,behavior:'smooth'});return;
+    }
+    if(act==='overview-today-results'){
+      resultsSelectedDay=resultsToday();resultsScope='league';resultsSearch='';resultsStatusFilter='all';resultsShown=40;
+      current='results';render();loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
+    }
+    if(act==='profile-back'){
+      const to=current==='program-detail'?programBackPage:managerBackPage;
+      const restore=current==='program-detail'?programBackScroll:managerBackScroll;
+      current=to;render();if(to==='programs')filterPrograms();
+      requestAnimationFrame(()=>window.scrollTo({top:restore,behavior:'auto'}));
+      return;
+    }
+    if(act==='tab'){
+      if(id==='notifications')loadNotifications(true);
+      globalSearchOpen=false;globalSearchQuery='';
+      if(id==='programs'&&current!=='programs')ratingSeason=season();
+      current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();
+      if(current==='draft-order'&&officialRace()&&raceState.id!==officialRace().id&&Date.now()-officialRace().started_at*1000<raceTotalMs(officialRace()))startDraftRacePlayback(true);
+      window.scrollTo({top:0,behavior:'auto'});return;
+    }
+    if(act==='program-profile-tab'){programProfileTab=id;render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
+    if(act==='program-show-history'){selectedProgramSeason=season();programProfileTab='history';render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
+    if(act==='program-season'){selectedProgramSeason=id;render();return;}
+    if(act==='schedule-view'){programScheduleView=id;render();return;}
+    if(act==='schedule-retry'){loadProgramSchedule(id,true);return;}
+    if(act==='view-ratings'){
+      ratingSeason=button.dataset.season||season();programMode='ratings';current='programs';render();window.scrollTo({top:0});return;
+    }
+    if(act==='view-historical-rank'){
+      leaderSeason=button.dataset.season||season();programMode='leaders';current='programs';render();
+      if(!schoolLeaders)loadSchoolLeaders();window.scrollTo({top:0});return;
+    }
+    if(act==='ratings-current'){ratingSeason=season();ratingShown=40;render();return;}
+    if(act==='rating-season'){ratingSeason=(Number(id)-1)+'-'+String(Number(id)%100).padStart(2,'0');ratingShown=40;render();return;}
+    if(act==='rating-sort'){ratingSort=id;ratingShown=40;render();return;}
+    if(act==='ratings-refresh'){delete ratingError[Number(id)];delete ratingCache[Number(id)];loadRatings(Number(id),true);render();return;}
+    if(act==='school-mode'){
+      if(id==='ratings'&&programMode!=='ratings')ratingSeason=season();
+      programMode=id;render();if(id==='leaders'&&!schoolLeaders)loadSchoolLeaders();else if(id==='directory')filterPrograms();return;
+    }
+    if(act==='leaders-season'){leaderSeason=id;leaderShown=40;render();return;}
+    if(act==='leaders-retry'){schoolLeaders=null;schoolLeadersError='';loadSchoolLeaders();return;}
+    if(act==='leaders-more'){leaderShown+=40;filterSchoolLeaders();return;}
+    if(act==='ratings-more'){ratingShown+=40;filterRatings();return;}
+    if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
+    if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
+    if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
+    if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
+    if(act==='open-program'){
+      globalSearchOpen=false;globalSearchQuery='';
+      if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
+      if(String(selectedProgramId)!==String(id)){programScheduleView='all';programProfileTab='overview';}
+      selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
+        programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();
+      loadProgramResults(id);loadProgramSchedule(id);window.scrollTo({top:0});return;
+    }
+    if(act==='open-manager'){
+      globalSearchOpen=false;globalSearchQuery='';
+      if(current!=='manager-detail'){managerBackPage=current;managerBackScroll=window.scrollY;}
+      selectedManagerId=id;current='manager-detail';render();window.scrollTo({top:0});return;
+    }
+    if(act==='commish-section'){
+      if(adminSection==='programs'&&id!=='programs'&&poolDirty&&!window.confirm('Leave without saving your program selections?'))return;
+      if(adminSection==='programs'&&id!=='programs')resetPoolDraft();
+      if(id!==adminSection)passwordResetReceipt=null;
+      adminSection=id;render();if(id==='data'){loadResults();loadIntegrity();}if(id==='activity')loadActivity();return;
+    }
+    if(act==='pool-conf'||act==='pool-major'||act==='pool-mid-major'||act==='pool-all-confs'){
+      initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
+      const targets=act==='pool-conf'?[id]:act==='pool-major'?conferenceGroups[0].ids:
+         act==='pool-mid-major'?[...midMajorConferenceIds]:Object.keys(conferenceNames);
+      const turnOn=act==='pool-conf'?!poolDraftConfs.has(id):true;
+      for(const confId of targets){
+        if(turnOn)poolDraftConfs.add(confId);else poolDraftConfs.delete(confId);
+        programs().filter(p=>String(p.conference_id)===confId).forEach(p=>{
+          if(turnOn)poolDraftSchools.add(String(p.id));else poolDraftSchools.delete(String(p.id));
+        });
+      }
+      poolDirty=true;render();return;
+    }
+    if(act==='pool-school'){
+      initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
+      if(poolDraftSchools.has(id))poolDraftSchools.delete(id);else poolDraftSchools.add(id);
+      poolDirty=true;renderPoolPreservingScroll();return;
+    }
+    if(act==='pool-scope'){poolScope=id;poolShown=70;render();return;}
+    if(act==='pool-more'){poolShown+=70;updatePoolList();return;}
+    if(act==='pool-add-visible'||act==='pool-remove-visible'){
+      initPoolDraft();if(league.settings.draft_status!=='pending'||picks().length)return;
+      poolVisible().forEach(p=>{
+        if(act==='pool-add-visible')poolDraftSchools.add(String(p.id));else poolDraftSchools.delete(String(p.id));
+      });
+      poolDirty=true;render();return;
+    }
+    if(act==='pool-reset'){resetPoolDraft();render();return;}
+    if(act==='load-programs'){programShown+=36;filterPrograms();return;}
+    if(act==='directory-conference'){programConference=id;programLetter='all';programShown=36;render();filterPrograms();return;}
+    if(act==='directory-ownership'){programOwnership=id;programShown=36;render();filterPrograms();return;}
+    if(act==='directory-letter'){programLetter=id;programShown=36;render();filterPrograms();return;}
+    if(act==='draft-history-retry'){schoolLeadersError='';schoolLeaders=null;loadSchoolLeaders();return;}
+    if(act==='draft-pool-sort'){draftSort=id;draftShown=30;render();return;}
+    if(act==='draft-pool-scope'){draftScope=id;draftShown=30;render();root.querySelector('#draft-pool-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(act==='draft-pool-more'){draftShown+=30;filterDraftPool();return;}
+    if(act==='draft-queue-up'||act==='draft-queue-down'){
+      moveDraftQueue(id,act==='draft-queue-up'?-1:1);return;
+    }
+    if(act==='draft-compare-toggle'){draftCompareExpanded=!draftCompareExpanded;render();return;}
+    if(act==='draft-queue-collapse'){draftQueueExpanded=!draftQueueExpanded;render();return;}
+    if(act==='draft-jump-queue'){
+      draftQueueOpen=true;draftQueueExpanded=true;render();
+      root.querySelector('#draft-queue-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;
+    }
+    if(act==='draft-jump-pool'){root.querySelector('#draft-pool-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(act==='draft-follow-live'){draftRoundView='current';render();root.querySelector('#draft-board-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(act==='draft-select'){
+      if(!draftAvailable().some(p=>String(p.id)===String(id))){notice('That program is no longer available.',true);await refresh(true);return;}
+      draftSelectedProgram=String(id);render();
+      if(!(window.matchMedia?.('(max-width:850px)').matches))root.querySelector('.draft-pick-desk')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+      return;
+    }
+    if(act==='draft-clear-selection'){draftSelectedProgram='';render();return;}
+    if(act==='draft-queue-toggle'){
+      prepareDraftQueue();
+      const programId=String(id),index=draftWatchlist.indexOf(programId);
+      if(index>=0)draftWatchlist.splice(index,1);
+      else if(draftAvailable().some(p=>String(p.id)===programId)){
+        if(draftWatchlist.length>=365){notice('The draft queue holds up to 365 schools.',true);return;}
+        const wasEmpty=draftWatchlist.length===0;
+        draftWatchlist.push(programId);
+        if(wasEmpty)draftQueueExpanded=true;
+      }
+      draftWatchlist=draftWatchlist.slice(0,365);
+      storeDraftQueue();render();return;
+    }
+    if(act==='draft-history-toggle'){showAllDraft=!showAllDraft;render();return;}
+    if(act==='draft-board-mode'){draftRoundView=button.dataset.mode;render();const board=root.querySelector('.draft-board-scroll');if(board)board.scrollTop=0;return;}
+    if(act==='results-date'){resultsSelectedDay=button.dataset.date;resultsShown=40;loadResults();return;}
+    if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));resultsShown=40;loadResults();return;}
+    if(act==='results-today'){resultsSelectedDay=resultsToday();resultsShown=40;loadResults();return;}
+    if(act==='results-scope'){resultsScope=button.dataset.scope;resultsShown=40;render();return;}
+    if(act==='results-status'){resultsStatusFilter=id;resultsShown=40;render();return;}
+    if(act==='results-clear-filters'){
+      resultsScope='league';resultsStatusFilter='all';resultsConference='all';resultsSearch='';resultsShown=40;
+      render();return;
+    }
+    if(act==='results-conference'){resultsConference=id;resultsShown=40;render();return;}
+    if(act==='results-more'){resultsShown+=40;render();return;}
+
+    if(act==='draft-round-change'){draftRoundView=id;render();return;}
+    if(act==='move-draft'){
+      const i=Number(button.dataset.index),j=i+Number(button.dataset.dir);
+      if(i>=0&&i<draftOrderPreview.length&&j>=0&&j<draftOrderPreview.length){
+        [draftOrderPreview[i],draftOrderPreview[j]]=[draftOrderPreview[j],draftOrderPreview[i]];
+        render();
+      }
+      return;
+    }
+    if(act==='signup-draft'){draftOrderPreview=members().map(u=>u.id);render();return;}
+    if(act==='shuffle-draft'){
+      const list=draftOrderPreview.slice();
+      for(let i=list.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[list[i],list[j]]=[list[j],list[i]];}
+      draftOrderPreview=list;render();return;
+    }
+    if(act==='auth-mode'){authMode=button.dataset.mode;renderAuth();return;}
+    if(act==='logout'){passwordResetReceipt=null;await api('logout',{});forgetSignedInToken();me=null;league=null;inviteLink='';notificationSnapshot=null;pushDeviceActive=false;notificationFetchedAt=0;await loadPublic();renderAuth();return;}
+    if(busy)return;
+    busy=true;
+    try{
+      if(act==='results-import-day'){
+        const result=await api('admin/data/sync',{date:resultsSelectedDay||resultsToday()});
+        notice('Imported '+result.matched+' games from '+result.date+'.');
+        await loadResults();busy=false;return;
+      }
+      if(act==='data-integrity-scan'){
+        const result=await api('admin/data/integrity-scan',{});
+        notice('Scan complete · '+Number(result.report?.critical_count||0)+' critical, '+Number(result.report?.warning_count||0)+' warnings.');
+        await loadIntegrity(true);
+      }else if(act==='data-repair-interrupted'){
+        if(!window.confirm('Retry up to two interrupted ESPN import dates and keep an audit trail?')){busy=false;return;}
+        const result=await api('admin/data/repair-interrupted',{});
+        const failed=(result.results||[]).filter(x=>!x.ok);
+        notice('Retried '+Number(result.attempted||0)+' dates'+(failed.length?' · '+failed.length+' errors':''),failed.length>0);
+        await Promise.all([loadResults(),loadIntegrity(true)]);
+      }else if(act==='data-verify-scoring'){
+        scoringAudit=await api('admin/data/verify-scoring',{});
+        notice(scoringAudit.valid?'Scoring verification passed.':'Scoring verification found exceptions.',!scoringAudit.valid);
+        render();
+      }else if(act==='data-sync'){
+        const data=await api('admin/data/sync',{date:v('#data-date')});
+        notice('Imported '+data.matched+' games · '+data.changed+' updated.');
+        await loadResults();
+      }else if(act==='data-history-backfill'){
+        const data=await api('admin/data/history-backfill',{days:8});
+        const failed=(data.results||[]).filter(x=>!x.ok);
+        notice('Checked '+(data.results||[]).length+' historical dates'+(failed.length?' · '+failed.length+' errors':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-history-net'){
+        const data=await api('admin/data/history-net',{season:v('#history-net-season')});
+        notice(data.duplicate?'Historical NET was already verified.':'Imported '+data.count+' historical NET rankings for '+data.season+'.');
+        await loadResults();
+      }else if(act==='data-backfill'){
+        const result=await api('admin/data/backfill',{days:7});
+        const failed=(result.days||[]).filter(x=>!x.ok);
+        notice('Checked '+(result.days||[]).length+' dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-upcoming'){
+        const result=await api('admin/data/upcoming',{});
+        const failed=(result.days||[]).filter(x=>!x.ok);
+        notice('Checked '+(result.days||[]).length+' upcoming dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
+        await loadResults();
+      }else if(act==='data-torvik-refresh'){
+        const ranks=await api('admin/data/torvik-refresh',{});
+        notice(ranks.skipped||'Imported '+ranks.matched+' provisional Bart Torvik schools.');
+        standingsFetchedAt=0;schoolLeaders=null;programResultCache={};
+        await loadResults();
+      }else if(act==='data-ap-refresh'){
+        const poll=await api('admin/data/ap-refresh',{});
+        notice('Verified '+poll.count+' AP-ranked teams.');
+        await loadResults();
+      }else if(act==='data-fill-missing'){
+        const result=await api('admin/data/fill-missing',{days:4});
+        const failures=(result.days||[]).filter(x=>!x.ok);
+        notice('Rechecked '+(result.days||[]).length+' missing dates'+(failures.length?' · '+failures.length+' failed':''),failures.length>0);
+        await loadResults();
+      }else if(act==='data-net-fetch'){
+        const outcome=await api('admin/data/net-auto',{});
+        notice('Saved '+outcome.count+' NCAA NET records.');await loadResults();
+      }else if(act==='data-health-refresh'){await Promise.all([loadResults(),loadIntegrity(true)]);notice('Data status refreshed.');
+      }else if(act==='data-auto-save'){
+        await api('admin/data/auto',{enabled:!!document.querySelector('#data-auto')?.checked});
+        notice('Automatic collection setting saved.');await loadResults();
+      }else if(act==='data-net-import'){
+        const csv=v('#data-net-csv').trim();
+        if(csv.split(/\r?\n/).filter(Boolean).length<350)throw new Error('Provide a full NET ranking list (at least 350 teams).');
+        const outcome=await api('admin/data/net',{date:v('#data-net-date'),csv});
+        notice('Saved '+outcome.count+' NET rankings.');await loadResults();
+      }else if(act==='data-award-save'){
+        await api('admin/data/award',{season:v('#data-award-season'),program_id:v('#data-award-school'),award_type:v('#data-award-type'),value:Number(v('#data-award-value')),source_note:v('#data-award-source')});
+        notice('Verified achievement saved.');
+      }else if(act==='refresh-results'){await loadResults();return;}
+      if(act==='save-clock'){
+        await api('admin/clock',{seconds:Number(v('#clock-duration'))});
+        notice('Draft clock saved.');
+      }else if(act==='save-waivers'){
+        await api('admin/waiver-settings',{enabled:!!document.querySelector('#waivers-enabled')?.checked});
+        notice('Waiver settings saved.');
+      }else if(act==='season-rollover'){
+        if(!window.confirm('Archive '+season()+' and start the next season? All teams keep the same programs. This cannot be undone.')){busy=false;return;}
+        const result=await api('admin/season/rollover',{});
+        selectedHistorySeason=result.archived;
+        notice('Archived '+result.archived+'. The new season is '+result.current_season+'.');
+      }else if(act==='season-champion'){
+        const select=[...document.querySelectorAll('.season-champion-select')].find(el=>el.dataset.season===id);
+        await api('admin/season/champion',{season:id,manager_id:select?.value||''});
+        notice('Archived champion updated.');
+      }else if(act==='team-drop'){
+        if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')throw new Error('Waivers are not available.');
+        const school=programs().find(p=>p.id===id);
+        if(!school||programOwned(id)?.manager_id!==me.id)throw new Error('You do not own this program.');
+        if(!window.confirm('Release '+school.name+' from your permanent roster? The program will become available to the league.')){busy=false;return;}
+        await api('waiver/drop',{program_id:id});
+        notice(school.name+' released.');
+      }else if(act==='waiver-claim'){
+        const programId=v('#waiver-program'),dropId=v('#waiver-drop');
+        if(!programId)throw new Error('Choose an available school.');
+        await api('waiver/claim',{program_id:programId,drop_program_id:dropId||null});
+        notice('Waiver request submitted.');
+      }else if(act==='waiver-cancel'){
+        await api('waiver/cancel',{claim_id:id});notice('Claim cancelled.');
+      }else if(act==='waiver-drop'){
+        const programId=v('#waiver-release');
+        if(!programId)throw new Error('Choose a school.');
+        const school=programs().find(p=>p.id===programId);
+        if(!window.confirm('Drop '+(school?.name||'this program')+' from your permanent roster?')){busy=false;return;}
+        await api('waiver/drop',{program_id:programId});notice('Program released.');
+      }else if(act==='waiver-review'){
+        if(!window.confirm((button.dataset.mode==='approve'?'Approve':'Deny')+' this waiver claim?')){busy=false;return;}
+        await api('admin/waiver/review',{claim_id:id,mode:button.dataset.mode});
+        notice('Waiver claim reviewed.');
+      }else if(act==='save-general'){
+        await api('admin/general',{league_name:v('#league-name').trim(),max_managers:Number(v('#manager-limit')||league.settings.max_managers)});
+        notice('General settings saved.');
+      }else if(act==='save-bestball'){
+        const count=Number(v('#bestball-count'));
+        if(!Number.isInteger(count)||count<1||count>Number(league.settings.rounds))throw new Error('Select between 1 and '+league.settings.rounds+' counting programs.');
+        await api('admin/bestball',{count});
+        notice('Best-ball updated: top '+count+' programs count.');
+      }else if(act==='save-scoring'){
+        const scoring={};
+        for(const key of Object.keys(scoreRules()))scoring[key]=key==='best_programs'?Number(scoreRules().best_programs):Number(v('#score-'+key));
+        await api('admin/scoring-settings',{scoring});
+        notice('Scoring weights saved.');
+      }else if(act==='save-trades'){
+        await api('admin/trade-settings',{trading_enabled:!!document.querySelector('#trading-enabled')?.checked});
+        notice('Trading settings saved.');
+      }else if(act==='race-start'){
+        if(me.role!=='commissioner')throw new Error('Only the commissioner can start the race.');
+        if(!window.confirm('Start the official race now? The current commissioner-set draft order will become final and all managers can replay it.')){busy=false;return;}
+        await api('admin/race/run',{});
+        notice('Race started. The draft order is now final.');
+      }else if(act==='race-reset'){
+        if(me.role!=='commissioner')throw new Error('Commissioner access required.');
+        if(!window.confirm('Reset the official race and restore signup order? All managers will lose the current replay. This is only allowed before drafting begins.')){busy=false;return;}
+        await api('admin/race/reset',{});
+        if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
+        raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};
+        draftOrderPreview=[];
+        notice('Race reset. You can configure and run a new official race.');
+      }else if(act==='save-draft-order'){
+        await api('admin/draft-order',{order:draftOrderPreview});
+        notice('Draft order saved.');
+      }else if(act==='save-rounds'){
+        await api('admin/settings',{rounds:Number(v('#rounds')),conferences:activeConfs()});
+        notice('Draft rounds saved.');
+      }else if(act==='trade-propose'){
+        const give_ids=[...document.querySelectorAll('input[name="trade-give"]:checked')].map(x=>x.value);
+        const receive_ids=[...document.querySelectorAll('input[name="trade-receive"]:checked')].map(x=>x.value);
+        const give_picks=[...document.querySelectorAll('input[name="trade-give-pick"]:checked')].map(x=>Number(x.value));
+        const receive_picks=[...document.querySelectorAll('input[name="trade-receive-pick"]:checked')].map(x=>Number(x.value));
+        if(!(give_ids.length+give_picks.length)||!(receive_ids.length+receive_picks.length))
+          throw Error('Select at least one asset from both teams.');
+        if(!window.confirm('Send this offer? The other manager must accept before picks or programs move.')){busy=false;return;}
+        await api('trade/propose',{to_manager_id:tradeTargetId,give_ids,receive_ids,give_picks,receive_picks});
+        notice('Trade offer sent.');
+      }else if(act==='trade-accept'){
+        if(!window.confirm('Accept this trade? All included draft picks and programs will transfer immediately.')){busy=false;return;}
+        await api('trade/respond',{trade_id:id,mode:'accept'});notice('Trade accepted. Pick and program ownership updated.');
+      }else if(act==='trade-decline'){
+        await api('trade/respond',{trade_id:id,mode:'decline'});notice('Trade declined.');
+      }else if(act==='trade-cancel'){
+        await api('trade/cancel',{trade_id:id});notice('Trade offer cancelled.');
+      }else if(act==='save-pool'){
+        initPoolDraft();
+        if(!poolDraftSchools.size)throw new Error('Select at least one program.');
+        const conferences=[...poolDraftConfs];
+        const included=programs().filter(p=>poolDraftSchools.has(String(p.id))&&!poolDraftConfs.has(String(p.conference_id))).map(p=>String(p.id));
+        const excluded=programs().filter(p=>!poolDraftSchools.has(String(p.id))&&poolDraftConfs.has(String(p.conference_id))).map(p=>String(p.id));
+        await api('admin/settings',{conferences,included_programs:included,excluded_programs:excluded,rounds:league.settings.rounds});
+        poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;
+        schoolLeaders=null;programResultCache={};standingsFetchedAt=0;notice('Eligible program pool saved.');
+      }else if(act==='admin-reset-member-password'){
+        if(me.role!=='commissioner')throw new Error('Commissioner access required.');
+        const target=members().find(u=>String(u.id)===String(id));
+        if(!target||target.role!=='manager')throw new Error('Select a manager account.');
+        if(!window.confirm('Reset @'+target.username+'? Their current password will stop working and all their devices will be signed out.'))return;
+        passwordResetReceipt=null;
+        const result=await api('admin/member/reset-password',{manager_id:String(target.id)});
+        passwordResetReceipt={username:result.username,display_name:result.display_name,temporary_password:result.temporary_password};
+        render();
+        notice('Temporary password generated for @'+result.username+'. Copy it before leaving this page.');
+        return;
+      }else if(act==='copy-reset-password'){
+        if(!passwordResetReceipt)throw new Error('No temporary password is available. Reset the manager again.');
+        await navigator.clipboard.writeText(passwordResetReceipt.temporary_password);
+        notice('Temporary password copied. Share it privately.');
+        return;
+      }else if(act==='dismiss-reset-password'){
+        passwordResetReceipt=null;render();return;
+      }else if(act==='invite'){
+        const r=await api('admin/invite',{});
+        inviteLink=location.origin+'/?invite='+encodeURIComponent(r.code);
+        notice('New invitation ready to copy.');
+      }else if(act==='copy-invite'){
+        await navigator.clipboard.writeText(inviteLink);
+        notice('Invitation link copied.');
+        busy=false;return;
+      }else if(act==='start'){
+        await api('admin/draft-control',{mode:'start'});notice('Draft is live.');
+      }else if(act==='pause'){
+        await api('admin/draft-control',{mode:'pause'});notice('Draft paused.');
+      }else if(act==='reset'){
+        if(!window.confirm('Permanently erase every draft pick? This cannot be undone.')){busy=false;return;}
+        await api('admin/draft-control',{mode:'reset'});notice('Draft picks reset.');
+      }else if(act==='draft-confirm'){
+        const programId=String(id),school=draftAvailable().find(p=>String(p.id)===programId);
+        if(draftSelectedProgram!==programId||!school)throw Error('Select an available program again.');
+        if(!isMyTurn())throw Error('It is not currently your draft pick. Refresh the draft room.');
+        await api('draft/pick',{program_id:programId});
+        draftSelectedProgram='';
+        draftWatchlist=draftWatchlist.filter(saved=>saved!==programId);
+        storeDraftQueue();
+        notice('Pick confirmed: '+school.name+' is yours.');
+        current='draft';
+      }else if(act==='pick'){
+        if(!window.confirm('Draft this program? The selection is permanent until commissioner reset.')){busy=false;return;}
+        await api('draft/pick',{program_id:id});notice('Program drafted successfully.');
+        draftSelectedProgram='';
+        current='draft';
+      }else if(act==='sync'){
+        const selected=activeConfs().slice();
+        if(!selected.length)throw Error('No enabled conferences to resync.');
+        if(!window.confirm('Import programs for '+selected.length+' conferences? This may take several moments.')){busy=false;return;}
+        syncActive=true;let done=0,errors=[];
+        for(const confId of selected){
+          try{const result=await api('admin/sync',{conference_id:confId});done+=result.added||0;}catch(e){errors.push(conf(confId)+': '+e.message);}
+        }
+        syncActive=false;
+        await refresh(true);
+        notice('Imported '+done+' programs.'+(errors.length?' '+errors.length+' conferences need review.':''),errors.length>0);
+        if(errors.length)window.alert('Some imports could not be completed:\n\n'+errors.join('\n'));
+        busy=false;return;
+      }
+      await refresh(true);
+    }catch(e){notice(e.message,true);}finally{busy=false;}
+  }
+  root.addEventListener('click',e=>{
+    const summary=e.target.closest('#draft-queue-details > summary');
+    if(summary){e.preventDefault();draftQueueOpen=!draftQueueOpen;render();return;}
+    const b=e.target.closest('[data-act]');
+    if(b)action(b);
+  });
+  // HTML drag and drop is available on desktop; large, native ↑/↓ buttons
+  // provide reliable reorder controls for touch devices and keyboard users.
+  const clearDraftDragMarkers=()=>{
+    root.querySelectorAll('.draft-queue-row.dragging, .draft-queue-row.drop-before, .draft-queue-row.drop-after')
+      .forEach(row=>row.classList.remove('dragging','drop-before','drop-after'));
+  };
+  const clearDraftDropMarkers=()=>{
+    root.querySelectorAll('.draft-queue-row.drop-before, .draft-queue-row.drop-after')
+      .forEach(row=>row.classList.remove('drop-before','drop-after'));
+  };
+  root.addEventListener('dragstart',e=>{
+    const handle=e.target.closest?.('.draft-queue-grip');
+    if(!handle||current!=='draft')return;
+    const id=String(handle.dataset.id);
+    if(!draftWatchlist.includes(id)){e.preventDefault();return;}
+    draftQueueDragging=id;
+    if(e.dataTransfer){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',id);}
+    handle.closest('.draft-queue-row')?.classList.add('dragging');
+  });
+  root.addEventListener('dragover',e=>{
+    if(!draftQueueDragging)return;
+    const row=e.target.closest?.('.draft-queue-row');
+    if(!row)return;
+    e.preventDefault();
+    if(e.dataTransfer)e.dataTransfer.dropEffect='move';
+    clearDraftDropMarkers();
+    const mid=row.getBoundingClientRect().top+row.getBoundingClientRect().height/2;
+    row.classList.add(e.clientY<mid?'drop-before':'drop-after');
+  });
+  root.addEventListener('drop',e=>{
+    if(!draftQueueDragging)return;
+    e.preventDefault();
+    const row=e.target.closest?.('.draft-queue-row');
+    const source=draftQueueDragging;draftQueueDragging='';
+    if(!row){clearDraftDragMarkers();return;}
+    const box=row.getBoundingClientRect();
+    const after=e.clientY>=box.top+box.height/2;
+    if(!insertDraftQueue(source,row.dataset.queueId,after))clearDraftDragMarkers();
+  });
+  root.addEventListener('dragend',()=>{
+    draftQueueDragging='';clearDraftDragMarkers();
+  });
+  root.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&draftSelectedProgram&&current==='draft'){
+      draftSelectedProgram='';render();
+    }
+  });
+  document.addEventListener?.('visibilitychange',()=>{if(!document.hidden){pingActivity(true);loadNotifications(true);}});
+  document.addEventListener?.('keydown',e=>{
+    if(!me||!league)return;
+    const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'')||e.target?.isContentEditable;
+    if(((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k')||(!typing&&!globalSearchOpen&&e.key==='/')){
+      e.preventDefault();toggleGlobalSearch(true);return;
+    }
+    if(globalSearchOpen&&e.key==='Escape'){e.preventDefault();toggleGlobalSearch(false);return;}
+    if(globalSearchOpen&&e.key==='ArrowDown'&&e.target?.id==='global-search-input'){
+      e.preventDefault();root.querySelector('.global-search-result')?.focus();return;
+    }
+    if(globalSearchOpen&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&e.target?.closest?.('.global-search-result')){
+      const buttons=[...root.querySelectorAll('.global-search-result')];
+      const index=buttons.indexOf(e.target.closest('.global-search-result'));
+      const next=Math.max(0,Math.min(buttons.length-1,index+(e.key==='ArrowDown'?1:-1)));
+      if(buttons[next]){e.preventDefault();buttons[next].focus();}
+      return;
+    }
+    if(globalSearchOpen&&e.key==='Enter'&&e.target?.id==='global-search-input'){
+      e.preventDefault();root.querySelector('.global-search-result')?.click();return;
+    }
+  });
+  root.addEventListener('submit',async e=>{
+    const form=e.target.closest('form[data-form]');
+    if(!form)return;
+    e.preventDefault();if(busy)return;
+    const type=form.dataset.form;
+    const data=Object.fromEntries(new FormData(form).entries());
+    busy=true;
+    try{
+      if(type==='account-profile'){
+        if(avatarDraft!==null)data.avatar_data=avatarDraft;
+        const changed=await api('account/profile',data);
+        avatarDraft=null;me=changed.user;
+        await refresh(true);
+        notice('Your team profile was updated.');
+      }else if(type==='account-password'){
+        if(data.new_password!==data.confirm_password)throw new Error('The two new passwords do not match.');
+        await api('account/password',{current_password:data.current_password,new_password:data.new_password});
+        form.reset();
+        notice('Password updated. Other sessions have been signed out.');
+      }else if(type==='program'){await api('admin/program',data);poolDraftConfs=null;poolDraftSchools=null;poolDirty=false;notice('Program added to pool.');await refresh(true);}
+      else{
+        data.remember_device=!!form.querySelector('[name="remember_device"]')?.checked;
+        const res=await api(type==='login'?'login':type==='join'?'join':'setup',data);
+        if(!res.token)throw new Error('Unable to establish a session. Try signing in again.');
+        saveSignedInToken(res.token,data.remember_device);
+        selectedInvite='';
+        const pendingLink=new URLSearchParams(location.search);
+        const openInbox=pendingLink.has('notifications');
+        if(location.search&&!pendingLink.has('verify_email'))history.replaceState({},'',location.pathname);
+        me=res.user;notificationSnapshot=null;notificationFetchedAt=0;pushDeviceActive=false;await refresh();
+        if(openInbox){current='notifications';render();}
+        startPolling();
+        notice(data.remember_device?'Signed in. This device will be remembered.':'Signed in for this browser session.');
+        if(me?.role==='commissioner')autoImportPrograms();
+        loadNotifications(true);verifyPendingNotificationEmail();
+      }
+    }catch(err){notice(err.message,true);}finally{busy=false;}
+  });
+  root.addEventListener('change',async e=>{
+    if(e.target?.id==='activity-range'){activityRange=e.target.value;activitySnapshot=null;activityFetchedAt=0;render();return;}
+    if(e.target?.id==='activity-member'){activityMemberFilter=e.target.value;render();return;}
+    if(e.target?.id==='settings-photo-input'){
+      const file=e.target.files?.[0];
+      if(!file)return;
+      if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024){
+        notice('Choose a JPEG, PNG or WebP photo under 8 MB.',true);e.target.value='';return;
+      }
+      const url=URL.createObjectURL(file),image=new Image();
+      try{
+        await new Promise((resolve,reject)=>{
+          image.onload=resolve;image.onerror=()=>reject(new Error('The image could not be opened.'));
+          image.src=url;
+        });
+        const canvas=document.createElement('canvas'),size=192;
+        canvas.width=size;canvas.height=size;
+        const ctx=canvas.getContext('2d');
+        if(!ctx)throw new Error('Your browser cannot resize profile images.');
+        ctx.fillStyle='#ffffff';ctx.fillRect(0,0,size,size);
+        const width=image.naturalWidth,height=image.naturalHeight,side=Math.min(width,height);
+        ctx.drawImage(image,(width-side)/2,(height-side)/2,side,side,0,0,size,size);
+        const encoded=canvas.toDataURL('image/jpeg',0.76);
+        if(encoded.length>82000)throw new Error('Image is still too large after resizing.');
+        avatarDraft=encoded;
+        const preview=root.querySelector('.settings-avatar-preview');
+        if(preview)preview.innerHTML=avatar({...me,avatar_data:encoded});
+        const hint=root.querySelector('#photo-hint');
+        if(hint)hint.textContent='New photo ready. Save your profile to publish it.';
+        notice('Profile photo ready to save.');
+      }catch(error){notice(String(error.message||error),true);}
+      finally{URL.revokeObjectURL(url);e.target.value='';}
+      return;
+    }
+    if(e.target?.id==='pool-conf-filter'){poolConferenceFilter=e.target.value;poolShown=70;render();return;}
+    if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
+    if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
+    if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
+    if(e.target?.id==='directory-sort'){programSort=e.target.value;programShown=36;render();filterPrograms();}
+    if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
+    if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
+    if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
+    if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
+    if(e.target?.id==='draft-pool-conference'){draftConference=e.target.value;draftShown=30;filterDraftPool();}
+    if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
+    if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;resultsShown=40;loadResults();}
+    if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"], input[name="trade-give-pick"], input[name="trade-receive-pick"]'))updateTradeSelections();
+  });
+  root.addEventListener('input',e=>{
+    if(e.target?.id==='global-search-input'){globalSearchQuery=e.target.value;const list=root.querySelector('#global-search-list');if(list)list.innerHTML=globalSearchResults();return;}
+    if(e.target?.id==='pool-search'){
+      poolQuery=e.target.value;poolShown=70;updatePoolList();return;
+    }
+    if(e.target?.id==='daily-team-search'){
+      resultsSearch=e.target.value;
+      resultsShown=40;
+      const caret=e.target.selectionStart;
+      render();
+      const field=root.querySelector('#daily-team-search');
+      if(field){field.focus({preventScroll:true});if(caret!==null)field.setSelectionRange(caret,caret);}
+      return;
+    }
+    if(e.target?.id==='leader-search'){leaderQuery=e.target.value;leaderShown=40;filterSchoolLeaders();return;}
+    if(e.target?.id==='rating-search'){ratingQuery=e.target.value;ratingShown=40;filterRatings();return;}
+    if(e.target?.id==='draft-pool-search'){draftQuery=e.target.value;draftShown=30;filterDraftPool();return;}
+    if(e.target?.id!=='program-search')return;
+    programQuery=e.target.value;
+    programShown=36;
+    filterPrograms();
+  });
+  // Startup guard: a missing helper or failed initialization must not leave
+  // the loading placeholder on screen indefinitely.
+  const startupFailure=e=>{
+    console.error('Boek Dynasty startup failed',e);
+    root.innerHTML='<div class="auth-layout"><main class="auth-panel"><div class="auth-card"><div class="auth-section"><h1>Unable to open Boek Dynasty</h1><p class="auth-desc">The application encountered a startup error. Please reload to try again.</p><a class="btn" href="/">Reload site</a></div></div></main></div>';
+  };
+  try{
+    setInterval(updateDraftClock,1000);
+    Promise.resolve(boot()).catch(startupFailure);
+  }catch(e){startupFailure(e);}
+})();)+'</div></div>'
       +(draftSort==='cost'
         ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · National rank out of 143 eligible schools, including drafted programs. CBS reported tiers and mid-major reporting are supplemented with unverified model estimates; amounts are not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
         :'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+

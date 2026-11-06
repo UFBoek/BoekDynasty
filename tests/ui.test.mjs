@@ -33,8 +33,8 @@ test('full snake board reverses the second round but not manager columns',()=>{
  const html=app.page('draft');
  const picks=[...html.matchAll(/data-pick="(\d+)"/g)].map(x=>Number(x[1]));
  assert.deepEqual(picks,[1,2,3,4,8,7,6,5,9,10,11,12]);
- assert.match(html,/Full board/);
- assert.match(html,/My rounds/);
+ assert.match(html,/All rounds/);
+ assert.match(html,/My picks/);
 });
 test('league overview prioritizes games, actionable guidance and compact team rosters',()=>{
  const html=app.page('home');

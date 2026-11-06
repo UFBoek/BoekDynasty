@@ -571,7 +571,7 @@
     try{
       const next=await api('state'); me=next.user;league=next;reconcileDraftQueue();
       if(new URLSearchParams(location.search).has('notifications'))current='notifications';
-      loadNotifications(true);verifyPendingNotificationEmail();
+      render();loadNotifications(true);verifyPendingNotificationEmail();
       startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}

@@ -13,6 +13,8 @@ const injection=`  return {
  sortDraft:sort=>{draftSort=sort;draftScope='all';},
  schools:(mode,data)=>{programMode=mode;schoolLeaders=data;leaderSeason='all';},
  results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsLoadedDay='2026-11-03';resultsSeason=season();resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
+ standings:(data)=>{standingsData=data;standingsFetchedAt=Date.now();},
+ expandLeague:(id)=>{leagueExpandedManager=String(id);},
  filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;}
 };
 })();`;
@@ -423,4 +425,57 @@ test('My Team v4 keeps scoring and actions while adding compact scouting columns
     assert.match(html,/data-id="waivers"/);
     assert.doesNotMatch(html,/CURRENTLY COUNTING|OWNED PROGRAMS|LEAGUE TITLES/);
   }finally{league.ownership=oldOwnership;league.settings.draft_status=oldStatus;}
+});
+
+
+test('League standings show ranked totals, ties, lead gaps and verified program contribution details',()=>{
+ const previousOwnership=league.ownership,previousBest=league.settings.scoring.best_programs;
+ try{
+  league.settings.scoring.best_programs=2;
+  league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'1'},
+   {program_id:'59',manager_id:'2'},{program_id:'60',manager_id:'3'}];
+  app.standings({season:'2026-27',best_programs:2,as_of:1790000000,quadrant_source:'torvik',
+   program_points:{'57':22.5,'58':4.5,'59':20,'60':20},
+   standings:[{manager_id:'1',points:27,counted_programs:2,counted_program_ids:['57','58']},
+    {manager_id:'2',points:20,counted_programs:1,counted_program_ids:['59']},
+    {manager_id:'3',points:20,counted_programs:1,counted_program_ids:['60']},
+    {manager_id:'4',points:0,counted_programs:0,counted_program_ids:[]}]});
+  let html=app.page('league');
+  assert.match(html,/league-standings-context/);
+  assert.match(html,/ROSTERED SCHOOLS/);
+  assert.match(html,/FANTASY POINTS/);
+  assert.match(html,/standings-mini-roster/);
+  assert.match(html,/T02/);
+  assert.match(html,/−7/);
+  assert.match(html,/LEADER/);
+  assert.match(html,/Bart Torvik · provisional/);
+  assert.match(html,/data-act="league-refresh"/);
+  assert.match(html,/data-act="league-toggle-details"/);
+  assert.match(html,/aria-expanded="false"/);
+  app.expandLeague('1');
+  html=app.page('league');
+  assert.match(html,/league-breakdown-row/);
+  assert.match(html,/COUNTING IN BEST BALL/);
+  assert.match(html,/Florida basketball/);
+  assert.match(html,/Duke basketball/);
+  assert.match(html,/22\.5/);
+  assert.match(html,/data-act="open-program"/);
+  assert.match(html,/aria-expanded="true"/);
+ }finally{app.expandLeague('');app.standings(null);
+   league.ownership=previousOwnership;league.settings.scoring.best_programs=previousBest;}
+});
+
+test('League preseason never fabricates a leader or point ranking',()=>{
+ const previousOwnership=league.ownership;
+ try{
+  league.ownership=[];
+  app.standings({season:'2026-27',best_programs:2,quadrant_source:'pending',program_points:{},
+   standings:users.map(u=>({manager_id:u.id,points:0,counted_programs:0,counted_program_ids:[]}))});
+  const html=app.page('league');
+  assert.match(html,/PRESEASON/);
+  assert.match(html,/Not established/);
+  assert.match(html,/Awaiting draft/);
+  assert.doesNotMatch(html,/class="league-standing-rank is-first"/);
+  assert.match(html,/HOW RANKINGS WORK/);
+ }finally{app.standings(null);league.ownership=previousOwnership;}
 });

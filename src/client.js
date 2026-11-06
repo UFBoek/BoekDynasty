@@ -97,6 +97,7 @@
     (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major</option>';
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
+  let leagueExpandedManager='';
   let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';
   let avatarDraft=null;
   let inviteLink='', passwordResetReceipt=null, busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
@@ -1542,9 +1543,10 @@
       +'<small>'+(reported?'2026–27 EST.':cost?.evidence==='M'?'MODEL ONLY':'NOT REPORTED')+'</small></span>'
       +'<span class="program-dir-status" data-label="STATUS">'+status+'</span></div>';
   }
-  async function loadStandings(){
-    if(!me||standingsLoading||Date.now()-standingsFetchedAt<60000)return;
+  async function loadStandings(force=false){
+    if(!me||standingsLoading||(!force&&Date.now()-standingsFetchedAt<60000))return;
     standingsLoading=true;standingsFetchedAt=Date.now();
+    if(force&&current==='league')render();
     try{standingsData=await api('data/standings');standingsError='';}
     catch(e){standingsError=e.message;}
     finally{standingsLoading=false;if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();}
@@ -2557,35 +2559,115 @@
 
   function leaguePage(){
     const scoring=standingsData?.season===season()?standingsData:null;
-    const scoreIndex=new Map((scoring?.standings||[]).map(x=>[x.manager_id,x]));
+    const best=Math.max(1,Number(scoring?.best_programs||league.settings.scoring?.best_programs||8));
+    const scoreIndex=new Map((scoring?.standings||[]).map(row=>[String(row.manager_id),row]));
+    const pointMap=scoring?.program_points||{};
+    const programIndex=new Map(programs().map(p=>[String(p.id),p]));
+    const rosterIndex=new Map(members().map(u=>[String(u.id),[]]));
+    for(const owned of owners()){
+      const roster=rosterIndex.get(String(owned.manager_id)),school=programIndex.get(String(owned.program_id));
+      if(roster&&school)roster.push(school);
+    }
     const users=members().slice();
-    if(scoring)users.sort((a,b)=>(scoreIndex.get(b.id)?.points||0)-(scoreIndex.get(a.id)?.points||0)||a.display_name.localeCompare(b.display_name));
+    const valueOf=u=>Number(scoreIndex.get(String(u.id))?.points||0);
+    if(scoring)users.sort((a,b)=>valueOf(b)-valueOf(a)||a.display_name.localeCompare(b.display_name));
+    const hasPoints=!!scoring&&users.some(u=>valueOf(u)>0);
+    const leaderTotal=hasPoints?Math.max(...users.map(valueOf)):0;
     const fmtPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
-    const rows=users.map((u,index)=>{
-      const manager=scoreIndex.get(u.id);
-      const schools=owners().filter(o=>o.manager_id===u.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
-      const schoolPreview=schools.length?'<span class="standings-mini-roster">'+schools.slice(0,5).map(p=>'<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+(schools.length>5?'<span class="standings-roster-more">+'+(schools.length-5)+'</span>':'')+'</span>':'<span class="standings-roster-pending">Draft pending</span>';
-      const points=manager&&schools.length?'<strong>'+fmtPoints(manager.points)+'</strong><small class="muted"> · '+manager.counted_programs+' counting</small>':
-        schools.length?'<span class="pending-score">Loading</span>':'<span class="pending-score">—</span>';
-      return '<tr class="standing-row'+(u.id===me.id?' is-mine':'')+'"><td><button class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
-        +(scoring&&owners().length?'<span class="standings-position-index">#'+String(1+users.findIndex(x=>Number(scoreIndex.get(x.id)?.points||0)===Number(scoreIndex.get(u.id)?.points||0)))+'</span>':'')
-        +avatar(u)+'<div><strong>'+escapeHTML(u.display_name)+'</strong><small>'+(u.id===me.id?'Your team':'View team profile')+'</small></div></button></td>'
-        +'<td class="standing-school-cell">'+schoolPreview+'</td><td class="numerical">'+points+'</td></tr>';
-    }).join('');
-    const note=standingsError?'Unable to refresh standings: '+escapeHTML(standingsError):
+    const leader=hasPoints?users[0]:null;
+    const ownerCount=owners().length;
+    const countedAcrossLeague=users.reduce((sum,u)=>sum+Number(scoreIndex.get(String(u.id))?.counted_programs||0),0);
+    const sourceLabel=scoring?.quadrant_source==='net'?'NCAA NET':
+      scoring?.quadrant_source==='torvik'?'Bart Torvik · provisional':'Quadrants pending';
+    const scoredAt=scoring?.as_of?new Date(Number(scoring.as_of)*1000).toLocaleTimeString('en-US',{
+      timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'';
+    const note=standingsError?'Unable to refresh standings: '+standingsError:
       !scoring?'Calculating the current fantasy scores from verified games and awards...':
-      !owners().length?'Managers earn points after drafting their schools.':
-      scoring.quadrant_source==='torvik'?'Live fantasy points include provisional Q1/Q1A/Q2 bonuses using Bart Torvik. NCAA NET will replace these calculations automatically.':
-      scoring.quadrant_source==='pending'?'Live fantasy scores. Quadrant bonuses begin once complete Bart Torvik or NCAA NET rankings are available.':
-      'Live scores reflect regular-season wins, NET quadrant bonuses and confirmed postseason awards.';
-    return heading('SEASON '+escapeHTML(season()),'Standings','Dynasty standings for the current season.')
-      +'<section class="panel standings-panel">'
-      +panelHeading('League standings','Best '+Number(league.settings.scoring?.best_programs||8)+' programs count toward each manager’s total')
-      +'<div class="standings-notice">'+note+'</div>'
-      +'<div class="standings-table-wrap"><table class="standings-table"><thead><tr><th>MANAGER</th><th>ROSTERED SCHOOLS</th><th class="numerical">FANTASY POINTS</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-      +'</section>';
+      !ownerCount?'Managers earn points after drafting their schools.':
+      scoring.quadrant_source==='torvik'?'Quadrant bonuses are provisional using Bart Torvik. NCAA NET will replace them when available.':
+      scoring.quadrant_source==='pending'?'Quadrant bonuses begin once complete Bart Torvik or NCAA NET rankings are available.':
+      'Totals include verified wins, NET quadrant bonuses and confirmed postseason awards.';
+    const programRows=(items,counted)=>{
+      if(!items.length)return '<p class="league-breakdown-empty">'+(counted?'No programs counting yet.':'No bench programs.')+'</p>';
+      return '<div class="league-breakdown-list">'+items.map((p,i)=>
+        '<button type="button" class="league-breakdown-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="Open '+escapeHTML(p.name)+' profile">'+
+        '<span class="league-breakdown-number">'+String(i+1).padStart(2,'0')+'</span>'+img(p)+
+        '<span class="league-breakdown-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'+
+        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+'</strong>'+
+        '<span class="league-breakdown-chevron" aria-hidden="true">↗</span></button>'
+      ).join('')+'</div>';
+    };
+    const rows=users.map((u,index)=>{
+      const manager=scoreIndex.get(String(u.id));
+      const owned=(rosterIndex.get(String(u.id))||[]).slice()
+        .sort((a,b)=>Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
+          a.name.localeCompare(b.name));
+      const countIds=new Set((manager?.counted_program_ids||[]).map(String));
+      const counted=owned.filter(p=>countIds.has(String(p.id)));
+      const bench=owned.filter(p=>!countIds.has(String(p.id)));
+      const pts=valueOf(u),position=hasPoints?1+users.findIndex(other=>valueOf(other)===pts):null;
+      const tied=hasPoints&&users.some(other=>String(other.id)!==String(u.id)&&valueOf(other)===pts);
+      const gap=hasPoints?(leaderTotal-pts):0;
+      const mine=String(u.id)===String(me.id),expanded=leagueExpandedManager===String(u.id);
+      const schoolPreview=owned.length?'<span class="standings-mini-roster">'+owned.slice(0,5).map(p=>
+        '<span title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join('')+
+        (owned.length>5?'<span class="standings-roster-more">+'+(owned.length-5)+'</span>':'')+'</span>':
+        '<span class="standings-roster-pending">Awaiting draft</span>';
+      const meta=owned.length?owned.length+' owned · '+(scoring?Number(manager?.counted_programs||0):'—')+' counting':'Awaiting selections';
+      const details=expanded?'<tr class="league-breakdown-row"><td colspan="7"><div class="league-breakdown">'+
+        '<div class="league-breakdown-top"><div><span>PROGRAM CONTRIBUTIONS</span><h3>'+escapeHTML(u.display_name)+'</h3></div>'+
+        '<button type="button" class="league-breakdown-profile" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">Full team profile <span aria-hidden="true">↗</span></button></div>'+
+        '<div class="league-breakdown-columns"><section><div class="league-breakdown-section-label"><strong>COUNTING IN BEST BALL</strong><span>'+counted.length+' / '+best+'</span></div>'+
+        programRows(counted,true)+'</section>'+
+        '<section><div class="league-breakdown-section-label"><strong>REMAINING ROSTER</strong><span>'+bench.length+' programs</span></div>'+
+        programRows(bench,false)+'</section></div></div></td></tr>':'';
+      return '<tr class="standing-row'+(mine?' is-mine':'')+(index===0&&hasPoints?' is-leader':'')+(expanded?' is-expanded':'')+'">'+
+        '<td class="standings-rank-cell"><span class="league-standing-rank'+(hasPoints&&position===1?' is-first':'')+'">'+
+          (position?(tied?'T':'')+String(position).padStart(2,'0'):'—')+'</span></td>'+
+        '<td class="standings-team-cell"><button type="button" class="standings-manager table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'" title="View '+escapeHTML(u.display_name)+' team">'+
+          avatar(u)+'<span class="league-manager-copy"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+
+          (mine?'YOUR FRANCHISE · ':'')+escapeHTML(meta)+'</small></span><span class="league-manager-arrow" aria-hidden="true">↗</span></button></td>'+
+        '<td class="standing-school-cell">'+schoolPreview+'</td>'+
+        '<td class="standings-count-cell"><strong>'+(scoring?Number(manager?.counted_programs||0):'—')+'</strong><small>/ '+best+'</small></td>'+
+        '<td class="standings-gap-cell">'+(hasPoints?(gap<=0?'<span class="league-gap-leader">LEADER</span>':'<span>−'+fmtPoints(gap)+'</span>'):'<span class="league-gap-muted">—</span>')+'</td>'+
+        '<td class="numerical standings-points-cell"><div class="league-standing-points">'+
+          (scoring&&owned.length?'<strong>'+fmtPoints(pts)+'</strong>':'<span class="pending-score">—</span>')+
+          (hasPoints&&owned.length?'<span class="league-score-track" aria-hidden="true"><i style="width:'+Math.max(0,Math.min(100,pts/leaderTotal*100)).toFixed(2)+'%"></i></span>':'')+
+          '</div></td>'+
+        '<td class="standings-expand-cell"><button type="button" class="league-expand-button'+(expanded?' is-open':'')+'" data-act="league-toggle-details" data-id="'+escapeHTML(u.id)+'" aria-label="'+(expanded?'Hide':'Show')+' '+escapeHTML(u.display_name)+' program breakdown" aria-expanded="'+expanded+'" title="Show program breakdown">'+
+          '<span aria-hidden="true">⌄</span></button></td></tr>'+details;
+    }).join('');
+    const standingsStatus=hasPoints?'LIVE TABLE':ownerCount?'SEASON OPEN':'PRESEASON';
+    return '<div class="league-center">'+
+      '<header class="league-masthead"><div><span class="league-kicker">CBB DYNASTY <span aria-hidden="true">/</span> '+escapeHTML(season())+'</span>'+
+        '<h1>League standings</h1><p>Every franchise. Every program. One best-ball race.</p></div>'+
+        '<div class="league-masthead-right"><span class="league-season-state"><i aria-hidden="true"></i>'+standingsStatus+'</span>'+
+          '<span>'+users.length+' MANAGERS <b aria-hidden="true">·</b> TOP '+best+' COUNT</span></div></header>'+
+      '<section class="standings-panel league-standings" aria-label="Current season league standings">'+
+        '<div class="league-standings-toolbar"><div class="league-standings-heading"><span class="league-section-index">01 / STANDINGS</span>'+
+          '<h2>'+escapeHTML(season())+' leaderboard</h2><p>Ranked by total points from each manager’s highest-scoring programs.</p></div>'+
+          '<button type="button" class="league-refresh" data-act="league-refresh" aria-label="Refresh league standings"'+(standingsLoading?' disabled':'')+'>'+
+            '<span aria-hidden="true">↻</span> '+(standingsLoading?'Updating':'Refresh')+'</button></div>'+
+        '<div class="league-standings-context" aria-label="League scoring summary">'+
+          '<div><small>SCORING</small><strong>Best '+best+' programs</strong></div>'+
+          '<div><small>PROGRAMS ROSTERED</small><strong>'+ownerCount+'</strong></div>'+
+          '<div><small>CURRENT LEADER</small><strong>'+(leader?escapeHTML(leader.display_name):'Not established')+'</strong></div>'+
+          '<div><small>RANKING SOURCE</small><strong>'+escapeHTML(sourceLabel)+'</strong></div></div>'+
+        '<div class="league-standings-notice'+(standingsError?' is-error':'')+'" role="status"><span class="league-info-symbol" aria-hidden="true">i</span>'+
+          '<span>'+escapeHTML(note)+'</span></div>'+
+        '<div class="standings-table-wrap"><table class="standings-table league-standings-table">'+
+          '<thead><tr><th class="standings-rank-cell">RANK</th><th>FRANCHISE</th><th>ROSTERED SCHOOLS</th><th>COUNTING</th><th>GAP</th>'+
+          '<th class="numerical">FANTASY POINTS</th><th><span class="sr-only">Program breakdown</span></th></tr></thead>'+
+          '<tbody>'+rows+'</tbody></table></div>'+
+        '<footer class="league-standings-footer"><span><strong>'+countedAcrossLeague+'</strong> programs counting league-wide'+
+          (scoredAt?' <span class="league-footer-dot">·</span> Snapshot '+escapeHTML(scoredAt)+' ET':'')+'</span>'+
+          '<span>Open a manager for the full roster, or <b>⌄</b> to inspect program points</span></footer>'+
+      '</section>'+
+      '<div class="league-bottom-strip"><span><strong>HOW RANKINGS WORK</strong> Scores are recalculated as verified results arrive. Only the best '+best+
+        ' program totals count; the remaining programs stay on the roster.</span>'+
+        '<button type="button" data-act="tab" data-id="scoring">View scoring rules <span aria-hidden="true">↗</span></button></div>'+
+      '</div>';
   }
-
   function profileBack(){return '<button class="profile-back" data-act="profile-back">← Back</button>';}
   function programSeasonSchedule(p){
     const data=programScheduleCache[String(p.id)];
@@ -3319,6 +3401,8 @@
     if(act==='search-open'){toggleGlobalSearch(true);return;}
     if(act==='search-close'){toggleGlobalSearch(false);return;}
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
+    if(act==='league-refresh'){await loadStandings(true);return;}
+    if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();return;}
     if(act==='results-track-queue'){
       resultsSelectedDay=resultsToday();resultsScope='queue';resultsConference='all';resultsStatusFilter='all';
       resultsSearch='';resultsShown=40;current='results';render();loadResults();

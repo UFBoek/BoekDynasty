@@ -2,7 +2,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 const read = path => readFileSync(new URL('../'+path, import.meta.url), 'utf8');
 const page = read('src/index.html');
 const client = read('src/client.js');
-const css = read('src/style.css')+'\n'+read('src/results-design.css');
+const css = read('src/style.css')+'\n'+read('src/results-design.css')+'\n'+read('src/league-design.css');
 const server = read('src/server.js');
 const brandLogoBase64 = read('src/brand-logo.base64').trim();
 if (!brandLogoBase64.startsWith('iVBORw0KGgo')) throw new Error('Brand logo asset must be a PNG.');

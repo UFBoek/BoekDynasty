@@ -6330,3 +6330,6 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .draft-sheet-v5 .draft-confirm-action:disabled{color:#52697e;background:#eaf0f5;border-color:#dae3ec}
  .draft-sheet-v5 .draft-preview-actions button{min-height:38px}
 }
+/* Keep queue stars clear of the right-aligned draft rankings and cost estimates. */
+.draft-v5 .draft-pool-open,
+.draft-v5 .draft-pool-card.is-cost-sort .draft-pool-open{padding-right:48px}

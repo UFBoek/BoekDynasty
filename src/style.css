@@ -6646,7 +6646,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .schools-hub .directory-welcome:after{content:none}
 .schools-hub .directory-welcome-copy{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
 .schools-hub .directory-section-number{color:#ae6b42;font-size:8px;line-height:1.3;font-weight:900;letter-spacing:.125em}
-.schools-hub .directory-welcome-copy>strong{font-family:var(--bd-font-display,inherit);font-size:18px;line-height:1.2;font-weight:850;letter-spacing:-.035em;color:#1a344a}
+.schools-hub .directory-welcome-copy>h2{font-family:var(--bd-font-display,inherit);font-size:18px;line-height:1.2;font-weight:850;letter-spacing:-.035em;color:#1a344a}
 .schools-hub .directory-welcome-copy>small{font-size:10px;line-height:1.35;color:#8798a6}
 .schools-hub .directory-summary{display:grid;grid-template-columns:repeat(3,minmax(80px,1fr));min-width:280px;max-width:400px;flex:1;align-items:center;margin-left:auto}
 .schools-hub .directory-summary>span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:1px 14px;border-left:1px solid #e9edf1;font-variant-numeric:tabular-nums}
@@ -6752,7 +6752,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .schools-hub .school-view-tabs{gap:19px;margin-bottom:12px}
  .schools-hub .school-view-tabs button{min-height:42px;font-size:10.5px}
  .schools-hub .directory-welcome{padding:13px 14px;min-height:80px;gap:10px;flex-wrap:wrap;margin-bottom:10px}
- .schools-hub .directory-welcome-copy>strong{font-size:16px}
+ .schools-hub .directory-welcome-copy>h2{font-size:16px}
  .schools-hub .directory-summary{min-width:0;max-width:none;flex:1 1 100%;order:2}
  .schools-hub .directory-summary>span{padding:0 8px}
  .schools-hub .directory-summary>span:first-child{border-left:0}

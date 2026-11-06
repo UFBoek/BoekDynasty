@@ -6616,3 +6616,193 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(prefers-reduced-motion:reduce){
   .pp-v3 .pp-trend-row,.pp-v3 .pp-statbar>button,.pp-v3 .pp-tabs button{transition:none}
 }
+
+
+/* Schools / scouting index — editorial sports-data interface, November 2026. */
+.schools-hub{--sh-ink:#183048;--sh-muted:#687e92;--sh-line:#dce5ec;--sh-blue:#1d567d;--sh-orange:#c96830;min-width:0;color:var(--sh-ink)}
+.schools-hub .schools-masthead{padding:2px 2px 18px;border-bottom:1px solid #e3e9ee}
+.schools-hub .schools-kicker{display:flex;align-items:center;gap:9px;color:#8a6570;font-size:9px;line-height:1.3;font-weight:850;letter-spacing:.145em}
+.schools-hub .schools-kicker-rule{width:19px;height:2px;flex:0 0 19px;background:#d07840}
+.schools-hub .schools-kicker-divider{font-weight:500;color:#bac5cd;padding:0 2px}
+.schools-hub .schools-masthead-main{display:flex;align-items:end;justify-content:space-between;gap:30px;margin-top:10px}
+.schools-hub .schools-masthead-copy{min-width:0}
+.schools-hub .schools-masthead h1{font-family:var(--bd-font-display,inherit);font-size:clamp(30px,3.2vw,39px);line-height:1.05;font-weight:850;letter-spacing:-.06em;color:#152d42;margin:0}
+.schools-hub .schools-headline-stop{color:#ca7542}
+.schools-hub .schools-masthead-copy p{max-width:63ch;margin:8px 0 0;color:#6a7d8d;font-size:11.5px;line-height:1.55}
+.schools-hub .schools-masthead-aside{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto;padding-bottom:2px;font-variant-numeric:tabular-nums}
+.schools-hub .schools-masthead-aside>span:first-child{font-size:8px;font-weight:850;color:#9a8173;letter-spacing:.105em}
+.schools-hub .schools-masthead-aside>strong{font-family:var(--bd-font-display,inherit);color:#244b66;font-size:23px;line-height:1.15;font-weight:850;letter-spacing:-.045em}
+.schools-hub .schools-masthead-aside>strong small{font-family:inherit;font-size:9px;letter-spacing:.055em;font-weight:800;color:#8ca0b0}
+.schools-hub .schools-masthead-aside>span:last-child{font-size:10px;color:#8798a7}
+.schools-hub .school-view-tabs{display:flex;align-items:stretch;gap:26px;width:100%;max-width:none;margin:0 0 16px;padding:0;border:0;border-bottom:1px solid var(--sh-line);border-radius:0;background:transparent;box-shadow:none;overflow-x:auto;scrollbar-width:none}
+.schools-hub .school-view-tabs::-webkit-scrollbar{display:none}
+.schools-hub .school-view-tabs button{flex:0 0 auto;position:relative;min-height:44px;padding:10px 2px 11px;background:none;border:0;border-radius:0;box-shadow:none;color:#73889a;font-size:11px;font-weight:750;letter-spacing:-.005em;transition:color .15s}
+.schools-hub .school-view-tabs button:hover{background:none;color:#234f73}
+.schools-hub .school-view-tabs button.active{background:none;color:#1c4565;box-shadow:none;font-weight:850}
+.schools-hub .school-view-tabs button.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:#d2753d}
+.schools-hub .school-view-tabs button:focus-visible{outline:2px solid #286d9d;outline-offset:-3px}
+.schools-hub .program-directory-shell{min-width:0}
+.schools-hub .directory-welcome{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:93px;padding:17px 21px;margin:0 0 13px;background:#fff;border:1px solid var(--sh-line);border-left:3px solid #c96d36;border-radius:9px;box-shadow:none;overflow:visible;color:var(--sh-ink)}
+.schools-hub .directory-welcome:after{content:none}
+.schools-hub .directory-welcome-copy{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.schools-hub .directory-section-number{color:#ae6b42;font-size:8px;line-height:1.3;font-weight:900;letter-spacing:.125em}
+.schools-hub .directory-welcome-copy>strong{font-family:var(--bd-font-display,inherit);font-size:18px;line-height:1.2;font-weight:850;letter-spacing:-.035em;color:#1a344a}
+.schools-hub .directory-welcome-copy>small{font-size:10px;line-height:1.35;color:#8798a6}
+.schools-hub .directory-summary{display:grid;grid-template-columns:repeat(3,minmax(80px,1fr));min-width:280px;max-width:400px;flex:1;align-items:center;margin-left:auto}
+.schools-hub .directory-summary>span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:1px 14px;border-left:1px solid #e9edf1;font-variant-numeric:tabular-nums}
+.schools-hub .directory-summary b{font-family:var(--bd-font-display,inherit);font-size:23px;line-height:1.08;letter-spacing:-.035em;color:#25465e;font-weight:850}
+.schools-hub .directory-summary small{color:#8a9aa9;font-size:8px;line-height:1.2;font-weight:850;letter-spacing:.1em}
+.schools-hub .directory-live-pick{display:flex;align-items:center;gap:15px;justify-content:space-between;border:1px solid #d48758;border-radius:6px;background:#fff7f0;padding:10px 12px;color:#9c4e27;font-size:10px;font-weight:850;white-space:nowrap;cursor:pointer}
+.schools-hub .directory-live-pick:hover{background:#ffead9}
+.schools-hub .directory-filters{padding:0;background:#fff;border:1px solid var(--sh-line);border-radius:10px 10px 0 0;margin:0;box-shadow:none;overflow:hidden}
+.schools-hub .directory-search-row{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:center;gap:18px;padding:13px 17px;border-bottom:1px solid #e9eef2}
+.schools-hub .directory-search{flex:auto;position:relative;display:flex;align-items:center;min-width:0}
+.schools-hub .directory-search>span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#8499ab;display:flex;align-items:center;pointer-events:none}
+.schools-hub .directory-search svg{width:16px;height:16px}
+.schools-hub .directory-search .field{height:39px;min-height:39px;width:100%;padding:9px 12px 9px 37px;border:1px solid #d9e3ec;border-radius:6px;background:#f8fafc;color:#294961;font-size:11px;box-shadow:none}
+.schools-hub .directory-search .field::placeholder{color:#9aaab8}
+.schools-hub .directory-search .field:focus{border-color:#6598bd;background:#fff;box-shadow:0 0 0 3px rgba(49,111,160,.09)}
+.schools-hub .directory-sort-box{display:flex;align-items:center;gap:10px;min-width:0}
+.schools-hub .directory-sort-box>span,.schools-hub .directory-filter-label{flex:0 0 auto;color:#8f9eac;font-size:8px;font-weight:900;letter-spacing:.085em}
+.schools-hub .directory-sort-tabs{display:flex;align-items:center;gap:2px;background:#f1f4f7;border:1px solid #e6ecf0;border-radius:6px;padding:3px}
+.schools-hub .directory-sort-tabs button{border:0;border-radius:4px;background:transparent;color:#74889a;padding:8px 10px;min-height:31px;font-size:10px;font-weight:750;white-space:nowrap;cursor:pointer}
+.schools-hub .directory-sort-tabs button:hover:not(.active){background:#e6edf3;color:#385e78}
+.schools-hub .directory-sort-tabs button.active{color:#214d70;background:#fff;box-shadow:0 1px 3px rgba(30,57,80,.1)}
+.schools-hub .directory-conference-line{display:grid;grid-template-columns:87px minmax(0,1fr);align-items:center;gap:10px;border-bottom:1px solid #e9eef2;padding:0 17px}
+.schools-hub .directory-conference-strip{display:flex;align-items:center;gap:5px;min-height:53px;overflow-x:auto;padding:9px 0;scrollbar-width:thin;scrollbar-color:#d6e0e9 transparent;scroll-snap-type:none;white-space:nowrap}
+.schools-hub .directory-conference-strip button{min-height:29px;padding:6px 10px;border:1px solid transparent;border-radius:5px;background:transparent;color:#647a8e;box-shadow:none;font-size:10px;font-weight:750}
+.schools-hub .directory-conference-strip button:hover{background:#f1f5f8;color:#315d7c;border-color:#e2ebf1}
+.schools-hub .directory-conference-strip button.active{background:#edf4f9;border:1px solid #c5d8e6;color:#205779;box-shadow:none}
+.schools-hub .directory-filter-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 17px;border:0}
+.schools-hub .directory-status-tabs{display:flex;gap:3px;padding:0;border:0;background:transparent;border-radius:0;flex-wrap:wrap}
+.schools-hub .directory-status-tabs button{min-height:30px;padding:7px 10px;border:1px solid transparent;border-radius:5px;background:transparent;box-shadow:none;font-size:10px;font-weight:750;color:#76899a}
+.schools-hub .directory-status-tabs button:hover:not(.active){background:#f4f7fa;color:#294f6b}
+.schools-hub .directory-status-tabs button.active{background:#eff5f9;color:#21516f;border:1px solid #d7e4ee;box-shadow:none}
+.schools-hub .directory-current-count{color:#637e92;font-size:10px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.schools-hub .directory-alphabet{display:grid;grid-template-columns:87px minmax(0,1fr);align-items:center;gap:10px;padding:8px 17px;border-top:1px solid #e9eef2;background:#fbfcfd}
+.schools-hub .directory-letter-strip{display:flex;align-items:center;gap:2px;min-width:0;overflow-x:auto;padding:0;scrollbar-width:none}
+.schools-hub .directory-letter-strip button{flex:1 0 23px;min-height:24px;min-width:22px;padding:4px 3px;border:0;border-radius:4px;font-size:9px;font-weight:800;color:#7e93a3;background:transparent}
+.schools-hub .directory-letter-strip button.active{color:#fff;background:#305978}
+.schools-hub .directory-letter-strip button:hover:not(.active){background:#eef3f7;color:#2b5876}
+.schools-hub .directory-table{overflow:hidden;border:1px solid var(--sh-line);border-top:0;border-radius:0 0 10px 10px;background:#fff}
+.schools-hub .directory-table-head,.schools-hub .program-directory-card{display:grid;grid-template-columns:minmax(245px,2.4fr) minmax(80px,.78fr) minmax(85px,.9fr) minmax(110px,1.02fr) minmax(115px,.95fr);align-items:center;gap:8px}
+.schools-hub .directory-table-head{min-height:38px;padding:9px 18px;background:#f2f6f9;border-bottom:1px solid #dce5ec}
+.schools-hub .directory-table-head>span{color:#6c8293;font-size:8.5px;font-weight:850;letter-spacing:.095em;line-height:1.2;text-align:right;white-space:nowrap}
+.schools-hub .directory-table-head>span:first-child{text-align:left}
+.schools-hub .program-directory-grid{display:block;gap:0;padding:0;background:#fff}
+.schools-hub .program-directory-card{position:relative;margin:0;padding:9px 18px;min-width:0;min-height:65px;border:0;border-bottom:1px solid #e9eef2;border-radius:0;box-shadow:none!important;transform:none!important;background:#fff;transition:background .13s;overflow:visible}
+.schools-hub .program-directory-card:nth-child(even){background:#fbfcfd}
+.schools-hub .program-directory-card:last-child{border-bottom:0}
+.schools-hub .program-directory-card:hover,.schools-hub .program-directory-card:focus-within{background:#f1f6fa;border-color:#e9eef2}
+.schools-hub .program-directory-card:hover:before,.schools-hub .program-directory-card:focus-within:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#c67543}
+.schools-hub .directory-school-cell{display:flex;align-items:center;min-width:0;gap:12px;border:0;padding:0;flex:initial;cursor:pointer;background:transparent;text-align:left;color:inherit}
+.schools-hub .directory-school-cell:focus-visible,.schools-hub .directory-live-pick:focus-visible,.schools-hub .directory-sort-tabs button:focus-visible,.schools-hub .program-dir-pick:focus-visible,.schools-hub .program-dir-owner:focus-visible{outline:2px solid #2c7aa9;outline-offset:3px}
+.schools-hub .directory-school-logo{display:grid;place-items:center;flex:0 0 39px;width:39px;height:39px;background:#fff;border:1px solid #e4ebf0;border-radius:7px}
+.schools-hub .directory-school-logo .program-logo{display:block;width:31px;height:31px;max-width:31px;max-height:31px;flex:0 0 31px;object-fit:contain;border:0;background:transparent;border-radius:0;padding:1px;box-shadow:none}
+.schools-hub .directory-school-identity{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.schools-hub .directory-school-identity strong{display:block!important;color:#213e55;font-size:12px;font-weight:850;line-height:1.24;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-line-clamp:unset}
+.schools-hub .directory-school-identity small{display:block;color:#8599aa;font-size:9.5px;line-height:1.2;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
+.schools-hub .directory-school-cell:hover .directory-school-identity strong{color:#21618b}
+.schools-hub .directory-school-arrow{flex:0 0 auto;color:#9caebe;font-size:12px;opacity:0;transform:translate(-3px,3px);transition:opacity .13s,transform .13s}
+.schools-hub .program-directory-card:hover .directory-school-arrow,.schools-hub .directory-school-cell:focus-visible .directory-school-arrow{opacity:1;transform:translate(0,0)}
+.schools-hub .directory-data-cell{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;min-width:0;text-align:right;font-variant-numeric:tabular-nums}
+.schools-hub .directory-data-cell b{display:block;color:#284d68;font-size:12.5px;line-height:1.2;letter-spacing:-.018em;font-weight:850;white-space:nowrap}
+.schools-hub .directory-data-cell small{font-size:8px;line-height:1.15;font-weight:800;color:#a0afba;letter-spacing:.045em;white-space:nowrap}
+.schools-hub .directory-cost b{color:#2d695e}
+.schools-hub .directory-cost small{color:#85a29d}
+.schools-hub .program-dir-status{min-width:0;max-width:none;display:flex;align-items:center;justify-content:flex-end}
+.schools-hub .program-dir-owner,.schools-hub .program-dir-open{max-width:100%;min-height:27px;display:inline-flex;align-items:center;gap:6px;min-width:0;margin:0;padding:6px 8px;border:1px solid #e0e7ed;border-radius:5px;background:#f5f7f9;color:#5a7286;font:inherit;font-size:9.5px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schools-hub .program-dir-owner{cursor:pointer}
+.schools-hub .program-dir-owner:hover{border-color:#bad0df;background:#eaf2f8;color:#245a7d}
+.schools-hub .program-dir-owner i,.schools-hub .program-dir-open i{display:block;flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:#8ca1b2}
+.schools-hub .program-dir-open{color:#2b8267;background:#eff8f4;border-color:#d7ece1}
+.schools-hub .program-dir-open i{background:#30a17c}
+.schools-hub .program-dir-pick{display:inline-flex;align-items:center;gap:8px;border:1px solid #c1d5e5;background:#eaf3fa;color:#235c83;border-radius:5px;font-size:10px;font-weight:850;min-height:29px;padding:6px 10px;cursor:pointer}
+.schools-hub .program-dir-pick:hover{background:#d6eaf8}
+.schools-hub .program-dir-pick span{font-size:11px}
+.schools-hub .directory-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;min-height:130px;padding:23px;background:#fff}
+.schools-hub .directory-empty strong{font-size:12px;color:#2d526d}
+.schools-hub .directory-empty span{font-size:10px;color:#91a2ae}
+.schools-hub .directory-empty[hidden]{display:none!important}
+.schools-hub .directory-load{padding:14px 18px;margin:0;border-top:1px solid #e7edf2;flex-direction:row;justify-content:center;gap:12px}
+.schools-hub .directory-load button{border:1px solid #c9dce9;border-radius:5px;background:#f2f7fb;color:#2a6388;font-size:10.5px;font-weight:800;padding:9px 15px;cursor:pointer}
+.schools-hub .directory-load button:hover{background:#e2f0f9}
+.schools-hub .directory-load span{font-size:10px;color:#8ca0b1}
+.schools-hub .directory-method-note{display:flex;align-items:flex-start;gap:14px;padding:15px 2px 3px;margin-top:2px;border:0}
+.schools-hub .directory-method-note>span{flex:0 0 auto;color:#bc7a52;font-size:8px;font-weight:900;letter-spacing:.1em;padding-top:3px}
+.schools-hub .directory-method-note p{font-size:10px;line-height:1.55;color:#8295a4;margin:0;max-width:97ch}
+.schools-hub .ranking-dashboard{border-color:#dae5ed;box-shadow:none}
+.schools-hub .rank-heading{background:#fff}
+.schools-hub .rank-heading h2{color:#203d55}
+.schools-hub .rank-tools{background:#f9fbfc}
+@media(max-width:1070px){
+ .schools-hub .directory-search-row{grid-template-columns:minmax(0,1fr);gap:10px}
+ .schools-hub .directory-sort-box{justify-content:flex-start}
+ .schools-hub .directory-table-head,.schools-hub .program-directory-card{grid-template-columns:minmax(185px,2fr) minmax(66px,.7fr) minmax(80px,.8fr) minmax(100px,1fr) minmax(88px,.9fr);gap:6px}
+ .schools-hub .directory-table-head{padding:9px 12px}
+ .schools-hub .program-directory-card{padding:8px 12px}
+ .schools-hub .directory-school-cell{gap:8px}
+ .schools-hub .directory-summary{min-width:250px}
+}
+@media(max-width:720px){
+ .schools-hub .schools-masthead{padding-bottom:15px}
+ .schools-hub .schools-masthead h1{font-size:32px}
+ .schools-hub .schools-masthead-copy p{font-size:11px;line-height:1.45}
+ .schools-hub .schools-masthead-aside{display:none}
+ .schools-hub .school-view-tabs{gap:19px;margin-bottom:12px}
+ .schools-hub .school-view-tabs button{min-height:42px;font-size:10.5px}
+ .schools-hub .directory-welcome{padding:13px 14px;min-height:80px;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+ .schools-hub .directory-welcome-copy>strong{font-size:16px}
+ .schools-hub .directory-summary{min-width:0;max-width:none;flex:1 1 100%;order:2}
+ .schools-hub .directory-summary>span{padding:0 8px}
+ .schools-hub .directory-summary>span:first-child{border-left:0}
+ .schools-hub .directory-summary b{font-size:18px}
+ .schools-hub .directory-summary small{font-size:7px}
+ .schools-hub .directory-live-pick{margin-left:auto}
+ .schools-hub .directory-search-row{padding:10px 12px}
+ .schools-hub .directory-sort-box{gap:8px;flex-wrap:wrap}
+ .schools-hub .directory-sort-tabs{flex:1;min-width:0}
+ .schools-hub .directory-sort-tabs button{flex:1;min-width:0;font-size:9px;padding:7px 6px}
+ .schools-hub .directory-conference-line,.schools-hub .directory-alphabet{grid-template-columns:minmax(0,1fr);gap:2px;padding:9px 12px 6px}
+ .schools-hub .directory-conference-strip{padding:2px 0 5px;min-height:38px}
+ .schools-hub .directory-filter-row{padding:8px 12px;align-items:flex-start;gap:5px}
+ .schools-hub .directory-current-count{align-self:center;font-size:9px}
+ .schools-hub .directory-status-tabs{gap:2px}
+ .schools-hub .directory-status-tabs button{font-size:9px;min-height:28px;padding:6px}
+ .schools-hub .directory-letter-strip{padding:4px 0}
+ .schools-hub .directory-letter-strip button{flex:0 0 24px}
+ .schools-hub .directory-table-head{display:none}
+ .schools-hub .program-directory-card{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:"school school status" "torvik history cost";gap:8px 5px;align-items:center;padding:11px 12px 10px;min-height:92px}
+ .schools-hub .directory-school-cell{grid-area:school;min-width:0;gap:9px}
+ .schools-hub .directory-school-logo{width:34px;height:34px;flex-basis:34px}
+ .schools-hub .directory-school-logo .program-logo{width:28px;height:28px;max-width:28px;max-height:28px;flex-basis:28px}
+ .schools-hub .directory-school-identity strong{font-size:11.5px}
+ .schools-hub .directory-school-identity small{font-size:9px}
+ .schools-hub .directory-school-arrow{display:none}
+ .schools-hub .program-dir-status{grid-area:status;min-width:0}
+ .schools-hub .program-dir-open,.schools-hub .program-dir-owner,.schools-hub .program-dir-pick{font-size:9px;min-height:25px;padding:5px 7px}
+ .schools-hub .directory-torvik{grid-area:torvik}
+ .schools-hub .directory-history{grid-area:history}
+ .schools-hub .directory-cost{grid-area:cost}
+ .schools-hub .directory-data-cell{padding-top:6px;align-items:center;text-align:center;border-top:1px solid #e6edf2;gap:4px}
+ .schools-hub .directory-data-cell:before{content:attr(data-label);display:block;font-size:7.5px;letter-spacing:.08em;color:#96a6b4;font-weight:850;line-height:1.2}
+ .schools-hub .directory-data-cell b{font-size:12px}
+ .schools-hub .directory-data-cell small{display:none}
+ .schools-hub .directory-method-note{display:block;padding:12px 1px}
+ .schools-hub .directory-method-note>span{display:block;margin-bottom:5px}
+ .schools-hub .directory-method-note p{font-size:9.5px}
+}
+@media(max-width:395px){
+ .schools-hub .schools-masthead h1{font-size:29px}
+ .schools-hub .directory-welcome{gap:8px}
+ .schools-hub .directory-status-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}
+ .schools-hub .directory-status-tabs button{font-size:8px;padding:6px 3px}
+ .schools-hub .directory-filter-row{display:block}
+ .schools-hub .directory-current-count{display:block;margin:6px 3px 0}
+ .schools-hub .directory-school-logo{width:31px;height:31px;flex-basis:31px}
+ .schools-hub .directory-school-identity strong{font-size:10.6px}
+ .schools-hub .program-dir-owner{max-width:101px}
+}
+@media(prefers-reduced-motion:reduce){
+ .schools-hub .directory-school-arrow,.schools-hub .program-directory-card,.schools-hub .school-view-tabs button{transition:none}
+}

@@ -921,14 +921,15 @@
     const t=g.start_utc?new Date(g.start_utc).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'TBD';
     const status=live?'LIVE':finished?'FINAL':g.status==='scheduled'?t:
       g.status==='cancelled'?'CANCELLED':g.status==='postponed'?'POSTPONED':'TBD';
+    const detail=live?String(g.status_detail||'In progress').slice(0,38):finished?'Full time':g.status==='scheduled'?'Eastern time':'Schedule update';
     const linked=new Set(programs().map(p=>String(p.id)));
     const line=(id,name,record,net,quad,q1a,score,isWinner,isHome)=>{
       const ap=pollRanks.get(String(id));
       const body=scoreboardLogo(id)
-        +'<span class="daily-team-identity">'+(ap?'<span class="daily-ap">#'+ap+'</span>':'')
-        +'<strong>'+escapeHTML(name||'Unknown school')+'</strong>'
+        +'<span class="daily-team-identity"><span class="daily-team-name">'+(ap?'<span class="daily-ap">#'+ap+'</span>':'')
+        +'<strong title="'+escapeHTML(name||'Unknown school')+'">'+escapeHTML(name||'Unknown school')+'</strong></span>'
         +'<small class="daily-team-record">'+dailyRecord(record)+' <span>W–L</span></small></span>'
-        +'<span class="daily-team-net">'+escapeHTML(dailyNetLabel(net))+'</span>'
+        +'<span class="daily-team-net" title="'+escapeHTML(dailyNetLabel(net))+'"><em>'+(resultsRankingSource==='torvik'?'TOR':'NET')+'</em> '+(net===null||net===undefined||!Number.isFinite(Number(net))?'—':Number(net))+'</span>'
         +dailyQuad(quad,q1a)
         +'<span class="daily-score">'+(hasScore&&score!==null?escapeHTML(String(score)):'—')+'</span>';
       const cls='daily-team-line'+(isWinner?' is-winner':'')+(isHome?' home':' away');
@@ -947,14 +948,14 @@
     const link=/^\d+$/.test(String(g.game_id||''))?'https://www.espn.com/mens-college-basketball/game/_/gameId/'+g.game_id:null;
     return '<article class="daily-game-card '+(live?'is-live':'')+(mine?' is-my-game':'')+(watched?' is-watched':'')+'" data-search="'+
       escapeHTML((String(g.home_name||'')+' '+String(g.away_name||'')+' '+String(g.home_id)+' '+String(g.away_id)).toLowerCase())+'">'
-      +'<div class="daily-card-status"><strong class="'+(live?'live':'')+'">'+(live?'<i class="daily-live-dot"></i>':'')+escapeHTML(status)+'</strong>'
+      +'<div class="daily-card-status"><strong class="'+(live?'live':'')+'">'+(live?'<i class="daily-live-dot" aria-hidden="true"></i>':'')+escapeHTML(status)+'</strong><small class="daily-status-detail">'+escapeHTML(detail)+'</small>'
       +(special?'<span class="daily-card-tourney">'+special+'</span>':'')
       +(mine?'<span class="daily-card-mine">MY TEAM</span>':watched?'<span class="daily-card-queue">MY QUEUE</span>':selectedLeague?'<span class="daily-card-league">ROSTERED</span>':'')
       +'</div><div class="daily-card-body">'
       +line(g.away_id,g.away_name,g.away_record,g.away_net,g.away_quad,g.away_q1a,g.away_score,winner&&Number(g.away_score)>Number(g.home_score),false)
       +line(g.home_id,g.home_name,g.home_record,g.home_net,g.home_quad,g.home_q1a,g.home_score,winner&&Number(g.home_score)>Number(g.away_score),true)
-      +'</div><div class="daily-card-footer"><span>'+at+'</span>'
-      +(link?'<a href="'+link+'" target="_blank" rel="noopener noreferrer" aria-label="View ESPN box score for '+escapeHTML(g.away_name+' at '+g.home_name)+'">Game details ↗</a>':'')
+      +'</div><div class="daily-card-footer"><span class="daily-venue">'+at+'</span>'
+      +(link?'<a href="'+link+'" target="_blank" rel="noopener noreferrer" aria-label="View ESPN box score for '+escapeHTML(g.away_name+' at '+g.home_name)+'">Box score ↗</a>':'')
       +'</div></article>';
   };
   function resultsPage(){
@@ -970,10 +971,10 @@
       '" data-act="results-conference" data-id="'+escapeHTML(id)+'" aria-pressed="'+(resultsConference===id)+'">'+escapeHTML(label)+'</button>';
     const days=Array.from({length:7},(_,i)=>{
       const value=shiftResultsDay(day,i-3);
-      return '<button type="button" class="daily-day '+(value===day?'active':'')+
+      return '<button type="button" class="daily-day '+(value===day?'active':'')+(value===resultsToday()?' is-today':'')+
         '" data-act="results-date" data-date="'+value+'" aria-pressed="'+(value===day)+'">'+
         '<span>'+formatResultsDay(value,{weekday:'short'})+'</span><strong>'+
-        formatResultsDay(value,{month:'short',day:'numeric'})+'</strong></button>';
+        formatResultsDay(value,{day:'numeric'})+'</strong><small>'+formatResultsDay(value,{month:'short'})+'</small></button>';
     }).join('');
     const query=resultsSearch.trim().toLowerCase();
     const scoped=all.filter(g=>{
@@ -1003,7 +1004,25 @@
     const conferenceOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)));
     const pollAvailable=resultsAP.length===25;
     const note=resultsQuadNote||'Rankings update as sources become available.';
-    return heading('COLLEGE BASKETBALL','Daily Results','Every team’s record, game quadrant and score, all in one easy-to-scan view.')
+    const groups=[
+      {id:'live',name:'In progress',caption:'Live scores',rows:visible.filter(g=>g.status==='live')},
+      {id:'upcoming',name:'Upcoming',caption:'Scheduled tipoffs',rows:visible.filter(g=>g.status==='scheduled')},
+      {id:'final',name:'Final',caption:'Completed games',rows:visible.filter(g=>g.status==='final')},
+      {id:'other',name:'Schedule updates',caption:'Postponed and cancelled',rows:visible.filter(g=>!['live','scheduled','final'].includes(g.status))}
+    ];
+    const groupedGames=groups.filter(group=>group.rows.length).map(group=>
+      '<section class="daily-scoreboard-group" aria-label="'+group.name+' games">'+
+      '<div class="daily-group-heading"><div><span class="daily-group-indicator '+group.id+'"></span>'+
+      '<h3>'+group.name+'</h3><span class="daily-group-caption">'+group.caption+'</span></div>'+
+      '<span class="daily-group-count">'+group.rows.length+' game'+(group.rows.length===1?'':'s')+'</span></div>'+
+      '<div class="daily-game-list">'+group.rows.map(g=>dailyGameCard(g,pollRanks)).join('')+'</div></section>'
+    ).join('');
+    return '<div class="results-page-head"><div class="results-page-heading">'+
+      '<div class="results-page-overline"><span>SEASON '+escapeHTML(season())+'</span><i aria-hidden="true"></i><span>MEN’S COLLEGE BASKETBALL</span></div>'+
+      '<h1>Results<span> / Game center</span></h1><p>Live scores, rankings and the programs that matter to your league.</p></div>'+
+      '<div class="results-summary" role="group" aria-label="Selected game totals"><div><strong>'+scoped.length+'</strong><span>GAMES</span></div>'+
+      '<div class="'+(statusCounts.live?'is-active':'')+'"><strong>'+statusCounts.live+'</strong><span>LIVE</span></div>'+
+      '<div><strong>'+statusCounts.final+'</strong><span>FINAL</span></div></div></div>'
       +'<section class="daily-results">'
       +'<div class="daily-toolbar"><div class="daily-toolbar-left"><span class="daily-status-dot '+(totalLive?'active':'')+'"></span><strong>'+
         list.length+'</strong> games <span class="daily-tool-separator">·</span> '+totalFinal+' final'+(totalLive?' <span class="daily-live-count">· '+totalLive+' live</span>':'')+
@@ -1019,15 +1038,15 @@
         statusButton('all','All',scoped.length)+statusButton('live','Live',statusCounts.live)+
         statusButton('upcoming','Upcoming',statusCounts.upcoming)+statusButton('final','Final',statusCounts.final)+
         '</div>'+(clearable?'<button type="button" class="daily-clear-filter" data-act="results-clear-filters">Clear filters</button>':'')+'</div>'
-      +'<div class="daily-conference-tabs" role="group" aria-label="Filter by conference">'+
-        conferenceButton('all','All conferences')+conferenceButton(MID_MAJOR_FILTER,'Mid-Major')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div>'
+      +'<div class="daily-conference-bar"><span>CONFERENCE</span><div class="daily-conference-tabs" role="group" aria-label="Filter by conference">'+
+        conferenceButton('all','All')+conferenceButton(MID_MAJOR_FILTER,'Mid-Major')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div></div>'
       +'<div class="daily-day-header"><div><span>DAILY SCOREBOARD</span><h2>'+
         formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</h2></div><small>'+
         (resultsLoading?'Updating…':visible.length+' of '+list.length+' games')+'</small></div>'
       +(resultsError?'<div class="notice">'+escapeHTML(resultsError)+'</div>':'')
       +(resultsScope==='top25'&&!pollAvailable
         ?'<div class="daily-empty"><strong>AP rankings are not available yet.</strong><p>Choose League schools or All D-I to see games while the current poll is being imported.</p></div>'
-        :list.length?'<div class="daily-game-list">'+visible.map(g=>dailyGameCard(g,pollRanks)).join('')+'</div>'
+        :list.length?'<div class="daily-board-content">'+groupedGames+'</div>'
         :'<div class="daily-empty"><strong>'+(resultsLoading?'Loading games…':'No games match these filters')+'</strong><p>'+
           (resultsScope==='mine'?'Draft a school to see its matchups here.':
             resultsScope==='queue'?'Add schools to your draft queue to follow their games here.':
@@ -1035,7 +1054,7 @@
           (resultsScope==='queue'?'<button class="btn small secondary" data-act="tab" data-id="draft">Open draft queue</button>':'')+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
-      +'<div class="daily-footer-info"><span><strong>W–L</strong> Updated through the selected date</span><span><strong>Q</strong> '+(resultsRankingSource==='torvik'?'Preliminary Bart Torvik':'NCAA NET')+' quadrant from each school’s perspective</span><span>'+escapeHTML(note)+'</span></div>'
+      +'<div class="daily-footer-info"><span><strong>W–L</strong> Record through selected date</span><span><strong>NET / TOR</strong> '+(resultsRankingSource==='torvik'?'Preliminary Bart Torvik':'NCAA NET')+' ranking</span><span><strong>Q</strong> Potential quadrant win bonus</span><span>'+escapeHTML(note)+'</span></div>'
       +'</section>';
   }
 

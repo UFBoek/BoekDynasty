@@ -373,3 +373,24 @@ test('Schools index is a compact scouting table with full search, filter and pro
     app.schools('directory',null);
   }
 });
+
+
+test('Results game center groups matchups and retains ranking, quadrant and navigation',()=>{
+ const games=[
+  {game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',home_net:4,away_net:12,home_quad:1,away_quad:1,home_record:{wins:1,losses:0},away_record:{wins:0,losses:1},home_conference_id:'23',away_conference_id:'2'},
+  {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_net:8,away_net:19,home_conference_id:'8',away_conference_id:'7'}
+ ];
+ app.results(games,[]);
+ app.filter('all','all');
+ const html=app.page('results');
+ assert.match(html,/results-page-head/);
+ assert.match(html,/daily-scoreboard-group/);
+ assert.match(html,/Completed games/);
+ assert.match(html,/daily-team-net/);
+ assert.match(html,/daily-quad q1/);
+ for(const action of ['results-scope','results-status','results-conference','results-shift','results-today']){
+  assert.ok(html.includes('data-act="'+action+'"'),action);
+ }
+ assert.match(html,/Box score/);
+ assert.equal((html.match(/class="daily-game-card /g)||[]).length,2);
+});

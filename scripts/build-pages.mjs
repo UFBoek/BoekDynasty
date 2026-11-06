@@ -29,7 +29,7 @@ client = client.replaceAll('src="/brand-logo.png?v=3"', 'src="' + basePath + 'br
 client = client.replace("location.origin+'/?invite='+", "location.origin+SITE_BASE+'?invite='+");
 write('index.html',html);
 write('app.js',client);
-write('style.css',read('src/style.css'));
+write('style.css',read('src/style.css')+'\n'+read('src/results-design.css'));
 write('sw.js',read('src/service-worker.js'));
 const image = Buffer.from(read('src/brand-logo.base64').trim(),'base64');
 if(image.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('Invalid PNG logo.');

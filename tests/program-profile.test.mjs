@@ -40,11 +40,14 @@ test('profile opens with compact summary and does not dump all sections onto the
   const html=app.tab('overview');
   assert.match(html,/<h1>Florida<\/h1>/);
   assert.match(html,/Dynasty owner/);
-  assert.match(html,/2026-27 POINTS/);
-  assert.match(html,/PROGRAM RANK/);
+  assert.match(html,/2026-27 FANTASY POINTS/);
+  assert.match(html,/LEAGUE FINISH \/ RANK/);
   assert.match(html,/#7 \/ 125/);
-  assert.match(html,/Full scoring breakdown/);
+  assert.match(html,/Complete scoring ledger/);
   assert.match(html,/Recent results/);
+  assert.match(html,/Season trajectory/);
+  assert.match(html,/data-act="program-history-jump"/);
+  assert.match(html,/pp-masthead-score/);
   assert.doesNotMatch(html,/program-full-schedule/);
   assert.doesNotMatch(html,/pp-history-list/);
   assert.doesNotMatch(html,/pp-ratings-grid/);

@@ -10,6 +10,7 @@ const injection=`  return {
  page:page=>{current=page;render();return root.innerHTML;},
  section:section=>{adminSection=section;return commissionerPage();},
  mode:mode=>{draftRoundView=mode;},
+ sortDraft:sort=>{draftSort=sort;draftScope='all';},
  schools:(mode,data)=>{programMode=mode;schoolLeaders=data;leaderSeason='all';},
  results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsLoadedDay='2026-11-03';resultsSeason=season();resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
  filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;}
@@ -126,6 +127,32 @@ test('Historical Leaders compares school points by season with a searchable tabl
   assert.match(html,/school-leader-table/);
   app.schools('directory',null);
 });
+test('draft historical sort shows full-field 5Y ranks on the right, including drafted schools',()=>{
+  const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];
+  const historyRows=programs.flatMap((p,i)=>years.map(season=>({
+    season,program_id:p.id,points:(4-i)*10
+  })));
+  const oldPicks=league.picks,oldOwnership=league.ownership;
+  try{
+    // Florida ranks first nationally, but has already been drafted.
+    league.picks=[{overall:1,round:1,program_id:'57',manager_id:'1'}];
+    league.ownership=[{program_id:'57',manager_id:'1'}];
+    app.schools('leaders',{seasons:years,directory:programs,rows:historyRows});
+    app.sortDraft('history');
+    const html=app.page('draft');
+    const grid=html.slice(html.indexOf('<div class="draft-pool-grid">'));
+    const card=id=>grid.split('data-program="'+id+'"')[1]?.split('</article>')[0];
+    assert.doesNotMatch(grid,/data-program="57"/);
+    assert.match(card('58'),/<span class="draft-pool-stat"><strong>#2<\/strong><small>5Y RANK<\/small>/);
+    assert.match(card('59'),/<span class="draft-pool-stat"><strong>#3<\/strong><small>5Y RANK<\/small>/);
+    app.sortDraft('power');
+    assert.match(app.page('draft'),/<small>T-RANK<\/small>/);
+  }finally{
+    app.sortDraft('power');app.schools('directory',null);
+    league.picks=oldPicks;league.ownership=oldOwnership;
+  }
+});
+
 test('Results exposes touch-friendly conference buttons, not a select menu',()=>{
   const html=app.page('results');
   assert.match(html,/class="daily-conference-tabs"/);

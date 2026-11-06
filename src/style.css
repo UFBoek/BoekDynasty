@@ -5939,3 +5939,37 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
   .draft-v3 .draft-queue-details>summary small{font-size:10px}
   .draft-v3 .draft-section-heading{padding:14px}
 }
+
+
+/* Draft room — 2026–27 roster spending rank, cost and evidence treatment. */
+.draft-pool-card.is-cost-sort .draft-pool-open{gap:7px}
+.draft-pool-card.is-cost-sort .draft-pool-info{gap:3px}
+.draft-pool-cost-source{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+ color:#6f7f91;font-size:9px;font-weight:650;line-height:1.35;margin-top:2px}
+.draft-pool-financial-rank{min-width:38px}
+.draft-pool-financial-rank strong{font-size:14px;color:#245276}
+.draft-pool-financial-cost{min-width:66px}
+.draft-pool-financial-cost strong{font-size:15px;color:#116a59;white-space:nowrap}
+.draft-pool-financial-rank small,.draft-pool-financial-cost small{font-size:8px;letter-spacing:.45px}
+.draft-pool-cost-disclosure{display:flex;flex-wrap:wrap;background:#f6fafc;color:#536c80;border-bottom:1px solid #e4ecf3;padding:10px 15px;font-size:10.5px;line-height:1.6}
+.draft-pool-cost-disclosure b{color:#234a69;font-weight:850}
+.draft-pool-cost-disclosure a{color:#176b9a;text-decoration:underline;text-underline-offset:2px;font-weight:800}
+.draft-roster-cost-preview{display:flex;flex-direction:column;gap:5px;padding:12px 13px;margin:9px 0;
+ border:1px solid #d6e7e2;border-radius:10px;background:#f6fbf9}
+.draft-roster-cost-preview span{font-size:9px;font-weight:850;color:#4c7c72;letter-spacing:.9px}
+.draft-roster-cost-preview strong{font-size:17px;font-weight:900;color:#145e53;font-variant-numeric:tabular-nums}
+.draft-roster-cost-preview small{font-size:10px;line-height:1.45;color:#607f78}
+@media(max-width:590px){
+ .draft-pool-card.is-cost-sort .draft-pool-open{padding-right:27px;gap:6px;min-height:76px}
+ .draft-pool-card.is-cost-sort .draft-pool-logo{flex:0 0 39px;width:39px;height:43px;padding:5px}
+ .draft-pool-card.is-cost-sort .draft-pool-logo>.program-logo,.draft-pool-card.is-cost-sort .draft-pool-logo>img{width:31px;height:32px;padding:2px}
+ .draft-pool-card.is-cost-sort .draft-pool-info strong{font-size:11.5px}
+ .draft-pool-cost-source{font-size:8px}
+ .draft-pool-financial-rank{min-width:32px}
+ .draft-pool-financial-rank strong{font-size:12px}
+ .draft-pool-financial-cost{min-width:56px}
+ .draft-pool-financial-cost strong{font-size:12px}
+ .draft-pool-financial-rank small,.draft-pool-financial-cost small{font-size:7px}
+ .draft-pool-cost-disclosure{font-size:10px;padding:9px 11px}
+ .draft-pool-tabs button{min-width:0}
+}

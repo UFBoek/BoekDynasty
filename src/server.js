@@ -88,6 +88,7 @@ export default (function makeWorker(){
     const saved=Array.isArray(settings.draft_order)?settings.draft_order:[];
     return [...new Set([...saved.filter(id=>ids.includes(id)),...ids])];
   };
+  const reversedDraftRound=round=>round===2||(round>=3&&round%2===1);
   const parseDraftQueue=row=>{
     let items=[];
     try{items=JSON.parse(row?.program_ids||'[]');}catch(e){}
@@ -261,7 +262,7 @@ export default (function makeWorker(){
       const count=(await q(env,'SELECT count(*) AS total FROM picks').first()).total;
       const roundIndex=Math.floor(count/users.length);
       if(roundIndex>=settings.rounds)return failure('Draft already finished.',409);
-      const idx=count%users.length,up=users[roundIndex%2===0?idx:users.length-1-idx].id;
+      const idx=count%users.length,up=users[reversedDraftRound(roundIndex+1)?users.length-1-idx:idx].id;
       if(user.id!==up)return failure('It is not your turn to draft.',403);
       const programId=String(data.program_id||'');
       const selected=(await q(env,'SELECT conference_id FROM programs WHERE id=?',programId).first());

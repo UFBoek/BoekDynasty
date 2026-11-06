@@ -30,13 +30,14 @@ const league={users,programs,picks:[],ownership:[],trades:[],trade_items:[],arch
  settings:{conferences:['23','2','8','7'],rounds:3,draft_status:'pending',current_season:'2026-27',league_name:'Boek Dynasty',max_managers:7,scoring:{best_programs:2},trading_enabled:true,waivers_enabled:false,draft_clock_seconds:0,draft_deadline:0},
  draft_order:users.map(x=>x.id),season:'2026-27'};
 app.set(users[0],league);
-test('full snake board reverses the second round but not manager columns',()=>{
+test('3RR draft board reverses rounds two and three without moving manager columns',()=>{
  app.mode('all');
  const html=app.page('draft');
  const picks=[...html.matchAll(/data-pick="(\d+)"/g)].map(x=>Number(x[1]));
- assert.deepEqual(picks,[1,2,3,4,8,7,6,5,9,10,11,12]);
+ assert.deepEqual(picks,[1,2,3,4,8,7,6,5,12,11,10,9]);
  assert.match(html,/Full board/);
  assert.match(html,/My slots/);
+ assert.match(html,/3RR order/);
 });
 test('league overview prioritizes games, actionable guidance and compact team rosters',()=>{
  const html=app.page('home');

@@ -38,10 +38,10 @@ app.set(members[0],league);
 
 test('snake slots remain fixed while traded picks follow their current owners',()=>{
   assert.deepEqual(Array.from({length:9},(_,i)=>app.owner(i+1)),
-    ['a','a','c','c','b','c','a','b','c']);
-  assert.deepEqual(app.future('a'),[1,2,7]);
+    ['a','a','c','c','b','c','c','b','a']);
+  assert.deepEqual(app.future('a'),[1,2,9]);
   assert.deepEqual(app.future('b'),[5,8]);
-  assert.deepEqual(app.future('c'),[3,4,6,9]);
+  assert.deepEqual(app.future('c'),[3,4,6,7]);
 });
 
 test('traded current pick is selected by the new owner during a live draft',()=>{
@@ -85,4 +85,35 @@ test('backend serializes pick selection against trade acceptance and validates a
   assert.match(backend,/currentPickOwner\(overall,inv\.ids,inv\.owners\)/);
   assert.match(backend,/draft_pick_trade_items/);
   assert.match(backend,/A pick has been used or changed owners/);
+});
+
+test('third-round reversal matches the server-authoritative selection order across 20 rounds',()=>{
+  const backend=readFileSync(new URL('../supabase/functions/boek-api/server.js',import.meta.url),'utf8');
+  const legacy=readFileSync(new URL('../src/server.js',import.meta.url),'utf8');
+  const clause=backend.match(/  const reversedDraftRound=round=>[^;]+;/);
+  const helper=backend.match(/  const originalPickOwner=\(slot,ids\)=>\{[\s\S]*?\n  \};/);
+  assert.ok(clause&&helper,'Server-side draft owner rules must remain extractable for parity testing');
+  const serverOwner=new Function('slot','ids',clause[0]+'\n'+helper[0]+'\nreturn originalPickOwner(slot,ids);');
+  assert.match(legacy,/reversedDraftRound\(roundIndex\+1\)/);
+  const ids=members.map(x=>x.id);
+    const prior=league.draft_pick_owners;
+  const priorRounds=league.settings.rounds;
+  league.draft_pick_owners=[];league.settings.rounds=20;
+  try{
+    const pattern=[
+      ['a','b','c'],['c','b','a'],['c','b','a'],
+      ['a','b','c'],['c','b','a'],['a','b','c']
+    ];
+    for(let round=1;round<=20;round++){
+      const expected=pattern[(round-1)%6] || (round%2===1?['c','b','a']:['a','b','c']);
+      for(let i=0;i<ids.length;i++){
+        const pick=(round-1)*ids.length+i+1;
+        assert.equal(serverOwner(pick,ids),app.owner(pick),'Backend/frontend disagree at pick #'+pick);
+        assert.equal(app.owner(pick),expected[i],'3RR order mismatch at round '+round+' position '+i);
+      }
+    }
+    assert.deepEqual(app.future('c').slice(0,4),[3,4,7,12]);
+  }finally{
+    league.settings.rounds=priorRounds;league.draft_pick_owners=prior;
+  }
 });

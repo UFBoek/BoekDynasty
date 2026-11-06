@@ -199,10 +199,12 @@
   const myPrograms=()=>owners().filter(o=>o.manager_id===me?.id).map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean);
   const season=()=>league?.season||'2026-27';
   const order=()=>league?.draft_order||members().map(x=>x.id);
+  // Third-round reversal: rounds 2 and 3 run backward, then directions alternate.
+  const reversedDraftRound=round=>round===2||(round>=3&&round%2===1);
   const originalDraftOwner=(slot,arr=order())=>{
     if(!arr.length||slot<1)return null;
-    const i=slot-1,round=Math.floor(i/arr.length),pos=i%arr.length;
-    return arr[round%2===0?pos:arr.length-1-pos]||null;
+    const i=slot-1,round=Math.floor(i/arr.length)+1,pos=i%arr.length;
+    return arr[reversedDraftRound(round)?arr.length-1-pos:pos]||null;
   };
   const draftOwnerOverrides=()=>new Map((league?.draft_pick_owners||[]).map(p=>[Number(p.overall),p.owner_manager_id]));
   const draftOwner=(slot,arr=order())=>draftOwnerOverrides().get(Number(slot))||originalDraftOwner(slot,arr);
@@ -1224,8 +1226,8 @@
         +'<div class="race-results-grid">'+raceOrder.map(row).join('')+'</div>'
         +'<p class="hint">The race reveals the commissioner-set draft order. This is the official first-round order.</p></div>':'')
       +'</section>'
-      +(race?'<section class="panel race-saved-panel section-gap">'+panelHeading('Official snake draft order',
-        'First-round picks follow this order. Round two reverses it.')
+      +(race?'<section class="panel race-saved-panel section-gap">'+panelHeading('Official 3RR draft order',
+        'Round 1 follows this order. Rounds 2 and 3 reverse it, then directions alternate.')
         +'<div class="race-results-grid">'+raceOrder.map(row).join('')+'</div>'
         +'<p class="hint section-gap">Saved for every manager. Only the commissioner can reset this race in Draft settings, before the draft begins.</p>'
         +'</section>'
@@ -1906,7 +1908,7 @@
     el.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
   }
 
-  /* Draft room: in-place selection desk and the original server-authoritative snake order.
+  /* Draft room: in-place selection desk and the server-authoritative 3RR order.
      Brand accents are presentation only, never a draft ranking or eligibility source. */
   const DRAFT_BRANDS={
     'alabama':'#9e1b32','auburn':'#0c2340','arkansas':'#9d2235','arizona st':'#8c1d40','arizona state':'#8c1d40','arizona':'#ab0520',
@@ -2242,7 +2244,7 @@
       +'</section>';
     const pickInventory='<section class="panel draft-pick-inventory" aria-label="Your unused draft picks">'
       +'<div class="draft-pick-inventory-title"><div><span class="draft-section-overline">YOUR DRAFT CAPITAL</span><h2>Upcoming picks</h2>'
-      +'<p>Selections stay in their original snake slots, even when they change hands.</p></div>'
+      +'<p>Selections keep their original 3RR slots, even when traded.</p></div>'
       +'<button class="btn small secondary" type="button" data-act="tab" data-id="trades">Trade a pick ›</button></div>'
       +(myFuturePicks.length?'<div class="draft-owned-slot-grid">'+myFuturePicks.map(slot=>{
         const acquired=originalDraftOwner(slot)!==me.id;
@@ -2264,7 +2266,7 @@
           +'<div class="draft-inbox-actions"><button type="button" class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept</button>'
           +'<button type="button" class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div></div>';
       }).join('')+'</section>':'';
-    const tracker='<div class="draft-pick-ticker"><div class="draft-pick-ticker-label"><strong>NEXT PICKS</strong><small>Snake order</small></div>'
+    const tracker='<div class="draft-pick-ticker"><div class="draft-pick-ticker-label"><strong>NEXT PICKS</strong><small>3RR order</small></div>'
       +'<div class="draft-pick-ticker-scroll">'+(upNext||'<span class="draft-no-upcoming">Draft order will appear here when the draft opens.</span>')+'</div></div>';
     const confOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)))
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(draftConference===id?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
@@ -2418,7 +2420,7 @@
     const boardCells=boardRows.map(round=>{
       const slots=boardColumns.map(id=>{
         const vacant=id.startsWith('open-seat-'),pos=visualOrder.indexOf(id);
-        const overall=(round-1)*Math.max(1,visualCount)+(round%2===1?pos+1:visualCount-pos);
+        const overall=(round-1)*Math.max(1,visualCount)+(reversedDraftRound(round)?visualCount-pos:pos+1);
         const picked=pickMap.get(overall),p=programIndex.get(String(picked?.program_id||''));
         const slotOwner=draftOwner(overall,visualOrder),holder=managerIndex.get(slotOwner);
         const traded=!vacant&&slotOwner&&slotOwner!==id;
@@ -2447,7 +2449,7 @@
             :'<div class="draft-cell-placeholder">'+(vacant?'Unclaimed slot':'Awaiting selection')+'</div>')
           +'</div>';
       }).join('');
-      return '<div class="draft-board-round '+(round===activeRound?'current':'')+'"><strong>R'+round+'</strong><span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
+      return '<div class="draft-board-round '+(round===activeRound?'current':'')+'"><strong>R'+round+'</strong><span>'+(reversedDraftRound(round)?'←':'→')+'</span></div>'+slots;
     }).join('');
     const boardTab=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(boardMode===id?'active':'')+'" aria-pressed="'+(boardMode===id)+'">'+label+'</button>';
     const board='<section class="panel draft-board-panel draft-v2-board" id="draft-board-section">'
@@ -2459,7 +2461,7 @@
       +'<div class="draft-board-key"><span><i class="selected"></i> Drafted</span><span><i class="on-clock"></i> On clock</span>'
       +'<span><i class="mine"></i> Your slots</span><span class="draft-board-metric-key">BART TORVIK · LAST 5 YEARS · EST. ROSTER $</span>'
       +'<button type="button" data-act="draft-follow-live">Jump to live pick ↗</button></div>'
-      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board with pick numbers, Bart Torvik rankings, five-year history and estimated roster costs"><div class="draft-board-grid" style="'+boardWidth+'">'
+      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable third-round reversal draft board with pick numbers, Bart Torvik rankings, five-year history and estimated roster costs"><div class="draft-board-grid" style="'+boardWidth+'">'
       +'<div class="draft-board-corner">ROUND</div>'+boardHeaders+boardCells+'</div></div>'
       +'<div class="draft-board-footer"><span>Scroll across managers · Select any school for its full profile.</span>'
       +'<span>Roster costs are estimates, not verified payrolls.</span></div></section>';
@@ -2475,7 +2477,7 @@
       +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
-    return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Follow picks, browse programs and manage your queue.')
+    return heading('INAUGURAL 3RR PROGRAM DRAFT','Draft Room','Follow picks, browse programs and manage your queue.')
       +'<div class="draft-v2 draft-v3 draft-v4 draft-v5">'+hero+tracker+board+tradeInbox+queueManager
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'
       +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
@@ -3201,7 +3203,7 @@
       }).join('');
       body='<section class="panel setting-panel">'+panelHeading('Draft settings')
         +'<div class="settings-grid"><div class="form-row"><label for="rounds">Rounds per manager</label><input class="field" id="rounds" type="number" min="1" max="20" value="'+settings.rounds+'" '+(locked?'disabled':'')+'/></div>'
-        +'<div class="settings-static"><span>Draft format</span><strong>Snake</strong><small>Status: '+escapeHTML(settings.draft_status)+'</small></div></div>'
+        +'<div class="settings-static"><span>Draft format</span><strong>3RR snake</strong><small>Status: '+escapeHTML(settings.draft_status)+'</small></div></div>'
         +'<button class="btn" data-act="save-rounds" '+(locked?'disabled':'')+'>Save rounds</button>'
         +'<div class="form-row section-gap"><label for="clock-duration">Draft clock</label><select id="clock-duration" class="field">'+[[0,'Off'],[60,'1 minute'],[120,'2 minutes'],[180,'3 minutes'],[300,'5 minutes'],[600,'10 minutes'],[900,'15 minutes'],[1800,'30 minutes']].map(([seconds,label])=>'<option value="'+seconds+'" '+(settings.draft_clock_seconds===seconds?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'
         +'<div class="button-row"><button class="btn secondary" data-act="save-clock" '+(!['pending','paused'].includes(settings.draft_status)?'disabled':'')+'>Save clock</button></div>'

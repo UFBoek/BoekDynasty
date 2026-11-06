@@ -121,10 +121,12 @@ export default (function makeWorker(){
     const saved=Array.isArray(settings.draft_order)?settings.draft_order:[];
     return [...new Set([...saved.filter(id=>ids.includes(id)),...ids])];
   };
+  // Third-round reversal: backward in rounds 2 and 3, forward in round 4.
+  const reversedDraftRound=round=>round===2||(round>=3&&round%2===1);
   const originalPickOwner=(slot,ids)=>{
     if(!ids.length||slot<1)return null;
-    const pos=slot-1,round=Math.floor(pos/ids.length),index=pos%ids.length;
-    return ids[round%2===0?index:ids.length-1-index]||null;
+    const pos=slot-1,round=Math.floor(pos/ids.length)+1,index=pos%ids.length;
+    return ids[reversedDraftRound(round)?ids.length-1-index:index]||null;
   };
   const currentPickOwner=(slot,ids,owners)=>owners.get(slot)||originalPickOwner(slot,ids);
   const tradeError=(message,status=409)=>Object.assign(new Error(message),{tradeStatus:status});
@@ -831,7 +833,7 @@ export default (function makeWorker(){
         stagger_ms:460
       };
       // One atomic statement: only the first race claim may save the official
-      // snake draft order. Concurrent attempts cannot overwrite the result.
+      // 3RR draft order. Concurrent attempts cannot overwrite the result.
       const sql="WITH claimed AS (INSERT INTO settings(key,value) VALUES('draft_race',?) "
         +"ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE settings.value IN ('null','') RETURNING value), "
         +"official AS (INSERT INTO settings(key,value) SELECT 'draft_order',? FROM claimed WHERE true "

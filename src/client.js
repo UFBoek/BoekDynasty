@@ -116,7 +116,7 @@
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
   let ratingConference='all',ratingOwnership='all',ratingShown=40;
-  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='current';
+  let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
   let programBackScroll=0,managerBackScroll=0;
   let programProfileTab='overview';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
@@ -249,7 +249,7 @@
     return parsed;
   }
 
-  // T-Rank is informational in analytics and provisional for fantasy scoring until official NET arrives.
+  // Bart Torvik is informational in analytics and provisional for fantasy scoring until official NET arrives.
   const ratingYear=(label)=>Number(String(label||season()).slice(0,4))+1;
   const ratingName=(raw)=>String(raw||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
     .replace(/&/g,' and ').replace(/\bsaint\b/g,'st').replace(/\bstate\b/g,'st')
@@ -301,7 +301,7 @@
     if(!force&&(ratingCache[year]||ratingError[year]))return;
     ratingLoading[year]=true;delete ratingError[year];
     try{const payload=await api('data/ratings?year='+year);
-      if(Number(payload.season)!==year)throw Error('The ratings source returned a different season. Refusing to display mismatched T-Rank data.');
+      if(Number(payload.season)!==year)throw Error('The ratings source returned a different season. Refusing to display mismatched Bart Torvik data.');
       if(!Array.isArray(payload.teams)||payload.teams.length<330)throw Error('Published ratings are incomplete.');
       ratingCache[year]=payload;
     }catch(e){ratingError[year]=e.message;}
@@ -857,7 +857,7 @@
     return /^\d+$/.test(String(id||''))?'<img class="program-logo" src="https://a.espncdn.com/i/teamlogos/ncaa/500/'+id+'.png" loading="lazy" alt=""/>':'<span class="program-logo program-initial">NCAA</span>';
   };
   const scoreboardRank=(id,map)=>map.has(String(id))?'<span class="scoreboard-rank">'+map.get(String(id))+'</span>':'';
-  const dailyNetLabel=(rank)=>rank===null||rank===undefined?(resultsRankingSource==='torvik'?'T-Rank pending':'NET pending'):(resultsRankingSource==='torvik'?'T-Rank #':'NET #')+Number(rank);
+  const dailyNetLabel=(rank)=>rank===null||rank===undefined?(resultsRankingSource==='torvik'?'Bart Torvik pending':'NET pending'):(resultsRankingSource==='torvik'?'Bart Torvik #':'NET #')+Number(rank);
   const dailyRecord=(record)=>record?Number(record.wins||0)+'–'+Number(record.losses||0):'0–0';
 
   // Quadrant value is a potential win bonus, separate from the base win points.
@@ -876,7 +876,7 @@
   const quadMeaning=(quad,q1a,preliminary)=>{
     const amount=quadBonusText(quad,q1a);
     return quadLabel(quad,q1a)+(amount?' · '+amount+' bonus if won':' · no quadrant bonus')+
-      (preliminary?' · provisional T-Rank':'');
+      (preliminary?' · provisional Bart Torvik':'');
   };
   const dailyQuad=(quad,q1a)=>{
     if(!Number.isInteger(quad)||quad<1||quad>4)
@@ -1025,7 +1025,7 @@
           (resultsScope==='queue'?'<button class="btn small secondary" data-act="tab" data-id="draft">Open draft queue</button>':'')+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
-      +'<div class="daily-footer-info"><span><strong>W–L</strong> Updated through the selected date</span><span><strong>Q</strong> '+(resultsRankingSource==='torvik'?'Preliminary T-Rank':'NCAA NET')+' quadrant from each school’s perspective</span><span>'+escapeHTML(note)+'</span></div>'
+      +'<div class="daily-footer-info"><span><strong>W–L</strong> Updated through the selected date</span><span><strong>Q</strong> '+(resultsRankingSource==='torvik'?'Preliminary Bart Torvik':'NCAA NET')+' quadrant from each school’s perspective</span><span>'+escapeHTML(note)+'</span></div>'
       +'</section>';
   }
 
@@ -1644,16 +1644,16 @@
   function ratingsPage(){
     const year=ratingYear(ratingSeason||season()),data=ratingCache[year];
     const years=Array.from({length:6},(_,i)=>ratingYear(season())-i).filter(y=>y>=2022&&y<=2027);
-    const seasons=rankingSeasonNav(years.map(y=>[String(y),(y-1)+'-'+String(y%100).padStart(2,'0')]),'rating-season',String(year),'T-Rank season');
+    const seasons=rankingSeasonNav(years.map(y=>[String(y),(y-1)+'-'+String(y%100).padStart(2,'0')]),'rating-season',String(year),'Bart Torvik season');
     const isCurrent=year===ratingYear(season());
     const heading='<div class="rank-heading"><div><span class="rank-kicker">PROGRAM RANKINGS · ADVANCED ANALYTICS</span><h2>Power ratings</h2>'
       +'<p>Explore Bart Torvik’s national efficiency rankings, offense, defense and team strength.</p></div>'
       +'<div class="rank-heading-mark"><span>'+(isCurrent?'CURRENT SEASON':'ARCHIVED SEASON')+'</span><strong>'+(year-1)+'-'+String(year%100).padStart(2,'0')+'</strong><small>Torvik '+year+' ratings</small></div></div>';
-    const source='<div class="rank-source-line"><span class="rank-source-mark"><i></i> '+(isCurrent?'CURRENT '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-RANK':'HISTORICAL '+(year-1)+'-'+String(year%100).padStart(2,'0')+' T-RANK')+'</span>'
+    const source='<div class="rank-source-line"><span class="rank-source-mark"><i></i> '+(isCurrent?'CURRENT '+(year-1)+'-'+String(year%100).padStart(2,'0')+' BART TORVIK':'HISTORICAL '+(year-1)+'-'+String(year%100).padStart(2,'0')+' BART TORVIK')+'</span>'
       +'<span>'+(isCurrent?'These are the 2026–27 national ratings, not 2025–26. Used for provisional Q1/Q1A/Q2 bonuses until official NCAA NET is available.':'Historical ratings are only for comparison; archived fantasy scores use the verified NCAA NET for that season.')+'</span>'
       +(!isCurrent?'<button type="button" class="rank-current-season-button" data-act="ratings-current">View current '+escapeHTML(season())+' ratings ›</button>':'')+'</div>';
     if(!data)return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
-      +(ratingError[year]?empty('T-Rank unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Try again</button>'
+      +(ratingError[year]?empty('Bart Torvik unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Try again</button>'
         :empty('Loading power ratings','Retrieving published national rankings and efficiency numbers.'))+'</section>';
     const metrics={
       rank:(a,b)=>(a.r?.rank??999)-(b.r?.rank??999),
@@ -1694,7 +1694,7 @@
     return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
       +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+escapeHTML(data.source||'BART TORVIK')+' · '+(year-1)+'-'+String(year%100).padStart(2,'0')+'</span><span>'+valid.length+' matched / '+entries.length+' eligible</span>'
       +'<span>Source checked '+escapeHTML(new Date(data.fetched_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</span></div>'
-      +rankingFeatured(valid.slice(0,3),'ratings',sortNames[ratingSort]||'National T-Rank',featureValue)
+      +rankingFeatured(valid.slice(0,3),'ratings',sortNames[ratingSort]||'National Bart Torvik',featureValue)
       +rankingTools('ratings',ratingQuery,ratingConference,ratingOwnership)
       +'<div class="rank-toolbar-bottom"><div class="rank-order rank-rating-order" role="group" aria-label="Sort power ratings">'+sortTabs+'</div>'
       +'<span class="rank-count" id="rating-count">'+entries.length+' schools</span></div>'
@@ -1713,7 +1713,7 @@
     const nav='<div class="school-view-tabs" role="group" aria-label="Schools sections">'
       +[['directory','School directory'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
     if(programMode==='leaders')return heading('COLLEGE BASKETBALL','Schools','Browse programs or compare historical fantasy scoring across all Division I schools.')+nav+schoolLeadersPage();
-    if(programMode==='ratings')return heading('COLLEGE BASKETBALL','Schools','Compare eligible programs using T-Rank efficiency ratings.')+nav+ratingsPage();
+    if(programMode==='ratings')return heading('COLLEGE BASKETBALL','Schools','Compare eligible programs using Bart Torvik efficiency ratings.')+nav+ratingsPage();
     const eligible=eligiblePrograms();
     const available=eligible.filter(p=>!programOwned(p.id)).length;
     const sorters={
@@ -2144,7 +2144,7 @@
       const metric=(label,value)=>'<div><span>'+label+'</span><strong>'+escapeHTML(String(value))+'</strong></div>';
       return '<article class="draft-compare-card" '+draftStyle(p)+'>'
         +'<div class="draft-compare-top"><span class="draft-compare-priority">#'+(i+1)+' PRIORITY</span>'
-        +'<span class="draft-compare-rank">'+(rank?'T-Rank #'+rank:'T-Rank pending')+'</span></div>'
+        +'<span class="draft-compare-rank">'+(rank?'Bart Torvik #'+rank:'Bart Torvik pending')+'</span></div>'
         +'<button type="button" class="draft-compare-school" data-act="draft-select" data-id="'+escapeHTML(id)+'">'
         +'<span class="draft-compare-logo">'+img(p)+'</span><span><strong>'+escapeHTML(p.name)+'</strong>'
         +'<small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
@@ -2175,7 +2175,7 @@
         +(costView
           ?'<span class="draft-pool-stat draft-pool-financial-rank"><strong>'+(cost?'#'+cost.rank:'—')+'</strong><small>$ RANK</small></span>'
             +'<span class="draft-pool-stat draft-pool-financial-cost"><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong><small>EST. COST</small></span>'
-          :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'T-RANK')+'</small></span>')
+          :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'BART TORVIK')+'</small></span>')
         +'</button>'
         +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
@@ -2188,7 +2188,7 @@
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">⌕</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
-      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','T-Rank')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster $')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
+      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster $')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
       +(draftSort==='cost'
         ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · National rank out of 143 eligible schools, including drafted programs. CBS reported tiers and mid-major reporting are supplemented with unverified model estimates; amounts are not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
         :'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+
@@ -2207,7 +2207,7 @@
     const selectedView=chosen?'<div class="draft-selection-preview">'
       +'<div class="draft-selection-team" '+draftStyle(chosen)+'><div class="draft-selection-team-art">'+img(chosen)+'</div>'
       +'<div class="draft-selection-team-info"><span>SELECTED PROGRAM</span><h3>'+escapeHTML(chosen.name)+'</h3>'
-      +'<p>'+escapeHTML(conf(chosen.conference_id))+(selectedRank?' · National T-Rank #'+selectedRank:'')+'</p></div></div>'
+      +'<p>'+escapeHTML(conf(chosen.conference_id))+(selectedRank?' · National Bart Torvik #'+selectedRank:'')+'</p></div></div>'
       +'<div class="draft-selection-facts"><div><span>STATUS</span><strong>Available</strong></div><div><span>YOUR PICK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong></div></div>'
       +(selectedRosterCost?'<div class="draft-roster-cost-preview"><span>2026–27 ROSTER COST</span><strong>#'+selectedRosterCost.rank+' of 143 · '+escapeHTML(rosterCostAmount2026(selectedRosterCost))+'</strong><small>'+escapeHTML(rosterCostEvidence2026(selectedRosterCost))+'</small></div>':'')
       +(selectedHistory?'<div class="draft-history-snapshot"><span>HISTORICAL FANTASY</span><strong>'+historicalPointLabel(selectedHistory.avg)+' avg pts</strong><strong>'+historicalPointLabel(selectedHistory.best)+' peak</strong><small>'+selectedHistory.count+'/'+selectedHistory.totalYears+' seasons</small></div>':'')
@@ -2229,7 +2229,7 @@
         +'<span class="draft-queue-position" aria-label="Priority '+(i+1)+'">'+(i+1)+'</span>'
         +'<span class="draft-queue-grip" data-id="'+escapeHTML(id)+'" draggable="true" title="Drag to reorder '+escapeHTML(p.name)+'" aria-hidden="true">⠿</span>'
         +'<button type="button" class="draft-queue-team" data-act="draft-select" data-id="'+escapeHTML(id)+'" title="Preview '+escapeHTML(p.name)+'">'
-        +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · T-Rank #'+rank:'')+
+        +'<span class="draft-queue-icon">'+img(p)+'</span><span class="draft-queue-info"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+(rank?' · Bart Torvik #'+rank:'')+
         (history?.eligibleForSort?' · 5Y '+historicalPointLabel(history.avg)+' pts':'')+'</small></span>'
         +'<span class="draft-queue-pick">Preview ›</span></button>'
         +'<div class="draft-queue-controls"><button type="button" data-act="draft-queue-up" data-id="'+escapeHTML(id)+'" '+(first?'disabled':'')+' aria-label="Move '+escapeHTML(p.name)+' up in draft queue" title="Move up">↑</button>'
@@ -2245,7 +2245,7 @@
       +(usedQueue.length?'<button type="button" data-act="draft-queue-collapse" class="draft-queue-collapse" aria-expanded="'+draftQueueExpanded+'">'+(draftQueueExpanded?'Collapse':'Expand queue')+'</button>':'')+'</div></div>'
       +(usedQueue.length
         ?'<div class="draft-queue-topline"><span>FIRST CHOICE</span><strong>#1 '+escapeHTML(programIndex.get(usedQueue[0])?.name||'School')+'</strong><span>'+escapeHTML(queueLabel)+'</span></div>'
-          +(draftCompareExpanded&&usedQueue.length>1?'<div class="draft-compare-section"><div class="draft-compare-heading"><strong>Compare your top '+Math.min(4,usedQueue.length)+' choices</strong><span>Current T-Rank + 5-year fantasy history</span></div><div class="draft-compare-grid">'+compareCards+'</div><small>Fantasy averages use archived scoring, not projections. Higher WAB and offense are better; lower defensive efficiency is better.</small></div>':'')
+          +(draftCompareExpanded&&usedQueue.length>1?'<div class="draft-compare-section"><div class="draft-compare-heading"><strong>Compare your top '+Math.min(4,usedQueue.length)+' choices</strong><span>Current Bart Torvik + 5-year fantasy history</span></div><div class="draft-compare-grid">'+compareCards+'</div><small>Fantasy averages use archived scoring, not projections. Higher WAB and offense are better; lower defensive efficiency is better.</small></div>':'')
           +(draftQueueExpanded?'<div class="draft-queue-list" aria-label="Draft priority order">'+queueItems+'</div>':'')
         :'<div class="draft-queue-empty"><span class="draft-queue-empty-icon">☆</span><div><strong>Start your queue</strong><p>Tap the star on any available school to add it here. Rearrange your picks whenever you like.</p></div>'
           +'<button type="button" data-act="draft-jump-pool">Browse available schools ›</button></div>')
@@ -2258,18 +2258,21 @@
     const sidebar='<aside class="draft-pick-aside"><section class="panel draft-pick-desk">'
       +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOUR TURN TO DRAFT':'Preview a program')+'</strong></div>'
       +selectedView+'</section></aside>';
-    const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'current';
+
+    // Compact manager-based draft board. Ranks are always national, not a filtered subset.
+    const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
     const boardColumns=visualOrder;
     const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1)
       .filter(r=>boardMode!=='mine'||Array.from({length:managerCount},(_,i)=>(r-1)*managerCount+i+1)
         .some(slot=>draftOwner(slot)===me.id));
-    const boardWidth='grid-template-columns:72px repeat('+Math.max(1,boardColumns.length)+',minmax(163px,1fr));min-width:'+(72+Math.max(1,boardColumns.length)*163)+'px';
-    const boardHeaders=boardColumns.map(id=>{
+    const boardWidth='grid-template-columns:62px repeat('+Math.max(1,boardColumns.length)+',minmax(188px,1fr));min-width:'+(62+Math.max(1,boardColumns.length)*188)+'px';
+    const managerPickedCount=id=>picks().filter(p=>String(p.manager_id)===String(id)).length;
+    const boardHeaders=boardColumns.map((id,pos)=>{
       const member=managerIndex.get(id),vacant=id.startsWith('open-seat-');
-      const selection=visualOrder.indexOf(id)+1;
       return '<div class="draft-board-manager '+(id===me.id?'mine':vacant?'vacant':'')+'">'
-        +'<span class="draft-board-avatar">'+avatar(member||{display_name:'+'})+'</span><div><strong>'+escapeHTML(member?.display_name||'Open seat')+'</strong>'
-        +'<small>'+(id===me.id?'YOUR COLUMN':vacant?'UNCLAIMED':'DRAFT POSITION '+selection)+'</small></div></div>';
+        +'<span class="draft-board-avatar">'+avatar(member||{display_name:'+'})+'</span>'
+        +'<div class="draft-board-owner"><strong>'+escapeHTML(member?.display_name||'Open seat')+'</strong>'
+        +'<small>'+(id===me.id?'YOUR TEAM · ':'SLOT '+(pos+1)+' · ')+(vacant?'VACANT':managerPickedCount(id)+' PICKED')+'</small></div></div>';
     }).join('');
     const boardCells=boardRows.map(round=>{
       const slots=boardColumns.map(id=>{
@@ -2280,29 +2283,45 @@
         const traded=!vacant&&slotOwner&&slotOwner!==id;
         const onClock=draftLive&&overall===activePick,mine=slotOwner===me.id;
         const state=p?'selected':onClock?'on-clock':vacant?'vacant':'open';
+        const torvik=p?programRank(p):null,history=p?historyOf(p):null,cost=p?rosterCost2026(p):null;
+        const fiveYearRank=history?.eligibleForSort?history.rank:null;
+        const costLabel=cost?rosterCostAmount2026(cost):'—';
+        const detail=p?'Bart Torvik: '+(torvik?'#'+torvik:'not available')
+          +' · 5Y history: '+(fiveYearRank?'#'+fiveYearRank+' ('+historicalPointLabel(history.avg)+' points/season)':'not available')
+          +' · 2026 roster cost: '+costLabel+' · '+rosterCostEvidence2026(cost):'';
+        const scouting=p?'<div class="draft-cell-scout" aria-label="National rankings and spending">'
+          +'<span title="Bart Torvik national ranking"><small>TORVIK</small><b>'+(torvik?'#'+torvik:'—')+'</b></span>'
+          +'<span title="5-year historical fantasy rank"><small>5Y RANK</small><b>'+(fiveYearRank?'#'+fiveYearRank:'—')+'</b></span>'
+          +'<span title="Estimated 2026–27 roster cost"><small>ROSTER $</small><b>'+escapeHTML(costLabel)+'</b></span>'
+          +'</div>':'';
         return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'"'+(p?draftStyle(p):'')+' data-pick="'+overall+'" '+(onClock?'id="draft-current-slot"':'')+'>'
-          +'<div class="draft-cell-meta"><span>#'+overall+'</span>'+(onClock?'<strong class="draft-cell-live">ON THE CLOCK</strong>':p?'<span class="draft-cell-done">LOCKED</span>':'')+'</div>'
-          +(traded?'<div class="draft-pick-owner-label">⇄ '+escapeHTML(holder?.display_name||'Traded pick')+'</div>':'')
-          +(p?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
+          +'<div class="draft-cell-meta"><span class="draft-pick-number">PICK #'+overall+'</span>'
+          +(onClock?'<strong class="draft-cell-live">● ON CLOCK</strong>':p?'<span class="draft-cell-done">SELECTED</span>':'<span class="draft-cell-pending">UPCOMING</span>')+'</div>'
+          +(traded?'<div class="draft-pick-owner-label" title="Draft pick traded to '+escapeHTML(holder?.display_name||'another manager')+'">⇄ '+escapeHTML(holder?.display_name||'Traded pick')+'</div>':'')
+          +(p?'<button type="button" class="draft-cell-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="'+escapeHTML(detail)+'">'
             +'<span class="draft-cell-logo">'+img(p)+'</span><span class="draft-cell-team"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button>'
+            +scouting
             :onClock?'<button type="button" class="draft-cell-open '+(mine?'take-pick':'')+'" data-act="draft-jump-pool">'
-              +'<strong>'+(mine?'Your pick is live':'Awaiting pick')+'</strong><small>'+(mine?'Choose a school ›':escapeHTML(holder?.display_name||'Manager')+' is selecting')+'</small></button>'
-            :'<div class="draft-cell-placeholder">'+(vacant?'Open seat':'AVAILABLE PICK')+'</div>')
+              +'<strong>'+(mine?'Your selection':'On the clock')+'</strong><small>'+(mine?'Choose a program ›':escapeHTML(holder?.display_name||'Manager')+' is picking')+'</small></button>'
+            :'<div class="draft-cell-placeholder">'+(vacant?'Unclaimed slot':'Awaiting selection')+'</div>')
           +'</div>';
       }).join('');
       return '<div class="draft-board-round '+(round===activeRound?'current':'')+'"><strong>R'+round+'</strong><span>'+(round%2===0?'←':'→')+'</span></div>'+slots;
     }).join('');
     const boardTab=(id,label)=>'<button type="button" data-act="draft-board-mode" data-mode="'+id+'" class="'+(boardMode===id?'active':'')+'" aria-pressed="'+(boardMode===id)+'">'+label+'</button>';
     const board='<section class="panel draft-board-panel draft-v2-board" id="draft-board-section">'
-      +'<div class="draft-board-toolbar"><div><span class="draft-section-overline">THE FULL LEAGUE</span><h2>Snake draft board</h2>'
-      +'<p>Live picks and draft order, including traded selections.</p></div>'
-      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','All rounds')+boardTab('current','Current round')+boardTab('mine','My picks')+'</div></div>'
-      +'<div class="draft-board-key"><span><i class="selected"></i> Picked programs</span><span><i class="on-clock"></i> On the clock</span>'
-      +'<span><i class="mine"></i> My draft column</span><button type="button" data-act="draft-follow-live">Jump to current round ↗</button></div>'
-      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board"><div class="draft-board-grid" style="'+boardWidth+'">'
+      +'<div class="draft-board-toolbar"><div class="draft-board-title"><span class="draft-section-overline">LIVE LEAGUE DRAFT</span><h2>Draft board</h2>'
+      +'<p>Every manager, pick and scouting metric in one view.</p></div>'
+      +'<div class="draft-board-toolbar-right"><div class="draft-board-progress"><span>ROUND <strong>'+activeRound+' / '+rounds+'</strong></span>'
+      +'<span>PICKS <strong>'+completed+' / '+plannedTotal+'</strong></span></div>'
+      +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My slots')+'</div></div></div>'
+      +'<div class="draft-board-key"><span><i class="selected"></i> Drafted</span><span><i class="on-clock"></i> On clock</span>'
+      +'<span><i class="mine"></i> Your slots</span><span class="draft-board-metric-key">BART TORVIK · 5Y RANK · EST. ROSTER $</span>'
+      +'<button type="button" data-act="draft-follow-live">Jump to live pick ↗</button></div>'
+      +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board with pick numbers, Bart Torvik rankings, five-year history and estimated roster costs"><div class="draft-board-grid" style="'+boardWidth+'">'
       +'<div class="draft-board-corner">ROUND</div>'+boardHeaders+boardCells+'</div></div>'
-      +'<div class="draft-board-footer"><span>Snake draft · Scroll to explore the board.</span>'
-      +'<span>'+completed+' / '+plannedTotal+' picks made</span></div></section>';
+      +'<div class="draft-board-footer"><span>Scroll across managers · Select any school for its full profile.</span>'
+      +'<span>Roster costs are estimates, not verified payrolls.</span></div></section>';
     const recent=picks().slice(-6).reverse().map(p=>{
       const school=programIndex.get(String(p.program_id)),member=managerIndex.get(String(p.manager_id));
       return school?'<button type="button" class="draft-recent-card" data-act="open-program" data-id="'+escapeHTML(school.id)+'" '+draftStyle(school)+'>'
@@ -2316,7 +2335,7 @@
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
     return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Follow picks, browse programs and manage your queue.')
-      +'<div class="draft-v2 draft-v3">'+hero+board+tracker+tradeInbox+queueManager
+      +'<div class="draft-v2 draft-v3 draft-v4">'+hero+board+tracker+tradeInbox+queueManager
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'
       +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
   }
@@ -2416,10 +2435,10 @@
       +(title==='NCAA Tournament seeding'?'</div><p class="hint section-gap">Each seed receives its own appearance bonus once per NCAA Tournament.</p>':'')
       +(title==='PAC-12 & MID-MAJOR BONUSES'?'<p class="hint section-gap">Applies to every eligible non-Power school, including individually selected programs and Pac-12 schools, <strong>excluding Gonzaga</strong>. The at-large bonus is awarded for an NCAA bid without winning the conference tournament (+5 per selection), after automatic bids are verified. Upset points are earned only by beating a better-seeded NCAA opponent (+1 per seed line, no cap). Both stack with normal tournament and quadrant points.</p>':'')+'</section>').join('')+'</div>'
       +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
-      +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A is a separate +2.5 win category and does not stack with Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik T-Rank and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
+      +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A is a separate +2.5 win category and does not stack with Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
       +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins. See the dedicated Pac-12 &amp; Mid-Major Bonuses section for at-large and upset eligibility.</p>'
       +'<p>Regular-season games earn their normal win points; conference tournament wins earn +2 and NCAA Tournament wins earn their configured postseason points. Those wins can additionally earn quadrant bonuses. There is no AP Poll or KenPom bonus.</p>'
-      +'<p class="muted">Provisional T-Rank-based points can change. Completed archived seasons use official final NET rankings.</p></section>';
+      +'<p class="muted">Provisional Bart Torvik-based points can change. Completed archived seasons use official final NET rankings.</p></section>';
   }
 
   function leaguePage(){
@@ -2442,8 +2461,8 @@
     const note=standingsError?'Unable to refresh standings: '+escapeHTML(standingsError):
       !scoring?'Calculating the current fantasy scores from verified games and awards...':
       !owners().length?'Managers earn points after drafting their schools.':
-      scoring.quadrant_source==='torvik'?'Live fantasy points include provisional Q1/Q1A/Q2 bonuses using Bart Torvik T-Rank. NCAA NET will replace these calculations automatically.':
-      scoring.quadrant_source==='pending'?'Live fantasy scores. Quadrant bonuses begin once complete T-Rank or NCAA NET rankings are available.':
+      scoring.quadrant_source==='torvik'?'Live fantasy points include provisional Q1/Q1A/Q2 bonuses using Bart Torvik. NCAA NET will replace these calculations automatically.':
+      scoring.quadrant_source==='pending'?'Live fantasy scores. Quadrant bonuses begin once complete Bart Torvik or NCAA NET rankings are available.':
       'Live scores reflect regular-season wins, NET quadrant bonuses and confirmed postseason awards.';
     return heading('SEASON '+escapeHTML(season()),'Standings','Dynasty standings for the current season.')
       +'<section class="panel standings-panel">'
@@ -2539,7 +2558,7 @@
       escapeHTML(value)+'</strong></div>';
     const rankValue=report?.net?.net_rank?'#'+report.net.net_rank:'—';
     const currentRecord=report?.record?.played?report.record.wins+'–'+report.record.losses:record(currentStats);
-    const ratingLabel=report?.ranking_source==='torvik'?'T-Rank (prelim)':'NET rank';
+    const ratingLabel=report?.ranking_source==='torvik'?'Bart Torvik (prelim)':'NET rank';
     const state=programProfileTab==='schedule'||programProfileTab==='history'||programProfileTab==='ratings'
       ?programProfileTab:'overview';
     const tabs=[['overview','Overview'],['schedule','Schedule'],['history','History'],['ratings','Ratings']];
@@ -2634,21 +2653,21 @@
     const ratingCard=(title,value,note='')=>'<div class="pp-rating-card"><span>'+escapeHTML(title)+'</span>'+
       '<strong>'+escapeHTML(value)+'</strong>'+(note?'<small>'+escapeHTML(note)+'</small>':'')+'</div>';
     const ratings='<section class="panel pp-section pp-ratings"><div class="pp-section-head"><div>'+
-      '<h2>Power ratings</h2><p>Bart Torvik T-Rank · '+escapeHTML(selected)+'</p></div></div>'+
+      '<h2>Power ratings</h2><p>Bart Torvik · '+escapeHTML(selected)+'</p></div></div>'+
       '<div class="pp-rating-seasons">'+Array.from({length:Math.max(1,firstYear-2021+1)},(_,i)=>{
         const year=firstYear-i,label=year+'-'+String((year+1)%100).padStart(2,'0');
         return '<button type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" class="'+
           (label===selected?'active':'')+'" aria-pressed="'+(label===selected)+'">'+escapeHTML(label)+'</button>';
       }).join('')+'</div>'+
       (metrics?'<div class="pp-ratings-grid">'+
-        ratingCard('National T-Rank','#'+metrics.rank)+
+        ratingCard('National Bart Torvik','#'+metrics.rank)+
         ratingCard('Barthag',decimal(metrics.barthag,3))+
         ratingCard('Adjusted offense',decimal(metrics.adj_o),metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Points / 100 possessions')+
         ratingCard('Adjusted defense',decimal(metrics.adj_d),metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Points / 100 possessions')+
         ratingCard('Wins above bubble',decimal(metrics.wab))+
         ratingCard('Adjusted tempo',decimal(metrics.tempo))+
         '</div>':'<p class="pp-empty-copy">'+escapeHTML(ratingError[metricsYear]||
-          (ratingLoading[metricsYear]?'Loading verified T-Rank ratings…':'No verified T-Rank data for this season.'))+'</p>')+
+          (ratingLoading[metricsYear]?'Loading verified Bart Torvik ratings…':'No verified Bart Torvik data for this season.'))+'</p>')+
       '<div class="pp-rating-links">'+ratingExternalLinks(metricsYear)+
       '<button class="pp-text-action" type="button" data-act="view-ratings" data-season="'+escapeHTML(selected)+
       '">Compare all programs ›</button></div></section>';
@@ -2959,9 +2978,9 @@
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-history-backfill">Import 8 historical dates</button></div>'
         +'<div class="form-row section-gap"><label for="history-net-season">Historical NET season</label><select class="field" id="history-net-season">'+['2025-26','2024-25','2023-24','2022-23','2021-22'].map(year=>'<option value="'+year+'">'+year+'</option>').join('')+'</select></div>'
         +'<button class="btn secondary" data-act="data-history-net">Import archived NET rankings</button></section>'
-        +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='torvik'?'Bart Torvik T-Rank · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET active':'Awaiting T-Rank rankings')
-        +'<p class="hint">Until official NCAA NET is available, T-Rank serves as the provisional ranking for Q1/Q1A/Q2 points. League standings recalculate automatically when verified NCAA NET replaces it. Historical seasons are unchanged.</p>'
-        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-torvik-refresh" '+(resultsStatus?.quadrant_source==='net'?'disabled':'')+'>Sync preliminary T-Rank</button></div></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='torvik'?'Bart Torvik · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET active':'Awaiting Bart Torvik rankings')
+        +'<p class="hint">Until official NCAA NET is available, Bart Torvik serves as the provisional ranking for Q1/Q1A/Q2 points. League standings recalculate automatically when verified NCAA NET replaces it. Historical seasons are unchanged.</p>'
+        +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-torvik-refresh" '+(resultsStatus?.quadrant_source==='net'?'disabled':'')+'>Sync preliminary Bart Torvik</button></div></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
         +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
@@ -3358,7 +3377,7 @@
         await loadResults();
       }else if(act==='data-torvik-refresh'){
         const ranks=await api('admin/data/torvik-refresh',{});
-        notice(ranks.skipped||'Imported '+ranks.matched+' provisional T-Rank schools.');
+        notice(ranks.skipped||'Imported '+ranks.matched+' provisional Bart Torvik schools.');
         standingsFetchedAt=0;schoolLeaders=null;programResultCache={};
         await loadResults();
       }else if(act==='data-ap-refresh'){

@@ -145,8 +145,13 @@ test('draft historical sort shows full-field 5Y ranks on the right, including dr
     assert.doesNotMatch(grid,/data-program="57"/);
     assert.match(card('58'),/<span class="draft-pool-stat"><strong>#2<\/strong><small>5Y RANK<\/small>/);
     assert.match(card('59'),/<span class="draft-pool-stat"><strong>#3<\/strong><small>5Y RANK<\/small>/);
+    assert.match(card('58'),/<small>5Y RANK<\/small><strong>#2<\/strong>/);
+    assert.match(card('59'),/<small>5Y RANK<\/small><strong>#3<\/strong>/);
+    assert.doesNotMatch(card('58'),/5\/5 seasons|5Y AVG|draft-pool-history/);
     app.sortDraft('power');
-    assert.match(app.page('draft'),/<small>BART TORVIK<\/small>/);
+    const powerHtml=app.page('draft');
+    assert.match(powerHtml,/<small>BART TORVIK<\/small>/);
+    assert.match(powerHtml.slice(powerHtml.indexOf('data-program="58"')).split('</article>')[0],/<small>5Y RANK<\/small><strong>#2<\/strong>/);
   }finally{
     app.sortDraft('power');app.schools('directory',null);
     league.picks=oldPicks;league.ownership=oldOwnership;

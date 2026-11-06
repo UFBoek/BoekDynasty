@@ -312,3 +312,33 @@ test('My Team presents only season score, ranked programs and collapsible manage
     league.settings.waivers_enabled=oldWaivers;league.settings.scoring.best_programs=oldBest;
   }
 });
+
+test('Schools index is a compact scouting table with full search, filter and profile actions',()=>{
+  const oldOwnership=league.ownership;
+  try{
+    league.ownership=[{program_id:'57',manager_id:'1'}];
+    const years=['2021-22','2022-23','2023-24','2024-25','2025-26'];
+    app.schools('directory',{seasons:years,rows:years.map((season,i)=>({season,program_id:'57',points:10+i*3}))});
+    const html=app.page('programs');
+    assert.match(html,/class="schools-masthead"/);
+    assert.match(html,/class="directory-table"/);
+    assert.match(html,/directory-school-identity/);
+    assert.match(html,/2026 ROSTER \$/);
+    assert.match(html,/data-act="directory-conference"/);
+    assert.match(html,/data-act="directory-ownership"/);
+    assert.match(html,/data-act="directory-sort"/);
+    assert.match(html,/data-act="directory-letter"/);
+    assert.match(html,/data-act="open-program"/);
+    assert.match(html,/data-act="open-manager"/);
+    assert.match(html,/program-dir-open/);
+    assert.match(html,/RANK #1/);
+    assert.match(html,/~\$27M/);
+    assert.doesNotMatch(html,/>#0<\/b>/,'Missing Torvik rankings must never appear as #0');
+    assert.match(html,/id="program-search"/);
+    assert.match(html,/id="program-results"/);
+    assert.match(html,/id="directory-load"/);
+  }finally{
+    league.ownership=oldOwnership;
+    app.schools('directory',null);
+  }
+});

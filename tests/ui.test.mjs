@@ -493,3 +493,48 @@ test('Results Game Center layout CSS covers masthead, counts, conference filters
   assert.match(css,/\.daily-results \.daily-group-heading\s*\{display:flex/);
   assert.match(css,/@media\(max-width:580px\)/);
 });
+
+
+test('front office surfaces pending trade offers and waiver claims without opening a drawer',()=>{
+ const state={
+  ...league,
+  settings:{...league.settings,draft_status:'finished',trading_enabled:true,waivers_enabled:true},
+  ownership:[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'2'}],
+  trades:[{id:'offer-1',from_manager_id:'2',to_manager_id:'1',status:'pending',offered_at:12345}],
+  trade_items:[
+   {trade_id:'offer-1',from_manager_id:'2',to_manager_id:'1',program_id:'58'},
+   {trade_id:'offer-1',from_manager_id:'1',to_manager_id:'2',program_id:'57'}
+  ],
+  draft_pick_trade_items:[],
+  waiver_claims:[{id:'claim-1',manager_id:'1',program_id:'59',drop_program_id:'57',status:'pending',created_at:12345}]
+ };
+ app.set(users[0],state);
+ try{
+  const team=app.page('team');
+  assert.match(team,/tm-frontoffice/);
+  assert.match(team,/tm-inbox-preview/);
+  assert.match(team,/Trade offer from Hayden/);
+  assert.match(team,/data-act="trade-accept" data-id="offer-1"/);
+  assert.match(team,/data-act="trade-decline" data-id="offer-1"/);
+  assert.match(team,/data-id="waivers"/);
+
+  const trades=app.page('trades');
+  assert.match(trades,/txn-inbox/);
+  assert.ok(trades.indexOf('id="txn-inbox-title"')<trades.indexOf('id="trade-proposal"'));
+  assert.match(trades,/YOU RECEIVE/);
+  assert.match(trades,/YOU SEND/);
+  assert.match(trades,/Duke basketball/);
+  assert.match(trades,/Florida basketball/);
+  assert.match(trades,/data-act="trade-propose"/);
+
+  const waivers=app.page('waivers');
+  assert.match(waivers,/txn-waiver-list/);
+  assert.match(waivers,/data-act="waiver-cancel" data-id="claim-1"/);
+  assert.match(waivers,/data-act="waiver-claim"/);
+  assert.match(waivers,/data-act="waiver-drop"/);
+  const more=app.page('more');
+  assert.match(more,/more-trade-alert/);
+ }finally{
+  app.set(users[0],league);
+ }
+});

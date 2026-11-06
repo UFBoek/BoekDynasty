@@ -54,7 +54,8 @@ test('traded current pick is selected by the new owner during a live draft',()=>
   assert.match(board,/draft-pick-owner-label/);
   assert.match(board,/⇄ Alpha/);
   assert.doesNotMatch(board,/YOUR DRAFT CAPITAL/);
-  assert.match(board,/Choose your program/);
+  assert.match(board,/draft-live-hero my-turn/);
+  assert.match(board,/data-act="draft-jump-pool">Draft/);
   league.picks=[];
 });
 

@@ -2079,9 +2079,9 @@
       return (ra??999)-(rb??999)||a.name.localeCompare(b.name);
     });
     const roundLabel=activeRound+' / '+rounds;
-    const phase=status==='live'?'LIVE DRAFT':status==='paused'?'DRAFT PAUSED':status==='finished'?'DRAFT COMPLETE':'DRAFT PREVIEW';
+    const phase=draftDone?'DRAFT COMPLETE':status==='live'?'LIVE DRAFT':status==='paused'?'DRAFT PAUSED':status==='finished'?'DRAFT COMPLETE':'DRAFT PREVIEW';
     const headline=yourTurn?"You're on the clock":draftLive?'On the clock':status==='paused'?'The draft is paused':
-      draftDone?'The inaugural draft is complete':'Your dynasty starts here';
+      draftDone?'The inaugural draft is complete':'Inaugural program draft';
     const clock=settings.draft_clock_seconds>0&&draftLive
       ?'<div class="draft-live-clock"><span>DRAFT CLOCK</span><strong id="draft-clock">--:--</strong><small>No automatic picks</small></div>':'';
     const upNext=Array.from({length:Math.min(5,Math.max(0,total-completed))},(_,i)=>{
@@ -2097,6 +2097,7 @@
       +'<span>'+(draftLive?'Round '+roundLabel+' · Overall pick #'+activePick:
          draftDone?completed+' programs selected':completed+' of '+plannedTotal+' projected selections')+'</span></div></div>'
       +'</div><div class="draft-live-right"><div class="draft-live-stat"><span>'+(yourTurn?'YOUR PICK':'YOUR NEXT PICK')+'</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong><small>'+(nextMine?(yourTurn?'Make your selection now':'Your next selection'):'No picks remaining')+'</small></div>'
+      +'<div class="draft-live-stat draft-round-stat"><span>ROUND</span><strong>'+activeRound+'<em> / '+rounds+'</em></strong><small>'+completed+' of '+plannedTotal+' picked</small></div>'
       +clock
       +'<button type="button" class="draft-live-cta" data-act="draft-jump-pool">'+(yourTurn?'Draft':'Browse programs')+' <span>›</span></button></div>'
       +'<div class="draft-live-progress"><span style="width:'+Math.min(100,100*completed/Math.max(1,plannedTotal))+'%"></span></div>'
@@ -2177,15 +2178,18 @@
             +'<span class="draft-pool-stat draft-pool-financial-cost"><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong><small>EST. COST</small></span>'
           :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'BART TORVIK')+'</small></span>')
         +'</button>'
+        +'<div class="draft-scouting-strip"><span><small>BART TORVIK</small><strong>'+(rank?'#'+rank:'—')+'</strong></span>'
+        +'<span><small>5Y AVG PTS</small><strong>'+(history?.eligibleForSort?historicalPointLabel(history.avg):'—')+'</strong></span>'
+        +'<span title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><small>EST. ROSTER $</small><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong></span></div>'
         +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
         +(queued?'<span>★</span><small>'+queueNumber+'</small>':'☆')+'</button>'
         +'</article>';
     }).join('');
     const pool='<section id="draft-pool-section" class="panel draft-pool-panel">'
-      +'<div class="draft-section-heading"><div><span class="draft-section-overline">YOUR DRAFT DESK</span><h2>Available programs</h2>'
-      +'<p>Choose a program to draft, or star it to save for later.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
-      +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">⌕</span>'
+      +'<div class="draft-section-heading"><div><span class="draft-section-overline">SCOUT • COMPARE • SELECT</span><h2>Draft desk</h2>'
+      +'<p>Compare rankings, review history and make your pick.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
+      +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">'+iconSVG('search')+'</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
       +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster $')+sortButton('name','A–Z')+sortButton('conference','Conference')+'</div></div>'
@@ -2219,7 +2223,7 @@
       +(queuePosition.has(String(chosen.id))?'★ Remove from queue (#'+queuePosition.get(String(chosen.id))+')':'☆ Add to draft queue')+'</button>'
       +'<button type="button" data-act="open-program" data-id="'+escapeHTML(chosen.id)+'">View school details ›</button></div>'
       +'<button type="button" class="draft-selection-clear" data-act="draft-clear-selection">Change selection</button></div>'
-      :'<div class="draft-selection-idle"><div class="draft-idle-mark">+</div><strong>'+(yourTurn?'Your selection is waiting':'Scout your next pick')+'</strong>'
+      :'<div class="draft-selection-idle"><div class="draft-idle-mark">'+iconSVG('draft')+'</div><span class="draft-idle-eyebrow">ON YOUR RADAR</span><strong>'+(yourTurn?'Your selection is waiting':'Scout your next pick')+'</strong>'
       +'<p>Tap a program to preview its details. '+(yourTurn?'Confirm it here when you are ready.':'Build an ordered draft queue while other managers pick.')+'</p></div>';
     const queueItems=usedQueue.map((id,i)=>{
       const p=programIndex.get(id),rank=p?programRank(p):null,history=historyOf(p);
@@ -2257,7 +2261,10 @@
     }).join('');
     const sidebar='<aside class="draft-pick-aside"><section class="panel draft-pick-desk">'
       +'<div class="draft-side-title"><span>SELECTION DESK</span><strong>'+(yourTurn?'YOUR TURN TO DRAFT':'Preview a program')+'</strong></div>'
-      +selectedView+'</section></aside>';
+      +selectedView+'</section>'
+      +(usedQueue.length?'<section class="panel draft-radar-panel"><div class="draft-radar-heading"><span>TOP OF YOUR QUEUE</span><button type="button" data-act="draft-jump-queue">Manage ↗</button></div>'
+        +usedQueue.slice(0,3).map((id,i)=>{const p=programIndex.get(id);return '<button type="button" class="draft-radar-program" data-act="draft-select" data-id="'+escapeHTML(id)+'"><span class="draft-radar-number">0'+(i+1)+'</span>'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span aria-hidden="true">↗</span></button>';}).join('')+'</section>':'')
+      +(myPickList?'<section class="panel draft-roster-panel"><div class="draft-radar-heading"><span>YOUR LATEST PICKS</span><strong>'+myPicks.length+' / '+rounds+'</strong></div>'+myPickList+'</section>':'')+'</aside>';
 
     // Compact manager-based draft board. Ranks are always national, not a filtered subset.
     const boardMode=['all','current','mine'].includes(draftRoundView)?draftRoundView:'all';
@@ -2330,12 +2337,12 @@
     }).join('');
     const foot='<section class="draft-recent-section"><div><span class="draft-section-overline">JUST OFF THE BOARD</span><h2>Recent selections</h2></div>'
       +(recent?'<div class="draft-recent-grid">'+recent+'</div>':'<p>No picks yet. Your dynasty draft history begins here.</p>')+'</section>';
-    const sheet=chosen?'<div class="draft-selection-sheet" role="dialog" aria-modal="true" aria-label="Selected draft program">'
+    const sheet=chosen?'<div class="draft-selection-sheet draft-sheet-v5" role="dialog" aria-modal="true" aria-label="Selected draft program">'
       +'<div class="draft-selection-sheet-scrim"><button type="button" data-act="draft-clear-selection" aria-label="Close selection"> </button></div>'
       +'<div class="draft-selection-sheet-content"><button type="button" class="draft-sheet-close" data-act="draft-clear-selection" aria-label="Close selection">×</button>'
       +selectedView+'</div></div>':'';
     return heading('INAUGURAL PROGRAM SNAKE DRAFT','Draft Room','Follow picks, browse programs and manage your queue.')
-      +'<div class="draft-v2 draft-v3 draft-v4">'+hero+board+tracker+tradeInbox+queueManager
+      +'<div class="draft-v2 draft-v3 draft-v4 draft-v5">'+hero+tracker+board+tradeInbox+queueManager
       +'<div class="draft-workspace">'+pool+sidebar+'</div>'
       +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
   }

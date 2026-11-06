@@ -1473,15 +1473,31 @@
   function leaderboard(){
     return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><button class="table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</button>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';
   }
-  function programCard(p,canPick){
+  function programCard(p,canPick,historyIndex){
     const assignment=programOwned(p.id),owner=members().find(u=>u.id===assignment?.manager_id);
-    const status=assignment?'<span class="program-dir-owner">'+escapeHTML(owner?.display_name||'Rostered')+'</span>'
-      :canPick?'<button type="button" class="btn small program-dir-pick" data-act="pick" data-id="'+escapeHTML(p.id)+'">Draft</button>'
-      :'<span class="program-dir-open">Available</span>';
-    return '<div class="program-card program-directory-card" data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(assignment?'owned':'available')+'" data-manager="'+escapeHTML(assignment?.manager_id||'')+'" data-letter="'+escapeHTML(p.name[0].toUpperCase())+'" data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'
-      +'<button type="button" class="program-card-main" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="View '+escapeHTML(p.name)+'">'
-      +img(p)+'<span class="grow"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span><span class="program-directory-chevron">›</span></button>'
-      +'<span class="program-dir-status">'+status+'</span></div>';
+    const rating=ratingOf(p,ratingYear(season())),history=historyIndex?.byId.get(String(p.id));
+    const cost=rosterCost2026(p),reported=cost&&cost.estimate!==null&&cost.evidence!=='M';
+    const torvik=Number.isFinite(Number(rating?.rank))?'#'+Number(rating.rank):'—';
+    const fiveYear=history?.eligibleForSort?historicalPointLabel(history.avg):'—';
+    const costFigure=reported?rosterCostAmount2026(cost):cost?.evidence==='M'?'N/A':'—';
+    const status=assignment
+      ?'<button type="button" class="program-dir-owner" data-act="open-manager" data-id="'+escapeHTML(owner?.id||assignment.manager_id)+'" title="View '+escapeHTML(owner?.display_name||'manager')+' roster"><i aria-hidden="true"></i>'+escapeHTML(owner?.display_name||'Rostered')+'</button>'
+      :canPick?'<button type="button" class="program-dir-pick" data-act="pick" data-id="'+escapeHTML(p.id)+'">Draft <span aria-hidden="true">↗</span></button>'
+      :'<span class="program-dir-open"><i aria-hidden="true"></i>Available</span>';
+    return '<div class="program-card program-directory-card '+(assignment?'is-rostered':'is-available')+'"'
+      +' data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(assignment?'owned':'available')+'"'
+      +' data-manager="'+escapeHTML(assignment?.manager_id||'')+'" data-letter="'+escapeHTML(p.name[0].toUpperCase())+'"'
+      +' data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'
+      +'<button type="button" class="program-card-main directory-school-cell" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="View '+escapeHTML(p.name)+' profile">'
+      +'<span class="directory-school-logo">'+img(p)+'</span>'
+      +'<span class="directory-school-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+      +'<span class="directory-school-arrow" aria-hidden="true">↗</span></button>'
+      +'<span class="directory-data-cell directory-torvik" data-label="TORVIK" title="Bart Torvik national rank"><b>'+escapeHTML(torvik)+'</b><small>NATIONAL</small></span>'
+      +'<span class="directory-data-cell directory-history" data-label="5Y AVG" title="Verified five-season average fantasy points"><b>'+escapeHTML(fiveYear)+'</b>'
+      +'<small>'+(history?.eligibleForSort?'RANK #'+history.rank:history?'LIMITED HISTORY':schoolLeadersLoading?'LOADING':'NO 5Y DATA')+'</small></span>'
+      +'<span class="directory-data-cell directory-cost" data-label="ROSTER $" title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><b>'+escapeHTML(costFigure)+'</b>'
+      +'<small>'+(reported?'2026–27 EST.':cost?.evidence==='M'?'MODEL ONLY':'NOT REPORTED')+'</small></span>'
+      +'<span class="program-dir-status" data-label="STATUS">'+status+'</span></div>';
   }
   async function loadStandings(){
     if(!me||standingsLoading||Date.now()-standingsFetchedAt<60000)return;
@@ -1710,37 +1726,61 @@
   }
   function filterRatings(){filterRankingDisplay('ratings');}
   function programsPage(){
-    const nav='<div class="school-view-tabs" role="group" aria-label="Schools sections">'
-      +[['directory','School directory'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</div>';
-    if(programMode==='leaders')return heading('COLLEGE BASKETBALL','Schools','Browse programs or compare historical fantasy scoring across all Division I schools.')+nav+schoolLeadersPage();
-    if(programMode==='ratings')return heading('COLLEGE BASKETBALL','Schools','Compare eligible programs using Bart Torvik efficiency ratings.')+nav+ratingsPage();
     const eligible=eligiblePrograms();
     const available=eligible.filter(p=>!programOwned(p.id)).length;
+    const enrolled=eligible.length-available;
+    const header='<header class="schools-masthead">'
+      +'<div class="schools-kicker"><span class="schools-kicker-rule" aria-hidden="true"></span>COLLEGE BASKETBALL <span class="schools-kicker-divider">/</span> '+escapeHTML(season())+' SEASON</div>'
+      +'<div class="schools-masthead-main"><div class="schools-masthead-copy"><h1>Schools<span class="schools-headline-stop">.</span></h1>'
+      +'<p>One place to scout the league, follow program performance, and study the national landscape.</p></div>'
+      +'<div class="schools-masthead-aside"><span>LEAGUE COVERAGE</span><strong>'+eligible.length+' <small>PROGRAMS</small></strong>'
+      +'<span>'+escapeHTML(String(eligibleConferenceIds().length))+' conferences represented</span></div></div></header>';
+    const nav='<nav class="school-view-tabs" aria-label="School research views">'
+      +[['directory','Program index'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-current="'+(programMode===id?'page':'false')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</nav>';
+    if(programMode==='leaders')return '<div class="schools-hub">'+header+nav+schoolLeadersPage()+'</div>';
+    if(programMode==='ratings')return '<div class="schools-hub">'+header+nav+ratingsPage()+'</div>';
     const sorters={
       name:(a,b)=>a.name.localeCompare(b.name),
       conference:(a,b)=>conf(a.conference_id).localeCompare(conf(b.conference_id))||a.name.localeCompare(b.name),
       availability:(a,b)=>Number(!!programOwned(a.id))-Number(!!programOwned(b.id))||a.name.localeCompare(b.name)
     };
     eligible.sort(sorters[programSort]||sorters.name);
+    const historyIndex=draftHistoricalIndex();
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
-    const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')+eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
-    const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'">'+title+'</button>';
-    const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
+    const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')
+      +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
+    const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
+    const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
     const sortButtons=[['name','A–Z'],['conference','Conference'],['availability','Available first']]
       .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
-    return heading('COLLEGE BASKETBALL','Schools','Explore the draft pool, compare programs and review season-by-season histories.')
-      +nav
-      +'<section class="program-directory-shell">'
-      +'<div class="directory-welcome"><div><span>THE DRAFT POOL</span><strong>'+eligible.length+' programs</strong><small>'+available+' available · '+(eligible.length-available)+' rostered</small></div>'
-      +(isMyTurn()?'<button class="btn small" data-act="tab" data-id="draft">Your pick is live →</button>':'<span class="directory-welcome-hint">Tap a school to view scores and history</span>')+'</div>'
-      +'<div class="directory-filters"><div class="directory-search-row"><label class="directory-search"><span aria-hidden="true">⌕</span><input class="field" type="search" id="program-search" value="'+escapeHTML(programQuery)+'" placeholder="Search programs or conferences..." aria-label="Search programs" autocomplete="off"/></label>'
-      +'<div class="directory-sort-tabs" role="group" aria-label="Sort schools">'+sortButtons+'</div></div>'
-      +'<div class="directory-conference-strip" role="group" aria-label="Filter by conference">'+conferenceChips+'</div>'
-      +'<div class="directory-filter-row"><div class="directory-status-tabs">'+filter('all','All schools')+filter('available','Available')+filter('owned','Rostered')+filter('mine','My programs')+'</div><span id="program-results" class="directory-current-count">'+eligible.length+' programs</span></div>'
-      +'</div>'
-      +(eligible.length?'<div class="program-grid program-directory-grid">'+eligible.map(p=>programCard(p,isMyTurn())).join('')+'</div><div id="no-program-results" class="empty directory-empty" hidden>No schools match those filters.</div><div id="directory-load" class="directory-load" hidden><button class="btn secondary" data-act="load-programs">Show more programs</button><span id="directory-progress"></span></div>'
-        :empty('No schools in the pool','The commissioner can import schools from league settings.'))
-      +'</section>';
+    return '<div class="schools-hub">'+header+nav
+      +'<section class="program-directory-shell" aria-label="League school directory">'
+      +'<div class="directory-welcome"><div class="directory-welcome-copy"><span class="directory-section-number">01 / LEAGUE UNIVERSE</span>'
+      +'<strong>Program index</strong><small>Eligible Division I programs · '+escapeHTML(season())+'</small></div>'
+      +'<div class="directory-summary" aria-label="Directory totals"><span><b>'+eligible.length+'</b><small>IN POOL</small></span>'
+      +'<span><b>'+available+'</b><small>AVAILABLE</small></span><span><b>'+enrolled+'</b><small>ROSTERED</small></span></div>'
+      +(isMyTurn()?'<button type="button" class="directory-live-pick" data-act="tab" data-id="draft">On the clock <span aria-hidden="true">↗</span></button>':'')+'</div>'
+      +'<div class="directory-filters" role="search" aria-label="Find programs">'
+      +'<div class="directory-search-row"><label class="directory-search"><span aria-hidden="true">'+iconSVG('search')+'</span>'
+      +'<input class="field" type="search" id="program-search" value="'+escapeHTML(programQuery)+'" placeholder="Search a school or conference" aria-label="Search programs" autocomplete="off"/></label>'
+      +'<div class="directory-sort-box"><span>SORT</span><div class="directory-sort-tabs" role="group" aria-label="Sort schools">'+sortButtons+'</div></div></div>'
+      +'<div class="directory-conference-line"><span class="directory-filter-label">CONFERENCE</span>'
+      +'<div class="directory-conference-strip" role="group" aria-label="Filter by conference">'+conferenceChips+'</div></div>'
+      +'<div class="directory-filter-row"><div class="directory-status-tabs" role="group" aria-label="Ownership status">'
+      +filter('all','All schools')+filter('available','Available')+filter('owned','Rostered')+filter('mine','My programs')+'</div>'
+      +'<span id="program-results" class="directory-current-count" role="status" aria-live="polite">'+eligible.length+' programs</span></div>'
+      +'<div class="directory-alphabet" aria-label="Jump to schools by first letter"><span class="directory-filter-label">INDEX</span>'
+      +'<div class="directory-letter-strip" role="group" aria-label="First-letter filter">'+letters+'</div></div></div>'
+      +(eligible.length?'<div class="directory-table" role="table" aria-label="Schools, scouting metrics and roster status">'
+        +'<div class="directory-table-head" role="row"><span role="columnheader">PROGRAM / CONFERENCE</span>'
+        +'<span role="columnheader">BART TORVIK</span><span role="columnheader">5Y AVG PTS</span>'
+        +'<span role="columnheader">2026 ROSTER $</span><span role="columnheader">STATUS</span></div>'
+        +'<div class="program-grid program-directory-grid" role="rowgroup">'+eligible.map(p=>programCard(p,isMyTurn(),historyIndex)).join('')+'</div>'
+        +'<div id="no-program-results" class="directory-empty" hidden><strong>No matching programs</strong><span>Try a different school, conference, or roster filter.</span></div>'
+        +'<div id="directory-load" class="directory-load" hidden><button type="button" data-act="load-programs">Show more programs <span aria-hidden="true">↓</span></button><span id="directory-progress"></span></div></div>'
+        :empty('No schools in the pool','The commissioner can add programs in league settings.'))
+      +'<div class="directory-method-note"><span>SCOUTING NOTES</span><p>Torvik is a national efficiency rank. Five-year averages use verified dynasty scoring from completed seasons; limited records are not ranked. Roster spending figures are directional estimates, not audited payrolls. Independent-model-only schools display N/A.</p></div>'
+      +'</section></div>';
   }
   function filterPrograms(){
     const query=programQuery.trim().toLowerCase();

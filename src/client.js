@@ -305,7 +305,11 @@
       if(!Array.isArray(payload.teams)||payload.teams.length<330)throw Error('Published ratings are incomplete.');
       ratingCache[year]=payload;
     }catch(e){ratingError[year]=e.message;}
-    finally{delete ratingLoading[year];if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft')render();}
+    finally{
+      delete ratingLoading[year];
+      if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
+      else if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft')render();
+    }
   }
   const ratingExternalLinks=(year=ratingYear(season()))=>'<div class="rating-source-links">'
     +'<a href="https://barttorvik.com/trank.php?year='+year+'" target="_blank" rel="noopener noreferrer">Bart Torvik '+(year-1)+'-'+String(year%100).padStart(2,'0')+' ↗</a>'
@@ -689,6 +693,11 @@
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
+    if(current==='programs'&&programMode==='directory'&&typeof window!=='undefined'){
+      const year=ratingYear(season());
+      if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
+      if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
+    }
     if(current==='program-detail'){
       loadRatings(ratingYear(selectedProgramSeason||season()));
       if(selectedProgramId&&!programScheduleCache[selectedProgramId]&&!programScheduleLoading[selectedProgramId]&&
@@ -724,6 +733,7 @@
     const notificationBell='<button type="button" class="topbar-bell" data-act="tab" data-id="notifications" title="Notifications" aria-label="Notifications'+(unreadNotifications?', '+unreadNotifications+' unread':'')+'">'+iconSVG('notifications')
       +(unreadNotifications?'<span class="notification-bell-count">'+unreadNotifications+'</span>':'')+'</button>';
     root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
+    if(current==='programs'&&programMode==='directory')filterPrograms();
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
     if(current==='draft'){
@@ -1477,7 +1487,7 @@
     const assignment=programOwned(p.id),owner=members().find(u=>u.id===assignment?.manager_id);
     const rating=ratingOf(p,ratingYear(season())),history=historyIndex?.byId.get(String(p.id));
     const cost=rosterCost2026(p),reported=cost&&cost.estimate!==null&&cost.evidence!=='M';
-    const torvik=Number.isFinite(Number(rating?.rank))?'#'+Number(rating.rank):'—';
+    const torvik=rating?.rank!=null&&Number.isFinite(Number(rating.rank))&&Number(rating.rank)>0?'#'+Number(rating.rank):'—';
     const fiveYear=history?.eligibleForSort?historicalPointLabel(history.avg):'—';
     const costFigure=reported?rosterCostAmount2026(cost):cost?.evidence==='M'?'N/A':'—';
     const status=assignment
@@ -1515,6 +1525,7 @@
     finally{
       schoolLeadersLoading=false;
       if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}
+      else if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
       else if(current==='draft'&&document.activeElement?.id!=='draft-pool-search')render();
     }
   }
@@ -1781,6 +1792,26 @@
         :empty('No schools in the pool','The commissioner can add programs in league settings.'))
       +'<div class="directory-method-note"><span>SCOUTING NOTES</span><p>Torvik is a national efficiency rank. Five-year averages use verified dynasty scoring from completed seasons; limited records are not ranked. Roster spending figures are directional estimates, not audited payrolls. Independent-model-only schools display N/A.</p></div>'
       +'</section></div>';
+  }
+  function refreshSchoolsDirectory(){
+    if(current!=='programs'||programMode!=='directory')return;
+    const search=root.querySelector('#program-search');
+    const focused=!!search&&document.activeElement===search;
+    const selection=focused?[search.selectionStart,search.selectionEnd]:null;
+    const conferenceScroll=root.querySelector('.directory-conference-strip')?.scrollLeft||0;
+    const alphabetScroll=root.querySelector('.directory-letter-strip')?.scrollLeft||0;
+    render();
+    const conferences=root.querySelector('.directory-conference-strip');
+    const letters=root.querySelector('.directory-letter-strip');
+    if(conferences)conferences.scrollLeft=conferenceScroll;
+    if(letters)letters.scrollLeft=alphabetScroll;
+    if(focused){
+      const next=root.querySelector('#program-search');
+      next?.focus({preventScroll:true});
+      if(selection&&selection.every(Number.isInteger)){
+        try{next?.setSelectionRange(selection[0],selection[1]);}catch{}
+      }
+    }
   }
   function filterPrograms(){
     const query=programQuery.trim().toLowerCase();

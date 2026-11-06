@@ -1386,7 +1386,7 @@
         +'<span class="tm-school-chevron" aria-hidden="true">↗</span></button></td>'
         +(metrics?'<td class="tm-stat-rank" data-label="TORVIK">'+torvik+'</td>'
           +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
-        +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong></td>'
+        +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</td>'
         +'</tr>';
     }).join('');
   }

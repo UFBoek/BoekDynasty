@@ -33,8 +33,8 @@ test('full snake board reverses the second round but not manager columns',()=>{
  const html=app.page('draft');
  const picks=[...html.matchAll(/data-pick="(\d+)"/g)].map(x=>Number(x[1]));
  assert.deepEqual(picks,[1,2,3,4,8,7,6,5,9,10,11,12]);
- assert.match(html,/All rounds/);
- assert.match(html,/My picks/);
+ assert.match(html,/Full board/);
+ assert.match(html,/My slots/);
 });
 test('league overview prioritizes games, actionable guidance and compact team rosters',()=>{
  const html=app.page('home');
@@ -146,10 +146,34 @@ test('draft historical sort shows full-field 5Y ranks on the right, including dr
     assert.match(card('58'),/<span class="draft-pool-stat"><strong>#2<\/strong><small>5Y RANK<\/small>/);
     assert.match(card('59'),/<span class="draft-pool-stat"><strong>#3<\/strong><small>5Y RANK<\/small>/);
     app.sortDraft('power');
-    assert.match(app.page('draft'),/<small>T-RANK<\/small>/);
+    assert.match(app.page('draft'),/<small>BART TORVIK<\/small>/);
   }finally{
     app.sortDraft('power');app.schools('directory',null);
     league.picks=oldPicks;league.ownership=oldOwnership;
+  }
+});
+
+test('draft board keeps pick details and shows compact scouting metrics for drafted schools',()=>{
+  const oldPicks=league.picks,oldOwnership=league.ownership;
+  try{
+    league.picks=[{overall:1,round:1,program_id:'57',manager_id:'1'}];
+    league.ownership=[{program_id:'57',manager_id:'1'}];
+    app.mode('all');
+    const html=app.page('draft');
+    assert.match(html,/PICK #1/);
+    assert.match(html,/Florida basketball/);
+    assert.match(html,/draft-cell-scout/);
+    assert.match(html,/<small>TORVIK<\/small>/);
+    assert.match(html,/<small>5Y RANK<\/small>/);
+    assert.match(html,/<small>ROSTER \$<\/small>/);
+    assert.match(html,/~\$27M/);
+    assert.match(html,/2026 roster spending is estimated|Roster costs are estimates/);
+    assert.match(html,/data-act="draft-board-mode" data-mode="current"/);
+    assert.match(html,/data-act="draft-board-mode" data-mode="mine"/);
+    assert.match(html,/data-act="open-program" data-id="57"/);
+  }finally{
+    league.picks=oldPicks;league.ownership=oldOwnership;
+    app.mode('all');
   }
 });
 

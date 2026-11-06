@@ -143,15 +143,15 @@ test('draft historical sort shows full-field 5Y ranks on the right, including dr
     const grid=html.slice(html.indexOf('<div class="draft-pool-grid">'));
     const card=id=>grid.split('data-program="'+id+'"')[1]?.split('</article>')[0];
     assert.doesNotMatch(grid,/data-program="57"/);
-    assert.match(card('58'),/<span class="draft-pool-stat"><strong>#2<\/strong><small>5Y RANK<\/small>/);
-    assert.match(card('59'),/<span class="draft-pool-stat"><strong>#3<\/strong><small>5Y RANK<\/small>/);
-    assert.match(card('58'),/<small>5Y RANK<\/small><strong>#2<\/strong>/);
-    assert.match(card('59'),/<small>5Y RANK<\/small><strong>#3<\/strong>/);
+    assert.match(card('58'),/<span class="draft-pool-stat"><strong>#2<\/strong><small>LAST 5 YEARS<\/small>/);
+    assert.match(card('59'),/<span class="draft-pool-stat"><strong>#3<\/strong><small>LAST 5 YEARS<\/small>/);
+    assert.match(card('58'),/<small>LAST 5 YEARS<\/small><strong>#2<\/strong>/);
+    assert.match(card('59'),/<small>LAST 5 YEARS<\/small><strong>#3<\/strong>/);
     assert.doesNotMatch(card('58'),/5\/5 seasons|5Y AVG|draft-pool-history/);
     app.sortDraft('power');
     const powerHtml=app.page('draft');
     assert.match(powerHtml,/<small>BART TORVIK<\/small>/);
-    assert.match(powerHtml.slice(powerHtml.indexOf('data-program="58"')).split('</article>')[0],/<small>5Y RANK<\/small><strong>#2<\/strong>/);
+    assert.match(powerHtml.slice(powerHtml.indexOf('data-program="58"')).split('</article>')[0],/<small>LAST 5 YEARS<\/small><strong>#2<\/strong>/);
   }finally{
     app.sortDraft('power');app.schools('directory',null);
     league.picks=oldPicks;league.ownership=oldOwnership;
@@ -169,7 +169,7 @@ test('draft board keeps pick details and shows compact scouting metrics for draf
     assert.match(html,/Florida basketball/);
     assert.match(html,/draft-cell-scout/);
     assert.match(html,/<small>TORVIK<\/small>/);
-    assert.match(html,/<small>5Y RANK<\/small>/);
+    assert.match(html,/<small>LAST 5 YEARS<\/small>/);
     assert.match(html,/<small>ROSTER \$<\/small>/);
     assert.match(html,/\$25M\+/);
     assert.match(html,/2026 roster spending is estimated|Roster costs are estimates/);

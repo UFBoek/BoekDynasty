@@ -6806,3 +6806,6 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(prefers-reduced-motion:reduce){
  .schools-hub .directory-school-arrow,.schools-hub .program-directory-card,.schools-hub .school-view-tabs button{transition:none}
 }
+
+/* Keep the full historical ranking label legible in compact draft-board cells. */
+.draft-v5 .draft-cell-scout>span:nth-child(2) small{white-space:normal;line-height:1.08;overflow-wrap:normal;text-align:center}

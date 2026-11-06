@@ -7039,6 +7039,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .results-summary>div:first-child{padding-left:0;border-left:0}
  .results-summary strong{font-size:20px}
  .results-summary span{font-size:7.5px}
+ .daily-results .daily-control-bar .daily-tools{display:grid;grid-template-columns:minmax(0,1fr) 123px 48px;gap:5px;flex:1 1 100%;width:100%;flex-wrap:nowrap}
+ .daily-results .daily-control-bar .daily-search{display:block;min-width:0;width:100%}
+ .daily-results .daily-control-bar .daily-search input{display:block;width:100%;min-width:0;box-sizing:border-box}
+ .daily-results .daily-control-bar .daily-picker{width:100%;min-width:0}
+ .daily-results .daily-control-bar .daily-today{width:100%;padding:0}
  .daily-results .daily-conference-bar{display:block;padding:9px 10px 10px}
  .daily-results .daily-conference-bar>span{display:block;margin:0 0 8px;font-size:8px}
  .daily-results .daily-conference-tabs{gap:4px}

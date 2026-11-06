@@ -479,3 +479,17 @@ test('League preseason never fabricates a leader or point ranking',()=>{
   assert.match(html,/HOW RANKINGS WORK/);
  }finally{app.standings(null);league.ownership=previousOwnership;}
 });
+test('Results Game Center layout CSS covers masthead, counts, conference filters and group headers',()=>{
+  const css=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
+  const page=app.page('results');
+  const selectors=['results-page-head','results-page-overline','results-summary','daily-conference-bar',
+    'daily-conference-tabs','daily-board-content','daily-scoreboard-group','daily-group-heading','daily-group-count'];
+  for(const name of selectors){
+    assert.ok(page.includes('class="'+name)||page.includes('class="'+name+' '),name+' must appear in Results markup');
+    assert.ok(css.includes('.'+name+'{')||css.includes('.'+name+' '),name+' must be styled');
+  }
+  assert.match(css,/\.results-page-head\s*\{display:flex/);
+  assert.match(css,/\.results-summary\s*\{display:grid/);
+  assert.match(css,/\.daily-results \.daily-group-heading\s*\{display:flex/);
+  assert.match(css,/@media\(max-width:580px\)/);
+});

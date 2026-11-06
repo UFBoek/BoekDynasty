@@ -2044,6 +2044,15 @@
         recentAvg:recent.length?recent.reduce((sum,n)=>sum+n,0)/recent.length:null,
         eligibleForSort:values.length>=3});
     }
+    // National five-year ranks remain fixed when schools are drafted or filtered out.
+    // Rank the same eligible averages used by the draft's 5Y Points sort.
+    const ranked=[...byId.entries()].filter(([,history])=>history.eligibleForSort)
+      .sort((a,b)=>b[1].avg-a[1].avg||a[0].localeCompare(b[0]));
+    let previousAvg=null,rank=0;
+    ranked.forEach(([,history],i)=>{
+      if(previousAvg===null||history.avg!==previousAvg){rank=i+1;previousAvg=history.avg;}
+      history.rank=rank;
+    });
     return {years,byId};
   }
   const historicalPointLabel=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:1});
@@ -2213,7 +2222,7 @@
         +(history?'<span class="draft-pool-history'+(history.eligibleForSort?'':' limited')+'">'+
           (history.eligibleForSort?'5Y AVG '+historicalPointLabel(history.avg)+' pts · '+history.count+'/'+history.totalYears+' seasons':'History: '+history.count+' season'+(history.count===1?'':'s'))+
           '</span>':'')+'</span>'
-        +'<span class="draft-pool-stat"><strong>'+(rank?'#'+rank:'—')+'</strong><small>T-RANK</small></span>'
+        +'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'T-RANK')+'</small></span>'
         +'</button>'
         +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'

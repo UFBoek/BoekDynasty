@@ -2250,10 +2250,10 @@
         +(costView
           ?'<span class="draft-pool-stat draft-pool-financial-rank'+(!cost?.rank?' is-unreported':'')+'"><strong>'+(cost?.rank?'#'+cost.rank:'N/A')+'</strong><small>$ RANK</small></span>'
             +'<span class="draft-pool-stat draft-pool-financial-cost'+(cost?.estimate===null||!cost?' is-unreported':'')+'"><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong><small>EST. COST</small></span>'
-          :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'BART TORVIK')+'</small></span>')
+          :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'LAST 5 YEARS':'BART TORVIK')+'</small></span>')
         +'</button>'
         +'<div class="draft-scouting-strip"><span><small>BART TORVIK</small><strong>'+(rank?'#'+rank:'—')+'</strong></span>'
-        +'<span title="Overall five-year fantasy rank across eligible programs"><small>5Y RANK</small><strong>'+(history?.rank?'#'+history.rank:'—')+'</strong></span>'
+        +'<span title="Overall five-year fantasy rank across eligible programs"><small>LAST 5 YEARS</small><strong>'+(history?.rank?'#'+history.rank:'—')+'</strong></span>'
         +'<span class="'+(!cost?.rank?'is-unreported':'')+'" title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><small>EST. ROSTER $</small><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong></span></div>'
         +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
@@ -2266,7 +2266,7 @@
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">'+iconSVG('search')+'</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
-      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster $')+'</div></div>'
+      +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','Last 5 Years')+sortButton('cost','2026 Roster $')+'</div></div>'
       +(draftSort==='cost'
         ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · Source-supported ranks include drafted programs. Schools supported only by an independent model display N/A for financial rank and spending. CBS $20M+ schools are shown as a tier, not individually estimated amounts. Published tiers are not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
         :'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+
@@ -2372,7 +2372,7 @@
           +' · 2026 roster cost: '+costLabel+' · '+rosterCostEvidence2026(cost):'';
         const scouting=p?'<div class="draft-cell-scout" aria-label="National rankings and spending">'
           +'<span title="Bart Torvik national ranking"><small>TORVIK</small><b>'+(torvik?'#'+torvik:'—')+'</b></span>'
-          +'<span title="5-year historical fantasy rank"><small>5Y RANK</small><b>'+(fiveYearRank?'#'+fiveYearRank:'—')+'</b></span>'
+          +'<span title="5-year historical fantasy rank"><small>LAST 5 YEARS</small><b>'+(fiveYearRank?'#'+fiveYearRank:'—')+'</b></span>'
           +'<span class="'+(!cost?.rank?'is-unreported':'')+'" title="Estimated 2026–27 roster cost"><small>ROSTER $</small><b>'+escapeHTML(costLabel)+'</b></span>'
           +'</div>':'';
         return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'"'+(p?draftStyle(p):'')+' data-pick="'+overall+'" '+(onClock?'id="draft-current-slot"':'')+'>'
@@ -2397,7 +2397,7 @@
       +'<span>PICKS <strong>'+completed+' / '+plannedTotal+'</strong></span></div>'
       +'<div class="draft-board-switch" role="group" aria-label="Draft board view">'+boardTab('all','Full board')+boardTab('current','Current round')+boardTab('mine','My slots')+'</div></div></div>'
       +'<div class="draft-board-key"><span><i class="selected"></i> Drafted</span><span><i class="on-clock"></i> On clock</span>'
-      +'<span><i class="mine"></i> Your slots</span><span class="draft-board-metric-key">BART TORVIK · 5Y RANK · EST. ROSTER $</span>'
+      +'<span><i class="mine"></i> Your slots</span><span class="draft-board-metric-key">BART TORVIK · LAST 5 YEARS · EST. ROSTER $</span>'
       +'<button type="button" data-act="draft-follow-live">Jump to live pick ↗</button></div>'
       +'<div class="draft-board-scroll" tabindex="0" aria-label="Scrollable snake draft board with pick numbers, Bart Torvik rankings, five-year history and estimated roster costs"><div class="draft-board-grid" style="'+boardWidth+'">'
       +'<div class="draft-board-corner">ROUND</div>'+boardHeaders+boardCells+'</div></div>'

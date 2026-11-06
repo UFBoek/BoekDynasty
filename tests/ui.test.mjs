@@ -193,13 +193,14 @@ test('model-only schools show N/A for financial rank and cost across draft views
     const cards=html.slice(html.indexOf('<div class="draft-pool-grid">'));
     const modelCard=cards.split('data-program="2439"')[1]?.split('</article>')[0];
     assert.ok(modelCard,'model-only school should appear in draft pool');
-    assert.match(modelCard,/draft-pool-financial-rank is-unreported"><strong>N\/A<\/strong>/);
+    assert.doesNotMatch(modelCard,/draft-pool-financial-rank|\$ RANK/);
     assert.match(modelCard,/draft-pool-financial-cost is-unreported"><strong>N\/A<\/strong>/);
+    assert.match(modelCard,/<small>EST\. COST<\/small>/);
     assert.match(modelCard,/Independent model only/);
     assert.doesNotMatch(modelCard,/\$5\.9M|#93<\/strong>/);
     // Florida has a separately reported CBS valuation north of $25M.
     const florida=cards.split('data-program="57"')[1]?.split('</article>')[0];
-    assert.match(florida,/#2<\/strong><small>\$ RANK<\/small>/);
+    assert.doesNotMatch(florida,/draft-pool-financial-rank|\$ RANK/);
     assert.match(florida,/\$25M\+/);
     league.picks=[{overall:1,round:1,program_id:'2439',manager_id:'1'}];
     league.ownership=[{program_id:'2439',manager_id:'1'}];

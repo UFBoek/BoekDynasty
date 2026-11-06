@@ -2575,30 +2575,56 @@
       name+'</button>').join('')+'</nav>';
 
     const earned=(currentStats?.breakdown||[]).filter(item=>Number(item.points||0)>0);
-    const shortBreakdown=earned.length?earned.slice(0,6).map(item=>
+    const shortBreakdown=earned.length?earned.slice(0,7).map(item=>
       '<div class="pp-breakdown-row"><span>'+escapeHTML(item.label)+'</span><strong>+'+
       Number(item.points||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join(''):
       '<p class="pp-empty-copy">No fantasy points have been recorded yet.</p>';
-    const recent=games.length?games.slice(0,5).map(g=>resultGameRow(g,p.id)).join(''):
-      '<p class="pp-empty-copy">Results will appear here when games are completed.</p>';
-
+    const recent=games.length?games.slice(0,6).map(g=>resultGameRow(g,p.id)).join(''):
+      '<p class="pp-empty-copy">Completed games will appear here as results are verified.</p>';
+    const trendSeasons=history.filter(x=>x?.season&&x.points!==null&&x.points!==undefined&&
+      Number.isFinite(Number(x.points))&&x.status!=='not_applicable').slice()
+      .sort((a,b)=>String(b.season).localeCompare(String(a.season))).slice(0,6);
+    const trendMax=Math.max(1,...trendSeasons.map(x=>Number(x.points||0)));
+    const trendRows=trendSeasons.map(x=>{
+      const width=Math.max(0,Math.min(100,Math.round(Number(x.points||0)/trendMax*100)));
+      const value=Number(x.points||0).toLocaleString('en-US',{maximumFractionDigits:1});
+      return '<button type="button" class="pp-trend-row" data-act="program-history-jump" data-id="'+
+        escapeHTML(x.season)+'" aria-label="View '+escapeHTML(x.season)+' full season breakdown">'+
+        '<span class="pp-trend-year">'+escapeHTML(x.season)+'</span>'+
+        '<span class="pp-trend-track"><span style="width:'+width+'%"></span></span>'+
+        '<strong>'+value+'</strong><span class="pp-trend-arrow" aria-hidden="true">›</span></button>';
+    }).join('');
     const overview='<div class="pp-overview-grid">'+
-      '<section class="panel pp-section pp-scoring"><div class="pp-section-head"><div><h2>Fantasy scoring</h2>'+
-      '<p>'+escapeHTML(season())+' season · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
-      '<strong class="pp-section-points">'+points(currentStats)+' <small>pts</small></strong></div>'+
+      '<div class="pp-overview-main"><section class="panel pp-section pp-scoring">'+
+      '<div class="pp-section-head"><div><span class="pp-section-kicker">SEASON PERFORMANCE</span><h2>Fantasy scoring</h2>'+
+      '<p>'+escapeHTML(season())+' · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
+      '<div class="pp-score-inline"><strong>'+points(currentStats)+'</strong><small>POINTS</small></div></div>'+
       '<div class="pp-fact-strip pp-fact-four">'+
       labelStat('Regular wins',currentStats?.games?currentStats.regular_wins:'—')+
       labelStat('Q1 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1??'—')+
       labelStat('Q1A wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1a??'—')+
       labelStat('Q2 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q2??'—')+
-      '</div><div class="pp-list-title">POINTS BY CATEGORY</div><div class="pp-breakdown">'+shortBreakdown+'</div>'+
-      '<button type="button" class="pp-text-action" data-act="program-show-history">Full scoring breakdown <span aria-hidden="true">›</span></button>'+
-      '</section>'+
-      '<section class="panel pp-section pp-recent"><div class="pp-section-head"><div><h2>Recent results</h2><p>Latest completed and recorded games</p></div>'+
-      '<button type="button" class="pp-text-action" data-act="program-profile-tab" data-id="schedule">All games ›</button></div>'+
-      '<div class="pp-recent-list">'+recent+'</div></section></div>'+
+      '</div><div class="pp-list-heading"><span class="pp-list-title">SCORING COMPOSITION</span>'+
+      '<span class="pp-list-subtitle">Verified category totals</span></div>'+
+      '<div class="pp-breakdown">'+shortBreakdown+'</div>'+
+      '<button type="button" class="pp-text-action pp-detail-link" data-act="program-show-history">Complete scoring ledger <span aria-hidden="true">↗</span></button>'+
+      '</section></div>'+
+      '<div class="pp-overview-aside">'+
+      '<section class="panel pp-section pp-recent"><div class="pp-section-head"><div>'+
+      '<span class="pp-section-kicker">GAME LOG</span><h2>Recent results</h2>'+
+      '<p>Latest recorded matchups</p></div>'+
+      '<button type="button" class="pp-text-action" data-act="program-profile-tab" data-id="schedule">Full schedule <span aria-hidden="true">↗</span></button></div>'+
+      '<div class="pp-recent-list">'+recent+'</div></section>'+
+      '<section class="panel pp-section pp-trajectory"><div class="pp-section-head"><div>'+
+      '<span class="pp-section-kicker">PROGRAM TRACK RECORD</span><h2>Season trajectory</h2>'+
+      '<p>Fantasy points by year · tap to inspect</p></div></div>'+
+      (trendRows?'<div class="pp-trend-list">'+trendRows+'</div>':
+        '<p class="pp-empty-copy">Season-by-season history will appear as verified results become available.</p>')+
+      '<button type="button" class="pp-text-action pp-trend-more" data-act="program-show-history">Explore program history <span aria-hidden="true">↗</span></button>'+
+      '</section></div></div>'+
+      (report?.error?'<p class="pp-data-note" role="status">'+escapeHTML(report.error)+'</p>':'')+
       '<div class="pp-overview-foot"><span>'+escapeHTML(conf(p.conference_id))+'</span>'+
-      '<span>'+(selection?'Draft pick #'+selection.overall+' · Round '+selection.round:'Undrafted')+'</span>'+
+      '<span>'+(selection?'Draft selection #'+selection.overall+' · Round '+selection.round:'Not selected in startup draft')+'</span>'+
       (report?.ranking_date?'<span>'+escapeHTML(ratingLabel)+' updated '+escapeHTML(report.ranking_date)+'</span>':'')+
       '</div>';
 
@@ -2609,9 +2635,9 @@
       const chosen=selected===yearLabel;
       return '<button type="button" class="pp-history-row'+(chosen?' active':'')+'" data-act="program-season" data-id="'+
         escapeHTML(yearLabel)+'" aria-pressed="'+chosen+'" aria-label="View '+escapeHTML(yearLabel)+' season">'+
-        '<strong>'+escapeHTML(yearLabel)+'</strong><span class="pp-history-record">'+escapeHTML(record(data))+'</span>'+
-        '<span class="pp-history-rank">'+escapeHTML(rank(data))+'</span><strong class="pp-history-points">'+
-        points(data)+' <small>pts</small></strong></button>';
+        '<span class="pp-history-year"><strong>'+escapeHTML(yearLabel)+'</strong><small>'+escapeHTML(record(data))+'</small></span>'+
+        '<span class="pp-history-rank">'+escapeHTML(rank(data))+'</span>'+
+        '<strong class="pp-history-points">'+points(data)+'<small> pts</small></strong></button>';
     }).join('');
     const items=selectedStats?.breakdown||[];
     const fullBreakdown=items.length?items.map(item=>
@@ -2648,12 +2674,14 @@
       (transactions?'<details class="panel pp-disclosure"><summary>Ownership & transactions <span>'+
       (activity.length+trades.length)+' ›</span></summary>'+transactions+'</details>':'')+
       '</div>';
-    const historical='<section class="panel pp-section pp-history-list"><div class="pp-section-head"><div>'+
-      '<h2>Season history</h2><p>Select a year to see its complete scoring details</p></div></div>'+
-      '<div class="pp-history-head"><span>SEASON</span><span class="pp-history-record">RECORD</span>'+
-      '<span class="pp-history-rank">RANK</span><span>POINTS</span></div>'+
-      '<div class="pp-history-rows">'+rows+'</div></section>'+historyDetail+extra+
-      (report?.history_error?'<p class="pp-data-note">'+escapeHTML(report.history_error)+'</p>':'');
+    const historical='<div class="pp-history-layout"><section class="panel pp-section pp-history-list">'+
+      '<div class="pp-section-head"><div><span class="pp-section-kicker">ARCHIVE / 2021–PRESENT</span>'+
+      '<h2>Season history</h2><p>Select a season to inspect</p></div></div>'+
+      '<div class="pp-history-head"><span>SEASON</span><span>LEAGUE RANK</span><span>POINTS</span></div>'+
+      '<div class="pp-history-rows">'+rows+'</div></section>'+
+      '<div class="pp-history-aside">'+historyDetail+extra+
+      (report?.history_error?'<p class="pp-data-note">'+escapeHTML(report.history_error)+'</p>':'')+
+      '</div></div>';
 
     const metricsYear=ratingYear(selected),metrics=ratingOf(p,metricsYear);
     const decimal=(value,d=1)=>value===null||value===undefined?'—':Number(value).toFixed(d);
@@ -2684,21 +2712,37 @@
     const ownerMarkup=manager?'<button type="button" class="program-profile-owner-link" data-act="open-manager" data-id="'+
       escapeHTML(manager.id)+'">'+escapeHTML(manager.display_name)+' ›</button>':
       '<span>Unowned</span>';
-    return '<div class="pp-page">'+profileBack()+
-      '<header class="pp-hero">'+
-      '<div class="pp-identity">'+img(p)+'<div class="pp-identity-text"><span class="pp-conference">'+
-      escapeHTML(conf(p.conference_id))+'</span><h1>'+escapeHTML(p.name)+'</h1>'+
-      '<div class="pp-owner">Dynasty owner: '+ownerMarkup+'</div></div></div>'+
-      '<span class="pp-status '+(owner?'is-rostered':'is-available')+'">'+
-      (owner?'Rostered':'Available')+'</span></header>'+
+    const eligible=programEligible(p);
+    const rosterState=owner?'is-rostered':eligible?'is-available':'is-ineligible';
+    const rosterLabel=owner?'ROSTERED':eligible?'AVAILABLE':'OUTSIDE DRAFT POOL';
+    const draftLabel=selection?'#'+selection.overall+' / RD '+selection.round:'UNDRAFTED';
+    return '<div class="pp-page pp-v3">'+
+      '<div class="pp-context">'+profileBack()+
+      '<span class="pp-context-path">SCHOOLS <span aria-hidden="true">/</span> '+
+      escapeHTML(conf(p.conference_id))+' <span aria-hidden="true">/</span> PROFILE</span></div>'+
+      '<header class="pp-masthead">'+
+      '<div class="pp-masthead-upper"><span class="pp-masthead-kicker">BOEK DYNASTY <span aria-hidden="true">/</span> PROGRAM INTELLIGENCE</span>'+
+      '<span class="pp-status '+rosterState+'">'+rosterLabel+'</span></div>'+
+      '<div class="pp-masthead-body"><div class="pp-identity">'+img(p)+
+      '<div class="pp-identity-text"><span class="pp-conference">'+escapeHTML(conf(p.conference_id))+
+      ' <span aria-hidden="true">·</span> NCAA DIVISION I</span>'+
+      '<h1>'+escapeHTML(p.name)+'</h1>'+
+      '<div class="pp-owner">Dynasty ownership <span aria-hidden="true">·</span> '+ownerMarkup+'</div></div></div>'+
+      '<div class="pp-masthead-score"><span>'+escapeHTML(season())+' FANTASY POINTS</span>'+
+      '<strong>'+points(currentStats)+'</strong><small>'+
+      (currentStats?.status==='complete'?'FINAL SEASON TOTAL':currentStats?.status==='partial'?'LIVE SEASON TOTAL':'VERIFIED SCORING')+
+      '</small></div></div></header>'+
       '<div class="pp-statbar">'+
-      '<div><span>'+escapeHTML(season())+' POINTS</span><strong>'+points(currentStats)+'</strong></div>'+
-      '<div><span>PROGRAM RANK</span><strong>'+escapeHTML(rank(currentStats))+'</strong></div>'+
+      '<div><span>LEAGUE FINISH / RANK</span><strong>'+escapeHTML(rank(currentStats))+'</strong></div>'+
       '<div><span>SEASON RECORD</span><strong>'+escapeHTML(currentRecord)+'</strong></div>'+
-      '<div><span>'+escapeHTML(ratingLabel.toUpperCase())+'</span><strong>'+escapeHTML(rankValue)+'</strong></div>'+
-      '</div>'+tabNav+
+      '<button type="button" data-act="program-profile-tab" data-id="ratings" title="Open program power ratings">'+
+      '<span>'+escapeHTML(ratingLabel.toUpperCase())+'</span><strong>'+escapeHTML(rankValue)+'</strong><small>VIEW RATINGS ↗</small></button>'+
+      '<div><span>STARTUP DRAFT</span><strong class="pp-draft-value">'+escapeHTML(draftLabel)+'</strong></div>'+
+      '</div>'+
+      tabNav+
       '<div id="pp-content" class="pp-content" role="tabpanel" aria-labelledby="pp-tab-'+state+'">'+panel+'</div>'+
       '</div>';
+
   }
   function managerProfilePage(){
     const u=members().find(m=>String(m.id)===String(selectedManagerId));
@@ -3194,6 +3238,7 @@
     }
     if(act==='program-profile-tab'){programProfileTab=id;render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
     if(act==='program-show-history'){selectedProgramSeason=season();programProfileTab='history';render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
+    if(act==='program-history-jump'){selectedProgramSeason=id;programProfileTab='history';render();root.querySelector('#program-profile-navigation')?.scrollIntoView({block:'start',behavior:'auto'});return;}
     if(act==='program-season'){selectedProgramSeason=id;render();return;}
     if(act==='schedule-view'){programScheduleView=id;render();return;}
     if(act==='schedule-retry'){loadProgramSchedule(id,true);return;}

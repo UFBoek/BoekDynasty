@@ -100,12 +100,9 @@ test('third-round reversal matches the server-authoritative selection order acro
   const priorRounds=league.settings.rounds;
   league.draft_pick_owners=[];league.settings.rounds=20;
   try{
-    const pattern=[
-      ['a','b','c'],['c','b','a'],['c','b','a'],
-      ['a','b','c'],['c','b','a'],['a','b','c']
-    ];
     for(let round=1;round<=20;round++){
-      const expected=pattern[(round-1)%6] || (round%2===1?['c','b','a']:['a','b','c']);
+      const expected=(round===1||(round>=4&&round%2===0))
+        ?['a','b','c']:['c','b','a'];
       for(let i=0;i<ids.length;i++){
         const pick=(round-1)*ids.length+i+1;
         assert.equal(serverOwner(pick,ids),app.owner(pick),'Backend/frontend disagree at pick #'+pick);

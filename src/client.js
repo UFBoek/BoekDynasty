@@ -1371,16 +1371,24 @@
       +'</section></div>';
   }
   // One roster treatment for your franchise and every other league manager.
-  function teamProgramRows(roster,scoring,pointMap){
+  function teamProgramRows(roster,scoring,pointMap,metrics=null){
     const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
-    return roster.map((p,index)=>'<tr class="tm-roster-row">'
-      +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
-      +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
-      +'<span class="tm-school-logo">'+img(p)+'</span>'
-      +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
-      +'<span class="tm-school-chevron" aria-hidden="true">›</span></button></td>'
-      +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong></td>'
-      +'</tr>').join('');
+    return roster.map((p,index)=>{
+      const rating=metrics?ratingOf(p,ratingYear(season())):null;
+      const history=metrics?.historyIndex?.byId.get(String(p.id));
+      const torvik=rating?.rank!=null&&Number(rating.rank)>0?'#'+rating.rank:'—';
+      const fiveYear=history?.eligibleForSort?'#'+history.rank:'—';
+      return '<tr class="tm-roster-row">'
+        +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
+        +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
+        +'<span class="tm-school-logo">'+img(p)+'</span>'
+        +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
+        +'<span class="tm-school-chevron" aria-hidden="true">↗</span></button></td>'
+        +(metrics?'<td class="tm-stat-rank" data-label="TORVIK">'+torvik+'</td>'
+          +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
+        +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong></td>'
+        +'</tr>';
+    }).join('');
   }
   // Visible on every roster; a single click switches between managers.
   function teamLeagueSwitcher(activeId){
@@ -1450,7 +1458,7 @@
         +'<div class="team-offer-detail"><span>You receive</span><strong>'+escapeHTML(receive.join(', ')||'No assets')+'</strong></div>'
         +(actions?'<div class="team-offer-actions">'+actions+'</div>':'')+'</div>';
     }).join('');
-    const roster=teamProgramRows(owned,scoring,pointMap);
+    const roster=teamProgramRows(owned,scoring,pointMap,{historyIndex:draftHistoricalIndex()});
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
@@ -1461,32 +1469,32 @@
       +(!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Draft room <span aria-hidden="true">↗</span></button>':'')
       +'<button type="button" class="tm-action" data-act="tab" data-id="programs">Browse programs <span aria-hidden="true">↗</span></button>'
       +'<button type="button" class="tm-action" data-act="tab" data-id="settings">Edit profile <span aria-hidden="true">↗</span></button></div>';
-    return '<main class="my-team-page tm-v3">'
+    return '<main class="my-team-page tm-v3 tm-v4">'
       +'<header class="tm-masthead">'
-      +'<div class="tm-masthead-top"><span class="tm-label">MY TEAM</span><span class="tm-year">'+seasonLabel+' SEASON</span></div>'
+      +'<div class="tm-masthead-top"><span class="tm-label"><i aria-hidden="true"></i>FRANCHISE HQ <span class="tm-label-separator">/</span> MY TEAM</span><span class="tm-year">'+seasonLabel+' · COLLEGE BASKETBALL DYNASTY</span></div>'
       +'<div class="tm-masthead-inner"><div class="tm-identity">'
       +'<div class="tm-avatar">'+avatar(me)+'</div><div class="tm-identity-copy">'
       +'<h1>'+escapeHTML(me.display_name)+'</h1>'
-      +'<p>@'+escapeHTML(me.username)+' <span aria-hidden="true">·</span> Dynasty franchise</p></div></div>'
+      +'<p>@'+escapeHTML(me.username)+' <span aria-hidden="true">·</span> PERMANENT ROSTER</p></div></div>'
       +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
-      +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div>'
+      +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small></div>'
       +'</div></header>'
-      +teamLeagueSwitcher(me.id)
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
-      +'<div class="tm-roster-heading"><div><span class="tm-overline">'+seasonLabel+' ROSTER</span>'
-      +'<h2 id="tm-roster-title">Your Programs</h2><p>'
+      +'<div class="tm-roster-heading"><div><span class="tm-overline">01 / '+seasonLabel+' ROSTER</span>'
+      +'<h2 id="tm-roster-title">Your programs</h2><p>'
       +(owned.length?owned.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
         'Your permanent program roster will appear here after the draft')+'</p></div>'+actions+'</div>'
       +(owned.length?'<div class="tm-roster-scroll"><table class="tm-table">'
-        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
         +'<tbody>'+roster+'</tbody></table></div>'
         :'<div class="tm-empty">'+empty('Your roster is ready to build','Schools selected in the inaugural draft will appear here.')+
         (!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Go to the draft room <span aria-hidden="true">↗</span></button>':'')+'</div>')
-      +'<footer class="tm-roster-footer"><span>Programs stay with your franchise from season to season.</span>'
+      +'<footer class="tm-roster-footer"><span>Permanent roster · Programs roll over each season unless traded or dropped.</span>'
       +'<span>'+(scoring?'Season points reflect the current standings.':'Season totals appear once scoring is available.')+'</span></footer>'
       +'</section>'
+      +teamLeagueSwitcher(me.id)
       +'<details class="tm-transactions"><summary><span class="tm-transactions-symbol" aria-hidden="true">⇄</span>'
-      +'<span class="tm-transactions-copy"><strong>Trades &amp; Waivers</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
+      +'<span class="tm-transactions-copy"><strong>Front office <span class="tm-transactions-divider">/</span> Trades &amp; waivers</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
       +(pendingActivity?'<span class="tm-transactions-count">'+pendingActivity+'</span>':'')
       +'<span class="tm-transactions-open">Manage <span aria-hidden="true">⌄</span></span></summary>'
       +'<div class="tm-transactions-body"><div class="team-aside"><section class="panel team-offers-panel">'

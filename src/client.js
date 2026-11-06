@@ -35,6 +35,7 @@
       league:'<path d="M4 20h16M7 17v-5h3v5m2 0V5h3v12m2 0V9h3v8"/>',
       results:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4m-4 4h6m3-5h2m-2 4h2"/>',
       trades:'<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
+      waivers:'<path d="m3 8 9-5 9 5v9l-9 4-9-4V8zM3 8l9 5 9-5M12 13v8"/>',
       scoring:'<path d="M4 4h16v16H4zM8 10h8M8 14h5"/>',
       commissioner:'<path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="5"/>',
       settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.5 1.5 0 0 0 .3 1.7l.1.1-1.8 1.8-.1-.1a1.5 1.5 0 0 0-1.7-.3l-.2.1a1.5 1.5 0 0 0-.9 1.4V20H9v-.3a1.5 1.5 0 0 0-.9-1.4l-.2-.1a1.5 1.5 0 0 0-1.7.3l-.1.1-1.8-1.8.1-.1A1.5 1.5 0 0 0 4.7 15l-.1-.2a1.5 1.5 0 0 0-1.4-.9H3v-3.8h.2a1.5 1.5 0 0 0 1.4-.9l.1-.2a1.5 1.5 0 0 0-.3-1.7l-.1-.1 1.8-1.8.1.1a1.5 1.5 0 0 0 1.7.3l.2-.1A1.5 1.5 0 0 0 9 4.3V4h6v.3a1.5 1.5 0 0 0 .9 1.4l.2.1a1.5 1.5 0 0 0 1.7-.3l.1-.1 1.8 1.8-.1.1a1.5 1.5 0 0 0-.3 1.7l.1.2a1.5 1.5 0 0 0 1.4.9h.2v3.8h-.2a1.5 1.5 0 0 0-1.4.9Z"/>' ,
@@ -640,7 +641,7 @@
     ['home','League Overview','Scores, rosters and league activity'],['team','My Team','My roster and transactions'],
     ['results','Results','Daily scores and schedules'],['programs','Schools','Directory and historical scoring'],
     ['draft','Draft Room','Draft board and priority queue'],['league','Standings','Season fantasy rankings'],
-    ['trades','Trades','Offers and completed trades'],['scoring','Scoring Rules','How points are calculated'],
+    ['trades','Trades','Offers and completed trades'],['waivers','Waivers','Claims and roster moves'],['scoring','Scoring Rules','How points are calculated'],
     ['settings','My Settings','Profile and account preferences']
   ];
   function globalSearchResults(){
@@ -685,7 +686,7 @@
     return '<button type="button" data-act="tab" data-id="'+id+'" class="'+(active?'active':'')+(live?' has-live':'')+'" '+(active?'aria-current="page"':'')+'>'+iconSVG(id)+'<span>'+names[id]+'</span>'+(live?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(pending?'<span class="nav-unread" aria-label="'+pending+' '+pendingLabel+'">'+Math.min(99,pending)+'</span>':'')+'</button>';
   }
   function sidebar(){
-    return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">LEAGUE HUB</div><nav class="nav" aria-label="League pages">'+['home','team','results','league','programs','draft'].map(navButton).join('')+'</nav><div class="nav-label nav-label-secondary">MANAGEMENT</div><nav class="nav" aria-label="Management pages">'+['trades','notifications','scoring','settings',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out</button></div></aside>';
+    return '<aside class="sidebar"><div class="brand"><div class="brand-icon brand-image"><img src="/brand-logo.png?v=3" alt="Boek Dynasty logo" width="43" height="43"></div><div><div class="brand-title">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</div></div></div><div><div class="nav-label">LEAGUE HUB</div><nav class="nav" aria-label="League pages">'+['home','team','results','league','programs','draft'].map(navButton).join('')+'</nav><div class="nav-label nav-label-secondary">MANAGEMENT</div><nav class="nav" aria-label="Management pages">'+['trades','waivers','notifications','scoring','settings',...(me.role==='commissioner'?['commissioner']:[])].map(navButton).join('')+'</nav></div><div class="side-foot"><span class="season-pill">'+escapeHTML(season())+' SEASON</span><div class="account-mini">'+avatar(me)+'<div><strong>'+escapeHTML(me.display_name)+'</strong><div class="muted tiny">'+(me.role==='commissioner'?'Commissioner':'League manager')+'</div></div></div><button data-act="logout" class="logout">Sign out</button></div></aside>';
   }
   function render(){
     if(!me||!league)return renderAuth();
@@ -737,9 +738,10 @@
     document.title=(unreadNotifications?'('+unreadNotifications+') ':'')+
       currentPageTitle+' | '+(league.settings.league_name||'Boek Dynasty');
     const searchShortcut=/Mac|iPhone|iPad|iPod/i.test(navigator.platform||'')?'⌘K':'Ctrl K';
+    const tradeShortcut=pendingTradeOffers?'<button type="button" class="topbar-trade-alert" data-act="tab" data-id="trades" aria-label="Review '+pendingTradeOffers+' incoming trade offer'+(pendingTradeOffers===1?'':'s')+'">'+iconSVG('trades')+'<span>'+pendingTradeOffers+' trade offer'+(pendingTradeOffers===1?'':'s')+'</span></button>':'';
     const notificationBell='<button type="button" class="topbar-bell" data-act="tab" data-id="notifications" title="Notifications" aria-label="Notifications'+(unreadNotifications?', '+unreadNotifications+' unread':'')+'">'+iconSVG('notifications')
       +(unreadNotifications?'<span class="notification-bell-count">'+unreadNotifications+'</span>':'')+'</button>';
-    root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
+    root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+tradeShortcut+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
     if(current==='programs'&&programMode==='directory')filterPrograms();
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
@@ -1109,6 +1111,7 @@
   }
 
   function morePage(){
+    const incoming=(league.trades||[]).filter(t=>t.status==='pending'&&t.to_manager_id===me.id).length;
     const groups=[
       ['Your account',[['settings','Profile & settings','Team name, photo, colors and password'],['notifications','Notifications','Inbox, push alerts and preferences']]],
       ['League information',[['league','Standings','Current fantasy scores'],['draft-order','Draft order','Horse race and selection positions'],['scoring','Scoring rules','Point values explained'],['history','Dynasty history','Past seasons and champions']]],
@@ -1116,6 +1119,7 @@
     ];
     if(me.role==='commissioner')groups.push(['Administration',[['commissioner','Commissioner settings','League setup and manager controls']]]);
     return heading('ACCOUNT & TOOLS','More','Find league information and account controls.')
+      +(incoming?'<button class="more-trade-alert" type="button" data-act="tab" data-id="trades"><span class="more-trade-alert-icon">'+iconSVG('trades')+'</span><span><strong>'+incoming+' trade offer'+(incoming===1?'':'s')+' awaiting your response</strong><small>Open your trade inbox to review the terms.</small></span><span aria-hidden="true">↗</span></button>':'')
       +'<div class="more-groups">'+groups.map(([group,items])=>
         '<section class="panel more-menu more-menu-section"><h2 class="more-group-title">'+escapeHTML(group)+'</h2>'
         +items.map(([id,title,description])=>
@@ -1445,6 +1449,8 @@
       .sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||Number(b.created_at||0)-Number(a.created_at||0));
     const transactions=(league.roster_transactions||[]).filter(t=>t.manager_id===me.id).slice(0,5);
     const pendingTrades=offers.filter(t=>t.status==='pending').length;
+    const incomingTrades=offers.filter(t=>t.status==='pending'&&t.to_manager_id===me.id);
+    const latestIncoming=incomingTrades[0];
     const pendingClaims=claims.filter(c=>c.status==='pending').length;
     const pendingActivity=pendingTrades+pendingClaims;
     const getName=id=>programs().find(p=>p.id===id)?.name||'Program';
@@ -1465,6 +1471,24 @@
         +'<div class="team-offer-detail"><span>You receive</span><strong>'+escapeHTML(receive.join(', ')||'No assets')+'</strong></div>'
         +(actions?'<div class="team-offer-actions">'+actions+'</div>':'')+'</div>';
     }).join('');
+    const frontOffice='<nav class="tm-frontoffice" aria-label="Front office shortcuts">'
+      +'<div class="tm-frontoffice-title"><span>FRONT OFFICE</span><small>Transactions</small></div>'
+      +'<button type="button" data-act="tab" data-id="trades">'+iconSVG('trades')+'<span>Trades</span>'
+      +(incomingTrades.length?'<strong class="tm-frontoffice-badge">'+incomingTrades.length+' to review</strong>':'<span class="tm-frontoffice-sub">View offers</span>')+'</button>'
+      +'<button type="button" data-act="tab" data-id="waivers">'+iconSVG('waivers')+'<span>Waivers</span>'
+      +(pendingClaims?'<strong class="tm-frontoffice-badge neutral">'+pendingClaims+' pending</strong>':'<span class="tm-frontoffice-sub">Manage claims</span>')+'</button></nav>';
+    const incomingPreview=latestIncoming?(()=>{
+      const other=members().find(u=>u.id===latestIncoming.from_manager_id);
+      const receive=tradeAssetNames(latestIncoming.id,latestIncoming.from_manager_id);
+      const send=tradeAssetNames(latestIncoming.id,me.id);
+      return '<section class="tm-inbox-preview" aria-label="Incoming trade requiring a response">'
+        +'<div class="tm-inbox-intro"><span class="tm-inbox-signal">ACTION REQUIRED</span><strong>Trade offer from '+escapeHTML(other?.display_name||'Manager')+'</strong>'
+        +'<small>'+incomingTrades.length+' incoming offer'+(incomingTrades.length===1?'':'s')+' · Review before accepting</small></div>'
+        +'<div class="tm-inbox-terms"><div><span>YOU RECEIVE</span><strong>'+escapeHTML(receive.join(' · ')||'No assets')+'</strong></div>'
+        +'<div><span>YOU SEND</span><strong>'+escapeHTML(send.join(' · ')||'No assets')+'</strong></div></div>'
+        +'<div class="tm-inbox-actions">'+(canTrade?'<button type="button" class="btn small" data-act="trade-accept" data-id="'+escapeHTML(latestIncoming.id)+'">Accept</button><button type="button" class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(latestIncoming.id)+'">Decline</button>':'')
+        +'<button type="button" class="btn small ghost" data-act="tab" data-id="trades">View all offers ↗</button></div></section>';
+    })():'';
     const roster=teamProgramRows(owned,scoring,pointMap,{historyIndex:draftHistoricalIndex()});
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
@@ -1486,6 +1510,7 @@
       +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
       +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small></div>'
       +'</div></header>'
+      +frontOffice+incomingPreview
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
       +'<div class="tm-roster-heading"><div><span class="tm-overline">01 / '+seasonLabel+' ROSTER</span>'
       +'<h2 id="tm-roster-title">Your programs</h2><p>'
@@ -2501,36 +2526,59 @@
     };
     const offers=(league.trades||[]).slice().sort((a,b)=>
       Number(b.status==='pending')-Number(a.status==='pending')||Number(b.offered_at||0)-Number(a.offered_at||0));
-    const card=t=>{
+    const incoming=offers.filter(t=>t.status==='pending'&&t.to_manager_id===me.id);
+    const outgoing=offers.filter(t=>t.status==='pending'&&t.from_manager_id===me.id);
+    const tradeCard=(t,perspective)=>{
       const from=members().find(m=>m.id===t.from_manager_id),to=members().find(m=>m.id===t.to_manager_id);
-      const give=tradeAssetNames(t.id,t.from_manager_id),receive=tradeAssetNames(t.id,t.to_manager_id);
-      const actions=t.status==='pending'&&ready?(t.to_manager_id===me.id?
-        '<div class="button-row section-gap"><button class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept trade</button><button class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button></div>':
-        t.from_manager_id===me.id?'<div class="button-row section-gap"><button class="btn small ghost" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button></div>':''):'';
-      return '<article class="trade-offer"><div class="trade-offer-head"><strong>'+escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager')+'</strong>'
-        +'<span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div>'
-        +'<div class="trade-exchange"><div class="trade-exchange-side"><span>SENDING</span><strong>'+escapeHTML(give.join(' · ')||'No assets')+'</strong></div>'
-        +'<span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>RECEIVING</span><strong>'+escapeHTML(receive.join(' · ')||'No assets')+'</strong></div></div>'+actions+'</article>';
+      const theirAssets=tradeAssetNames(t.id,t.from_manager_id);
+      const myAssets=tradeAssetNames(t.id,t.to_manager_id);
+      const yourOffer=perspective==='incoming';
+      const title=yourOffer?'From '+escapeHTML(from?.display_name||'Manager'):perspective==='outgoing'?'To '+escapeHTML(to?.display_name||'Manager'):
+        escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager');
+      const sideA=yourOffer?theirAssets:perspective==='outgoing'?myAssets:theirAssets;
+      const sideB=yourOffer?myAssets:perspective==='outgoing'?theirAssets:myAssets;
+      const labelA=yourOffer?'YOU RECEIVE':perspective==='outgoing'?'YOU REQUEST':'FROM '+escapeHTML(from?.display_name||'MANAGER').toUpperCase();
+      const labelB=yourOffer?'YOU SEND':perspective==='outgoing'?'YOU SEND':'FROM '+escapeHTML(to?.display_name||'MANAGER').toUpperCase();
+      const actions=t.status==='pending'&&ready?
+        yourOffer?'<button type="button" class="btn small" data-act="trade-accept" data-id="'+escapeHTML(t.id)+'">Accept offer</button><button type="button" class="btn small secondary" data-act="trade-decline" data-id="'+escapeHTML(t.id)+'">Decline</button>':
+        perspective==='outgoing'?'<button type="button" class="btn small secondary" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button>':'':'';
+      return '<article class="trade-offer txn-trade-card'+(yourOffer?' txn-trade-incoming':'')+'">'
+        +'<div class="trade-offer-head"><strong>'+title+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div>'
+        +'<div class="trade-exchange"><div class="trade-exchange-side"><span>'+labelA+'</span><strong>'+escapeHTML(sideA.join(' · ')||'No assets')+'</strong></div>'
+        +'<span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>'+labelB+'</span><strong>'+escapeHTML(sideB.join(' · ')||'No assets')+'</strong></div></div>'
+        +(actions?'<div class="txn-card-actions">'+actions+'</div>':'')
+        +(yourOffer&&!ready?'<p class="txn-unavailable">Trade responses are temporarily disabled by the commissioner.</p>':'')
+        +'</article>';
     };
-    const incoming=offers.filter(t=>t.status==='pending'&&t.to_manager_id===me.id).length;
-    return heading('DYNASTY TRANSACTIONS','Trades','Exchange future draft picks and rostered programs with other managers.')
-      +'<section class="trade-overview-strip"><div><strong>'+incoming+'</strong><span>Incoming offers</span></div>'
-      +'<div><strong>'+futureDraftPicks(me.id).length+'</strong><span>Remaining picks</span></div>'
-      +'<div><strong>'+offers.filter(t=>t.status==='accepted').length+'</strong><span>Accepted trades</span></div></section>'
-      +(ready?'<section class="panel trade-builder">'+panelHeading('Build a trade','Mix draft picks and schools in the same offer')
-        +'<div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'
+    return '<main class="txn-workspace">'
+      +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / TRANSACTIONS</span><h1>Trade desk</h1><p>Review offers first. Build a proposal when you are ready.</p></div>'
+      +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="waivers">'+iconSVG('waivers')+' Waivers</button>'
+      +(ready?'<a class="txn-link txn-link-primary" href="#trade-proposal">'+iconSVG('trades')+' New trade</a>':'')+'</div></header>'
+      +'<section class="txn-summary" aria-label="Trade summary"><div><strong>'+incoming.length+'</strong><span>NEEDS RESPONSE</span></div>'
+      +'<div><strong>'+outgoing.length+'</strong><span>OFFERS SENT</span></div>'
+      +'<div><strong>'+offers.filter(t=>t.status==='accepted').length+'</strong><span>COMPLETED</span></div></section>'
+      +'<section class="txn-inbox" aria-labelledby="txn-inbox-title"><div class="txn-section-head"><div><span class="txn-kicker">01 / YOUR INBOX</span><h2 id="txn-inbox-title">Incoming offers'
+      +(incoming.length?'<span class="txn-count">'+incoming.length+'</span>':'')+'</h2></div><small>Offers awaiting your decision</small></div>'
+      +(incoming.length?'<div class="txn-offer-list">'+incoming.map(t=>tradeCard(t,'incoming')).join('')+'</div>':
+        '<div class="txn-empty"><span class="txn-empty-dot" aria-hidden="true"></span><div><strong>All caught up</strong><p>No incoming trade offers need a response.</p></div></div>')
+      +'</section>'
+      +(outgoing.length?'<section class="txn-section" aria-labelledby="txn-outgoing-title"><div class="txn-section-head"><div><span class="txn-kicker">02 / AWAITING REPLY</span><h2 id="txn-outgoing-title">Sent offers <span class="txn-count neutral">'+outgoing.length+'</span></h2></div></div>'
+        +'<div class="txn-offer-list">'+outgoing.map(t=>tradeCard(t,'outgoing')).join('')+'</div></section>':'')
+      +(ready?'<section id="trade-proposal" class="txn-section txn-proposal"><div class="txn-section-head"><div><span class="txn-kicker">NEW PROPOSAL</span><h2>Build a trade</h2></div><small>Draft picks and rostered programs</small></div>'
+        +'<div class="trade-builder"><div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'
         +others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')
         +'</select></div>'
         +(!allowPicks&&status!=='finished'?'<p class="trade-note">Pick trading opens when the commissioner saves the final draft order.</p>':'')
         +'<div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'
         +selections(mine,me.id,'give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'
         +selections(theirs,tradeTargetId,'receive')+'</div></div>'
-        +'<div class="trade-submit"><div id="trade-selection-summary">Select at least one asset from each side</div>'
+        +'<div class="trade-submit"><div id="trade-selection-summary">Select at least one asset on each side</div>'
         +'<button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div>'
-        +'<p class="trade-footnote">The recipient must accept before anything transfers. Live draft picks move instantly on acceptance; used picks are ineligible.</p></section>':
-        '<section class="panel section-gap">'+empty('Trading disabled','The commissioner has paused new trades.')+'</section>')
-      +'<section class="panel section-gap trade-history">'+panelHeading('League trade activity',offers.length+' offers')
-      +(offers.length?offers.map(card).join(''):empty('No trades yet','Pending and completed offers will appear here.'))+'</section>';
+        +'<p class="trade-footnote">The other manager must accept before ownership changes. Available draft picks transfer on acceptance.</p></div></section>':
+        '<section class="txn-section"><div class="txn-empty"><div><strong>New trades paused</strong><p>The commissioner has disabled new offers.</p></div></div></section>')
+      +'<section class="txn-section txn-history"><div class="txn-section-head"><div><span class="txn-kicker">LEAGUE LEDGER</span><h2>Trade activity</h2></div><small>'+offers.length+' total offers</small></div>'
+      +(offers.length?'<div class="txn-offer-list">'+offers.map(t=>tradeCard(t,'history')).join('')+'</div>':
+        '<div class="txn-empty"><div><strong>No trade activity yet</strong><p>Submitted offers will appear here.</p></div></div>')+'</section></main>';
   }
 
   const scoringGroups=[
@@ -3009,15 +3057,38 @@
     const enabled=league.settings.waivers_enabled&&league.settings.draft_status==='finished';
     const eligible=eligiblePrograms().filter(p=>!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
     const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
-    const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
+    const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id)
+      .sort((a,b)=>Number(b.status==='pending')-Number(a.status==='pending')||Number(b.created_at||0)-Number(a.created_at||0));
+    const pending=claims.filter(c=>c.status==='pending').length;
     const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
     const drop='<option value="">No drop ('+mine.length+'/'+league.settings.rounds+' owned)</option>'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
-    return heading('', 'Waivers')
-      +(enabled?'<section class="panel">'+panelHeading('Submit a waiver claim')+'<div class="form-row"><label for="waiver-program">Available program</label><select id="waiver-program" class="field">'+opts+'</select></div><div class="form-row"><label for="waiver-drop">Release program (optional if roster not full)</label><select id="waiver-drop" class="field">'+drop+'</select></div><button class="btn" data-act="waiver-claim" '+(!eligible.length?'disabled':'')+'>Submit claim</button><p class="hint section-gap">Claims are reviewed by the commissioner. Approvals are not automatic.</p></section>'
-          +'<section class="panel section-gap">'+panelHeading('Release a program')+'<div class="form-row"><label for="waiver-release">Your roster</label><select id="waiver-release" class="field">'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div><button class="btn secondary" data-act="waiver-drop" '+(!mine.length?'disabled':'')+'>Drop selected program</button></section>'
-          :'<section class="panel">'+empty('Waivers are closed',league.settings.draft_status==='finished'?'The commissioner has not enabled waivers.':'Waivers begin after the inaugural draft.')+'</section>')
-      +'<section class="panel section-gap">'+panelHeading('Your claims')+(claims.length?claims.map(c=>{const p=programs().find(p=>p.id===c.program_id);return '<div class="history-row"><div><strong>'+escapeHTML(p?.name||'Program')+'</strong><small>'+escapeHTML(c.status)+'</small></div>'+(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>';}).join(''):empty('No waiver claims'))+'</section>';
+    const claimRows=claims.map(c=>{
+      const p=programs().find(p=>p.id===c.program_id),released=programs().find(p=>p.id===c.drop_program_id);
+      return '<div class="txn-waiver-row"><span class="txn-claim-state '+(c.status==='pending'?'pending':'')+'">'+escapeHTML(c.status)+'</span>'
+        +'<span class="txn-waiver-program"><strong>'+escapeHTML(p?.name||'Program')+'</strong>'
+        +'<small>'+(released?'Drop '+escapeHTML(released.name):'No corresponding drop')+'</small></span>'
+        +(c.status==='pending'?'<button type="button" class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel claim</button>':'')+'</div>';
+    }).join('');
+    return '<main class="txn-workspace txn-waivers">'
+      +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / TRANSACTIONS</span><h1>Waiver wire</h1><p>Manage claims, available programs and roster releases.</p></div>'
+      +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="trades">'+iconSVG('trades')+' Trade desk</button></div></header>'
+      +'<section class="txn-summary" aria-label="Waiver summary"><div><strong>'+pending+'</strong><span>PENDING CLAIMS</span></div>'
+      +'<div><strong>'+eligible.length+'</strong><span>AVAILABLE SCHOOLS</span></div><div><strong>'+mine.length+'</strong><span>YOUR ROSTER</span></div></section>'
+      +'<section class="txn-section"><div class="txn-section-head"><div><span class="txn-kicker">01 / CLAIM TRACKER</span><h2>Your claims</h2></div><small>'+claims.length+' total</small></div>'
+      +(claims.length?'<div class="txn-waiver-list">'+claimRows+'</div>':'<div class="txn-empty"><span class="txn-empty-dot" aria-hidden="true"></span><div><strong>No claims submitted</strong><p>Your submitted waiver claims and their status will appear here.</p></div></div>')+'</section>'
+      +(enabled?'<div class="txn-waiver-grid"><section class="txn-section txn-waiver-form"><div class="txn-section-head"><div><span class="txn-kicker">02 / ACQUISITIONS</span><h2>Claim a program</h2></div></div>'
+        +'<div class="form-row"><label for="waiver-program">Available program</label><select id="waiver-program" class="field">'+opts+'</select></div>'
+        +'<div class="form-row"><label for="waiver-drop">Drop to make room</label><select id="waiver-drop" class="field">'+drop+'</select></div>'
+        +'<div class="txn-form-foot"><p>Claims require commissioner approval.</p><button class="btn" data-act="waiver-claim" '+(!eligible.length?'disabled':'')+'>Submit claim</button></div></section>'
+        +'<section class="txn-section txn-waiver-form txn-release"><div class="txn-section-head"><div><span class="txn-kicker">03 / ROSTER MOVES</span><h2>Release a program</h2></div></div>'
+        +'<p class="txn-form-description">Drop a rostered school without submitting a claim.</p>'
+        +'<div class="form-row"><label for="waiver-release">Your programs</label><select id="waiver-release" class="field">'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div>'
+        +'<div class="txn-form-foot"><p>Releases free a roster spot.</p><button class="btn secondary" data-act="waiver-drop" '+(!mine.length?'disabled':'')+'>Release selected</button></div></section></div>':
+        '<section class="txn-section"><div class="txn-empty"><div><strong>Waivers are currently closed</strong><p>'
+        +(league.settings.draft_status==='finished'?'The commissioner has not enabled roster claims.':'Waivers open after the inaugural draft is completed.')
+        +'</p></div></div></section>')+'</main>';
   }
+
   function backendHealthPanel(){
     const scan=integritySnapshot?.latest,metrics=scan?.metrics||{},issues=scan?.issues||[];
     const label=scan?.severity||'pending',at=scan?.scanned_at?new Date(scan.scanned_at).toLocaleString():'Not yet scanned';

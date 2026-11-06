@@ -1980,12 +1980,12 @@
   // 2026–27 preseason financial rankings from the November 2026 league research.
   // Figures are spending signals, not audited program payrolls. Ranking is fixed
   // when programs are drafted or conference-filtered.
-  const ROSTER_COST_2026=new Map(`150|27|C1;57|27|F;356|27|C1;2641|26|C1;130|25|C1;97|24|C1;2633|23|C1;96|22|C1;251|22|C1;2599|21|C1;153|20|C1;8|19.5|C2;41|19.5|C2;84|19.5|C2;2305|19.5|C2;2390|16.3|C3;2250|16.3|C3;2|16.3|C3;99|16.3|C3;142|16.3|C3;127|16.3|C3;30|16.3|C3;12|16.3|C3;197|16.3|C3;238|16.3|C3;201|16.3|C3;245|16.3|C3;145|16.3|C3;248|16.3|C3;2132|16.3|C3;2579|16.3|C3;258|13.55|C4;333|13.55|C4;222|13.55|C4;194|13.55|C4;252|13.55|C4;277|13.55|C4;2507|13.55|C4;26|13.55|C4;156|13.55|C4;46|13.55|C4;269|13.55|C4;2752|13.55|C4;120|13.55|C4;239|13.55|C4;2567|13.55|C4;2483|13.55|C4;221|13.55|C4;344|13.55|C4;2253|12|N;61|11|C5;158|11|C5;152|11|C5;275|11|C5;2628|11|C5;228|11|C5;66|11|C5;183|11|C5;135|11|C5;139|9|N;2670|9|N;235|9|N;2294|8.5|C6;52|8.5|C6;164|8.5|C6;2509|8.5|C6;9|8.5|C6;305|8.5|C6;259|8.5|C6;2550|8.5|C6;25|8.5|C6;2116|8.5|C6;254|8.5|C6;213|8.5|C6;77|8.5|C6;2086|8.5|C6;2168|6.5|N;328|6.5|N;21|6.5|N;2608|6.5|N;167|6.5|N;93|6.5|N;2541|6.5|N;2272|6.5|N;154|6|C7;264|6|C7;59|6|C7;24|6|C7;87|6|C7;38|6|C7;103|6|C7;2306|6|C7;2439|5.9|M;2350|4.8|M;45|4.6|M;257|4.2|M;2244|4.1|M;204|4|M;2724|3.6|M;68|3.4|M;2440|3.3|M;58|3.3|M;36|2.6|M;2539|2.6|M;2429|2.6|M;218|2.4|M;5|2.4|M;265|2.2|M;2540|2.2|M;232|2.1|M;2275|2.1|M;2377|2.1|M;2230|2.1|M;2603|2.1|M;2638|2.1|M;2226|2.1|M;202|2.1|M;2166|2|M;300|2|M;227|1.9|M;326|1.8|M;2184|1.8|M;2325|1.7|M;2751|1.7|M;249|1.7|M;242|1.7|M;28|1.7|M;2335|1.6|M;2057|1.6|M;256|1.6|M;2006|1.5|M;193|1.5|M;278|1.5|M;350|1.4|M;179|1.4|M;2655|1.4|M;302|1.3|M;23|1.2|M;2636|1.2|M;62|1.1|M;151|1|M;2181|0.919|M;2005|-|M`.split(';').map((line,index)=>{
+  const ROSTER_COST_2026=new Map(`150|27|C1;57|27|F;356|27|C1;2641|26|C1;130|25|C1;97|24|C1;2633|23|C1;96|22|C1;251|22|C1;2599|21|C1;153|20|C1;8|19.5|C2;41|19.5|C2;84|19.5|C2;2305|19.5|C2;2390|16.3|C3;2250|16.3|C3;2|16.3|C3;99|16.3|C3;142|16.3|C3;127|16.3|C3;30|16.3|C3;12|16.3|C3;197|16.3|C3;238|16.3|C3;201|16.3|C3;245|16.3|C3;145|16.3|C3;248|16.3|C3;2132|16.3|C3;2579|16.3|C3;258|13.55|C4;333|13.55|C4;222|13.55|C4;194|13.55|C4;252|13.55|C4;277|13.55|C4;2507|13.55|C4;26|13.55|C4;156|13.55|C4;46|13.55|C4;269|13.55|C4;2752|13.55|C4;120|13.55|C4;239|13.55|C4;2567|13.55|C4;2483|13.55|C4;221|13.55|C4;344|13.55|C4;2253|12|N;61|11|C5;158|11|C5;152|11|C5;275|11|C5;2628|11|C5;228|11|C5;66|11|C5;183|11|C5;135|11|C5;139|9|N;2670|9|N;235|9|N;2294|8.5|C6;52|8.5|C6;164|8.5|C6;2509|8.5|C6;9|8.5|C6;305|8.5|C6;259|8.5|C6;2550|8.5|C6;25|8.5|C6;2116|8.5|C6;254|8.5|C6;213|8.5|C6;77|8.5|C6;2086|8.5|C6;2168|6.5|N;328|6.5|N;21|6.5|N;2608|6.5|N;167|6.5|N;93|6.5|N;2541|6.5|N;2272|6.5|N;154|6|C7;264|6|C7;59|6|C7;24|6|C7;87|6|C7;38|6|C7;103|6|C7;2306|6|C7;2439|-|M;2350|-|M;45|-|M;257|-|M;2244|-|M;204|-|M;2724|-|M;68|-|M;2440|-|M;58|-|M;36|-|M;2539|-|M;2429|-|M;218|-|M;5|-|M;265|-|M;2540|-|M;232|-|M;2275|-|M;2377|-|M;2230|-|M;2603|-|M;2638|-|M;2226|-|M;202|-|M;2166|-|M;300|-|M;227|-|M;326|-|M;2184|-|M;2325|-|M;2751|-|M;249|-|M;242|-|M;28|-|M;2335|-|M;2057|-|M;256|-|M;2006|-|M;193|-|M;278|-|M;350|-|M;179|-|M;2655|-|M;302|-|M;23|-|M;2636|-|M;62|-|M;151|-|M;2181|-|M;2005|-|M`.split(';').map((line,index)=>{
     const [id,figure,evidence]=line.split('|');
-    return [id,{rank:index+1,estimate:figure==='-'?null:Number(figure),evidence}];
+    return [id,{rank:evidence==='M'?null:index+1,estimate:figure==='-'?null:Number(figure),evidence}];
   }));
   const rosterCost2026=program=>ROSTER_COST_2026.get(String(program?.id))||null;
-  const rosterCostAmount2026=cost=>cost?.estimate===null||!cost?'—':
+  const rosterCostAmount2026=cost=>cost?.estimate===null||!cost?'N/A':
     '~$'+Number(cost.estimate).toLocaleString('en-US',{maximumFractionDigits:1})+'M';
   const rosterCostEvidence2026=cost=>{
     if(!cost)return 'No estimate in the November 2026 research';
@@ -1997,7 +1997,7 @@
         (cost.evidence==='C1'?' · estimated sorting value':' · estimated midpoint');
     }
     if(cost.evidence==='N')return 'Reported mid-major bracket · estimated midpoint';
-    return cost.estimate===null?'No reliable estimate available':'Independent model only · unverified';
+    return 'Independent model only · no published spending figure';
   };
   const historicalPointLabel=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:1});
   function draftSelectionOrder(slot,managers){return draftOwner(slot,managers)||'';}
@@ -2174,13 +2174,13 @@
           '</span>':'')
         +(costView&&cost?'<span class="draft-pool-cost-source">'+escapeHTML(rosterCostEvidence2026(cost))+'</span>':'')+'</span>'
         +(costView
-          ?'<span class="draft-pool-stat draft-pool-financial-rank"><strong>'+(cost?'#'+cost.rank:'—')+'</strong><small>$ RANK</small></span>'
-            +'<span class="draft-pool-stat draft-pool-financial-cost"><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong><small>EST. COST</small></span>'
+          ?'<span class="draft-pool-stat draft-pool-financial-rank'+(!cost?.rank?' is-unreported':'')+'"><strong>'+(cost?.rank?'#'+cost.rank:'N/A')+'</strong><small>$ RANK</small></span>'
+            +'<span class="draft-pool-stat draft-pool-financial-cost'+(cost?.estimate===null||!cost?' is-unreported':'')+'"><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong><small>EST. COST</small></span>'
           :'<span class="draft-pool-stat"><strong>'+(draftSort==='history'?(history?.rank?'#'+history.rank:'—'):(rank?'#'+rank:'—'))+'</strong><small>'+(draftSort==='history'?'5Y RANK':'BART TORVIK')+'</small></span>')
         +'</button>'
         +'<div class="draft-scouting-strip"><span><small>BART TORVIK</small><strong>'+(rank?'#'+rank:'—')+'</strong></span>'
         +'<span><small>5Y AVG PTS</small><strong>'+(history?.eligibleForSort?historicalPointLabel(history.avg):'—')+'</strong></span>'
-        +'<span title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><small>EST. ROSTER $</small><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong></span></div>'
+        +'<span class="'+(!cost?.rank?'is-unreported':'')+'" title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><small>EST. ROSTER $</small><strong>'+escapeHTML(rosterCostAmount2026(cost))+'</strong></span></div>'
         +'<button type="button" class="draft-pool-draft" data-act="draft-select" data-id="'+escapeHTML(p.id)+'" aria-label="'+(yourTurn?'Draft ':'Preview ')+escapeHTML(p.name)+'">Draft <span>›</span></button>'
         +'<button type="button" class="draft-pool-queue '+(queued?'added':'')+'" data-act="draft-queue-toggle" data-id="'+escapeHTML(p.id)+'" aria-label="'+(queued?'Remove ':'Add ')+escapeHTML(p.name)+(queued?' from':' to')+' draft queue'+(queued?', priority '+queueNumber:'')+'" aria-pressed="'+queued+'" title="'+(queued?'Priority #'+queueNumber+' in your queue':'Add to end of your queue')+'">'
         +(queued?'<span>★</span><small>'+queueNumber+'</small>':'☆')+'</button>'
@@ -2194,7 +2194,7 @@
       +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
       +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','5Y Points')+sortButton('cost','2026 Roster $')+'</div></div>'
       +(draftSort==='cost'
-        ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · National rank out of 143 eligible schools, including drafted programs. CBS reported tiers and mid-major reporting are supplemented with unverified model estimates; amounts are not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
+        ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · Source-supported ranks include drafted programs. Schools supported only by an independent model display N/A for financial rank and spending. Published tiers are estimates, not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
         :'<div class="draft-pool-history-note"><span>'+escapeHTML(historyStatus)+'</span>'+
           (schoolLeadersError?'<button type="button" data-act="draft-history-retry">Retry history</button>':'')+'</div>')
       +'<div class="draft-pool-subbar"><div class="draft-pool-scope"><button type="button" data-act="draft-pool-scope" data-id="all" class="'+(draftScope==='all'?'active':'')+'">All available</button>'
@@ -2213,7 +2213,7 @@
       +'<div class="draft-selection-team-info"><span>SELECTED PROGRAM</span><h3>'+escapeHTML(chosen.name)+'</h3>'
       +'<p>'+escapeHTML(conf(chosen.conference_id))+(selectedRank?' · National Bart Torvik #'+selectedRank:'')+'</p></div></div>'
       +'<div class="draft-selection-facts"><div><span>STATUS</span><strong>Available</strong></div><div><span>YOUR PICK</span><strong>'+(nextMine?'#'+nextMine:'—')+'</strong></div></div>'
-      +(selectedRosterCost?'<div class="draft-roster-cost-preview"><span>2026–27 ROSTER COST</span><strong>#'+selectedRosterCost.rank+' of 143 · '+escapeHTML(rosterCostAmount2026(selectedRosterCost))+'</strong><small>'+escapeHTML(rosterCostEvidence2026(selectedRosterCost))+'</small></div>':'')
+      +(selectedRosterCost?'<div class="draft-roster-cost-preview'+(!selectedRosterCost.rank?' is-unreported':'')+'"><span>2026–27 ROSTER COST</span><strong>'+(selectedRosterCost.rank?'#'+selectedRosterCost.rank+' of 143 · ':'')+escapeHTML(rosterCostAmount2026(selectedRosterCost))+'</strong><small>'+escapeHTML(rosterCostEvidence2026(selectedRosterCost))+'</small></div>':'')
       +(selectedHistory?'<div class="draft-history-snapshot"><span>HISTORICAL FANTASY</span><strong>'+historicalPointLabel(selectedHistory.avg)+' avg pts</strong><strong>'+historicalPointLabel(selectedHistory.best)+' peak</strong><small>'+selectedHistory.count+'/'+selectedHistory.totalYears+' seasons</small></div>':'')
       +(yourTurn?'<p class="draft-selection-explainer">Your selection is permanent for the dynasty. Confirm to add this program to your roster.</p>'
         :'<p class="draft-selection-explainer">Save this school to your draft queue. Only the manager on the clock can submit the next pick.</p>')
@@ -2292,14 +2292,14 @@
         const state=p?'selected':onClock?'on-clock':vacant?'vacant':'open';
         const torvik=p?programRank(p):null,history=p?historyOf(p):null,cost=p?rosterCost2026(p):null;
         const fiveYearRank=history?.eligibleForSort?history.rank:null;
-        const costLabel=cost?rosterCostAmount2026(cost):'—';
+        const costLabel=rosterCostAmount2026(cost);
         const detail=p?'Bart Torvik: '+(torvik?'#'+torvik:'not available')
           +' · 5Y history: '+(fiveYearRank?'#'+fiveYearRank+' ('+historicalPointLabel(history.avg)+' points/season)':'not available')
           +' · 2026 roster cost: '+costLabel+' · '+rosterCostEvidence2026(cost):'';
         const scouting=p?'<div class="draft-cell-scout" aria-label="National rankings and spending">'
           +'<span title="Bart Torvik national ranking"><small>TORVIK</small><b>'+(torvik?'#'+torvik:'—')+'</b></span>'
           +'<span title="5-year historical fantasy rank"><small>5Y RANK</small><b>'+(fiveYearRank?'#'+fiveYearRank:'—')+'</b></span>'
-          +'<span title="Estimated 2026–27 roster cost"><small>ROSTER $</small><b>'+escapeHTML(costLabel)+'</b></span>'
+          +'<span class="'+(!cost?.rank?'is-unreported':'')+'" title="Estimated 2026–27 roster cost"><small>ROSTER $</small><b>'+escapeHTML(costLabel)+'</b></span>'
           +'</div>':'';
         return '<div class="draft-board-cell '+state+(mine?' my-cell':'')+'"'+(p?draftStyle(p):'')+' data-pick="'+overall+'" '+(onClock?'id="draft-current-slot"':'')+'>'
           +'<div class="draft-cell-meta"><span class="draft-pick-number">PICK #'+overall+'</span>'

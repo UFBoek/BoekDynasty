@@ -203,7 +203,7 @@ test('ESPN individual game summary rejects mismatched or unverified events',asyn
   const competition={...game.competitions[0],status:game.status};
   await assert.rejects(pipeline.fetchGameSummary(game.id,async()=>({ok:true,json:async()=>({
     header:{id:'401999999',competitions:[competition]}
-  })})),/different event ID/);
+  })})),/Event ID mismatch|different event ID/);
 });
 
 test('full ESPN team schedule is fetched from alternate host with year validation',async()=>{
@@ -215,9 +215,9 @@ test('full ESPN team schedule is fetched from alternate host with year validatio
   }));
   const calls=[];
   const backendSource=readFileSync(new URL('../supabase/functions/boek-api/results.js',import.meta.url),'utf8')
-    .replace(/^import .*;\\n/gm,'').replace('export const DATA_PIPELINE=','const DATA_PIPELINE=');
+    .replace(/^import .*;\n/gm,'').replace('export const DATA_PIPELINE=','const DATA_PIPELINE=');
   const backend=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK','HISTORICAL_CONFERENCE_CHAMPIONS',
-    backendSource+'\\nreturn DATA_PIPELINE;')(programs,crosswalk,historicalConferences);
+    backendSource+'\nreturn DATA_PIPELINE;')(programs,crosswalk,historicalConferences);
   const feed=await backend.fetchTeamSchedule('2272','2026-27',async url=>{
     calls.push(url);
     return {ok:true,json:async()=>({season:{year:2027},events:teams})};

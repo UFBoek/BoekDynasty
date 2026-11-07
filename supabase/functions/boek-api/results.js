@@ -698,7 +698,16 @@ export const DATA_PIPELINE=(()=>{
     const day=localDay(new Date(utc)),month=Number(day.slice(5,7));
     const type=Number(event?.season?.type)||(month===11||month===12||month===1||month===2?2:null);
     const normalized={...event,season:{...event.season,type}};
-    return parseEvent(normalized,day,season);
+    const parsed=parseEvent(normalized,day,season);
+    if(parsed&&type===2&&(month===1||month===2)){
+      const homeConference=programConference.get(String(parsed.row[4]));
+      const awayConference=programConference.get(String(parsed.row[5]));
+      if(homeConference&&homeConference===awayConference){
+        parsed.row[13]=1;
+        parsed.hash=fingerprint(parsed.row);
+      }
+    }
+    return parsed;
   };
   async function importTeamSchedule(env,season,id,fetchFn=fetch){
     if(!dayInSeason(season,localDay()))throw new Error('Team schedule imports require the active season');
@@ -739,6 +748,7 @@ export const DATA_PIPELINE=(()=>{
       LEFT JOIN cbb_games g ON g.season=? AND (g.home_id=p.id OR g.away_id=p.id)
       WHERE NOT EXISTS (SELECT 1 FROM cbb_sync_runs r
         WHERE r.job='team-schedule' AND r.season=? AND r.source='espn-team-schedule:'||p.id
+        AND (r.status='ok' OR (r.status='error' AND r.started_at>unixepoch()-3600))
         AND r.started_at>unixepoch()-7*86400)
       GROUP BY p.id HAVING COUNT(g.game_id)<25
       ORDER BY COUNT(g.game_id) ASC,p.id LIMIT ?`,season,season,limit).all()).results||[];

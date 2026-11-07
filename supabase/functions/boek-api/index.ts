@@ -159,7 +159,9 @@ Deno.serve(async (request)=>{
           const scoreboard=await DATA_PIPELINE.importDay(env,season,today,{job:'live'});
           const details=await DATA_PIPELINE.repairUnfinishedGames(env,season,18)
             .catch(error=>({error:String(error?.message||error)}));
-          result={scoreboard,details};
+          const teamSchedules=await DATA_PIPELINE.fillSparseTeamSchedules(env,season,3)
+            .catch(error=>({error:String(error?.message||error)}));
+          result={scoreboard,details,teamSchedules};
         }
       }
       else if(kind==='recent'){

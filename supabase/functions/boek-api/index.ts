@@ -316,9 +316,14 @@ Deno.serve(async (request)=>{
       }
 
       else return Response.json({error:'Unknown task.'},{status:400,headers:cors});
-      // Reconcile any transiently failed push deliveries on the existing scheduled jobs.
-      if(kind==='live'||kind==='recent')await notificationEngine.flush(12).catch(error=>
-        console.warn('Push retry skipped:',String(error?.message||error)));
+      // Repair missed draft alerts even if a pick response or push delivery was interrupted.
+      // Deduplicated by recipient, kind and pick number; no duplicate notifications.
+      if(kind==='live'||kind==='recent'){
+        await notificationEngine.reconcileDraft().catch(error=>
+          console.warn('Draft alert reconciliation skipped:',String(error?.message||error)));
+        await notificationEngine.flush(12).catch(error=>
+          console.warn('Push retry skipped:',String(error?.message||error)));
+      }
       return Response.json({ok:true,kind,result},{headers:cors});
     }catch(error){
       console.error('Boek Dynasty scheduled job failed',kind,error);

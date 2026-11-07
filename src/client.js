@@ -2673,6 +2673,7 @@
         '<td class="numerical standings-points-cell"><div class="league-standing-points">'+
           (scoring&&owned.length?'<strong>'+fmtPoints(pts)+'</strong>':'<span class="pending-score">—</span>')+
           (hasPoints&&owned.length?'<span class="league-score-track" aria-hidden="true"><i style="width:'+Math.max(0,Math.min(100,pts/leaderTotal*100)).toFixed(2)+'%"></i></span>':'')+
+           (hasPoints&&owned.length?'<small class="league-mobile-gap">'+(gap===0?'Leader':'−'+fmtPoints(gap)+' from 1st')+'</small>':'')+
           '</div></td>'+
         '<td class="standings-expand-cell"><button type="button" class="league-expand-button'+(expanded?' is-open':'')+'" data-act="league-toggle-details" data-id="'+escapeHTML(u.id)+'" aria-label="'+(expanded?'Hide':'Show')+' '+escapeHTML(u.display_name)+' program breakdown" aria-expanded="'+expanded+'" title="Show program breakdown">'+
           '<span aria-hidden="true">⌄</span></button></td></tr>'+details;
@@ -2680,23 +2681,27 @@
     const standingsStatus=hasPoints?'LIVE TABLE':ownerCount?'SEASON OPEN':'PRESEASON';
     return '<div class="league-center">'+
       '<header class="league-masthead"><div><span class="league-kicker">CBB DYNASTY <span aria-hidden="true">/</span> '+escapeHTML(season())+'</span>'+
-        '<h1>League standings</h1><p>Every franchise. Every program. One best-ball race.</p></div>'+
+        '<h1>Standings</h1><p>The '+escapeHTML(season())+' fantasy championship, ranked by season points.</p></div>'+
         '<div class="league-masthead-right"><span class="league-season-state"><i aria-hidden="true"></i>'+standingsStatus+'</span>'+
           '<span>'+users.length+' MANAGERS <b aria-hidden="true">·</b> TOP '+best+' COUNT</span></div></header>'+
       '<section class="standings-panel league-standings" aria-label="Current season league standings">'+
         '<div class="league-standings-toolbar"><div class="league-standings-heading"><span class="league-section-index">01 / STANDINGS</span>'+
-          '<h2>'+escapeHTML(season())+' leaderboard</h2><p>Ranked by total points from each manager’s highest-scoring programs.</p></div>'+
+          '<h2>League leaderboard</h2><p>Season totals · Top '+best+' programs per franchise</p></div>'+
           '<button type="button" class="league-refresh" data-act="league-refresh" aria-label="Refresh league standings"'+(standingsLoading?' disabled':'')+'>'+
             '<span aria-hidden="true">↻</span> '+(standingsLoading?'Updating':'Refresh')+'</button></div>'+
-        '<div class="league-standings-context" aria-label="League scoring summary">'+
-          '<div><small>SCORING</small><strong>Best '+best+' programs</strong></div>'+
-          '<div><small>PROGRAMS ROSTERED</small><strong>'+ownerCount+'</strong></div>'+
-          '<div><small>CURRENT LEADER</small><strong>'+(leader?escapeHTML(leader.display_name):'Not established')+'</strong></div>'+
-          '<div><small>RANKING SOURCE</small><strong>'+escapeHTML(sourceLabel)+'</strong></div></div>'+
+        '<div class="league-race-strip" aria-label="League season overview">'+
+           '<div class="league-race-leader"><small>PACE SETTER</small><div class="league-race-identity">'+
+           (leader?avatar(leader):'<span class="league-race-empty-avatar" aria-hidden="true">—</span>')+
+           '<span><strong>'+(leader?escapeHTML(leader.display_name):'Awaiting first points')+'</strong><em>'+
+           (leader?(leaderMargin>0?'+'+fmtPoints(leaderMargin)+' pts ahead':'Tied at the top'):'Season not scored yet')+
+           '</em></span></div></div>'+
+           '<div class="league-race-stat"><small>BEST-BALL FORMAT</small><strong>'+best+' <span>counting</span></strong><em>Per manager</em></div>'+
+           '<div class="league-race-stat"><small>ROSTERED PROGRAMS</small><strong>'+ownerCount+'</strong><em>League-wide</em></div>'+
+           '<div class="league-race-stat league-race-source"><small>QUADRANT SOURCE</small><strong>'+escapeHTML(sourceLabel)+'</strong><em>Used for win bonuses</em></div></div>'+
         '<div class="league-standings-notice'+(standingsError?' is-error':'')+'" role="status"><span class="league-info-symbol" aria-hidden="true">i</span>'+
           '<span>'+escapeHTML(note)+'</span></div>'+
         '<div class="standings-table-wrap"><table class="standings-table league-standings-table">'+
-          '<thead><tr><th class="standings-rank-cell">RANK</th><th>FRANCHISE</th><th>ROSTERED SCHOOLS</th><th>COUNTING</th><th>GAP</th>'+
+          '<thead><tr><th class="standings-rank-cell">RANK</th><th>FRANCHISE</th><th>PROGRAMS</th><th>COUNTING</th><th>BEHIND</th>'+
           '<th class="numerical">FANTASY POINTS</th><th><span class="sr-only">Program breakdown</span></th></tr></thead>'+
           '<tbody>'+rows+'</tbody></table></div>'+
         '<footer class="league-standings-footer"><span><strong>'+countedAcrossLeague+'</strong> programs counting league-wide'+

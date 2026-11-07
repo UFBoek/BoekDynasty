@@ -64,7 +64,7 @@ test('historical seasons and date boundaries do not mix',()=>{
 test('ESPN schedule query requests all Division I games',()=>{
   const url=pipeline.scoreboardUrls('2026-11-03')[0];
   assert.match(url,/groups=50/);
-  assert.match(url,/limit=1000/);
+  assert.match(url,/limit=500/);
   assert.match(url,/dates=20261103/);
 });
 
@@ -187,4 +187,20 @@ test('verified conference champions score immediately while D1 archival writes a
   assert.equal(season.status,'partial');
   const leaders=await pipeline.historicalLeaders(env,{conference_regular_title:8},'2026-27');
   assert.equal(leaders.rows.find(x=>x.season==='2025-26'&&x.program_id===winner.id)?.points,8);
+});
+
+test('ESPN individual game summary recovers a missed final with verified event ID',async()=>{
+  const fixture=structuredClone(game);
+  const competition={...fixture.competitions[0],date:fixture.date,status:fixture.status};
+  const summary={header:{id:fixture.id,competitions:[competition],season:{type:2}}};
+  const fetchFn=async()=>({ok:true,json:async()=>summary});
+  const recovered=await pipeline.fetchGameSummary(fixture.id,fetchFn);
+  assert.equal(pipeline.parseEvent(recovered,'2026-11-03','2026-27').row[10],'final');
+  assert.equal(recovered.id,fixture.id);
+});
+test('ESPN individual game summary rejects mismatched or unverified events',async()=>{
+  const competition={...game.competitions[0],status:game.status};
+  await assert.rejects(pipeline.fetchGameSummary(game.id,async()=>({ok:true,json:async()=>({
+    header:{id:'401999999',competitions:[competition]}
+  })})),/different event ID/);
 });

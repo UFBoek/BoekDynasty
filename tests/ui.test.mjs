@@ -15,7 +15,9 @@ const injection=`  return {
  results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsLoadedDay='2026-11-03';resultsSeason=season();resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
  standings:(data)=>{standingsData=data;standingsFetchedAt=Date.now();},
  expandLeague:(id)=>{leagueExpandedManager=String(id);},
- filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;}
+ filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;},
+ queue:(ids)=>{draftWatchlist=ids.map(String);},
+ overviewGames:(games)=>{overviewGamesDay=resultsToday();overviewGames=games;}
 };
 })();`;
 const compiled=source.replace('  try{\n    setInterval(updateDraftClock,1000);\n    Promise.resolve(boot()).catch(startupFailure);\n  }catch(e){startupFailure(e);}\n})();',injection);
@@ -71,6 +73,24 @@ test('results filters are based on actual AP and conference IDs',()=>{
  app.filter('all','8');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,1);
 });
 
+test('overview and results never display a draft-queue game view',()=>{
+ const oldOwnership=league.ownership;
+ try{
+  league.ownership=[{program_id:'57',manager_id:'1'}];
+  app.queue(['59']);
+  app.overviewGames([
+   {game_id:'401',home_id:'57',away_id:'58',home_name:'Florida',away_name:'Duke',status:'scheduled'},
+   {game_id:'402',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',status:'scheduled'}
+  ]);
+  const overview=app.page('home');
+  assert.equal((overview.match(/class="overview-game-card/g)||[]).length,1);
+  assert.doesNotMatch(overview,/My queue games|IN QUEUE|results-track-queue/);
+  const results=app.page('results');
+  assert.doesNotMatch(results,/data-scope="queue"|MY QUEUE/);
+  assert.doesNotMatch(app.page('draft'),/data-act="results-track-queue"/);
+ }finally{league.ownership=oldOwnership;app.queue([]);app.overviewGames([]);}
+});
+
 test('mobile navigation presents six usable primary destinations with Standings under More',()=>{
  const html=app.page('home');
  const mobile=html.slice(html.indexOf('<nav class="bottom"'));
@@ -95,7 +115,7 @@ test('program draft, results and standings expose honest contextual visual data'
  assert.match(draft,/SEC/);
  const standings=app.page('league');
  assert.match(standings,/standings-mini-roster/);
- assert.match(standings,/ROSTERED SCHOOLS/);
+ assert.match(standings,/>PROGRAMS<\/th>/);
  const games=[{game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',
    home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',
    home_conference_id:'23',away_conference_id:'2'}];
@@ -442,8 +462,8 @@ test('League standings show ranked totals, ties, lead gaps and verified program 
     {manager_id:'3',points:20,counted_programs:1,counted_program_ids:['60']},
     {manager_id:'4',points:0,counted_programs:0,counted_program_ids:[]}]});
   let html=app.page('league');
-  assert.match(html,/league-standings-context/);
-  assert.match(html,/ROSTERED SCHOOLS/);
+  assert.match(html,/league-race-strip/);
+  assert.match(html,/>PROGRAMS<\/th>/);
   assert.match(html,/FANTASY POINTS/);
   assert.match(html,/standings-mini-roster/);
   assert.match(html,/T02/);
@@ -474,7 +494,7 @@ test('League preseason never fabricates a leader or point ranking',()=>{
    standings:users.map(u=>({manager_id:u.id,points:0,counted_programs:0,counted_program_ids:[]}))});
   const html=app.page('league');
   assert.match(html,/PRESEASON/);
-  assert.match(html,/Not established/);
+  assert.match(html,/Awaiting first points/);
   assert.match(html,/Awaiting draft/);
   assert.doesNotMatch(html,/class="league-standing-rank is-first"/);
   assert.match(html,/HOW RANKINGS WORK/);

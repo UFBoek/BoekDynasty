@@ -916,7 +916,6 @@
   const matchScoreboardScope=(g,scope,enrolled,owned,watched,pollRanks)=>{
     const home=String(g.home_id),away=String(g.away_id);
     if(scope==='mine')return owned.has(home)||owned.has(away);
-    if(scope==='queue')return watched.has(home)||watched.has(away);
     if(scope==='top25')return pollRanks.has(home)||pollRanks.has(away);
     if(scope==='league')return enrolled.has(home)||enrolled.has(away);
     return true;
@@ -951,17 +950,16 @@
     const winner=finished&&g.home_score!==null&&g.away_score!==null;
     const rostered=owners().filter(o=>String(o.program_id)===String(g.home_id)||String(o.program_id)===String(g.away_id));
     const mine=rostered.some(o=>o.manager_id===me?.id);
-    const watched=!mine&&isScoreboardMatch(g,activeDraftQueueIds());
     const selectedLeague=rostered.length>0;
     const isNeutral=Number(g.neutral_site)===1;
     const at= isNeutral?'Neutral site':'At '+escapeHTML(g.home_name||'home school');
     const special=g.tournament_tag==='ncaa'?'NCAA TOURNAMENT':g.tournament_tag==='conference'?'CONFERENCE TOURNAMENT':'';
     const link=/^\d+$/.test(String(g.game_id||''))?'https://www.espn.com/mens-college-basketball/game/_/gameId/'+g.game_id:null;
-    return '<article class="daily-game-card '+(live?'is-live':'')+(mine?' is-my-game':'')+(watched?' is-watched':'')+'" data-search="'+
+    return '<article class="daily-game-card '+(live?'is-live':'')+(mine?' is-my-game':'')+'" data-search="'+
       escapeHTML((String(g.home_name||'')+' '+String(g.away_name||'')+' '+String(g.home_id)+' '+String(g.away_id)).toLowerCase())+'">'
       +'<div class="daily-card-status"><strong class="'+(live?'live':'')+'">'+(live?'<i class="daily-live-dot" aria-hidden="true"></i>':'')+escapeHTML(status)+'</strong><small class="daily-status-detail">'+escapeHTML(detail)+'</small>'
       +(special?'<span class="daily-card-tourney">'+special+'</span>':'')
-      +(mine?'<span class="daily-card-mine">MY TEAM</span>':watched?'<span class="daily-card-queue">MY QUEUE</span>':selectedLeague?'<span class="daily-card-league">ROSTERED</span>':'')
+      +(mine?'<span class="daily-card-mine">MY TEAM</span>':selectedLeague?'<span class="daily-card-league">ROSTERED</span>':'')
       +'</div><div class="daily-card-body">'
       +line(g.away_id,g.away_name,g.away_record,g.away_net,g.away_quad,g.away_q1a,g.away_score,winner&&Number(g.away_score)>Number(g.home_score),false)
       +line(g.home_id,g.home_name,g.home_record,g.home_net,g.home_quad,g.home_q1a,g.home_score,winner&&Number(g.home_score)>Number(g.away_score),true)
@@ -974,7 +972,7 @@
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
     const enrolled=new Set(eligiblePrograms().map(p=>String(p.id)));
     const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
-    const watched=activeDraftQueueIds();
+    const watched=new Set();
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
     const scopeButton=(id,label)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
       '" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
@@ -1004,7 +1002,6 @@
     const list=scoped.filter(g=>matchScoreboardStatus(g,resultsStatusFilter))
       .sort((a,b)=>(priority[a.status]??5)-(priority[b.status]??5)||
         Number(isScoreboardMatch(b,owned))-Number(isScoreboardMatch(a,owned))||
-        Number(isScoreboardMatch(b,watched))-Number(isScoreboardMatch(a,watched))||
         String(a.start_utc||'').localeCompare(String(b.start_utc||'')));
     const visible=list.slice(0,resultsShown);
     const totalFinal=statusCounts.final,totalLive=statusCounts.live;
@@ -1041,7 +1038,7 @@
       +'<div class="daily-calendar"><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
       +'<div class="daily-day-list">'+days+'</div><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
       +'<div class="daily-control-bar"><div class="daily-filter-tabs" role="group" aria-label="Games to display">'+
-        scopeButton('league','League schools')+scopeButton('mine','My roster')+scopeButton('queue','★ My queue')+scopeButton('all','All D-I')+scopeButton('top25','AP Top 25')+
+        scopeButton('league','League schools')+scopeButton('mine','My roster')+scopeButton('all','All D-I')+scopeButton('top25','AP Top 25')+
         '</div><div class="daily-tools"><label class="daily-search"><span aria-hidden="true">⌕</span><input id="daily-team-search" type="search" autocomplete="off" placeholder="Find a school" aria-label="Search daily games by school" value="'+escapeHTML(resultsSearch)+'"/></label>'
       +'<input type="date" id="scoreboard-date" class="field daily-picker" aria-label="Jump to a date" value="'+escapeHTML(day)+'" />'
       +'<button type="button" class="daily-today" data-act="results-today">Today</button></div></div>'
@@ -1062,7 +1059,6 @@
           (resultsScope==='mine'?'Draft a school to see its matchups here.':
             resultsScope==='queue'?'Add schools to your draft queue to follow their games here.':
             'Try another date, conference or school search.')+'</p>'+ 
-          (resultsScope==='queue'?'<button class="btn small secondary" data-act="tab" data-id="draft">Open draft queue</button>':'')+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
       +'<div class="daily-footer-info"><span><strong>W–L</strong> Record through selected date</span><span><strong>NET / TOR</strong> '+(resultsRankingSource==='torvik'?'Preliminary Bart Torvik':'NCAA NET')+' ranking</span><span><strong>Q</strong> Potential quadrant win bonus</span><span>'+escapeHTML(note)+'</span></div>'
@@ -1240,17 +1236,13 @@
 
   function overviewScoreboard(){
     const today=resultsToday(),isReady=overviewGamesDay===today;
-    const eligible=new Set(eligiblePrograms().map(p=>String(p.id)));
+    const rostered=new Set(owners().map(o=>String(o.program_id)));
     const mine=new Set(owners().filter(o=>o.manager_id===me.id).map(o=>String(o.program_id)));
-    const watched=activeDraftQueueIds();
     const games=(isReady?overviewGames:[]).filter(g=>
-      eligible.has(String(g.home_id))||eligible.has(String(g.away_id))||
-      mine.has(String(g.home_id))||mine.has(String(g.away_id)));
+      rostered.has(String(g.home_id))||rostered.has(String(g.away_id)));
     const statusPriority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
     const isMine=g=>mine.has(String(g.home_id))||mine.has(String(g.away_id));
-    const isWatched=g=>watched.has(String(g.home_id))||watched.has(String(g.away_id));
     games.sort((a,b)=>Number(isMine(b))-Number(isMine(a))||
-      Number(isWatched(b))-Number(isWatched(a))||
       (statusPriority[a.status]??5)-(statusPriority[b.status]??5)||
       String(a.start_utc||'').localeCompare(String(b.start_utc||'')));
     const fixtures=games.slice(0,4);
@@ -1271,12 +1263,12 @@
     const cards=fixtures.map(g=>{
       const hasScore=g.status==='final'||g.status==='live';
       return '<button type="button" class="overview-game-card'+(g.status==='live'?' is-live':'')+
-        (isMine(g)?' is-mine':isWatched(g)?' is-watched':'')+'" data-act="overview-today-results" aria-label="Open today’s results for '+
+        (isMine(g)?' is-mine':'')+'" data-act="overview-today-results" aria-label="Open today’s results for '+
         escapeHTML((g.away_name||'Away')+' at '+(g.home_name||'Home'))+'">'+
         '<span class="overview-game-heading"><span class="overview-game-status">'+
         (g.status==='live'?'<i aria-hidden="true"></i>':'')+escapeHTML(formatTime(g))+'</span>'+
         (isMine(g)?'<span class="overview-game-my-tag">MY ROSTER</span>':
-          isWatched(g)?'<span class="overview-game-queue-tag">IN QUEUE</span>':'')+'</span>'+
+          '')+'</span>'+
         school(g.away_id,g.away_name,g.away_score,hasScore,g.away_quad,g.away_q1a)+
         school(g.home_id,g.home_name,g.home_score,hasScore,g.home_quad,g.home_q1a)+
         '<span class="overview-game-link">View game day <span aria-hidden="true">›</span></span></button>';
@@ -1286,11 +1278,10 @@
       '<div class="overview-games-placeholder">Loading today’s matchups…</div>':
       overviewGamesError&&!isReady?'<div class="overview-games-placeholder">'+escapeHTML(overviewGamesError)+'</div>':
       fixtures.length?'<div class="overview-game-grid">'+cards+'</div>':
-      '<div class="overview-games-placeholder">No league-school games scheduled today. Browse the full scoreboard for other matchups.</div>';
+      '<div class="overview-games-placeholder">No rostered programs play today. Browse the full scoreboard for other matchups.</div>';
     return '<section class="panel overview-scoreboard">'+
       panelHeading('Today’s games',formatResultsDay(today,{weekday:'long',month:'short',day:'numeric'})+
-      (count?' · '+count+' league matchups':''),
-      (watched.size?'<button class="btn small ghost" type="button" data-act="results-track-queue">My queue games</button>':'')+
+      (count?' · '+count+' rostered matchups':''),
       '<button class="btn small ghost" type="button" data-act="overview-today-results">Full scoreboard</button>')+
       body+'</section>';
   }
@@ -2380,7 +2371,6 @@
       +'<div class="draft-queue-manager-head"><div class="draft-queue-title"><span class="draft-section-overline">YOUR PRIORITY LIST</span><h2>My draft queue <span>'+usedQueue.length+'</span></h2>'
       +'<p>Put your top choice first. Drag or use the arrows to reorder. Saved across devices; no automatic picks.</p></div>'
       +'<div class="draft-queue-header-actions"><button type="button" data-act="draft-jump-pool" class="draft-queue-find">+ Add schools</button>'
-      +(usedQueue.length?'<button type="button" class="draft-queue-games" data-act="results-track-queue">Track games</button>':'')
       +(usedQueue.length>1?'<button type="button" data-act="draft-compare-toggle" class="draft-compare-toggle" aria-expanded="'+draftCompareExpanded+'">'+(draftCompareExpanded?'Hide comparison':'Compare top 4')+'</button>':'')
       +(usedQueue.length?'<button type="button" data-act="draft-queue-collapse" class="draft-queue-collapse" aria-expanded="'+draftQueueExpanded+'">'+(draftQueueExpanded?'Collapse':'Expand queue')+'</button>':'')+'</div></div>'
       +(usedQueue.length
@@ -3476,11 +3466,6 @@
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='league-refresh'){await loadStandings(true);return;}
     if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();return;}
-    if(act==='results-track-queue'){
-      resultsSelectedDay=resultsToday();resultsScope='queue';resultsConference='all';resultsStatusFilter='all';
-      resultsSearch='';resultsShown=40;current='results';render();loadResults();
-      window.scrollTo({top:0,behavior:'smooth'});return;
-    }
     if(act==='overview-today-results'){
       resultsSelectedDay=resultsToday();resultsScope='league';resultsSearch='';resultsStatusFilter='all';resultsShown=40;
       current='results';render();loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
@@ -3620,7 +3605,11 @@
     if(act==='results-date'){resultsSelectedDay=button.dataset.date;resultsShown=40;loadResults();return;}
     if(act==='results-shift'){resultsSelectedDay=shiftResultsDay(resultsSelectedDay||resultsToday(),Number(button.dataset.dir));resultsShown=40;loadResults();return;}
     if(act==='results-today'){resultsSelectedDay=resultsToday();resultsShown=40;loadResults();return;}
-    if(act==='results-scope'){resultsScope=button.dataset.scope;resultsShown=40;render();return;}
+    if(act==='results-scope'){
+      const nextScope=button.dataset.scope;
+      if(!['league','mine','all','top25'].includes(nextScope))return;
+      resultsScope=nextScope;resultsShown=40;render();return;
+    }
     if(act==='results-status'){resultsStatusFilter=id;resultsShown=40;render();return;}
     if(act==='results-clear-filters'){
       resultsScope='league';resultsStatusFilter='all';resultsConference='all';resultsSearch='';resultsShown=40;

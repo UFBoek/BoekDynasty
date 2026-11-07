@@ -10,6 +10,14 @@ const safeBody=(body)=>String(body||'').trim().slice(0,1200);
 const category=kind=>kind.startsWith('trade_')?'trades':kind.startsWith('draft_')?'draft':kind==='announcement'?'announcements':null;
 const categories=['trades','draft','announcements'];
 const boolFields=['trades','draft','announcements','push_enabled','email_enabled'];
+// Match the authoritative draft order in server.js: rounds 2 and 3 reverse,
+// round 4 moves forward, then alternate for the remainder of the 3RR draft.
+const reversedDraftRound=round=>round===2||(round>=3&&round%2===1);
+const originalPickOwner=(slot,order)=>{
+  if(slot<1||!order.length)return null;
+  const round=Math.floor((slot-1)/order.length)+1,index=(slot-1)%order.length;
+  return order[reversedDraftRound(round)?order.length-1-index:index]||null;
+};
 const EMAIL_ADDRESS=/^[^\s@<>]{1,64}@[^\s@<>]{1,150}\.[A-Za-z]{2,}$/;
 const encode=x=>String(x).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const emailConfig=()=>Boolean(Deno.env.get('RESEND_API_KEY')&&Deno.env.get('NOTIFICATION_EMAIL_FROM'));
@@ -139,20 +147,21 @@ export function createNotificationEngine(db){
     const saved=JSON.parse(settings.draft_order||'[]');
     const order=[...new Set([...saved.filter(id=>members.some(m=>m.id===id)),...members.map(m=>m.id)])];
     const rounds=Number(settings.rounds||0),total=order.length*rounds;
+    if(!Number.isInteger(rounds)||rounds<1||order.length<2||picks>=total)return;
     const ownerFor=async slot=>{
       const changed=await db.prepare('SELECT owner_manager_id FROM draft_pick_owners WHERE overall=?').bind(slot).first();
-      if(changed)return changed.owner_manager_id;
-      const r=Math.floor((slot-1)/order.length),col=(slot-1)%order.length;
-      return order[r%2===0?col:order.length-1-col];
+      return changed?.owner_manager_id||originalPickOwner(slot,order);
     };
-    if(picks>=total||order.length<2)return;
     const slot=picks+1,owner=await ownerFor(slot);
-    const name=members.find(m=>m.id===owner)?.display_name||'Manager';
+    if(!owner)return;
+    // Unique (user_id,kind,reference_id) makes retries and scheduled checks safe.
     await emit(owner,'draft_turn',"You're on the clock!",'Pick #'+slot+' is yours. Make your program selection.','draft','turn:'+slot);
-    if(slot+2<=total){
-      const soonSlot=slot+2,soonOwner=await ownerFor(soonSlot);
-      if(soonOwner!==owner)
-        await emit(soonOwner,'draft_soon',"You're 2 picks away",'Get ready: your selection #'+soonSlot+' is coming up.','draft','soon:'+soonSlot);
+    const soonSlot=slot+1;
+    if(soonSlot<=total){
+      const soonOwner=await ownerFor(soonSlot);
+      // Do not tell someone already on the clock that their consecutive pick is "up next".
+      if(soonOwner&&soonOwner!==owner)
+        await emit(soonOwner,'draft_soon',"You're up next!",'Pick #'+soonSlot+' is one pick away. Get ready to draft.','draft','soon:'+soonSlot);
     }
   }
   async function route(subpath,request,actor,original){
@@ -294,5 +303,5 @@ export function createNotificationEngine(db){
     }
     return fail('Unknown notification route.',404);
   }
-  return {route,emit,fanout,flush,onMutation};
+  return {route,emit,fanout,flush,onMutation,reconcileDraft:notifyCurrentPick};
 }

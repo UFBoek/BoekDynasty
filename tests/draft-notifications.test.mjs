@@ -47,7 +47,7 @@ function fixture(picks=0,overrides={}){
         },
         async run(){
           if(sql.startsWith('INSERT INTO cbb_notification_outbox')){outbox.set(args[0],{processed:false});return {meta:{changes:1}};}
-          if(sql.startsWith('UPDATE cbb_notification_outbox')){const row=outbox.get(args[3]);if(row)row.processed=!!args[0];return {meta:{changes:1}};}
+          if(sql.startsWith('UPDATE cbb_notification_outbox')){const row=outbox.get(args[2]);if(row)row.processed=!!args[0];return {meta:{changes:1}};}
           if(sql.startsWith('UPDATE cbb_push_devices SET last_delivered_at'))return {meta:{changes:1}};
           throw Error('Unexpected mutation: '+sql);
         }

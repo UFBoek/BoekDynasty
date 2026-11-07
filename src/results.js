@@ -100,20 +100,54 @@ const DATA_PIPELINE=(()=>{
 
   // Recover games omitted from ESPN's date scoreboard by querying the game's
   // own event record. Use ESPN event IDs, not guesses or inferred scores.
-  async function fetchGameSummary(gameId,fetchFn=fetch){
+
+  async function fetchGameSummary(gameId,fetchFn=fetch,homeId=null,season=null){
     const id=String(gameId);
     if(!/^\d{6,12}$/.test(id))throw new Error('Invalid ESPN event ID');
-    const url='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event='+id;
-    const response=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});
-    if(!response.ok)throw new Error('ESPN event '+id+' HTTP '+response.status);
-    const body=await response.json(),header=body?.header||{},competition=header.competitions?.[0];
-    if(!competition||!Array.isArray(competition.competitors)||competition.competitors.length!==2)
-      throw new Error('ESPN event '+id+' has no verifiable competition');
-    if(header.id&&String(header.id)!==id)throw new Error('ESPN returned a different event ID');
-    const status=competition.status||header.status||body.status;
-    if(!status?.type)throw new Error('ESPN event '+id+' has no verifiable status');
-    return {id,date:competition.date||header.date||null,competitions:[competition],
-      status,season:{type:Number(header.season?.type||2)}};
+    const errors=[];
+    // ESPN may block the site.api summary route even when its scoreboard works.
+    // The web API and CDN carry the same event header under alternate hosts.
+    const endpoints=[
+      'https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event='+id,
+      'https://cdn.espn.com/core/mens-college-basketball/playbyplay?xhr=1&gameId='+id
+    ];
+    for(const url of endpoints){
+      try{
+        const response=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)});
+        if(!response.ok){errors.push(new URL(url).hostname+' HTTP '+response.status);continue;}
+        const raw=await response.json();
+        let body=raw?.gamepackageJSON||raw?.content?.gamepackageJSON||raw?.page?.content?.gamepackageJSON||raw;
+        if(typeof body==='string')body=JSON.parse(body);
+        const header=body?.header||{},competition=header.competitions?.[0];
+        if(!competition||!Array.isArray(competition.competitors)||competition.competitors.length!==2){
+          errors.push(new URL(url).hostname+' missing competitors');continue;
+        }
+        if(header.id&&String(header.id)!==id){errors.push('Event ID mismatch');continue;}
+        const status=competition.status||header.status||body.status;
+        if(!status?.type){errors.push(new URL(url).hostname+' missing status');continue;}
+        return {id,date:competition.date||header.date||null,competitions:[competition],
+          status,season:{type:Number(header.season?.type||2)}};
+      }catch(e){errors.push(new URL(url).hostname+' '+err(e));}
+    }
+    // The team schedule endpoint is independently maintained by ESPN and
+    // often includes finals missing from its date-level scoreboard.
+    if(/^\d+$/.test(String(homeId||''))&&/^20\d\d-\d\d$/.test(String(season||''))){
+      const year=Number(String(season).slice(0,4))+1;
+      const url='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/'+homeId+'/schedule?season='+year;
+      try{
+        const response=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)});
+        if(!response.ok)errors.push('team schedule HTTP '+response.status);
+        else{
+          const body=await response.json();
+          const match=(body.events||[]).find(ev=>String(ev.id)===id);
+          if(match?.competitions?.[0]?.competitors?.length===2&&
+              (match.status?.type||match.competitions[0]?.status?.type))
+            return {...match,status:match.status||match.competitions[0].status};
+          errors.push('team schedule did not include verified event');
+        }
+      }catch(e){errors.push('team schedule '+err(e));}
+    }
+    throw new Error('ESPN event '+id+' unavailable: '+errors.slice(0,4).join(' | ').slice(0,190));
   }
   // Scoreboard groups occasionally return only a fraction of a known slate.
   // Poll missing individual games with a bounded rotating queue so every
@@ -138,7 +172,7 @@ const DATA_PIPELINE=(()=>{
     for(let i=0;i<selected.length;i+=4){
       await Promise.all(selected.slice(i,i+4).map(async row=>{
         try{
-          const event=await fetchGameSummary(row.game_id,fetchFn);
+          const event=await fetchGameSummary(row.game_id,fetchFn,row.home_id,season);
           const parsed=parseEvent(event,row.game_date,season);
           if(parsed&&parsed.row[0]===String(row.game_id)&&
               parsed.row[4]===String(row.home_id)&&parsed.row[5]===String(row.away_id)){

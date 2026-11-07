@@ -201,3 +201,11 @@ button.daily-team-line:hover{background:#f0f5f9}
  .daily-team-name strong{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.daily-game-card,.daily-day{transition:none}}
+
+/* Current fantasy ownership stays attached to the school, not the matchup. */
+.scoreboard-owner{display:block;min-width:0;max-width:100%;font-size:10px;font-weight:550;line-height:1.35;color:#738296;overflow-wrap:anywhere}
+.scoreboard-owner.is-owned{color:#395875;font-weight:650}
+.scoreboard-owner.is-mine{color:#995027}
+.overview-school-identity{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;padding:3px 0}
+.overview-game-school .overview-school-identity strong{display:block;flex:none;width:100%}
+.overview-school-identity .scoreboard-owner{font-size:9px}

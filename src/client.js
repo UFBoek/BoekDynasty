@@ -925,6 +925,13 @@
     filter==='final'&&g.status==='final'||
     filter==='upcoming'&&g.status==='scheduled';
   const isScoreboardMatch=(g,ids)=>ids.has(String(g.home_id))||ids.has(String(g.away_id));
+  const scoreboardOwnership=id=>{
+    const assignment=owners().find(o=>String(o.program_id)===String(id));
+    const manager=assignment&&members().find(u=>String(u.id)===String(assignment.manager_id));
+    const label=assignment?'Owned by '+(manager?.display_name||'League team'):'Unowned';
+    const mine=assignment&&String(assignment.manager_id)===String(me?.id);
+    return '<span class="scoreboard-owner'+(assignment?' is-owned':'')+(mine?' is-mine':'')+'" title="'+escapeHTML(label)+'">'+escapeHTML(label)+'</span>';
+  };
   const dailyGameCard=(g,pollRanks)=>{
     const finished=g.status==='final',live=g.status==='live';
     const hasScore=finished||live;
@@ -938,6 +945,7 @@
       const body=scoreboardLogo(id)
         +'<span class="daily-team-identity"><span class="daily-team-name">'+(ap?'<span class="daily-ap">#'+ap+'</span>':'')
         +'<strong title="'+escapeHTML(name||'Unknown school')+'">'+escapeHTML(name||'Unknown school')+'</strong></span>'
+        +scoreboardOwnership(id)
         +'<small class="daily-team-record">'+dailyRecord(record)+' <span>W–L</span></small></span>'
         +'<span class="daily-team-net" title="'+escapeHTML(dailyNetLabel(net))+'"><em>'+(resultsRankingSource==='torvik'?'TOR':'NET')+'</em> '+(net===null||net===undefined||!Number.isFinite(Number(net))?'—':Number(net))+'</span>'
         +dailyQuad(quad,q1a)
@@ -1255,7 +1263,7 @@
     };
     const school=(id,name,score,hasScore,quad,q1a)=>
       '<span class="overview-game-school">'+scoreboardLogo(id)+
-      '<strong>'+escapeHTML(name||'Unknown school')+'</strong>'+
+      '<span class="overview-school-identity"><strong>'+escapeHTML(name||'Unknown school')+'</strong>'+scoreboardOwnership(id)+'</span>'+
       '<span class="overview-quad-value" title="'+escapeHTML(quadMeaning(quad,q1a,overviewRankingSource==='torvik'))+'">'+
       quadLabel(quad,q1a)+(quadBonusText(quad,q1a)?' '+quadBonusText(quad,q1a):'')+'</span>'+
       '<b>'+((hasScore&&score!==null&&score!==undefined)?escapeHTML(String(score)):'–')+'</b></span>';

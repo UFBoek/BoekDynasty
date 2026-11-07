@@ -154,15 +154,9 @@ export function createNotificationEngine(db){
     };
     const slot=picks+1,owner=await ownerFor(slot);
     if(!owner)return;
-    // Unique (user_id,kind,reference_id) makes retries and scheduled checks safe.
+    // Only notify the actual current pick owner. No advance / one-pick-away alerts.
+    // Unique (user_id,kind,reference_id) prevents duplicate on-clock notifications.
     await emit(owner,'draft_turn',"You're on the clock!",'Pick #'+slot+' is yours. Make your program selection.','draft','turn:'+slot);
-    const soonSlot=slot+1;
-    if(soonSlot<=total){
-      const soonOwner=await ownerFor(soonSlot);
-      // Do not tell someone already on the clock that their consecutive pick is "up next".
-      if(soonOwner&&soonOwner!==owner)
-        await emit(soonOwner,'draft_soon',"You're up next!",'Pick #'+soonSlot+' is one pick away. Get ready to draft.','draft','soon:'+soonSlot);
-    }
   }
   async function route(subpath,request,actor,original){
     const method=request.method;

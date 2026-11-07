@@ -59,8 +59,8 @@ const DATA_PIPELINE=(()=>{
   const scoreboardUrls=(day,group=50)=>{
     const date=day.replace(/-/g,'');
     return [
-      'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+date+'&groups='+group+'&limit=1000',
-      'https://cdn.espn.com/core/mens-college-basketball/scoreboard?xhr=1&date='+date+'&groups='+group+'&limit=1000'
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+date+'&groups='+group+'&limit=500',
+      'https://cdn.espn.com/core/mens-college-basketball/scoreboard?xhr=1&date='+date+'&groups='+group+'&limit=500'
     ];
   };
   const fetchGroup=async(day,group,fetchFn=fetch)=>{
@@ -72,7 +72,7 @@ const DATA_PIPELINE=(()=>{
         const body=await res.json();
         const events=body.events||body.content?.sbData?.events||body.page?.content?.sbData?.events;
         if(!Array.isArray(events)){errors.push('Unexpected response from '+new URL(url).hostname);continue;}
-        if(events.length>=1000){errors.push('1000-game limit reached for group '+group);continue;}
+        if(events.length>=500){errors.push('500-game limit reached for group '+group);continue;}
         return {events,host:new URL(url).hostname,group};
       }catch(e){errors.push(new URL(url).hostname+' '+err(e));}
     }
@@ -96,7 +96,73 @@ const DATA_PIPELINE=(()=>{
     home_name=excluded.home_name,away_name=excluded.away_name,home_score=excluded.home_score,away_score=excluded.away_score,status=excluded.status,
     status_detail=excluded.status_detail,neutral_site=excluded.neutral_site,conference_game=excluded.conference_game,season_type=excluded.season_type,
     event_name=excluded.event_name,tournament_tag=excluded.tournament_tag,source=excluded.source,content_hash=excluded.content_hash,updated_at=unixepoch()
-    WHERE cbb_games.content_hash<>excluded.content_hash`;
+    WHERE cbb_games.content_hash<>excluded.content_hash AND NOT (cbb_games.status='final' AND excluded.status<>'final')`;
+
+  // Recover games omitted from ESPN's date scoreboard by querying the game's
+  // own event record. Use ESPN event IDs, not guesses or inferred scores.
+  async function fetchGameSummary(gameId,fetchFn=fetch){
+    const id=String(gameId);
+    if(!/^\d{6,12}$/.test(id))throw new Error('Invalid ESPN event ID');
+    const url='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event='+id;
+    const response=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});
+    if(!response.ok)throw new Error('ESPN event '+id+' HTTP '+response.status);
+    const body=await response.json(),header=body?.header||{},competition=header.competitions?.[0];
+    if(!competition||!Array.isArray(competition.competitors)||competition.competitors.length!==2)
+      throw new Error('ESPN event '+id+' has no verifiable competition');
+    if(header.id&&String(header.id)!==id)throw new Error('ESPN returned a different event ID');
+    const status=competition.status||header.status||body.status;
+    if(!status?.type)throw new Error('ESPN event '+id+' has no verifiable status');
+    return {id,date:competition.date||header.date||null,competitions:[competition],
+      status,season:{type:Number(header.season?.type||2)}};
+  }
+  // Scoreboard groups occasionally return only a fraction of a known slate.
+  // Poll missing individual games with a bounded rotating queue so every
+  // started game can eventually receive its actual ESPN final result.
+  async function repairUnfinishedGames(env,season,limit=18,fetchFn=fetch){
+    if(!Number.isInteger(limit)||limit<1||limit>30)throw new Error('Invalid game-detail repair limit');
+    const today=localDay(),oldest=shiftDay(today,-7),now=Date.now();
+    const all=(await q(env,`SELECT game_id,game_date,start_utc,home_id,away_id,fetched_at
+      FROM cbb_games WHERE season=? AND game_date>=? AND game_date<=?
+        AND status IN ('scheduled','live')
+      ORDER BY fetched_at ASC,game_date ASC LIMIT 320`,season,oldest,today).all()).results||[];
+    const selected=all.filter(row=>{
+      const start=Date.parse(row.start_utc||'');
+      return Number.isFinite(start)&&start<=now-2*3600000;
+    }).slice(0,limit);
+    if(!selected.length)return {checked:0,matched:0,changed:0};
+    const runId=crypto.randomUUID();
+    await q(env,`INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status)
+      VALUES(?,'detail-repair',?,?,?,'running')`,runId,season,today,'espn-game-summary').run();
+    let matched=0,changed=0,failed=0;
+    for(let i=0;i<selected.length;i+=4){
+      await Promise.all(selected.slice(i,i+4).map(async row=>{
+        try{
+          const event=await fetchGameSummary(row.game_id,fetchFn);
+          const parsed=parseEvent(event,row.game_date,season);
+          if(parsed&&parsed.row[0]===String(row.game_id)&&
+              parsed.row[4]===String(row.home_id)&&parsed.row[5]===String(row.away_id)){
+            matched++;
+            // Only verified final/live states may supersede a seeded schedule.
+            const phase=parsed.row[10];
+            if(phase==='final'||phase==='live'||phase==='cancelled'||phase==='postponed'){
+              if(phase!=='final'||(parsed.row[8]!==null&&parsed.row[9]!==null&&parsed.row[8]+parsed.row[9]>0)){
+                parsed.row[17]='espn-game-summary';
+                const updated=await q(env,INSERT,...parsed.row,fingerprint(parsed.row)).run();
+                changed+=Number(updated.meta?.changes||0);
+              }
+            }
+          }
+        }catch(e){failed++;}
+        // Record the check even on a temporary provider failure, so the next
+        // run checks other stale fixtures instead of hammering one event.
+        await q(env,'UPDATE cbb_games SET fetched_at=unixepoch() WHERE game_id=?',row.game_id).run();
+      }));
+    }
+    await q(env,`UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,
+      error_text=?,finished_at=unixepoch() WHERE id=?`,
+      selected.length,matched,changed,failed?failed+' game detail requests unavailable':null,runId).run();
+    return {checked:selected.length,matched,changed,failed};
+  }
   async function importDay(env,season,day,options={}){
     if(!dayInSeason(season,day))throw new Error('Date is outside the selected season.');
     const id=crypto.randomUUID(),job=options.job||'scoreboard';
@@ -106,6 +172,8 @@ const DATA_PIPELINE=(()=>{
       const feed=options.payload?{events:options.payload.events,host:'manual',sources:[]} :await fetchScoreboard(day,options.fetchFn,options.includeSecondary===true);
       if(!Array.isArray(feed.events)||feed.events.length>=500)throw new Error('Invalid or oversized scoreboard.');
       received=feed.events.length;
+      const known=await q(env,'SELECT COUNT(*) AS n FROM cbb_games WHERE season=? AND game_date=?',season,day).first();
+      const partial=Number(known?.n||0)>=15&&received<Math.ceil(Number(known.n)*0.6);
       const rows=feed.events.map(x=>parseEvent(x,day,season)).filter(Boolean);matched=rows.length;
       for(let k=0;k<rows.length;k+=60){
         const batch=await env.DB.batch(rows.slice(k,k+60).map(x=>q(env,INSERT,...x.row,x.hash)));
@@ -120,8 +188,10 @@ const DATA_PIPELINE=(()=>{
           provider=excluded.provider,fetched_at=unixepoch()`,season,day,source.group,source.count,
           matched,source.host)));
       }
-      await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",received,matched,changed,id).run();
-      return {date:day,received,matched,changed,provider:feed.host,groups:feed.sources||[]};
+      await q(env,"UPDATE cbb_sync_runs SET status=?,received=?,matched=?,changed=?,error_text=?,finished_at=unixepoch() WHERE id=?",
+        partial?'error':'ok',received,matched,changed,
+        partial?'Partial ESPN scoreboard: '+received+' received; '+Number(known.n)+' fixtures already known. Individual-game repair required.':null,id).run();
+      return {date:day,received,matched,changed,partial,provider:feed.host,groups:feed.sources||[]};
     }catch(e){
       await q(env,"UPDATE cbb_sync_runs SET status='error',received=?,matched=?,changed=?,error_text=?,finished_at=unixepoch() WHERE id=?",received,matched,changed,err(e),id).run().catch(()=>{});
       throw e;
@@ -858,10 +928,12 @@ const DATA_PIPELINE=(()=>{
       // Keep the feed active overnight: late games and corrections can post
       // after midnight, and never rely on a "quiet hours" assumption.
       const live=await importDay(env,season,day,{job:'live'});
-      return {live};
+      const details=await repairUnfinishedGames(env,season,18).catch(e=>({error:err(e)}));
+      return {live,details};
     }
     if(cron==='15 10 * * *'){
       const reconciled=await backfill(env,season,7);
+      const detailRepair=await repairUnfinishedGames(env,season,30).catch(e=>({error:err(e)}));
       const future=await upcoming(env,season,3);
       const repaired=await fillMissing(env,season,4);
       let ap;
@@ -869,7 +941,7 @@ const DATA_PIPELINE=(()=>{
       // NCAA NET is not issued until December, and the NCAA public proxy may
       // legitimately show last season's rankings before the new release.
       if(day<season.slice(0,4)+'-12-08')
-        return {games:reconciled,upcoming:future,repaired,ap,net:{skipped:'NET has not started'}};
+        return {games:reconciled,detailRepair,upcoming:future,repaired,ap,net:{skipped:'NET has not started'}};
       const id=crypto.randomUUID(),source=env.NET_FEED_URL?'configured-net-feed':'NCAA NET official rankings proxy';
       await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'net',?,?,?,'running')",id,season,day,source).run();
       try{
@@ -893,5 +965,5 @@ const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,fetchGameSummary,repairUnfinishedGames,importDay,backfill,upcoming,coverage,fillMissing,status,records,netRanks,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

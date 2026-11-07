@@ -153,13 +153,23 @@ Deno.serve(async (request)=>{
       const season=(await db.prepare("SELECT value FROM settings WHERE key='current_season'").first())?.value||DATA_PIPELINE.seasonOf(today);
       const eligible=[11,12,1,2,3,4].includes(Number(today.slice(5,7)))&&DATA_PIPELINE.dayInSeason(season,today);
       let result;
-      if(kind==='live')result=eligible?await DATA_PIPELINE.importDay(env,season,today,{job:'live'}):{skipped:'offseason'};
+      if(kind==='live'){
+        if(!eligible)result={skipped:'offseason'};
+        else{
+          const scoreboard=await DATA_PIPELINE.importDay(env,season,today,{job:'live'});
+          const details=await DATA_PIPELINE.repairUnfinishedGames(env,season,18)
+            .catch(error=>({error:String(error?.message||error)}));
+          result={scoreboard,details};
+        }
+      }
       else if(kind==='recent'){
-        // A regular reconciliation also repairs a small, rate-limited batch
-        // of interrupted imports, including historical jobs.
+        // Reconcile the scoreboard and separately recover individual finished
+        // events omitted by ESPN's sometimes-incomplete daily group feed.
         const reconciled=eligible?await DATA_PIPELINE.backfill(env,season,4):{skipped:'offseason'};
+        const details=eligible?await DATA_PIPELINE.repairUnfinishedGames(env,season,30)
+          .catch(error=>({error:String(error?.message||error)})):{skipped:'offseason'};
         const repaired=await DATA_PIPELINE.repairInterrupted(env,2);
-        result={reconciled,repaired};
+        result={reconciled,details,repaired};
       }
       else if(kind==='upcoming')result=eligible?await DATA_PIPELINE.upcoming(env,season,3):{skipped:'offseason'};
       else if(kind==='ap')result=eligible?await DATA_PIPELINE.syncAPPoll(env,season):{skipped:'offseason'};

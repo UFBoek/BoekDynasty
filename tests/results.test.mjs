@@ -205,3 +205,20 @@ test('ESPN individual game summary rejects mismatched or unverified events',asyn
     header:{id:'401999999',competitions:[competition]}
   })})),/different event ID/);
 });
+
+test('full ESPN team schedule is fetched from alternate host with year validation',async()=>{
+  const teams=Array.from({length:32},(_,i)=>({
+    ...structuredClone(game),id:String(401900000+i),
+    date:'2026-11-12T00:00:00Z',
+    season:{year:2027},status:undefined,
+    competitions:[{...structuredClone(game.competitions[0]),status:structuredClone(game.status)}]
+  }));
+  const calls=[];
+  const feed=await pipeline.fetchTeamSchedule('2272','2026-27',async url=>{
+    calls.push(url);
+    return {ok:true,json:async()=>({season:{year:2027},events:teams})};
+  });
+  assert.equal(feed.events.length,32);
+  assert.match(calls[0],/site\\.web\\.api\\.espn\\.com/);
+  assert.equal(pipeline.parseTeamScheduleEvent(teams[0],'2026-27').row[14],2);
+});

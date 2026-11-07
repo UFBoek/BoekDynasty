@@ -669,7 +669,7 @@ export const DATA_PIPELINE=(()=>{
     return ['https://site.web.api.espn.com'+path,'https://site.api.espn.com'+path];
   };
   async function fetchTeamSchedule(id,season,fetchFn=fetch){
-    if(!/^\\d+$/.test(String(id))||!/^20\\d\\d-\\d\\d$/.test(String(season)))
+    if(!/^[0-9]+$/.test(String(id))||!/^20[0-9][0-9]-[0-9][0-9]$/.test(String(season)))
       throw new Error('Invalid ESPN team or season');
     const year=Number(season.slice(0,4))+1,errors=[];
     let partial=null;

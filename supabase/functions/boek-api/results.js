@@ -660,6 +660,95 @@ export const DATA_PIPELINE=(()=>{
         award_count:Number(awardRows.find(r=>r.season===season)?.award_count||0)};
     });
   }
+
+  // ESPN's full team feed is independent of the often-incomplete date
+  // scoreboard. Prefer the web host: some edge regions get 403s on site.api.
+  const teamScheduleUrls=(id,season)=>{
+    const path='/apis/site/v2/sports/basketball/mens-college-basketball/teams/'+encodeURIComponent(String(id))+
+      '/schedule?season='+(Number(season.slice(0,4))+1)+'&limit=500';
+    return ['https://site.web.api.espn.com'+path,'https://site.api.espn.com'+path];
+  };
+  async function fetchTeamSchedule(id,season,fetchFn=fetch){
+    if(!/^\\d+$/.test(String(id))||!/^20\\d\\d-\\d\\d$/.test(String(season)))
+      throw new Error('Invalid ESPN team or season');
+    const year=Number(season.slice(0,4))+1,errors=[];
+    let partial=null;
+    for(const uri of teamScheduleUrls(id,season)){
+      try{
+        const response=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});
+        if(!response.ok){errors.push(new URL(uri).hostname+' HTTP '+response.status);continue;}
+        const payload=await response.json(),events=payload?.events;
+        if(!Array.isArray(events)||events.length>=500){errors.push('Invalid team schedule');continue;}
+        const reportedYear=Number(payload.season?.year||payload.season?.endYear||0);
+        if(reportedYear&&reportedYear!==year){errors.push('Schedule season mismatch');continue;}
+        const result={events,host:new URL(uri).hostname};
+        if(events.length>=20)return result;
+        if(!partial||partial.events.length<events.length)partial=result;
+      }catch(e){errors.push(err(e));}
+    }
+    if(partial)return partial;
+    throw new Error('ESPN team schedule unavailable: '+errors.join(' | ').slice(0,180));
+  }
+  // Team-schedule events do not supply season.type, unlike the date scoreboard.
+  // Known November-February dates are regular-season fixtures. Avoid assuming
+  // that March tournament games are regular season.
+  const parseTeamScheduleEvent=(event,season)=>{
+    const utc=event?.date||event?.competitions?.[0]?.date;
+    if(!utc||Number.isNaN(new Date(utc).getTime()))return null;
+    const day=localDay(new Date(utc)),month=Number(day.slice(5,7));
+    const type=Number(event?.season?.type)||(month===11||month===12||month===1||month===2?2:null);
+    const normalized={...event,season:{...event.season,type}};
+    return parseEvent(normalized,day,season);
+  };
+  async function importTeamSchedule(env,season,id,fetchFn=fetch){
+    if(!dayInSeason(season,localDay()))throw new Error('Team schedule imports require the active season');
+    const runId=crypto.randomUUID(),today=localDay(),source='espn-team-schedule:'+id;
+    await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'team-schedule',?,?,?,'running')",runId,season,today,source).run();
+    let received=0,matched=0,changed=0;
+    try{
+      const feed=await fetchTeamSchedule(id,season,fetchFn);
+      received=feed.events.length;
+      const parsed=feed.events.map(ev=>parseTeamScheduleEvent(ev,season)).filter(x=>x&&
+        (String(x.row[4])===String(id)||String(x.row[5])===String(id)));
+      const unique=new Map(parsed.map(x=>[x.row[0],x]));
+      matched=unique.size;
+      // Never replace a known final with a less-authoritative scheduled game.
+      // Existing same-ID fixtures retain their official scoreboard metadata.
+      const insertOnly=INSERT.slice(0,INSERT.indexOf(' ON CONFLICT(game_id)'))+' ON CONFLICT(game_id) DO NOTHING';
+      const rows=[...unique.values()];
+      for(let i=0;i<rows.length;i+=40){
+        const batch=await env.DB.batch(rows.slice(i,i+40).map(x=>{
+          const row=x.row.slice();row[17]='espn-team-schedule';
+          return q(env,insertOnly,...row,fingerprint(row));
+        }));
+        changed+=batch.reduce((n,r)=>n+Number(r.meta?.changes||0),0);
+      }
+      await q(env,"UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,finished_at=unixepoch() WHERE id=?",
+        received,matched,changed,runId).run();
+      return {id,received,matched,changed,provider:feed.host};
+    }catch(e){
+      await q(env,"UPDATE cbb_sync_runs SET status='error',received=?,matched=?,changed=?,error_text=?,finished_at=unixepoch() WHERE id=?",
+        received,matched,changed,err(e),runId).run().catch(()=>{});
+      throw e;
+    }
+  }
+  async function fillSparseTeamSchedules(env,season,limit=3){
+    if(!Number.isInteger(limit)||limit<1||limit>5)throw new Error('Invalid team sync limit');
+    const candidates=(await q(env,`SELECT p.id,COUNT(g.game_id) AS games
+      FROM programs p
+      LEFT JOIN cbb_games g ON g.season=? AND (g.home_id=p.id OR g.away_id=p.id)
+      WHERE NOT EXISTS (SELECT 1 FROM cbb_sync_runs r
+        WHERE r.job='team-schedule' AND r.season=? AND r.source='espn-team-schedule:'||p.id
+        AND r.started_at>unixepoch()-7*86400)
+      GROUP BY p.id HAVING COUNT(g.game_id)<25
+      ORDER BY COUNT(g.game_id) ASC,p.id LIMIT ?`,season,season,limit).all()).results||[];
+    const reports=[];
+    for(const row of candidates){
+      try{reports.push({ok:true,...await importTeamSchedule(env,season,row.id)});}
+      catch(e){reports.push({id:row.id,ok:false,error:err(e)});}
+    }
+    return {attempted:reports.length,reports};
+  }
   const programGames=async(env,season,id)=>{
     const rows=await q(env,"SELECT game_id,game_date,start_utc,home_id,away_id,home_name,away_name,home_score,away_score,status,status_detail,neutral_site,conference_game,season_type,tournament_tag FROM cbb_games WHERE season=? AND (home_id=? OR away_id=?) ORDER BY game_date DESC,start_utc DESC LIMIT 70",season,id,id).all();
     return rows.results||[];
@@ -668,20 +757,11 @@ export const DATA_PIPELINE=(()=>{
   async function publishedTeamSchedule(env,season,id,fetchFn=fetch){
     const imported=await programGames(env,season,id);
     const byId=new Map(imported.map(g=>[String(g.game_id),{...g,origin:'database'}]));
-    const year=Number(season.slice(0,4))+1;
-    const uri='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/'+encodeURIComponent(String(id))+'/schedule?season='+year;
     let fetched=0,error='';
     try{
-      const response=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
-      if(!response.ok)throw Error('ESPN schedule HTTP '+response.status);
-      const payload=await response.json();
-      if(!Array.isArray(payload?.events))throw Error('ESPN schedule did not return events.');
-      const reportedYear=Number(payload.season?.year||payload.season?.endYear||0);
-      if(reportedYear&&reportedYear!==year)throw Error('ESPN schedule season mismatch.');
-      for(const ev of payload.events){
-        const utc=ev?.date||ev?.competitions?.[0]?.date;
-        if(!utc||Number.isNaN(new Date(utc).getTime()))continue;
-        const parsed=parseEvent(ev,localDay(new Date(utc)),season);
+      const feed=await fetchTeamSchedule(id,season,fetchFn);
+      for(const ev of feed.events){
+        const parsed=parseTeamScheduleEvent(ev,season);
         if(!parsed)continue;
         const row=parsed.row;
         if(String(row[4])!==String(id)&&String(row[5])!==String(id))continue;
@@ -1243,5 +1323,5 @@ export const DATA_PIPELINE=(()=>{
     return {skipped:'unknown-cron'};
   }
 
-  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,fetchGameSummary,repairUnfinishedGames,importDay,backfill,upcoming,coverage,fillMissing,repairInterrupted,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,publishedTeamSchedule,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
+  return {localDay,seasonOf,dayInSeason,shiftDay,scoreboardUrls,groupsForDay,parseEvent,fetchScoreboard,fetchGameSummary,repairUnfinishedGames,teamScheduleUrls,fetchTeamSchedule,parseTeamScheduleEvent,importTeamSchedule,fillSparseTeamSchedules,importDay,backfill,upcoming,coverage,fillMissing,repairInterrupted,status,records,netRanks,activeRankings,syncPreliminaryTorvik,recentGames,gamesByDate,apPoll,syncAPPoll,parseOfficialAP,programHistory,historicalLeaders,backfillHistory,priorityPostseason,reconcileNCAA2026,historicalProgress,programGames,publishedTeamSchedule,saveNet,parseArchivedNet,syncArchivedNet,backfillArchivedNet,syncHistoricalConference,backfillHistoricalConferences,venueFor,parseNCAANet,fetchOfficialNet,seasonQuadrants,quadrant,isQ1A,scheduled};
 })();

@@ -134,6 +134,7 @@ const DATA_PIPELINE=(()=>{
     await q(env,`INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status)
       VALUES(?,'detail-repair',?,?,?,'running')`,runId,season,today,'espn-game-summary').run();
     let matched=0,changed=0,failed=0;
+    const failureSamples=[];
     for(let i=0;i<selected.length;i+=4){
       await Promise.all(selected.slice(i,i+4).map(async row=>{
         try{
@@ -152,7 +153,7 @@ const DATA_PIPELINE=(()=>{
               }
             }
           }
-        }catch(e){failed++;}
+        }catch(e){failed++;if(failureSamples.length<4)failureSamples.push(String(e?.message||e).slice(0,100));}
         // Record the check even on a temporary provider failure, so the next
         // run checks other stale fixtures instead of hammering one event.
         await q(env,'UPDATE cbb_games SET fetched_at=unixepoch() WHERE game_id=?',row.game_id).run();
@@ -160,8 +161,8 @@ const DATA_PIPELINE=(()=>{
     }
     await q(env,`UPDATE cbb_sync_runs SET status='ok',received=?,matched=?,changed=?,
       error_text=?,finished_at=unixepoch() WHERE id=?`,
-      selected.length,matched,changed,failed?failed+' game detail requests unavailable':null,runId).run();
-    return {checked:selected.length,matched,changed,failed};
+      selected.length,matched,changed,failed?failed+' game detail requests unavailable: '+failureSamples.join(' | '):null,runId).run();
+    return {checked:selected.length,matched,changed,failed,failureSamples};
   }
   async function importDay(env,season,day,options={}){
     if(!dayInSeason(season,day))throw new Error('Date is outside the selected season.');

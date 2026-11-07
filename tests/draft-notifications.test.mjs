@@ -59,59 +59,60 @@ function fixture(picks=0,overrides={}){
 function locate(rows,kind,slot){return rows.filter(n=>n.kind===kind&&n.reference_id===(kind==='draft_soon'?'soon:':'turn:')+slot);}
 function pushes(){globalThis.__draftTestPushes=[];return globalThis.__draftTestPushes;}
 
-test('3RR draft sends on-clock and one-pick-away pushes to the correct round 3 managers',async()=>{
-  const sent=pushes(),f=fixture(10); // 11th overall: first pick of reversed round 3
+test('3RR sends only on-clock push to the correct manager in round three',async()=>{
+  const sent=pushes(),f=fixture(10); // #11 is E, first pick of reversed round 3
   await f.engine.reconcileDraft();
   assert.deepEqual(locate(f.notifications,'draft_turn',11).map(n=>n.user_id),['e']);
-  assert.deepEqual(locate(f.notifications,'draft_soon',12).map(n=>n.user_id),['d']);
-  assert.match(locate(f.notifications,'draft_soon',12)[0].title,/up next/i);
-  assert.equal(sent.length,2,'Both alerts should be passed to the web-push transport');
-  assert.deepEqual(sent.map(call=>call[1].endpoint),['https://push.test/e','https://push.test/d']);
+  assert.equal(f.notifications.filter(n=>n.kind==='draft_soon').length,0);
+  assert.equal(sent.length,1,'Only the on-clock notification should be pushed');
+  assert.equal(sent[0][1].endpoint,'https://push.test/e');
   await f.engine.reconcileDraft();
-  assert.equal(sent.length,2,'Reconciliation must not send duplicate pushes');
-  assert.equal(f.outbox.size,2);
+  assert.equal(sent.length,1,'Rechecking the same turn must not resend an alert');
+  assert.equal(f.outbox.size,1);
   assert.ok([...f.outbox.values()].every(x=>x.processed));
 });
 
-test('3RR round 3/4 turnaround skips redundant soon alerts during back-to-back picks',async()=>{
+test('3RR round three/four reversal targets the correct on-clock manager',async()=>{
   pushes();
   const f=fixture(14);
-  await f.engine.reconcileDraft(); // #15 A; #16 A, also A
+  await f.engine.reconcileDraft(); // #15 A
   assert.deepEqual(locate(f.notifications,'draft_turn',15).map(n=>n.user_id),['a']);
-  assert.equal(locate(f.notifications,'draft_soon',16).length,0);
   f.state.picks=15;
-  await f.engine.reconcileDraft(); // #16 A; #17 B
+  await f.engine.reconcileDraft(); // #16 A; first pick of round 4
   assert.deepEqual(locate(f.notifications,'draft_turn',16).map(n=>n.user_id),['a']);
-  assert.deepEqual(locate(f.notifications,'draft_soon',17).map(n=>n.user_id),['b']);
+  f.state.picks=16;
+  await f.engine.reconcileDraft(); // #17 B
+  assert.deepEqual(locate(f.notifications,'draft_turn',17).map(n=>n.user_id),['b']);
+  assert.equal(f.notifications.some(n=>n.kind==='draft_soon'),false);
 });
 
-test('current live draft slot 18 alerts #19, not #20, and honors traded pick owners',async()=>{
+test('traded draft pick belongs to its current owner and never generates advance alerts',async()=>{
   const sent=pushes(),f=fixture(17,{18:'a',19:'e'});
   await f.engine.reconcileDraft();
   assert.deepEqual(locate(f.notifications,'draft_turn',18).map(n=>n.user_id),['a']);
-  assert.deepEqual(locate(f.notifications,'draft_soon',19).map(n=>n.user_id),['e']);
-  assert.equal(f.notifications.some(n=>n.reference_id==='soon:20'),false);
-  assert.deepEqual(sent.map(call=>call[1].endpoint),['https://push.test/a','https://push.test/e']);
+  assert.equal(f.notifications.length,1);
+  assert.deepEqual(sent.map(call=>call[1].endpoint),['https://push.test/a']);
 });
 
-test('successful draft pick triggers immediate alerts, and paused drafts suppress alerts',async()=>{
+test('successful draft picks trigger immediate on-clock alerts; paused drafts do not',async()=>{
   pushes();
   const f=fixture(17);
   await f.engine.onMutation('draft/pick',{id:'c',display_name:'C'}, {},
     {clone:()=>({json:async()=>({overall:17})})});
   assert.deepEqual(locate(f.notifications,'draft_turn',18).map(n=>n.user_id),['c']);
-  assert.deepEqual(locate(f.notifications,'draft_soon',19).map(n=>n.user_id),['d']);
+  assert.equal(f.notifications.some(n=>n.kind==='draft_soon'),false);
   f.state.picks=18;
   f.state.status='paused';
   await f.engine.reconcileDraft();
   assert.equal(locate(f.notifications,'draft_turn',19).length,0);
 });
 
-test('scheduled reconciliation remains connected to the API entrypoint',()=>{
+test('scheduled data sync cannot create a new draft notification',()=>{
   const entry=readFileSync(new URL('../supabase/functions/boek-api/index.ts',import.meta.url),'utf8');
   const server=readFileSync(new URL('../supabase/functions/boek-api/server.js',import.meta.url),'utf8');
-  assert.match(entry,/notificationEngine\.reconcileDraft\(\)/);
+  assert.doesNotMatch(entry,/notificationEngine\.reconcileDraft\(\)/);
   assert.match(entry,/notificationEngine\.flush\(12\)/);
+  assert.doesNotMatch(source,/emit\(soonOwner,'draft_soon'/);
   const master=server.match(/const reversedDraftRound=round=>[^;]+;/)?.[0];
   assert.ok(master,'Authoritative 3RR ordering must be present');
   assert.ok(source.includes(master),'Notifications must use the exact authoritative 3RR round-direction rule');

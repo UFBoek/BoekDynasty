@@ -214,11 +214,15 @@ test('full ESPN team schedule is fetched from alternate host with year validatio
     competitions:[{...structuredClone(game.competitions[0]),status:structuredClone(game.status)}]
   }));
   const calls=[];
-  const feed=await pipeline.fetchTeamSchedule('2272','2026-27',async url=>{
+  const backendSource=readFileSync(new URL('../supabase/functions/boek-api/results.js',import.meta.url),'utf8')
+    .replace(/^import .*;\\n/gm,'').replace('export const DATA_PIPELINE=','const DATA_PIPELINE=');
+  const backend=new Function('PROGRAM_DIRECTORY','NET_NAME_CROSSWALK','HISTORICAL_CONFERENCE_CHAMPIONS',
+    backendSource+'\\nreturn DATA_PIPELINE;')(programs,crosswalk,historicalConferences);
+  const feed=await backend.fetchTeamSchedule('2272','2026-27',async url=>{
     calls.push(url);
     return {ok:true,json:async()=>({season:{year:2027},events:teams})};
   });
   assert.equal(feed.events.length,32);
-  assert.match(calls[0],/site\\.web\\.api\\.espn\\.com/);
-  assert.equal(pipeline.parseTeamScheduleEvent(teams[0],'2026-27').row[14],2);
+  assert.match(calls[0],/site[.]web[.]api[.]espn[.]com/);
+  assert.equal(backend.parseTeamScheduleEvent(teams[0],'2026-27').row[14],2);
 });

@@ -1057,7 +1057,6 @@
         :list.length?'<div class="daily-board-content">'+groupedGames+'</div>'
         :'<div class="daily-empty"><strong>'+(resultsLoading?'Loading games…':'No games match these filters')+'</strong><p>'+
           (resultsScope==='mine'?'Draft a school to see its matchups here.':
-            resultsScope==='queue'?'Add schools to your draft queue to follow their games here.':
             'Try another date, conference or school search.')+'</p>'+ 
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
@@ -2615,6 +2614,7 @@
     const leaderTotal=hasPoints?Math.max(...users.map(valueOf)):0;
     const fmtPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
     const leader=hasPoints?users[0]:null;
+    const leaderMargin=leader&&users.length>1?Math.max(0,valueOf(users[0])-valueOf(users[1])):0;
     const ownerCount=owners().length;
     const countedAcrossLeague=users.reduce((sum,u)=>sum+Number(scoreIndex.get(String(u.id))?.counted_programs||0),0);
     const sourceLabel=scoring?.quadrant_source==='net'?'NCAA NET':

@@ -3111,7 +3111,7 @@
   }
   function notificationAdminPage(){
     const d=notificationAdmin||{},cfg=d.settings||{};
-    const controls=[['trades','Trade alerts','Offers, acceptances and declines'],['draft','Draft alerts','Draft start, on-clock and soon-up notifications'],['announcements','Commissioner announcements','League-wide messages']];
+    const controls=[['trades','Trade alerts','Offers, acceptances and declines'],['draft','Draft alerts','Draft start, on-clock and completion notifications'],['announcements','Commissioner announcements','League-wide messages']];
     const opts=controls.map(([key,title,detail])=>'<label class="notification-admin-toggle"><span><strong>'+title+'</strong><small>'+detail+'</small></span>'
       +'<input id="admin-notification-'+key+'" type="checkbox" '+(cfg[key]!==false?'checked':'')+'/></label>').join('');
     const recipientOptions=members().map(m=>'<option value="'+escapeHTML(m.id)+'">'+escapeHTML(m.display_name)+'</option>').join('');

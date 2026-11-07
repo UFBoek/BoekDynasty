@@ -123,6 +123,7 @@ test('historical backfill advances all five seasons rather than starving older y
   const env={DB:{
     prepare(sql){return {bind(){return {
       all:async()=>({results:[]}),
+      first:async()=>({n:0}),
       run:async()=>({meta:{changes:1}})
     };}}},
     batch:async statements=>statements.map(()=>({meta:{changes:1}}))

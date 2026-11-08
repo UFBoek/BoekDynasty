@@ -111,9 +111,9 @@ test('Power Conferences appears immediately after Mid-Major in all conference-ba
 test('Mid-Major remains available in every conference-based menu',()=>{
   assert.match(source,/conferenceButton\(MID_MAJOR_FILTER,'Mid-Major'\)/);
   assert.match(source,/chip\(MID_MAJOR_FILTER,'Mid-Major'\)/);
-  assert.match(source,/midMajorOption\(conference\)\+conferences/);
-  assert.match(source,/midMajorOption\(draftConference\)\+confOptions/);
-  assert.match(source,/midMajorOption\(poolConferenceFilter\)\+filterOptions/);
+  assert.match(source,/midMajorOption\(conference\)\+powerOption\(conference\)\+conferences/);
+  assert.match(source,/midMajorOption\(draftConference\)\+powerOption\(draftConference\)\+confOptions/);
+  assert.match(source,/midMajorOption\(poolConferenceFilter\)\+powerOption\(poolConferenceFilter\)\+filterOptions/);
   assert.match(source,/matchesConferenceFilter\(homeConf,resultsConference,g.home_id\)/);
   assert.match(source,/matchesConferenceFilter\(card.dataset.conference,draftConference\)/);
   assert.match(source,/matchesConferenceFilter\(card.dataset.conference,programConference\)/);

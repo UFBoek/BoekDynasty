@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/client.js',import.meta.url),'utf8');
 const end='  try{\n    setInterval(updateDraftClock,1000);\n    Promise.resolve(boot()).catch(startupFailure);\n  }catch(e){startupFailure(e);}\n})();';
 assert.ok(source.includes(end),'Client startup hook should remain stable');
-const stub='  return {matchesConferenceFilter,isMidMajorMenuConference,eligibleConferenceIds,conferenceMenuGroups,midMajorConferenceIds,conferenceGroups,midMajorOption,rankingTools,rankingEligible,poolVisible,programsPage,setLeague:v=>{league=v;poolDraftConfs=null;poolDraftSchools=null;}};\n})();';
+const stub='  return {matchesConferenceFilter,isMidMajorMenuConference,eligibleConferenceIds,conferenceMenuGroups,midMajorConferenceIds,powerConferenceIds,conferenceGroups,midMajorOption,powerOption,rankingTools,rankingEligible,poolVisible,programsPage,setLeague:v=>{league=v;poolDraftConfs=null;poolDraftSchools=null;}};\n})();';
 const root={innerHTML:'',addEventListener(){},querySelector(){return null;},querySelectorAll(){return [];}};
 const document={querySelector:q=>q==='#app'?root:null,querySelectorAll:()=>[],activeElement:null};
 const api=new Function('document','window','navigator','location','URLSearchParams',
@@ -23,6 +23,14 @@ test('the Mid-Major category includes all non-major conferences',()=>{
     assert.equal(api.matchesConferenceFilter(id,'all'),true,id);
     assert.equal(api.matchesConferenceFilter(id,id),true,id);
   }
+});
+test('Power Conferences group contains exactly the ACC, Big East, Big Ten, Big 12, SEC and Pac-12',()=>{
+  assert.deepEqual(new Set(api.powerConferenceIds),new Set(majors));
+  for(const id of majors)assert.equal(api.matchesConferenceFilter(id,'power'),true,id);
+  for(const id of [...api.midMajorConferenceIds,'999'])
+    assert.equal(api.matchesConferenceFilter(id,'power'),false,id);
+  assert.equal(api.matchesConferenceFilter('2','power','duke'),true,'Individually included power schools still classify as power');
+  assert.match(api.powerOption('power'),/<option value="power" selected>Power Conferences<\/option>/);
 });
 test('A10, American, Mountain West, WCC and other small conferences remain Mid-Major',()=>{
   for(const id of ['62','3','44','29','18','45','1','16','46'])
@@ -64,8 +72,11 @@ test('partially enabled conference programs appear in Mid-Major, retaining real 
   assert.equal(api.matchesConferenceFilter('62','mid-major','tulane'),true);
   assert.equal(api.rankingEligible(fixtures[6],'mid-major','all'),true);
   assert.equal(api.rankingEligible(fixtures[0],'mid-major','all'),false);
+  assert.equal(api.rankingEligible(fixtures[6],'power','all'),true);
+  assert.equal(api.rankingEligible(fixtures[4],'power','all'),false);
   const directory=api.programsPage();
   assert.match(directory,/data-act="directory-conference" data-id="mid-major"/);
+  assert.match(directory,/data-act="directory-conference" data-id="power"/);
   assert.doesNotMatch(directory,/data-act="directory-conference" data-id="2"/);
   assert.doesNotMatch(directory,/data-act="directory-conference" data-id="45"/);
   assert.match(directory,/ACC/);
@@ -75,6 +86,7 @@ test('partially enabled conference programs appear in Mid-Major, retaining real 
 test('historical rankings and ratings offer only the fully included conferences and Mid-Major',()=>{
   const options=api.rankingTools('ratings','','mid-major','all');
   assert.match(options,/<option value="mid-major" selected>Mid-Major<\/option>/);
+  assert.match(api.rankingTools('ratings','','power','all'),/<option value="power" selected>Power Conferences<\/option>/);
   assert.match(options,/Mountain West/);
   assert.match(options,/SEC/);
   assert.match(options,/Atlantic 10/);
@@ -89,6 +101,12 @@ test('commissioner school pool retains all schools and routes partial schools in
   assert.ok(groups.partial.has('45'));
   assert.ok(groups.partial.has('62'));
   assert.equal(groups.full.has('23'),true);
+});
+test('Power Conferences appears immediately after Mid-Major in all conference-based menus',()=>{
+  assert.match(source,/conferenceButton\(MID_MAJOR_FILTER,'Mid-Major'\)\+conferenceButton\(POWER_FILTER,'Power Conferences'\)/);
+  assert.match(source,/chip\(MID_MAJOR_FILTER,'Mid-Major'\)\+chip\(POWER_FILTER,'Power Conferences'\)/);
+  for(const [selection,next] of [['conference','conferences'],['draftConference','confOptions'],['poolConferenceFilter','filterOptions']])
+    assert.ok(source.includes('midMajorOption('+selection+')+powerOption('+selection+')+'+next));
 });
 test('Mid-Major remains available in every conference-based menu',()=>{
   assert.match(source,/conferenceButton\(MID_MAJOR_FILTER,'Mid-Major'\)/);

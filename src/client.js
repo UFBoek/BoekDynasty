@@ -62,6 +62,8 @@
   // Mid-Major includes all non-major conference groups; the Pac-12 remains a separate
   // major-conference filter consistent with the existing conference selector.
   const MID_MAJOR_FILTER='mid-major';
+  const POWER_FILTER='power';
+  const powerConferenceIds=new Set(conferenceGroups[0].ids);
   const midMajorConferenceIds=new Set(conferenceGroups.slice(1).flatMap(group=>group.ids));
   // A conference gets its own tab only when every school in the directory is
   // eligible. Conferences with individual inclusions appear under Mid-Major.
@@ -91,11 +93,15 @@
       (groups.partial.has(key)&&(schoolId===null||groups.eligibleIds.has(String(schoolId))));
   };
   const matchesConferenceFilter=(conferenceId,filter,schoolId=null)=>
-    filter==='all'||(filter===MID_MAJOR_FILTER
-      ?isMidMajorMenuConference(conferenceId,schoolId)
-      :String(conferenceId)===String(filter));
+    filter==='all'||(filter===POWER_FILTER
+      ?powerConferenceIds.has(String(conferenceId))
+      :filter===MID_MAJOR_FILTER
+        ?isMidMajorMenuConference(conferenceId,schoolId)
+        :String(conferenceId)===String(filter));
   const midMajorOption=selected=>'<option value="'+MID_MAJOR_FILTER+'"'+
     (selected===MID_MAJOR_FILTER?' selected':'')+'>Mid-Major</option>';
+  const powerOption=selected=>'<option value="'+POWER_FILTER+'"'+
+    (selected===POWER_FILTER?' selected':'')+'>Power Conferences</option>';
   let me=null, league=null, current='home', authMode='login', status={}, selectedInvite=new URLSearchParams(location.search).get('invite')||'';
   let standingsData=null,standingsLoading=false,standingsFetchedAt=0,standingsError='';
   let leagueExpandedManager='';
@@ -1059,7 +1065,7 @@
         statusButton('upcoming','Upcoming',statusCounts.upcoming)+statusButton('final','Final',statusCounts.final)+
         '</div>'+(clearable?'<button type="button" class="daily-clear-filter" data-act="results-clear-filters">Clear filters</button>':'')+'</div>'
       +'<div class="daily-conference-bar"><span>CONFERENCE</span><div class="daily-conference-tabs" role="group" aria-label="Filter by conference">'+
-        conferenceButton('all','All')+conferenceButton(MID_MAJOR_FILTER,'Mid-Major')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div></div>'
+        conferenceButton('all','All')+conferenceButton(MID_MAJOR_FILTER,'Mid-Major')+conferenceButton(POWER_FILTER,'Power Conferences')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div></div>'
       +'<div class="daily-day-header"><div><span>DAILY SCOREBOARD</span><h2>'+
         formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</h2></div><small>'+
         (resultsLoading?'Updating…':visible.length+' of '+list.length+' games')+'</small></div>'
@@ -1619,7 +1625,7 @@
       .map(id=>'<option value="'+escapeHTML(id)+'" '+(String(conference)===String(id)?'selected':'')+'>'+escapeHTML(conf(id))+'</option>').join('');
     return '<div class="rank-tools" role="search">'
       +'<label class="rank-search"><span class="rank-search-icon" aria-hidden="true">⌕</span><input id="'+prefix+'-search" type="search" value="'+escapeHTML(query)+'" placeholder="Search schools..." autocomplete="off" aria-label="Search ranked schools" /></label>'
-      +'<label class="rank-conference-select"><span class="sr-only">Conference</span><select id="'+prefix+'-conference" aria-label="Filter by conference"><option value="all">All conferences</option>'+midMajorOption(conference)+conferences+'</select></label>'
+      +'<label class="rank-conference-select"><span class="sr-only">Conference</span><select id="'+prefix+'-conference" aria-label="Filter by conference"><option value="all">All conferences</option>'+midMajorOption(conference)+powerOption(conference)+conferences+'</select></label>'
       +'<div class="rank-scope" role="group" aria-label="Filter by roster status">'+scopeButtons+'</div>'
       +'</div>';
   }
@@ -1823,7 +1829,7 @@
     eligible.sort(sorters[programSort]||sorters.name);
     const historyIndex=draftHistoricalIndex();
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
-    const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')
+    const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')+chip(POWER_FILTER,'Power Conferences')
       +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
@@ -2329,7 +2335,7 @@
       +'<p>Compare rankings, review history and make your pick.</p></div><strong class="draft-available-count">'+available.length+' <span>LEFT</span></strong></div>'
       +'<div class="draft-pool-toolbar"><label class="draft-pool-search"><span aria-hidden="true">'+iconSVG('search')+'</span>'
       +'<input type="search" id="draft-pool-search" aria-label="Find an available school" placeholder="Search schools or conferences..." autocomplete="off" value="'+escapeHTML(draftQuery)+'"/></label>'
-      +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+confOptions+'</select></label>'
+      +'<label class="draft-pool-conference"><span class="sr-only">Filter by conference</span><select id="draft-pool-conference" aria-label="Draft pool conference"><option value="all">All conferences</option>'+midMajorOption(draftConference)+powerOption(draftConference)+confOptions+'</select></label>'
       +'<div class="draft-pool-tabs" role="group" aria-label="Sort available schools">'+sortButton('power','Bart Torvik')+sortButton('history','Last 5 Years')+sortButton('cost','2026 Roster $')+'</div></div>'
       +(draftSort==='cost'
         ?'<div class="draft-pool-history-note draft-pool-cost-disclosure"><span><b>2026–27 roster spending estimates</b> · Showing reported spending tiers when available. Schools supported only by an independent model display N/A instead of a spending estimate. CBS $20M+ schools are shown as a tier, not individually estimated amounts. Published tiers are not audited payrolls. <a href="https://www.cbssports.com/college-basketball/news/nil-roster-spending-value-tiers-ncaa-hoops-2026-27-season/" target="_blank" rel="noopener noreferrer">CBS Sports</a> · <a href="https://www.midmajormadness.com/general/37159/mid-majors-spend-nil-roster" target="_blank" rel="noopener noreferrer">Mid-major reporting</a> · <a href="https://myportaledge.com/nil-budgets" target="_blank" rel="noopener noreferrer">Independent model</a></span></div>'
@@ -3257,7 +3263,7 @@
         +conferenceRows+'</section>'
         +'<section class="panel pool-schools">'+panelHeading('Individual schools','Override conference selections one school at a time')
         +'<div class="pool-search-tools"><label class="pool-search"><span aria-hidden="true">⌕</span><input type="search" id="pool-search" value="'+escapeHTML(poolQuery)+'" placeholder="Search any Division I school..." autocomplete="off" aria-label="Find a school" /></label>'
-        +'<select id="pool-conf-filter" class="field" aria-label="Filter schools by conference"><option value="all">All conferences</option>'+midMajorOption(poolConferenceFilter)+filterOptions+'</select></div>'
+        +'<select id="pool-conf-filter" class="field" aria-label="Filter schools by conference"><option value="all">All conferences</option>'+midMajorOption(poolConferenceFilter)+powerOption(poolConferenceFilter)+filterOptions+'</select></div>'
         +'<div class="pool-scope" role="group" aria-label="Program selection filter">'+scopeButtons+'</div>'
         +(!locked?'<div class="pool-bulk"><span>Matching schools</span><button type="button" data-act="pool-add-visible">Include all</button><button type="button" data-act="pool-remove-visible">Exclude all</button></div>':'')
         +'<div class="pool-school-list '+(locked?'is-locked':'')+'" id="pool-school-results">'+poolSchoolRows()+'</div></section></div>'

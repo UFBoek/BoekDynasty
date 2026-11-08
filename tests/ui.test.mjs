@@ -85,6 +85,7 @@ test('Results scopes distinguish owned, personal, ranked, and eligible league sc
   assert.equal(gameCount(),2,'Owned Schools includes other managers, but excludes unowned schools');
   app.filter('mine','all');assert.equal(gameCount(),1,'My Roster includes only my programs');
   app.filter('top25','all');assert.equal(gameCount(),2,'Top 25 includes ranked teams outside the draft pool');
+  app.filter('top25','power');assert.equal(gameCount(),1,'Power filter excludes ranked teams from outside the major conferences');
   app.filter('league','all');assert.equal(gameCount(),3,'All League Schools includes eligible undrafted schools');
   app.filter('league','8');assert.equal(gameCount(),1,'Conference filters still work');
  }finally{league.ownership=oldOwnership;app.filter('owned','all');}
@@ -290,6 +291,7 @@ test('Results exposes touch-friendly conference buttons, not a select menu',()=>
   const html=app.page('results');
   assert.match(html,/class="daily-conference-tabs"/);
   assert.match(html,/data-act="results-conference"/);
+  assert.match(html,/data-id="mid-major"[^>]*>Mid-Major<\/button><button[^>]*data-id="power"[^>]*>Power Conferences<\/button>/);
   assert.doesNotMatch(html,/id="scoreboard-conference"/);
 });
 

@@ -1027,6 +1027,79 @@ export default (function makeWorker(){
       if(results[1].meta?.changes!==1)return failure('Waiver claim transfer failed; inspect the claim before retrying.',500);
       return response({ok:true});
     }
+    if(path==='admin/draft/undo-pick'){
+      const fetchLast=async env=>await q(env,`SELECT p.id,p.overall,p.round,p.program_id,p.manager_id,p.picked_at,
+        pr.name AS program_name,u.display_name AS manager_name
+        FROM picks p JOIN programs pr ON pr.id=p.program_id
+        JOIN users u ON u.id=p.manager_id
+        ORDER BY p.overall DESC LIMIT 1`).first();
+      const allowed=['live','paused','finished'];
+      if(data.preview===true){
+        const settings=await getSettings(env);
+        if(!allowed.includes(settings.draft_status))return failure('No active or completed draft selection can be undone.',409);
+        const pick=await fetchLast(env);
+        if(!pick)return failure('There are no draft selections to undo.',409);
+        const current=await q(env,'SELECT manager_id FROM program_owners WHERE program_id=?',pick.program_id).first();
+        if(current?.manager_id!==pick.manager_id)return failure('This program has changed owners and cannot safely be undone.',409);
+        return response({ok:true,preview:true,pick,will_reopen:settings.draft_status==='finished'});
+      }
+      const overall=Number(data.expected_overall),pickId=Number(data.expected_pick_id);
+      const programId=String(data.expected_program_id||'');
+      const managerId=String(data.expected_manager_id||'');
+      if(!Number.isSafeInteger(overall)||overall<1||!Number.isSafeInteger(pickId)||pickId<1||
+        !/^[A-Za-z0-9_-]{1,40}$/.test(programId)||!/^[0-9a-f-]{36}$/i.test(managerId))
+        return failure('Preview the last selection before confirming its removal.',400);
+      try{
+        const undone=await env.DB.transaction(async DB=>{
+          const tx={...env,DB};
+          // Serialize undo with picks and accepted trades.
+          await q(tx,"SELECT value FROM settings WHERE key='draft_status' FOR UPDATE").first();
+          const settings=await getSettings(tx);
+          if(!allowed.includes(settings.draft_status))throw tradeError('Undo is available only during a live, paused or just-completed draft.');
+          const last=await fetchLast(tx);
+          if(!last)throw tradeError('No draft selections remain.');
+          if(Number(last.overall)!==overall||Number(last.id)!==pickId||
+             String(last.program_id)!==programId||String(last.manager_id)!==managerId)
+            throw tradeError('The last selection has changed. Preview it again.');
+          const picked=Number((await q(tx,'SELECT count(*) AS total FROM picks').first())?.total||0);
+          if(picked!==overall)throw tradeError('Draft pick history is out of sequence. Manual review is required.');
+          const owned=await q(tx,'SELECT manager_id FROM program_owners WHERE program_id=? FOR UPDATE',programId).first();
+          if(owned?.manager_id!==managerId)
+            throw tradeError('This program has changed owners and cannot safely be undone.');
+          // Do not delete a program that is involved in a live trade offer.
+          const pending=await q(tx,`SELECT 1 FROM trade_items ti JOIN trades t ON t.id=ti.trade_id
+            WHERE ti.program_id=? AND t.status='pending' LIMIT 1`,programId).first();
+          if(pending)throw tradeError('Cancel the pending trade involving this program before undoing its pick.');
+          if(settings.draft_status==='finished'){
+            const archives=await q(tx,'SELECT 1 FROM season_archives WHERE season=? LIMIT 1',settings.current_season).first();
+            if(archives)throw tradeError('The draft has been archived and cannot be reopened.');
+            // Post-draft transfers cannot safely be rolled back as part of a pick undo.
+            const postDraftTrade=await q(tx,`SELECT 1 FROM trades
+              WHERE status='accepted' AND resolved_at>=? LIMIT 1`,Number(last.picked_at||0)).first();
+            if(postDraftTrade)throw tradeError('A trade was accepted after draft completion; undo is unavailable.');
+            const postDraftMoves=await q(tx,`SELECT 1 FROM roster_transactions
+              WHERE season=? LIMIT 1`,settings.current_season).first();
+            if(postDraftMoves)throw tradeError('Roster transactions already occurred after the draft; undo is unavailable.');
+          }
+          const removedOwner=await q(tx,'DELETE FROM program_owners WHERE program_id=? AND manager_id=?',
+            programId,managerId).run();
+          if(Number(removedOwner.meta?.changes)!==1)throw tradeError('Unable to release the drafted school. Try again.');
+          const removedPick=await q(tx,'DELETE FROM picks WHERE id=? AND overall=? AND manager_id=? AND program_id=?',
+            pickId,overall,managerId,programId).run();
+          if(Number(removedPick.meta?.changes)!==1)throw tradeError('Unable to reverse the selection. Try again.');
+          if(settings.draft_status==='finished')
+            await q(tx,"UPDATE settings SET value='live' WHERE key='draft_status'").run();
+          const nextDeadline=(settings.draft_status==='paused'||settings.draft_clock_seconds<=0)
+            ?0:timestamp()+settings.draft_clock_seconds;
+          await q(tx,"UPDATE settings SET value=? WHERE key='draft_deadline'",String(nextDeadline)).run();
+          return {...last,will_reopen:settings.draft_status==='finished'};
+        });
+        return response({ok:true,pick:undone});
+      }catch(error){
+        if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+        throw error;
+      }
+    }
     if(path==='admin/draft/auto-pick'){
       // The first request only previews the exact selection. A separate
       // transaction will re-check the manager, overall slot and program.

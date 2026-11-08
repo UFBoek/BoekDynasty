@@ -32,6 +32,7 @@ const ACTION_NAMES = {
   'admin/settings':'Updated program eligibility','admin/program':'Updated program',
   'admin/draft-control':'Changed draft status','admin/draft-order':'Updated draft order',
   'admin/draft/auto-pick':'Commissioner auto-picked the current draft selection',
+  'admin/draft/undo-pick':'Commissioner undid the latest draft selection',
   'admin/race/run':'Finalized draft order race','admin/race/reset':'Reset draft order race',
   'admin/clock':'Updated draft clock','admin/trade-settings':'Updated trade settings',
   'admin/waiver-settings':'Updated waiver settings','admin/waiver/review':'Reviewed waiver claim',
@@ -345,6 +346,7 @@ Deno.serve(async (request)=>{
   const notificationBody=actionable&&request.method==='POST'
     ?await request.clone().json().catch(()=>null):null;
   const autoPickPreview=subpath==='admin/draft/auto-pick'&&notificationBody?.preview===true;
+  const undoPickPreview=subpath==='admin/draft/undo-pick'&&notificationBody?.preview===true;
   original.pathname='/api/'+subpath;
   const forwarded=new Request(original.toString(),request);
   const response=await apiWorker.fetch(forwarded,{DB:db,FRONTEND_ORIGIN});
@@ -358,7 +360,7 @@ Deno.serve(async (request)=>{
     }
   }
   // Audit only successful, authenticated mutations. Never store request bodies, tokens or IP addresses.
-  if(request.method==='POST'&&response.ok&&!autoPickPreview){
+  if(request.method==='POST'&&response.ok&&!autoPickPreview&&!undoPickPreview){
     try{
       if(subpath==='login'||subpath==='join'||subpath==='setup'){
         const result=await response.clone().json().catch(()=>null);

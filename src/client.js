@@ -3234,6 +3234,10 @@
     }else if(adminSection==='draft'){
       if(draftOrderPreview.length!==members().length||draftOrderPreview.some(id=>!members().some(u=>u.id===id)))draftOrderPreview=order().slice();
       const orderLocked=locked||!!settings.draft_race;
+      const lastPick=picks().reduce((latest,p)=>!latest||Number(p.overall)>Number(latest.overall)?p:latest,null);
+      const lastSchool=lastPick?programs().find(p=>String(p.id)===String(lastPick.program_id)):null;
+      const lastManager=lastPick?members().find(m=>m.id===lastPick.manager_id):null;
+      const canUndo=!!lastPick&&['live','paused','finished'].includes(settings.draft_status);
       const rows=draftOrderPreview.map((id,index)=>{
         const person=members().find(u=>u.id===id);
         return '<div class="draft-order-row"><span class="draft-order-number">'+(index+1)+'</span>'+avatar(person)+'<strong class="grow">'+escapeHTML(person.display_name)+'</strong>'
@@ -3267,6 +3271,12 @@
           ?'CURRENT PICK #'+(picks().length+1)+' · '+escapeHTML(nextManager().display_name)
           :'Available only during a live draft')+'</small></div>'
         +'<button type="button" class="btn secondary" data-act="admin-auto-pick" '+(settings.draft_status!=='live'||!nextManager()?'disabled':'')+'>Auto-pick now</button></div>'
+        +'<div class="admin-undo-pick"><div><strong>Undo last selection</strong>'
+        +'<p>'+(lastPick?'Pick #'+lastPick.overall+' · '+escapeHTML(lastSchool?.name||String(lastPick.program_id))
+            +' · '+escapeHTML(lastManager?.display_name||'Unknown manager')
+            :'No draft selections have been made.')+'</p>'
+        +'<small>Removes only the latest draft pick and returns the school to the available pool.</small></div>'
+        +'<button type="button" class="btn danger" data-act="admin-undo-pick" '+(canUndo?'':'disabled')+'>Undo last selection</button></div>'
         +'</section>';
     }else if(adminSection==='programs'){
       initPoolDraft();
@@ -3893,6 +3903,25 @@
         await navigator.clipboard.writeText(inviteLink);
         notice('Invitation link copied.');
         busy=false;return;
+      }else if(act==='admin-undo-pick'){
+        if(me.role!=='commissioner')throw new Error('Commissioner access required.');
+        const preview=await api('admin/draft/undo-pick',{preview:true});
+        const selected=preview.pick;
+        if(!window.confirm('Undo the MOST RECENT draft pick?\n\n'
+          +'Pick #'+selected.overall+' · Round '+selected.round+'\n'
+          +selected.manager_name+' — '+selected.program_name+'\n\n'
+          +'This will remove the selection and return the program to the draft pool.'
+          +(preview.will_reopen?'\nThe completed draft will be reopened.':'')
+          +'\nNo earlier picks will be changed.')){busy=false;return;}
+        const result=await api('admin/draft/undo-pick',{
+          expected_overall:selected.overall,
+          expected_pick_id:selected.id,
+          expected_program_id:selected.program_id,
+          expected_manager_id:selected.manager_id
+        });
+        notice('Undid pick #'+result.pick.overall+': '+result.pick.program_name
+          +' ('+result.pick.manager_name+'). The selection is back on the clock.');
+        draftSelectedProgram='';
       }else if(act==='admin-auto-pick'){
         if(me.role!=='commissioner')throw new Error('Commissioner access required.');
         const choice=await api('admin/draft/auto-pick',{preview:true});

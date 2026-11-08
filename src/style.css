@@ -7241,3 +7241,12 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .admin-autopick small{font-size:10px;font-weight:850;letter-spacing:.5px;color:#8c654b}
 .admin-autopick .btn{flex-shrink:0}
 @media(max-width:590px){.admin-autopick{flex-direction:column;align-items:stretch;gap:13px}.admin-autopick .btn{width:100%}}
+
+/* Commissioner reversible last draft pick */
+.admin-undo-pick{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid #e7edf5;margin-top:16px;padding-top:16px}
+.admin-undo-pick>div{min-width:0}
+.admin-undo-pick strong{font-size:13px;font-weight:800;color:#173b5b}
+.admin-undo-pick p{font-size:12px;line-height:1.5;color:#354e69;margin:5px 0;font-weight:700}
+.admin-undo-pick small{font-size:10px;line-height:1.5;color:#7d8d9f}
+.admin-undo-pick .btn{flex-shrink:0}
+@media(max-width:590px){.admin-undo-pick{flex-direction:column;align-items:stretch;gap:13px}.admin-undo-pick .btn{width:100%}}

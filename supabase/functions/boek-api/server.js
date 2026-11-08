@@ -111,7 +111,7 @@ export default (function makeWorker(){
       draft_race:(()=>{try{
         const race=JSON.parse(map.draft_race||'null');
         return race&&typeof race.id==='string'&&Array.isArray(race.order)&&Array.isArray(race.lanes)?race:null;
-      }catch{return null;}})()};
+      }catch{return null;}})(),draft_expansion_open:map.draft_expansion_open==='1'};
   }
   async function setSetting(env,key,value){
     await q(env,'INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',key,String(value)).run();
@@ -329,13 +329,30 @@ export default (function makeWorker(){
       const entry=await q(env,'SELECT * FROM invites WHERE code_hash=? AND used_at IS NULL AND expires_at>?',await hash(code),timestamp()).first();
       if(!entry)return failure('This invitation is invalid, expired or already used.',403);
       const setting=await getSettings(env);
-      if(setting.draft_status!=='pending')return failure('New members cannot join after the draft has started.',409);
-      if(setting.draft_race)return failure('The draft order race is finalized. Ask the commissioner to reset it before inviting more managers.',409);
+      if(setting.draft_status!=='pending')return failure('New members cannot join while the draft is in progress.',409);
+      const num=await q(env,'SELECT count(*) AS total FROM users').first();
+      if(Number(num.total)>=setting.max_managers)return failure('This league is full ('+setting.max_managers+' managers).',409);
+      const selectedCount=Number((await q(env,'SELECT count(*) AS n FROM picks').first())?.n||0);
+      // Commissioner-approved one-seat expansion of the startup draft after its first four picks.
+      // Existing five-manager race results remain historical; sixth manager receives slot #6.
+      const expanding=setting.draft_expansion_open&&setting.max_managers===6&&Number(num.total)===5
+        &&selectedCount===4&&setting.draft_order.length===5;
+      if(setting.draft_race&&!expanding)
+        return failure('The draft order race is finalized. Ask the commissioner to reset it before inviting more managers.',409);
+      if(selectedCount>0&&!expanding)return failure('New members cannot join after the draft has started.',409);
       if((await q(env,'SELECT count(*) AS n FROM draft_pick_owners').first()).n>0)
         return failure('The draft order is locked following a pick trade.',409);
-      const num=await q(env,'SELECT count(*) AS total FROM users').first();
-      if(num.total>=setting.max_managers)return failure('This league is full ('+setting.max_managers+' managers).',409);
       const user=await createUser(env,data,'manager');
+      if(expanding){
+        const updatedOrder=[...setting.draft_order,user.id];
+        // Save the exact original race order; record the expansion separately.
+        const race=setting.draft_race?{...setting.draft_race,expansion_manager_id:user.id,expanded_order:updatedOrder}:null;
+        await env.DB.batch([
+          q(env,"UPDATE settings SET value=? WHERE key='draft_order'",JSON.stringify(updatedOrder)),
+          ...(race?[q(env,"UPDATE settings SET value=? WHERE key='draft_race'",JSON.stringify(race))]:[]),
+          q(env,"UPDATE settings SET value='0' WHERE key='draft_expansion_open'")
+        ]);
+      }
       await q(env,'UPDATE invites SET used_at=? WHERE code_hash=? AND used_at IS NULL',timestamp(),entry.code_hash).run();
       return response({user,token:await remember(env,user.id,data.remember_device!==false)});
     }
@@ -1028,6 +1045,8 @@ export default (function makeWorker(){
         if(!['pending','paused'].includes(settings.draft_status))return failure('Draft cannot start from its current state.',409);
         const users=(await q(env,'SELECT count(*) AS n FROM users').first()).n;
         if(users<2)return failure('At least two managers must join before drafting.',409);
+        if(settings.draft_expansion_open&&users<settings.max_managers)
+          return failure('The sixth manager must join before the draft can resume.',409);
         const allPrograms=(await q(env,'SELECT id,conference_id FROM programs').all()).results||[];
         const eligibleCount=allPrograms.filter(p=>eligibleProgram(p,settings)).length;
         if(eligibleCount<users*settings.rounds)return failure('Not enough eligible programs for all draft rounds. Import more schools or reduce rounds.',409);

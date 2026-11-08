@@ -128,8 +128,32 @@
   let programBackScroll=0,managerBackScroll=0;
   let programProfileTab='overview';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
-  const DRAFT_PRANK_ERROR='Error: These programs are too garbage.';
+  const DRAFT_PRANK_MESSAGES=["Error: These programs are too garbage. Are you sure you want to continue?","Are you sure? There are a lot of good programs left.","I'm trying to do you a favor. Take a look back at some of the teams that are left.","Alright man, last chance."];
   const isPrankDraftPick=id=>String(id)==='183'||String(id)==='2507';
+  let draftPrank=null;
+  function advanceDraftPrank(){
+    if(!draftPrank)return false;
+    if(draftPrank.step===DRAFT_PRANK_MESSAGES.length-1)return true;
+    draftPrank.step++;
+    return false;
+  }
+  function draftPrankDialog(){
+    if(!draftPrank)return '';
+    const school=programs().find(p=>String(p.id)===draftPrank.programId);
+    const step=draftPrank.step;
+    return '<div class="draft-prank-layer"><section class="draft-prank-dialog" role="alertdialog" aria-modal="true" aria-labelledby="draft-prank-title" aria-describedby="draft-prank-message" tabindex="-1">'
+      +'<div class="draft-prank-kicker">'+(step===0?'DRAFT ERROR':'DRAFT WARNING')+' · '+(step+1)+' OF '+DRAFT_PRANK_MESSAGES.length+'</div>'
+      +'<div class="draft-prank-team">'+escapeHTML(school?.name||'Selected program')+'</div>'
+      +'<h2 id="draft-prank-title">'+(step===0?'We have a problem.':'Still want to do this?')+'</h2>'
+      +'<p id="draft-prank-message">'+escapeHTML(DRAFT_PRANK_MESSAGES[step])+'</p>'
+      +'<div class="draft-prank-actions"><button type="button" data-act="draft-prank-cancel" class="draft-prank-cancel">Cancel</button>'
+      +'<button type="button" data-act="draft-prank-continue" class="draft-prank-continue">Continue</button></div>'
+      +'</section></div>';
+  }
+  function showDraftPrank(programId){
+    draftPrank={programId:String(programId),step:0};
+    render();root.querySelector('.draft-prank-continue')?.focus();
+  }
   let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftQueueOpen=false,draftCompareExpanded=false,draftQueueDragging='';
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
@@ -751,7 +775,7 @@
     const tradeShortcut=pendingTradeOffers?'<button type="button" class="topbar-trade-alert" data-act="tab" data-id="trades" aria-label="Review '+pendingTradeOffers+' incoming trade offer'+(pendingTradeOffers===1?'':'s')+'">'+iconSVG('trades')+'<span>'+pendingTradeOffers+' trade offer'+(pendingTradeOffers===1?'':'s')+'</span></button>':'';
     const notificationBell='<button type="button" class="topbar-bell" data-act="tab" data-id="notifications" title="Notifications" aria-label="Notifications'+(unreadNotifications?', '+unreadNotifications+' unread':'')+'">'+iconSVG('notifications')
       +(unreadNotifications?'<span class="notification-bell-count">'+unreadNotifications+'</span>':'')+'</button>';
-    root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+tradeShortcut+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'');
+    root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+tradeShortcut+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'')+(draftPrank?draftPrankDialog():'');
     if(current==='programs'&&programMode==='directory')filterPrograms();
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
@@ -3503,6 +3527,7 @@
       return;
     }
     if(act==='tab'){
+      draftPrank=null;
       if(id==='notifications')loadNotifications(true);
       globalSearchOpen=false;globalSearchQuery='';
       if(id==='programs'&&current!=='programs')ratingSeason=season();
@@ -3607,11 +3632,11 @@
     if(act==='draft-follow-live'){draftRoundView='current';render();root.querySelector('#draft-board-section')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     if(act==='draft-select'){
       if(!draftAvailable().some(p=>String(p.id)===String(id))){notice('That program is no longer available.',true);await refresh(true);return;}
-      draftSelectedProgram=String(id);render();
+      draftPrank=null;draftSelectedProgram=String(id);render();
       if(!(window.matchMedia?.('(max-width:850px)').matches))root.querySelector('.draft-pick-desk')?.scrollIntoView({behavior:'smooth',block:'nearest'});
       return;
     }
-    if(act==='draft-clear-selection'){draftSelectedProgram='';render();return;}
+    if(act==='draft-clear-selection'){draftPrank=null;draftSelectedProgram='';render();return;}
     if(act==='draft-queue-toggle'){
       prepareDraftQueue();
       const programId=String(id),index=draftWatchlist.indexOf(programId);
@@ -3868,11 +3893,31 @@
       }else if(act==='reset'){
         if(!window.confirm('Permanently erase every draft pick? This cannot be undone.')){busy=false;return;}
         await api('admin/draft-control',{mode:'reset'});notice('Draft picks reset.');
+      }else if(act==='draft-prank-cancel'){
+        draftPrank=null;render();return;
+      }else if(act==='draft-prank-continue'){
+        if(!draftPrank)return;
+        if(!advanceDraftPrank()){
+          render();root.querySelector('.draft-prank-continue')?.focus();return;
+        }
+        const programId=draftPrank.programId;
+        if(!isMyTurn()){
+          draftPrank=null;
+          throw Error('It is not currently your draft pick. Refresh the draft room.');
+        }
+        const school=draftAvailable().find(p=>String(p.id)===programId);
+        if(!school){draftPrank=null;throw Error('That program is no longer available.');}
+        try{await api('draft/pick',{program_id:programId});}
+        catch(error){draftPrank=null;throw error;}
+        draftPrank=null;draftSelectedProgram='';
+        draftWatchlist=draftWatchlist.filter(saved=>saved!==programId);
+        storeDraftQueue();current='draft';
+        notice('Pick confirmed: '+school.name+' is yours.');
       }else if(act==='draft-confirm'){
         const programId=String(id),school=draftAvailable().find(p=>String(p.id)===programId);
         if(draftSelectedProgram!==programId||!school)throw Error('Select an available program again.');
         if(!isMyTurn())throw Error('It is not currently your draft pick. Refresh the draft room.');
-        if(isPrankDraftPick(programId)){window.alert(DRAFT_PRANK_ERROR);return;}
+        if(isPrankDraftPick(programId)){showDraftPrank(programId);return;}
         await api('draft/pick',{program_id:programId});
         draftSelectedProgram='';
         draftWatchlist=draftWatchlist.filter(saved=>saved!==programId);
@@ -3881,7 +3926,7 @@
         current='draft';
       }else if(act==='pick'){
         if(!window.confirm('Draft this program? The selection is permanent until commissioner reset.')){busy=false;return;}
-        if(isPrankDraftPick(id)){window.alert(DRAFT_PRANK_ERROR);return;}
+        if(isPrankDraftPick(id)){showDraftPrank(id);return;}
         await api('draft/pick',{program_id:id});notice('Program drafted successfully.');
         draftSelectedProgram='';
         current='draft';
@@ -3951,6 +3996,9 @@
     draftQueueDragging='';clearDraftDragMarkers();
   });
   root.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&draftPrank){
+      e.preventDefault();draftPrank=null;render();return;
+    }
     if(e.key==='Escape'&&draftSelectedProgram&&current==='draft'){
       draftSelectedProgram='';render();
     }

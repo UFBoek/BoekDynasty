@@ -267,8 +267,6 @@ export default (function makeWorker(){
       const programId=String(data.program_id||'');
       const selected=(await q(env,'SELECT conference_id FROM programs WHERE id=?',programId).first());
       if(!selected || !settings.conferences.includes(selected.conference_id))return failure('This program is not eligible.',400);
-      // Allow normal preview, but reject these picks before any draft state is modified.
-      if(programId==='183'||programId==='2507')return failure('Error: These programs are too garbage.',409);
       await q(env,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',count+1,roundIndex+1,user.id,programId).run();
       if(count+1===users.length*settings.rounds){
         await env.DB.batch([q(env,"UPDATE settings SET value='finished' WHERE key='draft_status'"),q(env,"INSERT INTO settings(key,value) VALUES('draft_deadline','0') ON CONFLICT(key) DO UPDATE SET value='0'")]);

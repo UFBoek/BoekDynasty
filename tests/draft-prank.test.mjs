@@ -29,7 +29,7 @@ test('Four messages appear in the specified order, and only the fourth Continue 
       assert.match(html,/role="alertdialog"/);
       assert.match(html,/data-act="draft-prank-cancel"/);
       assert.match(html,/data-act="draft-prank-continue"/);
-      assert.ok(html.includes(app.steps[stage].replaceAll('&#39;',"'")));
+      assert.ok(html.includes(app.steps[stage].replaceAll("'",'&#39;')));
       assert.equal(app.next(),stage===3);
     }
   }
@@ -37,23 +37,23 @@ test('Four messages appear in the specified order, and only the fourth Continue 
 
 test('Pre-confirmation selection and queueing remain completely normal',()=>{
   const select=client.slice(client.indexOf("    if(act==='draft-select'){"),client.indexOf("    if(act==='draft-clear-selection')"));
-  assert.match(select,/draftSelectedProgram=String\\(id\\);render\\(\\);/);
+  assert.match(select,/draftSelectedProgram=String\(id\);render\(\);/);
   assert.doesNotMatch(select,/showDraftPrank|DRAFT_PRANK_MESSAGES/);
   const primary=client.slice(client.indexOf("}else if(act==='draft-confirm'){"),client.indexOf("}else if(act==='pick'){"));
-  assert.match(primary,/showDraftPrank\\(programId\\)/);
+  assert.match(primary,/showDraftPrank\(programId\)/);
   assert.ok(primary.indexOf('showDraftPrank(programId)')<primary.indexOf("await api('draft/pick'"));
   const other=client.slice(client.indexOf("}else if(act==='pick'){"),client.indexOf("}else if(act==='sync'){"));
   assert.ok(other.indexOf('showDraftPrank(id)')>other.indexOf('window.confirm('));
   const continueFlow=client.slice(client.indexOf("}else if(act==='draft-prank-continue'){"),client.indexOf("}else if(act==='draft-confirm'){"));
   assert.ok(continueFlow.indexOf('advanceDraftPrank()')<continueFlow.indexOf("await api('draft/pick'"));
-  assert.match(continueFlow,/if\\(!advanceDraftPrank\\(\\)\\)/);
-  assert.match(css,/\\.draft-prank-layer/);
+  assert.match(continueFlow,/if\(!advanceDraftPrank\(\)\)/);
+  assert.match(css,/\.draft-prank-layer/);
 });
 
 test('Both APIs allow Syracuse and Providence to be drafted after the full warning sequence',()=>{
   for(const source of [edge,worker]){
     const route=source.slice(source.indexOf("if(path==='draft/pick'){"));
-    assert.doesNotMatch(route,/if\\(programId==='183'\\|\\|programId==='2507'\\)/);
+    assert.doesNotMatch(route,/if\(programId==='183'\|\|programId==='2507'\)/);
     assert.match(route,/INSERT INTO picks/);
   }
 });

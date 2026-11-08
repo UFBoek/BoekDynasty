@@ -7232,3 +7232,12 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(prefers-reduced-motion:reduce){
  .topbar-trade-alert,.tm-v4 .tm-frontoffice>button,.txn-workspace .txn-link{transition:none}
 }
+
+/* Commissioner live-draft auto-pick */
+.admin-autopick{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid #e7edf5;margin-top:17px;padding-top:17px}
+.admin-autopick>div{min-width:0}
+.admin-autopick strong{font-size:13px;color:#173b5b;font-weight:800}
+.admin-autopick p{font-size:12px;line-height:1.55;color:#64758b;margin:5px 0}
+.admin-autopick small{font-size:10px;font-weight:850;letter-spacing:.5px;color:#8c654b}
+.admin-autopick .btn{flex-shrink:0}
+@media(max-width:590px){.admin-autopick{flex-direction:column;align-items:stretch;gap:13px}.admin-autopick .btn{width:100%}}

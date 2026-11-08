@@ -3260,7 +3260,14 @@
         +'<button class="btn" data-act="start" '+(settings.draft_status==='live'||settings.draft_status==='finished'?'disabled':'')+'>Start / resume</button>'
         +'<button class="btn secondary" data-act="pause" '+(settings.draft_status!=='live'?'disabled':'')+'>Pause draft</button>'
         +'<button class="btn danger" data-act="reset" '+(settings.draft_status==='finished'?'disabled':'')+'>Reset picks</button>'
-        +'</div></section>';
+        +'</div>'
+        +'<div class="admin-autopick"><div><strong>Auto-pick current selection</strong>'
+        +'<p>Uses the on-clock manager’s first available saved queue choice. If none are available, selects the highest-ranked undrafted Bart Torvik program.</p>'
+        +'<small>'+(settings.draft_status==='live'&&nextManager()
+          ?'CURRENT PICK #'+(picks().length+1)+' · '+escapeHTML(nextManager().display_name)
+          :'Available only during a live draft')+'</small></div>'
+        +'<button type="button" class="btn secondary" data-act="admin-auto-pick" '+(settings.draft_status!=='live'||!nextManager()?'disabled':'')+'>Auto-pick now</button></div>'
+        +'</section>';
     }else if(adminSection==='programs'){
       initPoolDraft();
       const total=programs().length,selected=poolDraftSchools.size,required=members().length*Number(settings.rounds);
@@ -3886,6 +3893,23 @@
         await navigator.clipboard.writeText(inviteLink);
         notice('Invitation link copied.');
         busy=false;return;
+      }else if(act==='admin-auto-pick'){
+        if(me.role!=='commissioner')throw new Error('Commissioner access required.');
+        const choice=await api('admin/draft/auto-pick',{preview:true});
+        const source=choice.source==='queue'
+          ?'Top available program in the manager’s saved queue'
+          :'Highest available Bart Torvik program'+(choice.torvik_rank?' (#'+choice.torvik_rank+')':'');
+        if(!window.confirm('Auto-pick #'+choice.overall+' for '+choice.manager_name+'?\n\n'
+          +'Program: '+choice.program_name+'\n'+source
+          +'\n\nThis will immediately submit the pick for that manager.')){
+          busy=false;return;
+        }
+        const result=await api('admin/draft/auto-pick',{
+          expected_overall:choice.overall,
+          expected_manager_id:choice.manager_id,
+          expected_program_id:choice.program_id
+        });
+        notice('Auto-picked #'+result.overall+': '+result.program_name+' for '+result.manager_name+'.');
       }else if(act==='start'){
         await api('admin/draft-control',{mode:'start'});notice('Draft is live.');
       }else if(act==='pause'){

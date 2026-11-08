@@ -138,6 +138,41 @@ export default (function makeWorker(){
     const picked=Number((await q(env,'SELECT count(*) AS total FROM picks').first())?.total||0);
     return {ids,owners,picked,total:ids.length*settings.rounds};
   }
+  // Auto-pick uses the current pick owner, including traded picks. Only saved
+  // queue entries are considered; fall back to current-season Bart Torvik ranks.
+  async function autoPickChoice(env,settings,inv){
+    if(settings.draft_status!=='live')throw tradeError('Auto-pick is available only while the draft is live.');
+    if(!inv.ids.length||inv.picked>=inv.total)throw tradeError('The draft is already finished.');
+    const overall=inv.picked+1,managerId=currentPickOwner(overall,inv.ids,inv.owners);
+    const manager=await q(env,'SELECT id,display_name FROM users WHERE id=?',managerId).first();
+    if(!manager)throw tradeError('Current pick owner was not found.');
+    const [pool,picked,queue]=await Promise.all([
+      q(env,'SELECT id,name,conference_id FROM programs').all(),
+      q(env,'SELECT program_id FROM picks').all(),
+      q(env,'SELECT program_ids FROM draft_queues WHERE manager_id=?',managerId).first()
+    ]);
+    const used=new Set((picked.results||[]).map(p=>String(p.program_id)));
+    const available=new Map((pool.results||[])
+      .filter(s=>eligibleProgram(s,settings)&&!used.has(String(s.id)))
+      .map(s=>[String(s.id),s]));
+    let school=null,source='',rank=null;
+    for(const id of parseDraftQueue(queue).items){
+      if(available.has(id)){school=available.get(id);source='queue';break;}
+    }
+    if(!school){
+      const ranks=(await q(env,'SELECT program_id,rank FROM cbb_preliminary_rankings WHERE season=? ORDER BY rank,program_id',
+        settings.current_season).all()).results||[];
+      for(const row of ranks){
+        if(available.has(String(row.program_id))){
+          school=available.get(String(row.program_id));source='torvik';rank=Number(row.rank);break;
+        }
+      }
+    }
+    if(!school)throw tradeError('No available queued program or current Bart Torvik ranking was found.');
+    return {overall,round:Math.floor(inv.picked/inv.ids.length)+1,
+      manager_id:manager.id,manager_name:manager.display_name,
+      program_id:String(school.id),program_name:school.name,source,torvik_rank:rank};
+  }
   const parseDraftQueue=row=>{
     let items=[];
     try{items=JSON.parse(row?.program_ids||'[]');}catch(e){}
@@ -991,6 +1026,54 @@ export default (function makeWorker(){
       if(results[0].meta?.changes!==1)return failure('Claim is stale or the requested school is not available.',409);
       if(results[1].meta?.changes!==1)return failure('Waiver claim transfer failed; inspect the claim before retrying.',500);
       return response({ok:true});
+    }
+    if(path==='admin/draft/auto-pick'){
+      // The first request only previews the exact selection. A separate
+      // transaction will re-check the manager, overall slot and program.
+      if(data.preview===true){
+        try{
+          const settings=await getSettings(env),inv=await pickInventory(env,settings);
+          return response({ok:true,preview:true,...await autoPickChoice(env,settings,inv)});
+        }catch(error){
+          if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+          throw error;
+        }
+      }
+      const expectedOverall=Number(data.expected_overall);
+      const expectedManager=String(data.expected_manager_id||'');
+      const expectedProgram=String(data.expected_program_id||'');
+      if(!Number.isInteger(expectedOverall)||expectedOverall<1||
+         !/^[0-9a-f-]{36}$/i.test(expectedManager)||
+         !/^[A-Za-z0-9_-]{1,40}$/.test(expectedProgram))
+        return failure('Preview the current auto-pick and confirm it before submitting.',400);
+      try{
+        const chosen=await env.DB.transaction(async DB=>{
+          const tx={...env,DB};
+          await q(tx,"SELECT value FROM settings WHERE key='draft_status' FOR UPDATE").first();
+          const settings=await getSettings(tx),inv=await pickInventory(tx,settings);
+          const selection=await autoPickChoice(tx,settings,inv);
+          if(selection.overall!==expectedOverall||
+             selection.manager_id!==expectedManager||
+             selection.program_id!==expectedProgram)
+            throw tradeError('The current pick or auto-pick choice changed. Preview it again.');
+          await q(tx,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',
+            selection.overall,selection.round,selection.manager_id,selection.program_id).run();
+          if(selection.overall===inv.total){
+            await q(tx,"UPDATE settings SET value='finished' WHERE key='draft_status'").run();
+            await q(tx,"UPDATE settings SET value='0' WHERE key='draft_deadline'").run();
+            await q(tx,`UPDATE trades SET status='cancelled',resolved_at=unixepoch()
+              WHERE status='pending' AND EXISTS (SELECT 1 FROM draft_pick_trade_items d WHERE d.trade_id=trades.id)`).run();
+          }else if(settings.draft_clock_seconds>0)
+            await q(tx,"UPDATE settings SET value=? WHERE key='draft_deadline'",
+              String(timestamp()+settings.draft_clock_seconds)).run();
+          return selection;
+        });
+        return response({ok:true,...chosen});
+      }catch(error){
+        if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+        if(error.code==='23505')return failure('That draft slot or program was just selected. Refresh and try again.',409);
+        throw error;
+      }
     }
     if(path==='admin/clock'){
       const settings=await getSettings(env);

@@ -123,7 +123,7 @@ export function createNotificationEngine(db){
       const id=String(body.trade_id||''),trade=await db.prepare('SELECT from_manager_id,to_manager_id FROM trades WHERE id=?').bind(id).first();
       if(trade&&trade.from_manager_id===actor.id)
         await emit(trade.to_manager_id,'trade_cancelled','Trade offer cancelled',name+' cancelled a trade offer.','trades','cancel:'+id);
-    }else if(path==='draft/pick'){
+    }else if(path==='draft/pick'||path==='admin/draft/auto-pick'){
       const overall=Number((await response.clone().json())?.overall||0);
       if(overall>0)await notifyCurrentPick('pick:'+overall);
     }else if(path==='admin/draft-control'&&body.mode==='start'){

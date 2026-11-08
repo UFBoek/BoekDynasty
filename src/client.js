@@ -128,7 +128,7 @@
   let programBackScroll=0,managerBackScroll=0;
   let programProfileTab='overview';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
-  const DRAFT_PRANK_MESSAGES=["Error: These programs are too garbage. Are you sure you want to continue?","Are you sure? There are a lot of good programs left.","I'm trying to do you a favor. Take a look back at some of the teams that are left.","Alright man, last chance."];
+  const DRAFT_PRANK_MESSAGES=["Error: This program is too garbage. Are you sure you want to continue?","Are you sure? There are a lot of good programs left.","I'm trying to do you a favor. Take a look back at some of the teams that are left.","Alright man, last chance."];
   const isPrankDraftPick=id=>String(id)==='183'||String(id)==='2507';
   let draftPrank=null;
   function advanceDraftPrank(){
@@ -142,7 +142,7 @@
     const school=programs().find(p=>String(p.id)===draftPrank.programId);
     const step=draftPrank.step;
     return '<div class="draft-prank-layer"><section class="draft-prank-dialog" role="alertdialog" aria-modal="true" aria-labelledby="draft-prank-title" aria-describedby="draft-prank-message" tabindex="-1">'
-      +'<div class="draft-prank-kicker">'+(step===0?'DRAFT ERROR':'DRAFT WARNING')+' · '+(step+1)+' OF '+DRAFT_PRANK_MESSAGES.length+'</div>'
+      +'<div class="draft-prank-kicker">DRAFT ERROR</div>'
       +'<div class="draft-prank-team">'+escapeHTML(school?.name||'Selected program')+'</div>'
       +'<h2 id="draft-prank-title">'+(step===0?'We have a problem.':'Still want to do this?')+'</h2>'
       +'<p id="draft-prank-message">'+escapeHTML(DRAFT_PRANK_MESSAGES[step])+'</p>'

@@ -20,7 +20,7 @@ test('Only Syracuse and Providence get the warnings',()=>{
 });
 
 test('Four messages appear in the specified order, and only the fourth Continue permits submission',()=>{
-  assert.deepEqual(app.steps,["Error: These programs are too garbage. Are you sure you want to continue?","Are you sure? There are a lot of good programs left.","I'm trying to do you a favor. Take a look back at some of the teams that are left.","Alright man, last chance."]);
+  assert.deepEqual(app.steps,["Error: This program is too garbage. Are you sure you want to continue?","Are you sure? There are a lot of good programs left.","I'm trying to do you a favor. Take a look back at some of the teams that are left.","Alright man, last chance."]);
   for(const id of ['183','2507']){
     app.start(id);
     for(let stage=0;stage<4;stage++){

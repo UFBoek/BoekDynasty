@@ -61,16 +61,33 @@ test('best ball has its own commissioner control',()=>{
  assert.match(html,/id="bestball-count"/);
  assert.match(html,/data-act="save-bestball"/);
 });
-test('results filters are based on actual AP and conference IDs',()=>{
- const games=[
-  {game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',home_conference_id:'23',away_conference_id:'2'},
-  {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:0,away_score:0,status:'scheduled',home_conference_id:'8',away_conference_id:'7'}
- ];
- const ap=[{program_id:'57',rank:1},...Array.from({length:24},(_,i)=>({program_id:String(100+i),rank:i+2}))];
- app.results(games,ap);
- app.filter('all','all');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,2);
- app.filter('top25','all');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,1);
- app.filter('all','8');assert.equal((app.page('results').match(/class="daily-game-card /g)||[]).length,1);
+test('Results scopes distinguish owned, personal, ranked, and eligible league schools',()=>{
+ const oldOwnership=league.ownership;
+ try{
+  league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'59',manager_id:'2'}];
+  const games=[
+   {game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',home_conference_id:'23',away_conference_id:'2'},
+   {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_conference_id:'8',away_conference_id:'7'},
+   {game_id:'403',game_date:'2026-11-03',home_id:'58',away_id:'60',home_name:'Duke',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_conference_id:'2',away_conference_id:'7'},
+   {game_id:'404',game_date:'2026-11-03',home_id:'901',away_id:'902',home_name:'Outside ranked school',away_name:'Outside school',home_score:88,away_score:81,status:'final',home_conference_id:'999',away_conference_id:'999'}
+  ];
+  const ap=[{program_id:'57',rank:1},{program_id:'901',rank:2},...Array.from({length:23},(_,i)=>({program_id:String(100+i),rank:i+3}))];
+  app.results(games,ap);
+  const gameCount=()=> (app.page('results').match(/class="daily-game-card /g)||[]).length;
+  app.filter('owned','all');
+  const html=app.page('results');
+  assert.deepEqual([...html.matchAll(/data-act="results-scope" data-scope="([^"]+)"/g)].map(m=>m[1]),['owned','mine','top25','league']);
+  assert.match(html,/Owned Schools/);
+  assert.match(html,/My Roster/);
+  assert.match(html,/Top 25/);
+  assert.match(html,/All League Schools/);
+  assert.doesNotMatch(html,/data-scope="all"/);
+  assert.equal(gameCount(),2,'Owned Schools includes other managers, but excludes unowned schools');
+  app.filter('mine','all');assert.equal(gameCount(),1,'My Roster includes only my programs');
+  app.filter('top25','all');assert.equal(gameCount(),2,'Top 25 includes ranked teams outside the draft pool');
+  app.filter('league','all');assert.equal(gameCount(),3,'All League Schools includes eligible undrafted schools');
+  app.filter('league','8');assert.equal(gameCount(),1,'Conference filters still work');
+ }finally{league.ownership=oldOwnership;app.filter('owned','all');}
 });
 
 test('overview and results never display a draft-queue game view',()=>{
@@ -120,7 +137,7 @@ test('program draft, results and standings expose honest contextual visual data'
    home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',
    home_conference_id:'23',away_conference_id:'2'}];
  app.results(games,[]);
- app.filter('all','all');
+ app.filter('league','all');
  assert.match(app.page('results'),/daily-card-mine/);
  league.ownership=[];
  league.picks=[];
@@ -404,7 +421,7 @@ test('Results game center groups matchups and retains ranking, quadrant and navi
   {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_net:8,away_net:19,home_conference_id:'8',away_conference_id:'7'}
  ];
  app.results(games,[]);
- app.filter('all','all');
+ app.filter('league','all');
  const html=app.page('results');
  assert.match(html,/results-page-head/);
  assert.match(html,/daily-scoreboard-group/);

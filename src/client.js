@@ -129,7 +129,7 @@
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let integritySnapshot=null,integrityLoading=false,integrityError='',integrityFetchedAt=0,scoringAudit=null;
   let programScheduleCache={},programScheduleLoading={},programScheduleError={},programScheduleView='all';
-  let resultsSelectedDay='',resultsConference='all',resultsScope='league',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
+  let resultsSelectedDay='',resultsConference='all',resultsScope='owned',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
   let resultsLoadedDay='';
   let resultsSearch='',resultsShown=40,resultsStatusFilter='all',resultsNetDate=null,resultsRecordNote='',resultsQuadNote='',resultsRankingSource='pending',resultsRankingDate=null;
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -913,12 +913,13 @@
       ...picks().map(p=>String(p.program_id))]);
     return new Set(draftWatchlist.map(String).filter(id=>!drafted.has(id)));
   };
-  const matchScoreboardScope=(g,scope,enrolled,owned,watched,pollRanks)=>{
+  const matchScoreboardScope=(g,scope,enrolled,owned,mine,pollRanks)=>{
     const home=String(g.home_id),away=String(g.away_id);
-    if(scope==='mine')return owned.has(home)||owned.has(away);
+    if(scope==='owned')return owned.has(home)||owned.has(away);
+    if(scope==='mine')return mine.has(home)||mine.has(away);
     if(scope==='top25')return pollRanks.has(home)||pollRanks.has(away);
     if(scope==='league')return enrolled.has(home)||enrolled.has(away);
-    return true;
+    return false;
   };
   const matchScoreboardStatus=(g,filter)=>filter==='all'||
     filter==='live'&&g.status==='live'||
@@ -979,11 +980,11 @@
     const day=resultsSelectedDay||resultsToday();
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
     const enrolled=new Set(eligiblePrograms().map(p=>String(p.id)));
-    const owned=new Set(owners().filter(o=>o.manager_id===me?.id).map(o=>String(o.program_id)));
-    const watched=new Set();
+    const owned=new Set(owners().map(o=>String(o.program_id)));
+    const mine=new Set(owners().filter(o=>String(o.manager_id)===String(me?.id)).map(o=>String(o.program_id)));
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
-    const scopeButton=(id,label)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
-      '" data-act="results-scope" data-scope="'+id+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
+    const scopeButton=(id,label,description)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
+      '" data-act="results-scope" data-scope="'+id+'" title="'+escapeHTML(description)+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
     const conferenceButton=(id,label)=>'<button type="button" class="'+(resultsConference===id?'active':'')+
       '" data-act="results-conference" data-id="'+escapeHTML(id)+'" aria-pressed="'+(resultsConference===id)+'">'+escapeHTML(label)+'</button>';
     const days=Array.from({length:7},(_,i)=>{
@@ -996,7 +997,7 @@
     const query=resultsSearch.trim().toLowerCase();
     const scoped=all.filter(g=>{
       const homeConf=String(g.home_conference_id||''),awayConf=String(g.away_conference_id||'');
-      return matchScoreboardScope(g,resultsScope,enrolled,owned,watched,pollRanks)&&
+      return matchScoreboardScope(g,resultsScope,enrolled,owned,mine,pollRanks)&&
         (matchesConferenceFilter(homeConf,resultsConference,g.home_id)||matchesConferenceFilter(awayConf,resultsConference,g.away_id))&&
         (!query||((g.home_name||'')+' '+(g.away_name||'')).toLowerCase().includes(query));
     });
@@ -1009,14 +1010,14 @@
     const priority={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
     const list=scoped.filter(g=>matchScoreboardStatus(g,resultsStatusFilter))
       .sort((a,b)=>(priority[a.status]??5)-(priority[b.status]??5)||
-        Number(isScoreboardMatch(b,owned))-Number(isScoreboardMatch(a,owned))||
+        Number(isScoreboardMatch(b,mine))-Number(isScoreboardMatch(a,mine))||
         String(a.start_utc||'').localeCompare(String(b.start_utc||'')));
     const visible=list.slice(0,resultsShown);
     const totalFinal=statusCounts.final,totalLive=statusCounts.live;
     const statusButton=(id,label,count)=>'<button type="button" data-act="results-status" data-id="'+id+
       '" class="'+(resultsStatusFilter===id?'active':'')+'" aria-pressed="'+(resultsStatusFilter===id)+'">'+
       label+(count!==undefined?'<span>'+count+'</span>':'')+'</button>';
-    const clearable=resultsScope!=='league'||resultsStatusFilter!=='all'||resultsConference!=='all'||!!query;
+    const clearable=resultsScope!=='owned'||resultsStatusFilter!=='all'||resultsConference!=='all'||!!query;
     const conferenceOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)));
     const pollAvailable=resultsAP.length===25;
     const note=resultsQuadNote||'Rankings update as sources become available.';
@@ -1046,7 +1047,10 @@
       +'<div class="daily-calendar"><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
       +'<div class="daily-day-list">'+days+'</div><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
       +'<div class="daily-control-bar"><div class="daily-filter-tabs" role="group" aria-label="Games to display">'+
-        scopeButton('league','League schools')+scopeButton('mine','My roster')+scopeButton('all','All D-I')+scopeButton('top25','AP Top 25')+
+        scopeButton('owned','Owned Schools','Games involving a school owned by any manager')+
+        scopeButton('mine','My Roster','Games involving schools on your roster')+
+        scopeButton('top25','Top 25','Games featuring a team in the current AP Top 25')+
+        scopeButton('league','All League Schools','Games featuring any eligible league school')+
         '</div><div class="daily-tools"><label class="daily-search"><span aria-hidden="true">⌕</span><input id="daily-team-search" type="search" autocomplete="off" placeholder="Find a school" aria-label="Search daily games by school" value="'+escapeHTML(resultsSearch)+'"/></label>'
       +'<input type="date" id="scoreboard-date" class="field daily-picker" aria-label="Jump to a date" value="'+escapeHTML(day)+'" />'
       +'<button type="button" class="daily-today" data-act="results-today">Today</button></div></div>'
@@ -1064,7 +1068,7 @@
         ?'<div class="daily-empty"><strong>AP rankings are not available yet.</strong><p>Choose League schools or All D-I to see games while the current poll is being imported.</p></div>'
         :list.length?'<div class="daily-board-content">'+groupedGames+'</div>'
         :'<div class="daily-empty"><strong>'+(resultsLoading?'Loading games…':'No games match these filters')+'</strong><p>'+
-          (resultsScope==='mine'?'Draft a school to see its matchups here.':
+          (resultsScope==='mine'&&!mine.size?'Draft a school to see its matchups here.':
             'Try another date, conference or school search.')+'</p>'+ 
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
@@ -3480,7 +3484,7 @@
     if(act==='league-refresh'){await loadStandings(true);return;}
     if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();return;}
     if(act==='overview-today-results'){
-      resultsSelectedDay=resultsToday();resultsScope='league';resultsSearch='';resultsStatusFilter='all';resultsShown=40;
+      resultsSelectedDay=resultsToday();resultsScope='owned';resultsSearch='';resultsStatusFilter='all';resultsShown=40;
       current='results';render();loadResults();window.scrollTo({top:0,behavior:'smooth'});return;
     }
     if(act==='profile-back'){
@@ -3620,12 +3624,12 @@
     if(act==='results-today'){resultsSelectedDay=resultsToday();resultsShown=40;loadResults();return;}
     if(act==='results-scope'){
       const nextScope=button.dataset.scope;
-      if(!['league','mine','all','top25'].includes(nextScope))return;
+      if(!['owned','mine','top25','league'].includes(nextScope))return;
       resultsScope=nextScope;resultsShown=40;render();return;
     }
     if(act==='results-status'){resultsStatusFilter=id;resultsShown=40;render();return;}
     if(act==='results-clear-filters'){
-      resultsScope='league';resultsStatusFilter='all';resultsConference='all';resultsSearch='';resultsShown=40;
+      resultsScope='owned';resultsStatusFilter='all';resultsConference='all';resultsSearch='';resultsShown=40;
       render();return;
     }
     if(act==='results-conference'){resultsConference=id;resultsShown=40;render();return;}

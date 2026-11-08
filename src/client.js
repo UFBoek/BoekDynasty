@@ -128,6 +128,8 @@
   let programBackScroll=0,managerBackScroll=0;
   let programProfileTab='overview';
   let draftQuery='',draftConference='all',draftSort='power',draftScope='all',draftShown=30,draftSelectedProgram='';
+  const DRAFT_PRANK_ERROR='Error: These programs are too garbage.';
+  const isPrankDraftPick=id=>String(id)==='183'||String(id)==='2507';
   let draftWatchlist=[],draftWatchlistOwner='',draftQueueExpanded=true,draftQueueOpen=false,draftCompareExpanded=false,draftQueueDragging='';
   let draftQueueVersion=0,draftQueueDirty=false,draftQueueSaving=false,draftQueueRetryTimer=null,draftQueueSyncError=false;
   let appError='';
@@ -3870,6 +3872,7 @@
         const programId=String(id),school=draftAvailable().find(p=>String(p.id)===programId);
         if(draftSelectedProgram!==programId||!school)throw Error('Select an available program again.');
         if(!isMyTurn())throw Error('It is not currently your draft pick. Refresh the draft room.');
+        if(isPrankDraftPick(programId)){window.alert(DRAFT_PRANK_ERROR);return;}
         await api('draft/pick',{program_id:programId});
         draftSelectedProgram='';
         draftWatchlist=draftWatchlist.filter(saved=>saved!==programId);
@@ -3878,6 +3881,7 @@
         current='draft';
       }else if(act==='pick'){
         if(!window.confirm('Draft this program? The selection is permanent until commissioner reset.')){busy=false;return;}
+        if(isPrankDraftPick(id)){window.alert(DRAFT_PRANK_ERROR);return;}
         await api('draft/pick',{program_id:id});notice('Program drafted successfully.');
         draftSelectedProgram='';
         current='draft';

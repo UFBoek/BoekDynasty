@@ -454,6 +454,8 @@ export default (function makeWorker(){
           if(owner!==user.id)throw tradeError('This pick belongs to another manager.',403);
           const school=await q(tx,'SELECT id,conference_id FROM programs WHERE id=?',programId).first();
           if(!eligibleProgram(school,settings))throw tradeError('This school is not eligible.',400);
+          // Prank pick rejection occurs before pick insertion or clock changes.
+          if(programId==='183'||programId==='2507')throw tradeError('Error: These programs are too garbage.',409);
           if(await q(tx,'SELECT id FROM picks WHERE program_id=?',programId).first())throw tradeError('This school has been drafted.');
           await q(tx,'INSERT INTO picks(overall,round,manager_id,program_id) VALUES(?,?,?,?)',
             overall,Math.floor(inv.picked/inv.ids.length)+1,user.id,programId).run();

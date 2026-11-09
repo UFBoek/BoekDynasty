@@ -35,7 +35,7 @@
 .daily-day.active span,.daily-day.active strong{color:#20577f}
 .daily-day.is-today:after{content:"";position:absolute;bottom:2px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:#c9652d}
 .daily-control-bar{padding:10px 13px;gap:10px;border-top:0}
-.daily-filter-tabs{gap:2px}
+.daily-filter-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;width:min(310px,100%)}
 .daily-filter-tabs button{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 10px;font-size:11px;font-weight:750;color:#687c90;white-space:nowrap}
 .daily-filter-tabs button.active{background:transparent;border:0;border-bottom:2px solid #c66430;color:#205079}
 .daily-filter-tabs button:hover:not(.active){background:#f4f7fa}
@@ -157,8 +157,8 @@ button.daily-team-line:hover{background:#f0f5f9}
  .daily-day small{font-size:8px}
  .daily-date-arrow{width:22px;height:51px;font-size:19px}
  .daily-control-bar{padding:8px 9px}
- .daily-filter-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:0}
- .daily-filter-tabs button{font-size:10px;padding:8px 9px;flex-shrink:0;white-space:nowrap}
+ .daily-filter-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:0}
+ .daily-filter-tabs button{font-size:10px;padding:8px 9px;white-space:nowrap}
  .daily-tools{display:grid;grid-template-columns:minmax(0,1fr) 122px 45px;gap:5px}
  .daily-search{min-width:0}
  .daily-picker{width:122px}

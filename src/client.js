@@ -949,12 +949,12 @@
       ...picks().map(p=>String(p.program_id))]);
     return new Set(draftWatchlist.map(String).filter(id=>!drafted.has(id)));
   };
-  const matchScoreboardScope=(g,scope,enrolled,owned,mine,pollRanks)=>{
-    const home=String(g.home_id),away=String(g.away_id);
-    if(scope==='owned')return owned.has(home)||owned.has(away);
-    if(scope==='mine')return mine.has(home)||mine.has(away);
-    if(scope==='top25')return pollRanks.has(home)||pollRanks.has(away);
-    if(scope==='league')return enrolled.has(home)||enrolled.has(away);
+  const matchScoreboardScope=(g,scope,ownersByProgram)=>{
+    const homeOwner=ownersByProgram.get(String(g.home_id));
+    const awayOwner=ownersByProgram.get(String(g.away_id));
+    if(scope==='owned')return !!(homeOwner||awayOwner);
+    // A league owner-versus-owner matchup requires two DIFFERENT managers.
+    if(scope==='owners')return !!(homeOwner&&awayOwner&&homeOwner!==awayOwner);
     return false;
   };
   const matchScoreboardStatus=(g,filter)=>filter==='all'||
@@ -1015,8 +1015,7 @@
   function resultsPage(){
     const day=resultsSelectedDay||resultsToday();
     const pollRanks=new Map(resultsAP.map(x=>[String(x.program_id),Number(x.rank)]));
-    const enrolled=new Set(eligiblePrograms().map(p=>String(p.id)));
-    const owned=new Set(owners().map(o=>String(o.program_id)));
+    const ownersByProgram=new Map(owners().map(o=>[String(o.program_id),String(o.manager_id)]));
     const mine=new Set(owners().filter(o=>String(o.manager_id)===String(me?.id)).map(o=>String(o.program_id)));
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
     const scopeButton=(id,label,description)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
@@ -1033,7 +1032,7 @@
     const query=resultsSearch.trim().toLowerCase();
     const scoped=all.filter(g=>{
       const homeConf=String(g.home_conference_id||''),awayConf=String(g.away_conference_id||'');
-      return matchScoreboardScope(g,resultsScope,enrolled,owned,mine,pollRanks)&&
+      return matchScoreboardScope(g,resultsScope,ownersByProgram)&&
         (matchesConferenceFilter(homeConf,resultsConference,g.home_id)||matchesConferenceFilter(awayConf,resultsConference,g.away_id))&&
         (!query||((g.home_name||'')+' '+(g.away_name||'')).toLowerCase().includes(query));
     });
@@ -1055,7 +1054,6 @@
       label+(count!==undefined?'<span>'+count+'</span>':'')+'</button>';
     const clearable=resultsScope!=='owned'||resultsStatusFilter!=='all'||resultsConference!=='all'||!!query;
     const conferenceOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)));
-    const pollAvailable=resultsAP.length===25;
     const note=resultsQuadNote||'Rankings update as sources become available.';
     const groups=[
       {id:'live',name:'In progress',caption:'Live scores',rows:visible.filter(g=>g.status==='live')},
@@ -1083,10 +1081,8 @@
       +'<div class="daily-calendar"><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="-1" aria-label="Previous day">‹</button>'
       +'<div class="daily-day-list">'+days+'</div><button class="daily-date-arrow" type="button" data-act="results-shift" data-dir="1" aria-label="Next day">›</button></div>'
       +'<div class="daily-control-bar"><div class="daily-filter-tabs" role="group" aria-label="Games to display">'+
-        scopeButton('owned','Owned Schools','Games involving a school owned by any manager')+
-        scopeButton('mine','My Roster','Games involving schools on your roster')+
-        scopeButton('top25','Top 25','Games featuring a team in the current AP Top 25')+
-        scopeButton('league','All League Schools','Games featuring any eligible league school')+
+        scopeButton('owned','Owned Schools','Games involving at least one program owned by any manager')+
+        scopeButton('owners','Owner vs Owner','Games between programs owned by different league managers')+
         '</div><div class="daily-tools"><label class="daily-search"><span aria-hidden="true">⌕</span><input id="daily-team-search" type="search" autocomplete="off" placeholder="Find a school" aria-label="Search daily games by school" value="'+escapeHTML(resultsSearch)+'"/></label>'
       +'<input type="date" id="scoreboard-date" class="field daily-picker" aria-label="Jump to a date" value="'+escapeHTML(day)+'" />'
       +'<button type="button" class="daily-today" data-act="results-today">Today</button></div></div>'
@@ -1100,12 +1096,10 @@
         formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</h2></div><small>'+
         (resultsLoading?'Updating…':visible.length+' of '+list.length+' games')+'</small></div>'
       +(resultsError?'<div class="notice">'+escapeHTML(resultsError)+'</div>':'')
-      +(resultsScope==='top25'&&!pollAvailable
-        ?'<div class="daily-empty"><strong>AP rankings are not available yet.</strong><p>Choose League schools or All D-I to see games while the current poll is being imported.</p></div>'
-        :list.length?'<div class="daily-board-content">'+groupedGames+'</div>'
+      +(list.length?'<div class="daily-board-content">'+groupedGames+'</div>'
         :'<div class="daily-empty"><strong>'+(resultsLoading?'Loading games…':'No games match these filters')+'</strong><p>'+
-          (resultsScope==='mine'&&!mine.size?'Draft a school to see its matchups here.':
-            'Try another date, conference or school search.')+'</p>'+ 
+          (resultsScope==='owners'?'No games today between programs owned by different managers. Try another date or filter.':
+            'Try another date, conference or school search.')+'</p>'+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
       +'<div class="daily-footer-info"><span><strong>W–L</strong> Record through selected date</span><span><strong>NET / TOR</strong> '+(resultsRankingSource==='torvik'?'Preliminary Bart Torvik':'NCAA NET')+' ranking</span><span><strong>Q</strong> Potential quadrant win bonus</span><span>'+escapeHTML(note)+'</span></div>'
@@ -3665,7 +3659,7 @@
     if(act==='results-today'){resultsSelectedDay=resultsToday();resultsShown=40;loadResults();return;}
     if(act==='results-scope'){
       const nextScope=button.dataset.scope;
-      if(!['owned','mine','top25','league'].includes(nextScope))return;
+      if(!['owned','owners'].includes(nextScope))return;
       resultsScope=nextScope;resultsShown=40;render();return;
     }
     if(act==='results-status'){resultsStatusFilter=id;resultsShown=40;render();return;}

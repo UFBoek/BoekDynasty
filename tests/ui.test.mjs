@@ -61,33 +61,31 @@ test('best ball has its own commissioner control',()=>{
  assert.match(html,/id="bestball-count"/);
  assert.match(html,/data-act="save-bestball"/);
 });
-test('Results scopes distinguish owned, personal, ranked, and eligible league schools',()=>{
+test('Results offers only Owned Schools and Owner vs Owner, excluding self-owned matchups',()=>{
  const oldOwnership=league.ownership;
  try{
-  league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'59',manager_id:'2'}];
+  league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'59',manager_id:'2'},{program_id:'60',manager_id:'1'}];
   const games=[
    {game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',home_conference_id:'23',away_conference_id:'2'},
    {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_conference_id:'8',away_conference_id:'7'},
    {game_id:'403',game_date:'2026-11-03',home_id:'58',away_id:'60',home_name:'Duke',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_conference_id:'2',away_conference_id:'7'},
-   {game_id:'404',game_date:'2026-11-03',home_id:'901',away_id:'902',home_name:'Outside ranked school',away_name:'Outside school',home_score:88,away_score:81,status:'final',home_conference_id:'999',away_conference_id:'999'}
+   {game_id:'404',game_date:'2026-11-03',home_id:'901',away_id:'902',home_name:'Outside ranked school',away_name:'Outside school',home_score:88,away_score:81,status:'final',home_conference_id:'999',away_conference_id:'999'},
+   {game_id:'405',game_date:'2026-11-03',home_id:'57',away_id:'60',home_name:'Florida',away_name:'Michigan',home_score:65,away_score:64,status:'final',home_conference_id:'23',away_conference_id:'7'}
   ];
-  const ap=[{program_id:'57',rank:1},{program_id:'901',rank:2},...Array.from({length:23},(_,i)=>({program_id:String(100+i),rank:i+3}))];
-  app.results(games,ap);
+  app.results(games,[]);
   const gameCount=()=> (app.page('results').match(/class="daily-game-card /g)||[]).length;
   app.filter('owned','all');
   const html=app.page('results');
-  assert.deepEqual([...html.matchAll(/data-act="results-scope" data-scope="([^"]+)"/g)].map(m=>m[1]),['owned','mine','top25','league']);
+  assert.deepEqual([...html.matchAll(/data-act="results-scope" data-scope="([^"]+)"/g)].map(m=>m[1]),['owned','owners']);
   assert.match(html,/Owned Schools/);
-  assert.match(html,/My Roster/);
-  assert.match(html,/Top 25/);
-  assert.match(html,/All League Schools/);
-  assert.doesNotMatch(html,/data-scope="all"/);
-  assert.equal(gameCount(),2,'Owned Schools includes other managers, but excludes unowned schools');
-  app.filter('mine','all');assert.equal(gameCount(),1,'My Roster includes only my programs');
-  app.filter('top25','all');assert.equal(gameCount(),2,'Top 25 includes ranked teams outside the draft pool');
-  app.filter('top25','power');assert.equal(gameCount(),1,'Power filter excludes ranked teams from outside the major conferences');
-  app.filter('league','all');assert.equal(gameCount(),3,'All League Schools includes eligible undrafted schools');
-  app.filter('league','8');assert.equal(gameCount(),1,'Conference filters still work');
+  assert.match(html,/Owner vs Owner/);
+  assert.doesNotMatch(html,/My Roster|All League Schools/);
+  assert.equal(gameCount(),4,'Owned Schools includes any rostered school, even against unowned opponents');
+  app.filter('owners','all');
+  assert.equal(gameCount(),1,'Only different-manager matchups qualify');
+  assert.match(app.page('results'),/Houston/);
+  app.filter('owners','8');assert.equal(gameCount(),1,'Conference filters still work with owner matchups');
+  app.filter('owners','23');assert.equal(gameCount(),0,'Same-owner games are not counted as owner matchups');
  }finally{league.ownership=oldOwnership;app.filter('owned','all');}
 });
 

@@ -59,12 +59,15 @@
     {name:'OTHER DIVISION I',ids:['1','5','6','12','13','16','19','20','22','24','25','26','27','28','30','46']}
   ];
   // A shared conference filter across the directory, rankings, draft and daily results.
-  // Mid-Major includes all non-major conference groups; the Pac-12 remains a separate
-  // major-conference filter consistent with the existing conference selector.
+  // Mid-Major includes all non-major conferences and every Pac-12 program except
+  // Gonzaga. The Pac-12 still has its own conference filter for every member.
   const MID_MAJOR_FILTER='mid-major';
   const POWER_FILTER='power';
   const powerConferenceIds=new Set(conferenceGroups[0].ids);
   const midMajorConferenceIds=new Set(conferenceGroups.slice(1).flatMap(group=>group.ids));
+  const isPac12MidMajor=(conferenceId,schoolId)=>
+    String(conferenceId)==='21'&&schoolId!==null&&schoolId!==undefined&&
+    String(schoolId)!=='2250'; // Gonzaga's ESPN program ID
   // A conference gets its own tab only when every school in the directory is
   // eligible. Conferences with individual inclusions appear under Mid-Major.
   // This grouping is display-only: school subtitles retain their real league.
@@ -89,12 +92,13 @@
   }
   const isMidMajorMenuConference=(id,schoolId=null)=>{
     const key=String(id),groups=conferenceMenuGroups();
+    if(key==='21')return isPac12MidMajor(key,schoolId);
     return midMajorConferenceIds.has(key)||
       (groups.partial.has(key)&&(schoolId===null||groups.eligibleIds.has(String(schoolId))));
   };
   const matchesConferenceFilter=(conferenceId,filter,schoolId=null)=>
     filter==='all'||(filter===POWER_FILTER
-      ?powerConferenceIds.has(String(conferenceId))
+      ?powerConferenceIds.has(String(conferenceId))&&!isPac12MidMajor(conferenceId,schoolId)
       :filter===MID_MAJOR_FILTER
         ?isMidMajorMenuConference(conferenceId,schoolId)
         :String(conferenceId)===String(filter));
@@ -193,7 +197,7 @@
     initPoolDraft();
     const search=poolQuery.trim().toLowerCase();
     return programs().filter(p=>
-      matchesConferenceFilter(p.conference_id,poolConferenceFilter)&&
+      matchesConferenceFilter(p.conference_id,poolConferenceFilter,p.id)&&
       (poolScope==='all'||(poolScope==='included')===poolDraftSchools.has(String(p.id)))&&
       (!search||(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase().includes(search))
     ).sort((a,b)=>a.name.localeCompare(b.name));
@@ -1590,7 +1594,7 @@
       :canPick?'<button type="button" class="program-dir-pick" data-act="pick" data-id="'+escapeHTML(p.id)+'">Draft <span aria-hidden="true">↗</span></button>'
       :'<span class="program-dir-open"><i aria-hidden="true"></i>Available</span>';
     return '<div class="program-card program-directory-card '+(assignment?'is-rostered':'is-available')+'"'
-      +' data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(assignment?'owned':'available')+'"'
+      +' data-program="'+escapeHTML(p.id)+'" data-conference="'+escapeHTML(p.conference_id)+'" data-owner="'+(assignment?'owned':'available')+'"'
       +' data-manager="'+escapeHTML(assignment?.manager_id||'')+'" data-letter="'+escapeHTML(p.name[0].toUpperCase())+'"'
       +' data-search="'+escapeHTML((p.name+' '+p.abbr+' '+conf(p.conference_id)).toLowerCase())+'">'
       +'<button type="button" class="program-card-main directory-school-cell" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="View '+escapeHTML(p.name)+' profile">'
@@ -1632,7 +1636,7 @@
     Number(value).toLocaleString('en-US',{minimumFractionDigits:places,maximumFractionDigits:places});
   const rankingSearchText=p=>(p.name+' '+(p.abbr||'')+' '+conf(p.conference_id)).toLowerCase();
   function rankingEligible(p,conference,scope){
-    if(!matchesConferenceFilter(p.conference_id,conference))return false;
+    if(!matchesConferenceFilter(p.conference_id,conference,p.id))return false;
     const owned=programOwned(p.id);
     if(scope==='available')return !owned;
     if(scope==='owned')return !!owned;
@@ -1915,7 +1919,7 @@
     let found=0,visible=0;
     document.querySelectorAll('.program-card[data-search]').forEach(card=>{
       const match=card.dataset.search.includes(query)
-        &&matchesConferenceFilter(card.dataset.conference,programConference)
+        &&matchesConferenceFilter(card.dataset.conference,programConference,card.dataset.program)
         &&(programOwnership==='all'||(programOwnership==='mine'?card.dataset.manager===me.id:card.dataset.owner===programOwnership))
         &&(programLetter==='all'||card.dataset.letter===programLetter);
       if(match)found++;
@@ -2185,7 +2189,7 @@
     let total=0,visible=0;
     for(const card of cards){
       const matches=card.dataset.search.includes(query)
-        &&matchesConferenceFilter(card.dataset.conference,draftConference)
+        &&matchesConferenceFilter(card.dataset.conference,draftConference,card.dataset.program)
         &&(draftScope!=='queue'||card.dataset.queued==='1');
       if(matches)total++;
       const show=matches&&total<=draftShown;

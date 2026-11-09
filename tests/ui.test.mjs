@@ -136,7 +136,7 @@ test('program draft, results and standings expose honest contextual visual data'
    home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',
    home_conference_id:'23',away_conference_id:'2'}];
  app.results(games,[]);
- app.filter('league','all');
+ app.filter('owned','all');
  assert.match(app.page('results'),/daily-card-mine/);
  league.ownership=[];
  league.picks=[];
@@ -421,7 +421,7 @@ test('Results game center groups matchups and retains ranking, quadrant and navi
   {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_net:8,away_net:19,home_conference_id:'8',away_conference_id:'7'}
  ];
  app.results(games,[]);
- app.filter('league','all');
+ app.filter('owned','all');
  const html=app.page('results');
  assert.match(html,/results-page-head/);
  assert.match(html,/daily-scoreboard-group/);

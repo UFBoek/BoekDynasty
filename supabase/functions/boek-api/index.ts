@@ -25,7 +25,8 @@ const ACTIVITY_SECTIONS = new Set(['general','programs','draft','scoring','membe
 const ACTION_NAMES = {
   'draft/queue':'Updated draft queue','draft/pick':'Selected a draft pick',
   'trade/propose':'Proposed a program/pick trade','trade/respond':'Responded to a program/pick trade','trade/cancel':'Cancelled a trade',
-  'waiver/claim':'Submitted a waiver claim','waiver/cancel':'Cancelled a waiver claim','waiver/drop':'Dropped a program',
+  'roster/add':'Added a program','roster/drop':'Dropped a program',
+  'waiver/cancel':'Cancelled a legacy waiver claim','waiver/drop':'Dropped a program',
   'account/profile':'Updated profile','account/password':'Changed password',
   'admin/invite':'Created an invitation','admin/general':'Updated league settings',
   'admin/bestball':'Updated best-ball format','admin/scoring-settings':'Updated scoring settings',

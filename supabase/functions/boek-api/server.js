@@ -604,21 +604,46 @@ export default (function makeWorker(){
       if(!result.meta?.changes)return failure('Only the sender can cancel a pending offer.',409);
       return response({ok:true});
     }
-    if(path==='waiver/claim'){
-      const settings=await getSettings(env);
-      if(settings.draft_status!=='finished'||!settings.waivers_enabled)return failure('Waiver claims are closed.',409);
+    // Atomic, immediate, first-come-first-served roster additions.
+    if(path==='roster/add'){
       const programId=String(data.program_id||''),dropId=String(data.drop_program_id||'');
-      if(!programId||programId.length>120||dropId.length>120||programId===dropId)return failure('Choose a valid unrostered school.',400);
-      const school=await q(env,'SELECT id,conference_id FROM programs WHERE id=?',programId).first();
-      if(!eligibleProgram({id:programId,conference_id:school?.conference_id},settings))return failure('This school is not eligible for waivers.',400);
-      if(await q(env,'SELECT 1 FROM program_owners WHERE program_id=?',programId).first())return failure('This school is already rostered.',409);
-      if(dropId&&!await q(env,'SELECT 1 FROM program_owners WHERE program_id=? AND manager_id=?',dropId,user.id).first())return failure('You do not own the school selected to drop.',409);
-      const owned=(await q(env,'SELECT count(*) AS n FROM program_owners WHERE manager_id=?',user.id).first()).n;
-      if(!dropId&&owned>=settings.rounds)return failure('Your roster is full. Select a school to drop.',409);
-      if(await q(env,"SELECT 1 FROM waiver_claims WHERE manager_id=? AND program_id=? AND status='pending'",user.id,programId).first())return failure('You already have a pending claim for this school.',409);
-      const id=crypto.randomUUID();
-      await q(env,"INSERT INTO waiver_claims(id,season,manager_id,program_id,drop_program_id) VALUES(?,?,?,?,?)",id,settings.current_season,user.id,programId,dropId||null).run();
-      return response({ok:true,id});
+      if(!programId||programId.length>120||dropId.length>120||programId===dropId)
+        return failure('Choose a valid available program.',400);
+      try{
+        await env.DB.transaction(async DB=>{
+          const tx={...env,DB};
+          // Serialize against draft picks, trades and other roster moves.
+          await q(tx,"SELECT value FROM settings WHERE key='draft_status' FOR UPDATE").first();
+          const settings=await getSettings(tx);
+          if(settings.draft_status!=='finished'||!settings.waivers_enabled)
+            throw tradeError('Add / Drop is currently closed.');
+          const school=await q(tx,'SELECT id,conference_id FROM programs WHERE id=?',programId).first();
+          if(!eligibleProgram(school,settings))
+            throw tradeError('This program is not eligible for Add / Drop.',400);
+          if(await q(tx,'SELECT program_id FROM program_owners WHERE program_id=? FOR UPDATE',programId).first())
+            throw tradeError('Another manager already owns this program.');
+          const owned=(await q(tx,'SELECT program_id FROM program_owners WHERE manager_id=? ORDER BY program_id FOR UPDATE',user.id).all()).results||[];
+          if(dropId&&!owned.some(row=>row.program_id===dropId))
+            throw tradeError('You no longer own the program selected to drop.');
+          if(!dropId&&owned.length>=Number(settings.rounds))
+            throw tradeError('Your roster is full. Choose a program to drop.');
+          if(dropId){
+            const dropped=await q(tx,'DELETE FROM program_owners WHERE program_id=? AND manager_id=?',dropId,user.id).run();
+            if(dropped.meta?.changes!==1)throw tradeError('The selected drop is no longer on your roster.');
+          }
+          await q(tx,'INSERT INTO program_owners(program_id,manager_id) VALUES(?,?)',programId,user.id).run();
+          await q(tx,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) VALUES(?,?,?,?,'claim')",
+            crypto.randomUUID(),settings.current_season,user.id,programId).run();
+          if(dropId)
+            await q(tx,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) VALUES(?,?,?,?,'drop')",
+              crypto.randomUUID(),settings.current_season,user.id,dropId).run();
+        });
+        return response({ok:true});
+      }catch(error){
+        if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+        if(error.code==='23505')return failure('That program was just added by another manager. Refresh and try again.',409);
+        throw error;
+      }
     }
     if(path==='waiver/cancel'){
       const claimId=String(data.claim_id||'');
@@ -626,17 +651,26 @@ export default (function makeWorker(){
       if(result.meta?.changes!==1)return failure('This waiver claim can no longer be cancelled.',409);
       return response({ok:true});
     }
-    if(path==='waiver/drop'){
-      const settings=await getSettings(env);
-      if(settings.draft_status!=='finished'||!settings.waivers_enabled)return failure('Roster moves are closed.',409);
+    if(path==='roster/drop'||path==='waiver/drop'){
       const programId=String(data.program_id||'');
-      const id=crypto.randomUUID();
-      const moves=await env.DB.batch([
-        q(env,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) SELECT ?,?,?,program_id,'drop' FROM program_owners WHERE program_id=? AND manager_id=?",id,settings.current_season,user.id,programId,programId,user.id),
-        q(env,'DELETE FROM program_owners WHERE program_id=? AND manager_id=?',programId,user.id)
-      ]);
-      if(moves[1].meta?.changes!==1)return failure('You do not own this school.',409);
-      return response({ok:true});
+      if(!programId||programId.length>120)return failure('Choose a valid rostered program.',400);
+      try{
+        await env.DB.transaction(async DB=>{
+          const tx={...env,DB};
+          await q(tx,"SELECT value FROM settings WHERE key='draft_status' FOR UPDATE").first();
+          const settings=await getSettings(tx);
+          if(settings.draft_status!=='finished'||!settings.waivers_enabled)
+            throw tradeError('Add / Drop is currently closed.');
+          const dropped=await q(tx,'DELETE FROM program_owners WHERE program_id=? AND manager_id=?',programId,user.id).run();
+          if(dropped.meta?.changes!==1)throw tradeError('You no longer own that program.');
+          await q(tx,"INSERT INTO roster_transactions(id,season,manager_id,program_id,action) VALUES(?,?,?,?,'drop')",
+            crypto.randomUUID(),settings.current_season,user.id,programId).run();
+        });
+        return response({ok:true});
+      }catch(error){
+        if(error.tradeStatus)return failure(error.message,error.tradeStatus);
+        throw error;
+      }
     }
     if(user.role!=='commissioner')return failure('Commissioner access required.',403);
 

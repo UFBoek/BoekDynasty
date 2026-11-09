@@ -416,6 +416,9 @@ test('Schools index is a compact scouting table with full search, filter and pro
 
 
 test('Results game center groups matchups and retains ranking, quadrant and navigation',()=>{
+ const oldOwnership=league.ownership;
+ league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'59',manager_id:'2'}];
+ try{
  const games=[
   {game_id:'401',game_date:'2026-11-03',home_id:'57',away_id:'58',home_name:'Florida',away_name:'Duke',home_score:75,away_score:73,status:'final',home_net:4,away_net:12,home_quad:1,away_quad:1,home_record:{wins:1,losses:0},away_record:{wins:0,losses:1},home_conference_id:'23',away_conference_id:'2'},
   {game_id:'402',game_date:'2026-11-03',home_id:'59',away_id:'60',home_name:'Houston',away_name:'Michigan',home_score:null,away_score:null,status:'scheduled',home_net:8,away_net:19,home_conference_id:'8',away_conference_id:'7'}
@@ -433,6 +436,7 @@ test('Results game center groups matchups and retains ranking, quadrant and navi
  }
  assert.match(html,/Box score/);
  assert.equal((html.match(/class="daily-game-card /g)||[]).length,2);
+ }finally{league.ownership=oldOwnership;}
 });
 test('My Team v4 keeps scoring and actions while adding compact scouting columns',()=>{
   const oldOwnership=league.ownership,oldStatus=league.settings.draft_status;
@@ -519,6 +523,9 @@ test('League preseason never fabricates a leader or point ranking',()=>{
 });
 test('Results Game Center layout CSS covers masthead, counts, conference filters and group headers',()=>{
   const css=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
+  const previousOwnership=league.ownership;
+  league.ownership=[{program_id:'57',manager_id:'1'}];
+  try{
   const page=app.page('results');
   const selectors=['results-page-head','results-page-overline','results-summary','daily-conference-bar',
     'daily-conference-tabs','daily-board-content','daily-scoreboard-group','daily-group-heading','daily-group-count'];
@@ -530,6 +537,7 @@ test('Results Game Center layout CSS covers masthead, counts, conference filters
   assert.match(css,/\.results-summary\s*\{display:grid/);
   assert.match(css,/\.daily-results \.daily-group-heading\s*\{display:flex/);
   assert.match(css,/@media\(max-width:580px\)/);
+  }finally{league.ownership=previousOwnership;}
 });
 
 

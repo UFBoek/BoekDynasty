@@ -679,7 +679,7 @@
     ['home','League Overview','Scores, rosters and league activity'],['team','My Team','My roster and transactions'],
     ['results','Results','Daily scores and schedules'],['programs','Schools','Directory and historical scoring'],
     ['draft','Draft Room','Draft board and priority queue'],['league','Standings','Season fantasy rankings'],
-    ['trades','Trades','Offers and completed trades'],['waivers','Waivers','Claims and roster moves'],['scoring','Scoring Rules','How points are calculated'],
+    ['trades','Trades','Offers and completed trades'],['waivers','Add / Drop','Immediate roster moves'],['scoring','Scoring Rules','How points are calculated'],
     ['settings','My Settings','Profile and account preferences']
   ];
   function globalSearchResults(){
@@ -1160,7 +1160,7 @@
     const groups=[
       ['Your account',[['settings','Profile & settings','Team name, photo, colors and password'],['notifications','Notifications','Inbox, push alerts and preferences']]],
       ['League information',[['league','Standings','Current fantasy scores'],['draft-order','Draft order','Horse race and selection positions'],['scoring','Scoring rules','Point values explained'],['history','Dynasty history','Past seasons and champions']]],
-      ['League tools',[['trades','Trades','Offers and completed deals'],['waivers','Waivers','Claim or release programs'],['results','Daily results','Scores and schedules']]]
+      ['League tools',[['trades','Trades','Offers and completed deals'],['waivers','Add / Drop','Add or release programs'],['results','Daily results','Scores and schedules']]]
     ];
     if(me.role==='commissioner')groups.push(['Administration',[['commissioner','Commissioner settings','League setup and manager controls']]]);
     return heading('ACCOUNT & TOOLS','More','Find league information and account controls.')
@@ -1515,8 +1515,8 @@
       +'<div class="tm-frontoffice-title"><span>FRONT OFFICE</span><small>Transactions</small></div>'
       +'<button type="button" data-act="tab" data-id="trades">'+iconSVG('trades')+'<span>Trades</span>'
       +(incomingTrades.length?'<strong class="tm-frontoffice-badge">'+incomingTrades.length+' to review</strong>':'<span class="tm-frontoffice-sub">View offers</span>')+'</button>'
-      +'<button type="button" data-act="tab" data-id="waivers">'+iconSVG('waivers')+'<span>Waivers</span>'
-      +(pendingClaims?'<strong class="tm-frontoffice-badge neutral">'+pendingClaims+' pending</strong>':'<span class="tm-frontoffice-sub">Manage claims</span>')+'</button></nav>';
+      +'<button type="button" data-act="tab" data-id="waivers">'+iconSVG('waivers')+'<span>Add / Drop</span>'
+      +(pendingClaims?'<strong class="tm-frontoffice-badge neutral">'+pendingClaims+' pending</strong>':'<span class="tm-frontoffice-sub">Roster moves</span>')+'</button></nav>';
     const incomingPreview=latestIncoming?(()=>{
       const other=members().find(u=>u.id===latestIncoming.from_manager_id);
       const receive=tradeAssetNames(latestIncoming.id,latestIncoming.from_manager_id);
@@ -1532,9 +1532,9 @@
     const roster=teamProgramRows(owned,scoring,pointMap,{historyIndex:draftHistoricalIndex()});
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
-    const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Acquired':'Released')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
+    const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Added':'Dropped')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
     const currentPoints=managerScore&&owned.length?formatPoints(managerScore.points):scoring&&owned.length?'0':'—';
-    const pendingLabel=pendingActivity?pendingActivity+' pending '+(pendingActivity===1?'item':'items'):'Offers, claims and roster moves';
+    const pendingLabel=pendingActivity?pendingActivity+' pending '+(pendingActivity===1?'item':'items'):'Trades and roster moves';
     const seasonLabel=escapeHTML(season());
     const actions='<div class="tm-actions">'
       +(!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Draft room <span aria-hidden="true">↗</span></button>':'')
@@ -1566,17 +1566,17 @@
       +'</section>'
       +teamLeagueSwitcher(me.id)
       +'<details class="tm-transactions"><summary><span class="tm-transactions-symbol" aria-hidden="true">⇄</span>'
-      +'<span class="tm-transactions-copy"><strong>Front office <span class="tm-transactions-divider">/</span> Trades &amp; waivers</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
+      +'<span class="tm-transactions-copy"><strong>Front office <span class="tm-transactions-divider">/</span> Trades &amp; add/drop</strong><small>'+escapeHTML(pendingLabel)+'</small></span>'
       +(pendingActivity?'<span class="tm-transactions-count">'+pendingActivity+'</span>':'')
       +'<span class="tm-transactions-open">Manage <span aria-hidden="true">⌄</span></span></summary>'
       +'<div class="tm-transactions-body"><div class="team-aside"><section class="panel team-offers-panel">'
       +panelHeading('Your trades',pendingTrades+' pending · '+allOffers.length+' total')
       +(offers.length?offerCards:empty('No trades yet','Trade offers and completed deals will appear here.'))
       +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="trades">'+(canTrade?'Propose or view trades':'View trade history')+'</button></div></section>'
-      +'<section class="panel team-waivers-panel">'+panelHeading('Waiver activity',pendingClaims+' pending claims')
-      +(claims.length?waiverRows:empty('No waiver claims','Your claims and roster moves will appear here.'))
+      +'<section class="panel team-waivers-panel">'+panelHeading('Roster activity',pendingClaims+' older pending claims')
+      +(claims.length?waiverRows:empty('No roster moves yet','Additions and drops will appear here.'))
       +(transactionRows?'<h3 class="team-subhead">Recent roster moves</h3>'+transactionRows:'')
-      +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="waivers">'+(canWaive?'Manage waivers':'View waivers')+'</button></div></section>'
+      +'<div class="team-panel-footer"><button type="button" class="btn secondary small" data-act="tab" data-id="waivers">'+(canWaive?'Add or drop programs':'View roster moves')+'</button></div></section>'
       +'</div></div></details></main>';
   }
   function leaderboard(){
@@ -2591,7 +2591,7 @@
     };
     return '<main class="txn-workspace">'
       +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / TRANSACTIONS</span><h1>Trade desk</h1><p>Review offers first. Build a proposal when you are ready.</p></div>'
-      +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="waivers">'+iconSVG('waivers')+' Waivers</button>'
+      +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="waivers">'+iconSVG('waivers')+' Add / Drop</button>'
       +(ready?'<a class="txn-link txn-link-primary" href="#trade-proposal">'+iconSVG('trades')+' New trade</a>':'')+'</div></header>'
       +'<section class="txn-summary" aria-label="Trade summary"><div><strong>'+incoming.length+'</strong><span>NEEDS RESPONSE</span></div>'
       +'<div><strong>'+outgoing.length+'</strong><span>OFFERS SENT</span></div>'
@@ -2924,7 +2924,7 @@
       (selectedStats?.quadrant_provisional?'<p class="pp-data-note">Quadrant totals are provisional pending official NCAA NET rankings.</p>':'')+
       '</section>';
     const transactions=activity.map(t=>'<div class="pp-history-event"><strong>'+
-      escapeHTML(t.action==='claim'?'Acquired':'Released')+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('')+
+      escapeHTML(t.action==='claim'?'Added':'Dropped')+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('')+
       trades.map(t=>'<div class="pp-history-event"><strong>Traded</strong><span>'+
       escapeHTML(members().find(m=>m.id===t.from_manager_id)?.display_name||'Manager')+' → '+
       escapeHTML(members().find(m=>m.id===t.to_manager_id)?.display_name||'Manager')+'</span></div>').join('');
@@ -3080,37 +3080,44 @@
   function waiversPage(){
     const enabled=league.settings.waivers_enabled&&league.settings.draft_status==='finished';
     const eligible=eligiblePrograms().filter(p=>!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
-    const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
-    const claims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id)
-      .sort((a,b)=>Number(b.status==='pending')-Number(a.status==='pending')||Number(b.created_at||0)-Number(a.created_at||0));
-    const pending=claims.filter(c=>c.status==='pending').length;
+    const mine=myPrograms().slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const rosterLimit=Number(league.settings.rounds||20);
+    const transactions=(league.roster_transactions||[]).filter(t=>t.manager_id===me.id).slice(0,12);
+    const oldClaims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
+    const programName=id=>programs().find(p=>p.id===id)?.name||'Program';
     const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
-    const drop='<option value="">No drop ('+mine.length+'/'+league.settings.rounds+' owned)</option>'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
-    const claimRows=claims.map(c=>{
-      const p=programs().find(p=>p.id===c.program_id),released=programs().find(p=>p.id===c.drop_program_id);
-      return '<div class="txn-waiver-row"><span class="txn-claim-state '+(c.status==='pending'?'pending':'')+'">'+escapeHTML(c.status)+'</span>'
-        +'<span class="txn-waiver-program"><strong>'+escapeHTML(p?.name||'Program')+'</strong>'
-        +'<small>'+(released?'Drop '+escapeHTML(released.name):'No corresponding drop')+'</small></span>'
-        +(c.status==='pending'?'<button type="button" class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel claim</button>':'')+'</div>';
-    }).join('');
+    const drop='<option value="">'+(mine.length>=rosterLimit?'Select a program (roster full)':'Do not drop a program')+'</option>'
+      +mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+    const activity=transactions.map(t=>'<div class="txn-waiver-row"><span class="txn-claim-state">'+(t.action==='claim'?'ADDED':'DROPPED')+'</span>'
+      +'<span class="txn-waiver-program"><strong>'+escapeHTML(programName(t.program_id))+'</strong><small>'+escapeHTML(t.season)+'</small></span></div>').join('');
+    const previous=oldClaims.map(c=>'<div class="txn-waiver-row"><span class="txn-claim-state '+(c.status==='pending'?'pending':'')+'">'+escapeHTML(c.status)+'</span>'
+      +'<span class="txn-waiver-program"><strong>'+escapeHTML(programName(c.program_id))+'</strong><small>Previous waiver claim'+(c.drop_program_id?' · Drop '+escapeHTML(programName(c.drop_program_id)):'')+'</small></span>'
+      +(c.status==='pending'?'<button type="button" class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     return '<main class="txn-workspace txn-waivers">'
-      +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / TRANSACTIONS</span><h1>Waiver wire</h1><p>Manage claims, available programs and roster releases.</p></div>'
+      +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / ROSTER MOVES</span><h1>Add / Drop</h1>'
+      +'<p>Add available programs immediately, or release programs from your permanent roster. No claims or commissioner approvals.</p></div>'
       +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="trades">'+iconSVG('trades')+' Trade desk</button></div></header>'
-      +'<section class="txn-summary" aria-label="Waiver summary"><div><strong>'+pending+'</strong><span>PENDING CLAIMS</span></div>'
-      +'<div><strong>'+eligible.length+'</strong><span>AVAILABLE SCHOOLS</span></div><div><strong>'+mine.length+'</strong><span>YOUR ROSTER</span></div></section>'
-      +'<section class="txn-section"><div class="txn-section-head"><div><span class="txn-kicker">01 / CLAIM TRACKER</span><h2>Your claims</h2></div><small>'+claims.length+' total</small></div>'
-      +(claims.length?'<div class="txn-waiver-list">'+claimRows+'</div>':'<div class="txn-empty"><span class="txn-empty-dot" aria-hidden="true"></span><div><strong>No claims submitted</strong><p>Your submitted waiver claims and their status will appear here.</p></div></div>')+'</section>'
-      +(enabled?'<div class="txn-waiver-grid"><section class="txn-section txn-waiver-form"><div class="txn-section-head"><div><span class="txn-kicker">02 / ACQUISITIONS</span><h2>Claim a program</h2></div></div>'
+      +'<section class="txn-summary" aria-label="Roster summary"><div><strong>'+eligible.length+'</strong><span>AVAILABLE PROGRAMS</span></div>'
+      +'<div><strong>'+mine.length+' / '+rosterLimit+'</strong><span>ROSTER SLOTS USED</span></div></section>'
+      +(enabled?'<div class="txn-waiver-grid"><section class="txn-section txn-waiver-form">'
+        +'<div class="txn-section-head"><div><span class="txn-kicker">01 / ACQUIRE</span><h2>Add a program</h2></div></div>'
         +'<div class="form-row"><label for="waiver-program">Available program</label><select id="waiver-program" class="field">'+opts+'</select></div>'
-        +'<div class="form-row"><label for="waiver-drop">Drop to make room</label><select id="waiver-drop" class="field">'+drop+'</select></div>'
-        +'<div class="txn-form-foot"><p>Claims require commissioner approval.</p><button class="btn" data-act="waiver-claim" '+(!eligible.length?'disabled':'')+'>Submit claim</button></div></section>'
-        +'<section class="txn-section txn-waiver-form txn-release"><div class="txn-section-head"><div><span class="txn-kicker">03 / ROSTER MOVES</span><h2>Release a program</h2></div></div>'
-        +'<p class="txn-form-description">Drop a rostered school without submitting a claim.</p>'
-        +'<div class="form-row"><label for="waiver-release">Your programs</label><select id="waiver-release" class="field">'+mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div>'
-        +'<div class="txn-form-foot"><p>Releases free a roster spot.</p><button class="btn secondary" data-act="waiver-drop" '+(!mine.length?'disabled':'')+'>Release selected</button></div></section></div>':
-        '<section class="txn-section"><div class="txn-empty"><div><strong>Waivers are currently closed</strong><p>'
-        +(league.settings.draft_status==='finished'?'The commissioner has not enabled roster claims.':'Waivers open after the inaugural draft is completed.')
-        +'</p></div></div></section>')+'</main>';
+        +'<div class="form-row"><label for="waiver-drop">Drop a program (if needed)</label><select id="waiver-drop" class="field">'+drop+'</select></div>'
+        +'<div class="txn-form-foot"><p>'+(mine.length>=rosterLimit?'Your roster is full. Select a program to drop.':'Open roster spots can be filled without a drop.')+' Changes take effect immediately.</p>'
+        +'<button class="btn" data-act="roster-add" '+(!eligible.length?'disabled':'')+'>Add program</button></div></section>'
+        +'<section class="txn-section txn-waiver-form txn-release"><div class="txn-section-head"><div><span class="txn-kicker">02 / RELEASE</span><h2>Drop a program</h2></div></div>'
+        +'<p class="txn-form-description">Release a program without adding a replacement. Other managers can add it immediately.</p>'
+        +'<div class="form-row"><label for="waiver-release">Your programs</label><select id="waiver-release" class="field">'
+        +mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div>'
+        +'<div class="txn-form-foot"><p>Dropping a program permanently releases your rights to it.</p>'
+        +'<button class="btn secondary" data-act="roster-drop" '+(!mine.length?'disabled':'')+'>Drop program</button></div></section></div>'
+        :'<section class="txn-section"><div class="txn-empty"><div><strong>Add / Drop is currently closed</strong><p>'
+        +(league.settings.draft_status==='finished'?'The commissioner has disabled roster moves.':'Roster moves open after the inaugural draft ends.')
+        +'</p></div></div></section>')
+      +'<section class="txn-section"><div class="txn-section-head"><div><span class="txn-kicker">03 / ACTIVITY</span><h2>Recent roster moves</h2></div></div>'
+      +(activity?'<div class="txn-waiver-list">'+activity+'</div>':'<div class="txn-empty"><div><strong>No roster moves yet</strong><p>Additions and drops will appear here.</p></div></div>')+'</section>'
+      +(oldClaims.length?'<details class="txn-section"><summary>Previous waiver claims ('+oldClaims.length+')</summary><div class="txn-waiver-list">'+previous+'</div></details>':'')
+      +'</main>';
   }
 
   function backendHealthPanel(){
@@ -3198,7 +3205,7 @@
     const settings=league.settings;
     const locked=settings.draft_status!=='pending'||picks().length>0;
     const cap=Number(settings.max_managers||10);
-    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','Accounts & invites'],['activity','Activity','Visits & actions'],['notifications','Notifications','Broadcasts & delivery'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Waivers','Claims'],['seasons','Seasons','Rollover']];
+    const sections=[['general','General','League identity'],['programs','Programs','Eligibility & selection'],['draft','Draft','Rounds & order'],['scoring','Scoring','Point values'],['members','Members','Accounts & invites'],['activity','Activity','Visits & actions'],['notifications','Notifications','Broadcasts & delivery'],['data','Data','Results & imports'],['trades','Trades','Permissions'],['waivers','Add / Drop','Roster moves'],['seasons','Seasons','Rollover']];
     const menu='<nav class="commissioner-menu" aria-label="Commissioner sections">'+sections.map(([id,label,detail])=>
       '<button data-act="commish-section" data-id="'+id+'" type="button" class="'+(adminSection===id?'active':'')+'"><strong>'+label+'</strong><span>'+detail+'</span></button>'
     ).join('')+'</nav>';
@@ -3391,10 +3398,10 @@
         const drop=programs().find(p=>p.id===c.drop_program_id);
         return '<div class="claim-review"><div class="grow"><strong>'+escapeHTML(p?.name||'Program')+'</strong><small>'+escapeHTML(u?.display_name||'Manager')+(drop?' · Drops '+escapeHTML(drop.name):'')+'</small></div><div class="button-row"><button class="btn small" data-act="waiver-review" data-id="'+escapeHTML(c.id)+'" data-mode="approve">Approve</button><button class="btn small secondary" data-act="waiver-review" data-id="'+escapeHTML(c.id)+'" data-mode="deny">Deny</button></div></div>';
       }).join('');
-      body='<section class="panel setting-panel">'+panelHeading('Waivers')
-        +'<label class="settings-toggle" for="waivers-enabled"><div><strong>Enable waivers</strong><span>Managers can request unrostered schools after the inaugural draft. Claims require commissioner approval.</span></div><input id="waivers-enabled" type="checkbox" '+(settings.waivers_enabled?'checked':'')+'/></label>'
+      body='<section class="panel setting-panel">'+panelHeading('Add / Drop')
+        +'<label class="settings-toggle" for="waivers-enabled"><div><strong>Enable add/drop</strong><span>Managers can add unrostered programs immediately and drop programs after the inaugural draft. No approval required.</span></div><input id="waivers-enabled" type="checkbox" '+(settings.waivers_enabled?'checked':'')+'/></label>'
         +'<div class="button-row section-gap"><button class="btn" data-act="save-waivers">Save setting</button></div></section>'
-        +'<section class="panel setting-panel section-gap">'+panelHeading('Pending claims',pending.length+' awaiting review')+(pendingRows||empty('No pending claims'))+'</section>';
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Previous pending waiver claims',pending.length+' awaiting review')+(pendingRows||empty('No pending claims'))+'</section>';
     }else if(adminSection==='seasons'){
       const archives=league.archives||[];
       const options='<option value="">Not recorded</option>'+members().map(u=>'<option value="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</option>').join('');
@@ -3766,7 +3773,7 @@
         notice('Draft clock saved.');
       }else if(act==='save-waivers'){
         await api('admin/waiver-settings',{enabled:!!document.querySelector('#waivers-enabled')?.checked});
-        notice('Waiver settings saved.');
+        notice('Add / Drop settings saved.');
       }else if(act==='season-rollover'){
         if(!window.confirm('Archive '+season()+' and start the next season? All teams keep the same programs. This cannot be undone.')){busy=false;return;}
         const result=await api('admin/season/rollover',{});
@@ -3777,25 +3784,31 @@
         await api('admin/season/champion',{season:id,manager_id:select?.value||''});
         notice('Archived champion updated.');
       }else if(act==='team-drop'){
-        if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')throw new Error('Waivers are not available.');
+        if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')throw new Error('Add / Drop is currently closed.');
         const school=programs().find(p=>p.id===id);
         if(!school||programOwned(id)?.manager_id!==me.id)throw new Error('You do not own this program.');
         if(!window.confirm('Release '+school.name+' from your permanent roster? The program will become available to the league.')){busy=false;return;}
-        await api('waiver/drop',{program_id:id});
+        await api('roster/drop',{program_id:id});
         notice(school.name+' released.');
-      }else if(act==='waiver-claim'){
+      }else if(act==='roster-add'){
         const programId=v('#waiver-program'),dropId=v('#waiver-drop');
-        if(!programId)throw new Error('Choose an available school.');
-        await api('waiver/claim',{program_id:programId,drop_program_id:dropId||null});
-        notice('Waiver request submitted.');
+        const added=programs().find(p=>p.id===programId),dropped=programs().find(p=>p.id===dropId);
+        if(!added||programOwned(programId))throw new Error('Choose an available program.');
+        if(myPrograms().length>=Number(league.settings.rounds)&&!dropId)
+          throw new Error('Your roster is full. Select a program to drop.');
+        if(dropId&&(!dropped||programOwned(dropId)?.manager_id!==me.id))
+          throw new Error('Choose a program from your roster to drop.');
+        if(dropId&&!window.confirm('Drop '+dropped.name+' and add '+added.name+' immediately? This cannot be undone.')){busy=false;return;}
+        await api('roster/add',{program_id:programId,drop_program_id:dropId||null});
+        notice(added.name+' added'+(dropped?' · '+dropped.name+' dropped':'')+'.');
       }else if(act==='waiver-cancel'){
         await api('waiver/cancel',{claim_id:id});notice('Claim cancelled.');
-      }else if(act==='waiver-drop'){
+      }else if(act==='roster-drop'){
         const programId=v('#waiver-release');
         if(!programId)throw new Error('Choose a school.');
         const school=programs().find(p=>p.id===programId);
         if(!window.confirm('Drop '+(school?.name||'this program')+' from your permanent roster?')){busy=false;return;}
-        await api('waiver/drop',{program_id:programId});notice('Program released.');
+        await api('roster/drop',{program_id:programId});notice('Program released.');
       }else if(act==='waiver-review'){
         if(!window.confirm((button.dataset.mode==='approve'?'Approve':'Deny')+' this waiver claim?')){busy=false;return;}
         await api('admin/waiver/review',{claim_id:id,mode:button.dataset.mode});

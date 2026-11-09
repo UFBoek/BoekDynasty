@@ -7250,3 +7250,21 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .admin-undo-pick small{font-size:10px;line-height:1.5;color:#7d8d9f}
 .admin-undo-pick .btn{flex-shrink:0}
 @media(max-width:590px){.admin-undo-pick{flex-direction:column;align-items:stretch;gap:13px}.admin-undo-pick .btn{width:100%}}
+
+/* Current-season fantasy points: visible throughout every Schools research view. */
+.schools-hub .directory-table-head,.schools-hub .program-directory-card{grid-template-columns:minmax(210px,2.4fr) minmax(76px,.8fr) minmax(75px,.78fr) minmax(82px,.9fr) minmax(98px,1fr) minmax(110px,.95fr)}
+.schools-hub .directory-points b{color:#1b5987;font-weight:900}
+.rank-table td.current-season-points{min-width:100px;text-align:right;font-variant-numeric:tabular-nums;background:#f5f9fc;color:#1d5881}
+.rank-table td.current-season-points strong{font-size:13px;font-weight:900}
+.rank-table th.season-points-head{text-align:right!important;color:#235b81!important;background:#e6f0f8!important;min-width:100px}
+.rank-mobile-metrics>div.current strong,.rank-mini-years>div.current strong{color:#1a5d8c;font-weight:900}
+.rank-mobile-metrics>div.current span,.rank-mini-years>div.current span{color:#3f799f}
+@media(max-width:1070px){
+ .schools-hub .directory-table-head,.schools-hub .program-directory-card{grid-template-columns:minmax(165px,2fr) minmax(62px,.72fr) minmax(62px,.7fr) minmax(72px,.8fr) minmax(90px,1fr) minmax(85px,.9fr)}
+}
+@media(max-width:720px){
+ .schools-hub .program-directory-card{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-areas:"school school school school school school school school status status status status" "points points points torvik torvik torvik history history history cost cost cost"}
+ .schools-hub .directory-points{grid-area:points}
+ .ratings-shell .rank-mobile-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+ .ratings-shell .rank-mobile-metrics span{font-size:7px}
+}

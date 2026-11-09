@@ -1771,7 +1771,7 @@
       +[['points','Most points'],['name','A–Z']].map(([id,label])=>'<button type="button" data-act="leaders-sort" data-id="'+id+'" class="'+(leaderOrder===id?'active':'')+'">'+label+'</button>').join('')+'</div>'
       +'<span class="rank-count" id="leader-count">'+entries.length+' schools</span></div>'
       +'<div class="rank-table-container school-leader-table-wrap"><table class="school-leader-table rank-table">'
-      +'<thead><tr><th class="rank-position-cell">RANK</th><th class="rank-school-cell">SCHOOL</th><th class="rank-primary-head">'+escapeHTML(period==='all'?'CAREER PTS':'SEASON PTS')+'</th><th class="season-points-head">'+escapeHTML(season())+' PTS</th>'+thYears+'</tr></thead><tbody>'+table+'</tbody></table></div>
+      +'<thead><tr><th class="rank-position-cell">RANK</th><th class="rank-school-cell">SCHOOL</th><th class="rank-primary-head">'+escapeHTML(period==='all'?'CAREER PTS':'SEASON PTS')+'</th><th class="season-points-head">'+escapeHTML(season())+' PTS</th>'+thYears+'</tr></thead><tbody>'+table+'</tbody></table></div>'
       +'<div class="rank-mobile-list">'+cards+'</div>'
       +'<div id="leader-empty" class="rank-empty" hidden>No schools match your search. Try a different name or conference.</div>'
       +'<div class="rank-load"><button id="leader-more" type="button" data-act="leaders-more" class="rank-load-button" hidden>Show more schools <small></small></button></div>'

@@ -2699,7 +2699,7 @@
         '<span class="standings-roster-pending">Awaiting draft</span>';
       const meta=owned.length?owned.length+' owned · '+(scoring?Number(manager?.counted_programs||0):'—')+' counting':'Awaiting selections';
       const details=expanded?'<tr class="league-breakdown-row"><td colspan="7"><div class="league-breakdown">'+
-        '<div class="league-breakdown-top"><div><span>PROGRAM CONTRIBUTIONS</span><h3>'+escapeHTML(u.display_name)+'</h3></div>'+
+        '<div class="league-breakdown-top"><div><h3 tabindex="-1" id="league-contributions-'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+' · Program contributions</h3></div>'+
         '<button type="button" class="league-breakdown-profile" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">Full team profile <span aria-hidden="true">↗</span></button></div>'+
         '<div class="league-breakdown-columns"><section><div class="league-breakdown-section-label"><strong>COUNTING IN BEST BALL</strong><span>'+counted.length+' / '+best+'</span></div>'+
         programRows(counted,true)+'</section>'+
@@ -2720,43 +2720,22 @@
            (hasPoints&&owned.length?'<small class="league-mobile-gap">'+(gap===0?'Leader':'−'+fmtPoints(gap)+' from 1st')+'</small>':'')+
           '</div></td>'+
         '<td class="standings-expand-cell"><button type="button" class="league-expand-button'+(expanded?' is-open':'')+'" data-act="league-toggle-details" data-id="'+escapeHTML(u.id)+'" aria-label="'+(expanded?'Hide':'Show')+' '+escapeHTML(u.display_name)+' program breakdown" aria-expanded="'+expanded+'" title="Show program breakdown">'+
-          '<span aria-hidden="true">⌄</span></button></td></tr>'+details;
+          '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></td></tr>'+details;
     }).join('');
-    const standingsStatus=hasPoints?'LIVE TABLE':ownerCount?'SEASON OPEN':'PRESEASON';
+    const standingsStatus=hasPoints?'SEASON IN PROGRESS':ownerCount?'SEASON OPEN':'PRESEASON';
     return '<div class="league-center">'+
-      '<header class="league-masthead"><div><span class="league-kicker">CBB DYNASTY <span aria-hidden="true">/</span> '+escapeHTML(season())+'</span>'+
-        '<h1>Standings</h1><p>The '+escapeHTML(season())+' fantasy championship, ranked by season points.</p></div>'+
-        '<div class="league-masthead-right"><span class="league-season-state"><i aria-hidden="true"></i>'+standingsStatus+'</span>'+
-          '<span>'+users.length+' MANAGERS <b aria-hidden="true">·</b> TOP '+best+' COUNT</span></div></header>'+
-      '<section class="standings-panel league-standings" aria-label="Current season league standings">'+
-        '<div class="league-standings-toolbar"><div class="league-standings-heading"><span class="league-section-index">01 / STANDINGS</span>'+
-          '<h2>League leaderboard</h2><p>Season totals · Top '+best+' programs per franchise</p></div>'+
-          '<button type="button" class="league-refresh" data-act="league-refresh" aria-label="Refresh league standings"'+(standingsLoading?' disabled':'')+'>'+
-            '<span aria-hidden="true">↻</span> '+(standingsLoading?'Updating':'Refresh')+'</button></div>'+
-        '<div class="league-race-strip" aria-label="League season overview">'+
-           '<div class="league-race-leader"><small>PACE SETTER</small><div class="league-race-identity">'+
-           (leader?avatar(leader):'<span class="league-race-empty-avatar" aria-hidden="true">—</span>')+
-           '<span><strong>'+(leader?escapeHTML(leader.display_name):'Awaiting first points')+'</strong><em>'+
-           (leader?(leaderMargin>0?'+'+fmtPoints(leaderMargin)+' pts ahead':'Tied at the top'):'Season not scored yet')+
-           '</em></span></div></div>'+
-           '<div class="league-race-stat"><small>BEST-BALL FORMAT</small><strong>'+best+' <span>counting</span></strong><em>Per manager</em></div>'+
-           '<div class="league-race-stat"><small>ROSTERED PROGRAMS</small><strong>'+ownerCount+'</strong><em>League-wide</em></div>'+
-           '<div class="league-race-stat league-race-source"><small>QUADRANT SOURCE</small><strong>'+escapeHTML(sourceLabel)+'</strong><em>Used for win bonuses</em></div></div>'+
-        '<div class="league-standings-notice'+(standingsError?' is-error':'')+'" role="status"><span class="league-info-symbol" aria-hidden="true">i</span>'+
-          '<span>'+escapeHTML(note)+'</span></div>'+
-        '<div class="standings-table-wrap"><table class="standings-table league-standings-table">'+
-          '<thead><tr><th class="standings-rank-cell">RANK</th><th>FRANCHISE</th><th>PROGRAMS</th><th>COUNTING</th><th>BEHIND</th>'+
-          '<th class="numerical">FANTASY POINTS</th><th><span class="sr-only">Program breakdown</span></th></tr></thead>'+
-          '<tbody>'+rows+'</tbody></table></div>'+
-        '<footer class="league-standings-footer"><span><strong>'+countedAcrossLeague+'</strong> programs counting league-wide'+
-          (scoredAt?' <span class="league-footer-dot">·</span> Snapshot '+escapeHTML(scoredAt)+' ET':'')+'</span>'+
-          '<span>Open a manager for the full roster, or <b>⌄</b> to inspect program points</span></footer>'+
-      '</section>'+
-      '<div class="league-bottom-strip"><span><strong>HOW RANKINGS WORK</strong> Scores are recalculated as verified results arrive. Only the best '+best+
-        ' program totals count; the remaining programs stay on the roster.</span>'+
-        '<button type="button" data-act="tab" data-id="scoring">View scoring rules <span aria-hidden="true">↗</span></button></div>'+
-      '</div>';
+      '<header class="league-masthead"><div><h1>Standings <span>'+escapeHTML(season())+'</span></h1><p>'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' · '+users.length+' managers · Best '+best+' programs count</p></div>'+
+      '<button type="button" class="league-refresh" data-act="league-refresh"'+(standingsLoading?' disabled':'')+'>'+(standingsLoading?'Updating…':'Refresh standings')+'</button></header>'+
+      '<nav class="league-local-nav" aria-label="Standings shortcuts"><span class="league-season-state">'+standingsStatus+'</span><div><button type="button" data-act="league-my-contributions" data-id="'+escapeHTML(me.id)+'">My contributions</button><button type="button" data-act="tab" data-id="scoring">Scoring rules</button></div></nav>'+
+      '<section class="standings-panel league-standings" aria-label="Current season league standings" aria-busy="'+standingsLoading+'">'+
+      '<div class="standings-table-wrap"><table class="standings-table league-standings-table"><caption class="sr-only">Season standings, ranked by best-ball fantasy points</caption>'+
+      '<thead><tr><th scope="col" class="standings-rank-cell">RANK</th><th scope="col">FRANCHISE</th><th scope="col">PROGRAMS</th><th scope="col">COUNTING</th><th scope="col">BEHIND</th><th scope="col" class="numerical">FANTASY POINTS</th><th scope="col"><span class="sr-only">Program breakdown</span></th></tr></thead>'+
+      '<tbody>'+rows+(!users.length?'<tr><td colspan="7" class="league-empty">No managers yet. Standings appear when managers join the league.</td></tr>':'')+'</tbody></table></div>'+
+      '<footer class="league-standings-footer"><span>Season totals'+(scoredAt?' · Updated '+escapeHTML(scoredAt)+' ET':'')+'</span><span>Select a team to view its roster. Expand to inspect points.</span></footer></section>'+
+      '<div class="league-race-strip" aria-label="League season overview"><div><h2>The championship race</h2><p>'+(leader?'<strong>'+escapeHTML(leader.display_name)+'</strong> '+(leaderMargin>0?'leads by <strong>'+fmtPoints(leaderMargin)+' points</strong>.':'is tied at the top.'):'Awaiting first points')+'</p></div><div><span>League roster</span><p><strong>'+ownerCount+'</strong> programs owned · <strong>'+countedAcrossLeague+'</strong> counting</p></div></div>'+
+      '<details class="league-scoring-context"'+(standingsError?' open':'')+'><summary>Scoring status <span>'+escapeHTML(sourceLabel)+'</span></summary><div class="league-standings-notice'+(standingsError?' is-error':'')+'" role="status">'+escapeHTML(note)+'</div><div class="league-bottom-strip"><strong>HOW RANKINGS WORK</strong><p>Only the best '+best+' program totals count. Remaining programs stay on the roster. Scores are recalculated as verified results arrive.</p><button type="button" data-act="tab" data-id="scoring">View scoring rules</button></div></details></div>';
   }
+
   function profileBack(){return '<button class="profile-back" data-act="profile-back">← Back</button>';}
   function programSeasonSchedule(p){
     const data=programScheduleCache[String(p.id)];
@@ -3531,6 +3510,7 @@
     if(act==='search-close'){toggleGlobalSearch(false);return;}
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
     if(act==='league-refresh'){await loadStandings(true);return;}
+    if(act==='league-my-contributions'){leagueExpandedManager=String(me.id);render();const heading=document.getElementById('league-contributions-'+String(me.id));heading?.focus({preventScroll:true});heading?.scrollIntoView({block:'center',behavior:'instant'});return;}
     if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();return;}
     if(act==='overview-today-results'){
       resultsSelectedDay=resultsToday();resultsScope='owned';resultsSearch='';resultsStatusFilter='all';resultsShown=40;

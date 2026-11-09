@@ -394,7 +394,7 @@
         }
         if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000)&&!overviewGamesLoading)loadOverviewGames();
-        if((['home','league','team','manager-detail'].includes(current)||(current==='programs'&&programMode==='directory'))&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
+        if((['home','league','team','manager-detail'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
       }
       if(chosen.length){
         document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
@@ -728,7 +728,7 @@
   }
   function render(){
     if(!me||!league)return renderAuth();
-    if((['home','league','team','manager-detail'].includes(current)||(current==='programs'&&programMode==='directory'))&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    if((['home','league','team','manager-detail'].includes(current)||current==='programs')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     // The overview previews today's games without requiring a visit to Results.
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
@@ -1576,6 +1576,12 @@
   function leaderboard(){
     return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><button class="table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</button>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';
   }
+  // The same current-season program totals used by Standings appear in every Schools view.
+  function currentSeasonPoints(p){
+    if(standingsData?.season!==season())return '—';
+    const points=Number(standingsData.program_points?.[String(p.id)]??0);
+    return Number.isFinite(points)?points.toLocaleString('en-US',{maximumFractionDigits:2}):'—';
+  }
   function programCard(p,canPick,historyIndex){
     const assignment=programOwned(p.id),owner=members().find(u=>u.id===assignment?.manager_id);
     const rating=ratingOf(p,ratingYear(season())),history=historyIndex?.byId.get(String(p.id));
@@ -1595,6 +1601,7 @@
       +'<span class="directory-school-logo">'+img(p)+'</span>'
       +'<span class="directory-school-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
       +'<span class="directory-school-arrow" aria-hidden="true">↗</span></button>'
+      +'<span class="directory-data-cell directory-points" data-label="'+escapeHTML(season().slice(2))+' PTS" title="'+escapeHTML(season())+' fantasy points"><b>'+currentSeasonPoints(p)+'</b><small>SEASON POINTS</small></span>'
       +'<span class="directory-data-cell directory-torvik" data-label="TORVIK" title="Bart Torvik national rank"><b>'+escapeHTML(torvik)+'</b><small>NATIONAL</small></span>'
       +'<span class="directory-data-cell directory-history" data-label="5Y AVG" title="Verified five-season average fantasy points"><b>'+escapeHTML(fiveYear)+'</b>'
       +'<small>'+(history?.eligibleForSort?'RANK #'+history.rank:history?'LIMITED HISTORY':schoolLeadersLoading?'LOADING':'NO 5Y DATA')+'</small></span>'
@@ -1610,8 +1617,10 @@
     catch(e){standingsError=e.message;}
     finally{
       standingsLoading=false;
-      if(!globalSearchOpen&&current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();
+      if(!globalSearchOpen&&current==='programs'){
+        if(programMode==='directory')refreshSchoolsDirectory();
+        else render();
+      }else if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();
     }
   }
   async function loadSchoolLeaders(){
@@ -1731,15 +1740,17 @@
       ?(a,b)=>a.p.name.localeCompare(b.p.name)
       :(a,b)=>(b.selected??-1)-(a.selected??-1)||a.p.name.localeCompare(b.p.name));
     const format=value=>rankingNumber(value,2).replace(/\.00$/,'');
-    const previewYears=[...new Set([...(period==='all'?[]:[period]),...years.slice(-3).reverse()])].slice(0,4);
-    const thYears=years.slice().map(y=>'<th class="rank-year-cell '+(period===y?'active':'')+'"><button type="button" data-act="leaders-season" data-id="'+escapeHTML(y)+'" title="Rank by '+escapeHTML(y)+'">'+escapeHTML(y.slice(2))+'</button></th>').join('');
+    const previousYears=years.filter(y=>y!==season());
+    const previewYears=[...new Set([...(period==='all'||period===season()?[]:[period]),...previousYears.slice(-3).reverse()])].slice(0,3);
+    const thYears=previousYears.map(y=>'<th class="rank-year-cell '+(period===y?'active':'')+'"><button type="button" data-act="leaders-season" data-id="'+escapeHTML(y)+'" title="Rank by '+escapeHTML(y)+'">'+escapeHTML(y.slice(2))+'</button></th>').join('');
     const table=rows.map(row=>{
       const p=row.p,rank=ranks.get(String(p.id)),rankText=row.selected===null?'—':(byPoints.some(x=>x!==row&&x.selected===row.selected)?'T-':'')+'#'+rank;
       return '<tr class="rank-data-row school-leader-row" data-ranking="leaders" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
         +'<td class="rank-position-cell"><span class="rank-position '+(rank<=3?'is-top':'')+'">'+rankText+'</span></td>'
         +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
         +'<td class="school-leader-points"><strong>'+format(row.selected)+'</strong><small>PTS</small></td>'
-        +row.values.map((x,i)=>'<td class="rank-year-cell '+(years[i]===period?'active':'')+'">'+format(x)+'</td>').join('')
+        + '<td class="current-season-points"><strong>'+currentSeasonPoints(p)+'</strong></td>'
+         +previousYears.map(y=>'<td class="rank-year-cell '+(y===period?'active':'')+'">'+format(row.history.get(y)?.points??null)+'</td>').join('')
         +'</tr>';
     }).join('');
     const cards=rows.map(row=>{
@@ -1749,7 +1760,7 @@
         +'<span class="rank-mobile-index">'+(row.selected===null?'—':'#'+rank)+'</span>'+img(p)
         +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
         +'<span class="rank-mobile-primary"><strong>'+value+'</strong><small>PTS</small></span><span class="rank-mobile-chevron">›</span></button>'
-        +'<div class="rank-mini-years">'+previewYears.map(y=>'<div class="'+(y===period?'active':'')+'"><span>'+escapeHTML(y.slice(2))+'</span><strong>'+format(row.history.get(y)?.points??null)+'</strong></div>').join('')+'</div></article>';
+        +'<div class="rank-mini-years"><div class="current"><span>'+escapeHTML(season().slice(2))+' PTS</span><strong>'+currentSeasonPoints(p)+'</strong></div>'+previewYears.map(y=>'<div class="'+(y===period?'active':'')+'"><span>'+escapeHTML(y.slice(2))+'</span><strong>'+format(row.history.get(y)?.points??null)+'</strong></div>').join('')+'</div></article>';
     }).join('');
     const notes=all.archive_complete?'Archived seasons are verified. Current-season totals are live and may change.':
       'Scores reflect available verified results; unfinished historical imports may change totals.';
@@ -1760,7 +1771,7 @@
       +[['points','Most points'],['name','A–Z']].map(([id,label])=>'<button type="button" data-act="leaders-sort" data-id="'+id+'" class="'+(leaderOrder===id?'active':'')+'">'+label+'</button>').join('')+'</div>'
       +'<span class="rank-count" id="leader-count">'+entries.length+' schools</span></div>'
       +'<div class="rank-table-container school-leader-table-wrap"><table class="school-leader-table rank-table">'
-      +'<thead><tr><th class="rank-position-cell">RANK</th><th class="rank-school-cell">SCHOOL</th><th class="rank-primary-head">'+escapeHTML(period==='all'?'CAREER PTS':'SEASON PTS')+'</th>'+thYears+'</tr></thead><tbody>'+table+'</tbody></table></div>'
+      +'<thead><tr><th class="rank-position-cell">RANK</th><th class="rank-school-cell">SCHOOL</th><th class="rank-primary-head">'+escapeHTML(period==='all'?'CAREER PTS':'SEASON PTS')+'</th><th class="season-points-head">'+escapeHTML(season())+' PTS</th>'+thYears+'</tr></thead><tbody>'+table+'</tbody></table></div>
       +'<div class="rank-mobile-list">'+cards+'</div>'
       +'<div id="leader-empty" class="rank-empty" hidden>No schools match your search. Try a different name or conference.</div>'
       +'<div class="rank-load"><button id="leader-more" type="button" data-act="leaders-more" class="rank-load-button" hidden>Show more schools <small></small></button></div>'
@@ -1803,7 +1814,8 @@
       '<tr class="rank-data-row rating-school-row" data-ranking="ratings" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
       +'<td class="rank-position-cell"><span class="rank-position '+(r?.rank<=25?'is-top':'')+'">'+(r?'#'+r.rank:'—')+'</span></td>'
       +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
-      +'<td class="rating-power"><strong>'+dec(r?.barthag,3)+'</strong></td>'
+      +'<td class="current-season-points"><strong>'+currentSeasonPoints(p)+'</strong></td>'
+       +'<td class="rating-power"><strong>'+dec(r?.barthag,3)+'</strong></td>'
       +'<td class="rating-numeric"><strong>'+dec(r?.adj_o)+'</strong><small>'+(r?.adj_o_rank?'#'+r.adj_o_rank+' nationally':'—')+'</small></td>'
       +'<td class="rating-numeric"><strong>'+dec(r?.adj_d)+'</strong><small>'+(r?.adj_d_rank?'#'+r.adj_d_rank+' nationally':'—')+'</small></td>'
       +'<td class="rating-numeric">'+dec(r?.wab)+'</td><td class="rating-numeric">'+dec(r?.tempo)+'</td></tr>').join('');
@@ -1813,7 +1825,7 @@
       +'<span class="rank-mobile-index">'+(r?'#'+r.rank:'—')+'</span>'+img(p)
       +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
       +'<span class="rank-mobile-primary"><strong>'+featureValue({r})+'</strong><small>'+escapeHTML((sortNames[ratingSort]||'Overall').toUpperCase())+'</small></span><span class="rank-mobile-chevron">›</span></button>'
-      +'<div class="rank-mobile-metrics"><div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
+      +'<div class="rank-mobile-metrics"><div class="current"><span>SEASON PTS</span><strong>'+currentSeasonPoints(p)+'</strong></div><div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
       +'<div><span>DEFENSE</span><strong>'+dec(r?.adj_d)+'</strong></div>'
       +'<div><span>WAB</span><strong>'+dec(r?.wab)+'</strong></div>'
       +'<div><span>TEMPO</span><strong>'+dec(r?.tempo)+'</strong></div></div></article>').join('');
@@ -1825,7 +1837,7 @@
       +'<div class="rank-toolbar-bottom"><div class="rank-order rank-rating-order" role="group" aria-label="Sort power ratings">'+sortTabs+'</div>'
       +'<span class="rank-count" id="rating-count">'+entries.length+' schools</span></div>'
       +'<div class="rank-table-container ratings-table-wrap"><table class="ratings-table rank-table"><thead><tr><th class="rank-position-cell">NATL RANK</th><th class="rank-school-cell">SCHOOL</th>'
-      +'<th title="Probability-based power rating">BARTHAG</th><th title="Adjusted points scored per 100 possessions">OFFENSE</th>'
+      +'<th class="season-points-head">'+escapeHTML(season())+' PTS</th><th title="Probability-based power rating">BARTHAG</th><th title="Adjusted points scored per 100 possessions">OFFENSE</th>'
       +'<th title="Adjusted points allowed per 100 possessions, lower is better">DEFENSE</th><th title="Wins above bubble">WAB</th>'
       +'<th title="Adjusted possessions per game">TEMPO</th></tr></thead><tbody>'+table+'</tbody></table></div>'
       +'<div class="rank-mobile-list">'+cards+'</div>'
@@ -1884,13 +1896,13 @@
       +'<div class="directory-letter-strip" role="group" aria-label="First-letter filter">'+letters+'</div></div></div>'
       +(eligible.length?'<div class="directory-table">'
         +'<div class="directory-table-head" aria-hidden="true"><span>PROGRAM / CONFERENCE</span>'
-        +'<span>BART TORVIK</span><span>5Y AVG PTS</span>'
+        +'<span>'+escapeHTML(season())+' PTS</span><span>BART TORVIK</span><span>5Y AVG PTS</span>'
         +'<span>2026 ROSTER $</span><span>STATUS</span></div>'
         +'<div class="program-grid program-directory-grid">'+eligible.map(p=>programCard(p,isMyTurn(),historyIndex)).join('')+'</div>'
         +'<div id="no-program-results" class="directory-empty" hidden><strong>No matching programs</strong><span>Try a different school, conference, or roster filter.</span></div>'
         +'<div id="directory-load" class="directory-load" hidden><button type="button" data-act="load-programs">Show more programs <span aria-hidden="true">↓</span></button><span id="directory-progress"></span></div></div>'
         :empty('No schools in the pool','The commissioner can add programs in league settings.'))
-      +'<div class="directory-method-note"><span>SCOUTING NOTES</span><p>Torvik is a national efficiency rank. Five-year averages use verified dynasty scoring from completed seasons; limited records are not ranked. Roster spending figures are directional estimates, not audited payrolls. Independent-model-only schools display N/A.</p></div>'
+      +'<div class="directory-method-note"><span>SCOUTING NOTES</span><p>Current-season points reflect the live standings and can be provisional. Torvik is a national efficiency rank. Five-year averages use verified dynasty scoring from completed seasons; limited records are not ranked. Roster spending figures are directional estimates, not audited payrolls. Independent-model-only schools display N/A.</p></div>'
       +'</section></div>';
   }
   function refreshSchoolsDirectory(){

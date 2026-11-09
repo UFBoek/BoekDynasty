@@ -1863,18 +1863,38 @@
     if(programMode==='ratings')return '<div class="schools-hub">'+header+nav+ratingsPage()+'</div>';
     const pointMap=standingsData?.season===season()?standingsData.program_points||{}:{};
     const pointsOf=p=>Number(pointMap[String(p.id)]||0);
+    const historyIndex=draftHistoricalIndex();
+    const torvikYear=ratingYear(season());
+    const fiveYearOf=p=>{
+      const history=historyIndex.byId.get(String(p.id));
+      return history?.eligibleForSort&&Number.isFinite(history.avg)?history.avg:null;
+    };
+    const torvikRankOf=p=>{
+      const rank=Number(ratingOf(p,torvikYear)?.rank);
+      return Number.isFinite(rank)&&rank>0?rank:null;
+    };
     const sorters={
       points:(a,b)=>pointsOf(b)-pointsOf(a)||a.name.localeCompare(b.name),
-      availability:(a,b)=>Number(!!programOwned(a.id))-Number(!!programOwned(b.id))||a.name.localeCompare(b.name)
+      history:(a,b)=>{
+        const aAvg=fiveYearOf(a),bAvg=fiveYearOf(b);
+        if(aAvg===null)return bAvg===null?a.name.localeCompare(b.name):1;
+        if(bAvg===null)return -1;
+        return bAvg-aAvg||a.name.localeCompare(b.name);
+      },
+      torvik:(a,b)=>{
+        const aRank=torvikRankOf(a),bRank=torvikRankOf(b);
+        if(aRank===null)return bRank===null?a.name.localeCompare(b.name):1;
+        if(bRank===null)return -1;
+        return aRank-bRank||a.name.localeCompare(b.name);
+      }
     };
     eligible.sort(sorters[programSort]||sorters.points);
-    const historyIndex=draftHistoricalIndex();
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
     const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')+chip(POWER_FILTER,'Power Conferences')
       +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
-    const sortButtons=[['points',escapeHTML(season())+' Points'],['availability','Available first']]
+    const sortButtons=[['points',escapeHTML(season())+' Points'],['history','5Y Average'],['torvik','Bart Torvik']]
       .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
     return '<div class="schools-hub">'+header+nav
       +'<section class="program-directory-shell" aria-label="League school directory">'
@@ -3582,7 +3602,7 @@
     if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
     if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
-    if(act==='directory-sort'){programSort=id==='availability'?'availability':'points';programShown=36;render();filterPrograms();return;}
+    if(act==='directory-sort'){programSort=['points','history','torvik'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       globalSearchOpen=false;globalSearchQuery='';
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
@@ -4162,7 +4182,7 @@
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
-    if(e.target?.id==='directory-sort'){programSort=e.target.value==='availability'?'availability':'points';programShown=36;render();filterPrograms();}
+    if(e.target?.id==='directory-sort'){programSort=['points','history','torvik'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
     if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
     if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}

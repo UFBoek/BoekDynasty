@@ -115,8 +115,8 @@ test('Mid-Major remains available in every conference-based menu',()=>{
   assert.match(source,/midMajorOption\(draftConference\)\+powerOption\(draftConference\)\+confOptions/);
   assert.match(source,/midMajorOption\(poolConferenceFilter\)\+powerOption\(poolConferenceFilter\)\+filterOptions/);
   assert.match(source,/matchesConferenceFilter\(homeConf,resultsConference,g.home_id\)/);
-  assert.match(source,/matchesConferenceFilter\(card.dataset.conference,draftConference\)/);
-  assert.match(source,/matchesConferenceFilter\(card.dataset.conference,programConference\)/);
+  assert.match(source,/matchesConferenceFilter\(card\.dataset\.conference,draftConference,card\.dataset\.program\)/);
+  assert.match(source,/matchesConferenceFilter\(card\.dataset\.conference,programConference,card\.dataset\.program\)/);
 });
 
 test('all eight non-Gonzaga 2026-27 Pac-12 programs appear under Mid-Major, never Gonzaga',()=>{

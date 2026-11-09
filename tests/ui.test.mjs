@@ -535,7 +535,7 @@ test('Results Game Center layout CSS covers masthead, counts, conference filters
 });
 
 
-test('front office surfaces pending trade offers and waiver claims without opening a drawer',()=>{
+test('front office preserves pending trades and supports instant Add / Drop with legacy claim history',()=>{
  const state={
   ...league,
   settings:{...league.settings,draft_status:'finished',trading_enabled:true,waivers_enabled:true},
@@ -570,8 +570,10 @@ test('front office surfaces pending trade offers and waiver claims without openi
   const waivers=app.page('waivers');
   assert.match(waivers,/txn-waiver-list/);
   assert.match(waivers,/data-act="waiver-cancel" data-id="claim-1"/);
-  assert.match(waivers,/data-act="waiver-claim"/);
-  assert.match(waivers,/data-act="waiver-drop"/);
+  assert.match(waivers,/data-act="roster-add"/);
+  assert.match(waivers,/data-act="roster-drop"/);
+  assert.match(waivers,/No claims or commissioner approvals/);
+  assert.doesNotMatch(waivers,/data-act="waiver-claim"/);
   const more=app.page('more');
   assert.match(more,/more-trade-alert/);
  }finally{

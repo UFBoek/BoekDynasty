@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/client.js',import.meta.url),'utf8');
 const end='  try{\n    setInterval(updateDraftClock,1000);\n    Promise.resolve(boot()).catch(startupFailure);\n  }catch(e){startupFailure(e);}\n})();';
 assert.ok(source.includes(end),'Client startup hook should remain stable');
-const stub='  return {matchesConferenceFilter,isMidMajorMenuConference,eligibleConferenceIds,conferenceMenuGroups,midMajorConferenceIds,powerConferenceIds,conferenceGroups,midMajorOption,powerOption,rankingTools,rankingEligible,poolVisible,programsPage,setLeague:v=>{league=v;poolDraftConfs=null;poolDraftSchools=null;}};\n})();';
+const stub='  return {matchesConferenceFilter,isMidMajorMenuConference,eligibleConferenceIds,conferenceMenuGroups,midMajorConferenceIds,powerConferenceIds,conferenceGroups,midMajorOption,powerOption,rankingTools,rankingEligible,poolVisible,programsPage,setLeague:v=>{league=v;poolDraftConfs=null;poolDraftSchools=null;},setPoolConferenceFilter:v=>{poolConferenceFilter=v;}};\n})();';
 const root={innerHTML:'',addEventListener(){},querySelector(){return null;},querySelectorAll(){return [];}};
 const document={querySelector:q=>q==='#app'?root:null,querySelectorAll:()=>[],activeElement:null};
 const api=new Function('document','window','navigator','location','URLSearchParams',
@@ -117,4 +117,31 @@ test('Mid-Major remains available in every conference-based menu',()=>{
   assert.match(source,/matchesConferenceFilter\(homeConf,resultsConference,g.home_id\)/);
   assert.match(source,/matchesConferenceFilter\(card.dataset.conference,draftConference\)/);
   assert.match(source,/matchesConferenceFilter\(card.dataset.conference,programConference\)/);
+});
+
+test('all eight non-Gonzaga 2026-27 Pac-12 programs appear under Mid-Major, never Gonzaga',()=>{
+  const pac12=[
+    ['68','Boise State'],['36','Colorado State'],['278','Fresno State'],
+    ['204','Oregon State'],['21','San Diego State'],['326','Texas State'],
+    ['328','Utah State'],['265','Washington State'],['2250','Gonzaga']
+  ].map(([id,name])=>({id,name,abbr:name,conference_id:'21'}));
+  api.setLeague({settings:{
+    conferences:['21'],included_programs:[],excluded_programs:[]
+  },programs:pac12});
+  for(const school of pac12){
+    const isGonzaga=school.id==='2250';
+    assert.equal(api.matchesConferenceFilter('21','mid-major',school.id),!isGonzaga,school.name);
+    assert.equal(api.matchesConferenceFilter('21','power',school.id),isGonzaga,school.name);
+    assert.equal(api.matchesConferenceFilter('21','21',school.id),true,school.name);
+    assert.equal(api.rankingEligible(school,'mid-major','all'),!isGonzaga,school.name);
+    assert.equal(api.rankingEligible(school,'power','all'),isGonzaga,school.name);
+  }
+  api.setPoolConferenceFilter('mid-major');
+  assert.deepEqual(new Set(api.poolVisible().map(p=>p.id)),
+    new Set(pac12.filter(p=>p.id!=='2250').map(p=>p.id)));
+  api.setPoolConferenceFilter('power');
+  assert.deepEqual(api.poolVisible().map(p=>p.id),['2250']);
+  assert.match(source,/matchesConferenceFilter\(card\.dataset\.conference,programConference,card\.dataset\.program\)/);
+  assert.match(source,/matchesConferenceFilter\(card\.dataset\.conference,draftConference,card\.dataset\.program\)/);
+  assert.match(source,/data-program="'\+escapeHTML\(p\.id\)\+'" data-conference=/);
 });

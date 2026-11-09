@@ -123,7 +123,7 @@
 
   let poolDraftConfs=null,poolDraftSchools=null,poolDirty=false;
   let poolQuery='',poolConferenceFilter='all',poolScope='all',poolShown=70;
-  let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='name',showAllDraft=false,lastAutoPoll=0;
+  let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='points',showAllDraft=false,lastAutoPoll=0;
   let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
@@ -394,7 +394,7 @@
         }
         if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000)&&!overviewGamesLoading)loadOverviewGames();
-        if(['home','league','team','manager-detail'].includes(current)&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
+        if((['home','league','team','manager-detail'].includes(current)||(current==='programs'&&programMode==='directory'))&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
       }
       if(chosen.length){
         document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
@@ -728,7 +728,7 @@
   }
   function render(){
     if(!me||!league)return renderAuth();
-    if(['home','league','team','manager-detail'].includes(current)&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    if((['home','league','team','manager-detail'].includes(current)||(current==='programs'&&programMode==='directory'))&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     // The overview previews today's games without requiring a visit to Results.
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
@@ -1608,7 +1608,11 @@
     if(force&&current==='league')render();
     try{standingsData=await api('data/standings');standingsError='';}
     catch(e){standingsError=e.message;}
-    finally{standingsLoading=false;if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();}
+    finally{
+      standingsLoading=false;
+      if(!globalSearchOpen&&current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
+      else if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();
+    }
   }
   async function loadSchoolLeaders(){
     if(!me||schoolLeadersLoading)return;
@@ -1845,19 +1849,20 @@
       +[['directory','Program index'],['leaders','Historical leaders'],['ratings','Power ratings']].map(([id,label])=>'<button type="button" data-act="school-mode" data-id="'+id+'" class="'+(programMode===id?'active':'')+'" aria-current="'+(programMode===id?'page':'false')+'" aria-pressed="'+(programMode===id)+'">'+escapeHTML(label)+'</button>').join('')+'</nav>';
     if(programMode==='leaders')return '<div class="schools-hub">'+header+nav+schoolLeadersPage()+'</div>';
     if(programMode==='ratings')return '<div class="schools-hub">'+header+nav+ratingsPage()+'</div>';
+    const pointMap=standingsData?.season===season()?standingsData.program_points||{}:{};
+    const pointsOf=p=>Number(pointMap[String(p.id)]||0);
     const sorters={
-      name:(a,b)=>a.name.localeCompare(b.name),
-      conference:(a,b)=>conf(a.conference_id).localeCompare(conf(b.conference_id))||a.name.localeCompare(b.name),
+      points:(a,b)=>pointsOf(b)-pointsOf(a)||a.name.localeCompare(b.name),
       availability:(a,b)=>Number(!!programOwned(a.id))-Number(!!programOwned(b.id))||a.name.localeCompare(b.name)
     };
-    eligible.sort(sorters[programSort]||sorters.name);
+    eligible.sort(sorters[programSort]||sorters.points);
     const historyIndex=draftHistoricalIndex();
     const chip=(value,label)=>'<button class="'+(programConference===value?'active':'')+'" data-act="directory-conference" data-id="'+escapeHTML(value)+'" type="button" aria-pressed="'+(programConference===value)+'">'+escapeHTML(label)+'</button>';
     const conferenceChips=chip('all','All conferences')+chip(MID_MAJOR_FILTER,'Mid-Major')+chip(POWER_FILTER,'Power Conferences')
       +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
-    const sortButtons=[['name','A–Z'],['conference','Conference'],['availability','Available first']]
+    const sortButtons=[['points',escapeHTML(season())+' Points'],['availability','Available first']]
       .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
     return '<div class="schools-hub">'+header+nav
       +'<section class="program-directory-shell" aria-label="League school directory">'
@@ -3565,7 +3570,7 @@
     if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
     if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
-    if(act==='directory-sort'){programSort=id;programShown=36;render();filterPrograms();return;}
+    if(act==='directory-sort'){programSort=id==='availability'?'availability':'points';programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       globalSearchOpen=false;globalSearchQuery='';
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
@@ -4145,7 +4150,7 @@
     if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
-    if(e.target?.id==='directory-sort'){programSort=e.target.value;programShown=36;render();filterPrograms();}
+    if(e.target?.id==='directory-sort'){programSort=e.target.value==='availability'?'availability':'points';programShown=36;render();filterPrograms();}
     if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
     if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}

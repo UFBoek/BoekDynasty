@@ -45,7 +45,7 @@
     };
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.more)+'</svg>';
   };
-  const names={notifications:'Notifications',home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',settings:'My Settings',more:'More','draft-order':'Draft Order',waivers:'Waivers',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
+  const names={notifications:'Notifications',home:'League Overview',team:'My Team',programs:'Programs',draft:'Draft',trades:'Trades',league:'Standings',scoring:'Scoring',commissioner:'Commissioner',settings:'My Settings',more:'More','draft-order':'Draft Order',waivers:'Add / Drop',history:'Dynasty history',results:'Results','program-detail':'Program','manager-detail':'Manager'};
   const conferenceNames={
     '1':'America East','2':'ACC','3':'Atlantic 10','4':'Big East','5':'Big Sky','6':'Big South','7':'Big Ten','8':'Big 12',
     '9':'Big West','10':'Coastal Athletic','11':'Conference USA','12':'Ivy League','13':'Metro','14':'MAC','16':'MEAC',
@@ -3401,7 +3401,7 @@
       body='<section class="panel setting-panel">'+panelHeading('Add / Drop')
         +'<label class="settings-toggle" for="waivers-enabled"><div><strong>Enable add/drop</strong><span>Managers can add unrostered programs immediately and drop programs after the inaugural draft. No approval required.</span></div><input id="waivers-enabled" type="checkbox" '+(settings.waivers_enabled?'checked':'')+'/></label>'
         +'<div class="button-row section-gap"><button class="btn" data-act="save-waivers">Save setting</button></div></section>'
-        +'<section class="panel setting-panel section-gap">'+panelHeading('Previous pending waiver claims',pending.length+' awaiting review')+(pendingRows||empty('No pending claims'))+'</section>';
+        +(pending.length?'<section class="panel setting-panel section-gap">'+panelHeading('Unresolved older waiver claims',pending.length+' awaiting review')+pendingRows+'</section>':'');
     }else if(adminSection==='seasons'){
       const archives=league.archives||[];
       const options='<option value="">Not recorded</option>'+members().map(u=>'<option value="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</option>').join('');

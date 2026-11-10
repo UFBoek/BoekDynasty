@@ -1166,6 +1166,7 @@ export const DATA_PIPELINE=(()=>{
     const [awards,nets,preliminary,kenpomCount]=(await Promise.all([
       q(env,"SELECT season,program_id,award_type,value FROM cbb_awards WHERE season BETWEEN '2021-22' AND ?",currentSeason).all(),
       q(env,"SELECT season,stored_count FROM cbb_net_snapshots WHERE status='complete' AND season BETWEEN '2021-22' AND ?",currentSeason).all(),
+      q(env,"SELECT COUNT(*) AS n FROM cbb_preliminary_rankings WHERE season=?",currentSeason).all(),
       q(env,"SELECT COUNT(*) AS n FROM private.cbb_kenpom_daily d JOIN private.cbb_kenpom_fetches f ON f.snapshot_date=d.snapshot_date WHERE d.season=? AND f.status='ready' AND d.snapshot_date=(SELECT MAX(snapshot_date) FROM private.cbb_kenpom_fetches WHERE status='ready')",currentSeason).all()
     ])).map(x=>x.results||[]);
     const torvikReady=Number(preliminary[0]?.n||0)>=350;

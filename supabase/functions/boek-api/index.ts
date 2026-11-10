@@ -183,7 +183,32 @@ Deno.serve(async (request)=>{
       const season=(await db.prepare("SELECT value FROM settings WHERE key='current_season'").first())?.value||DATA_PIPELINE.seasonOf(today);
       const eligible=[11,12,1,2,3,4].includes(Number(today.slice(5,7)))&&DATA_PIPELINE.dayInSeason(season,today);
       let result;
-      if(kind==='live-fast'){
+      // Private, read-only regression test for standings, five-year leaders,
+      // and the current KenPom quadrant source. Only the cron job-token can invoke it.
+      if(kind==='scoring-healthcheck'){
+        const rows=(await db.prepare("SELECT key,value FROM settings WHERE key IN ('scoring_rules','conferences','included_programs','excluded_programs')").all()).results||[];
+        const map=Object.fromEntries(rows.map(row=>[row.key,row.value]));
+        const scoring=JSON.parse(map.scoring_rules||'{}');
+        const selection={
+          conferences:JSON.parse(map.conferences||'[]'),
+          included_programs:JSON.parse(map.included_programs||'[]'),
+          excluded_programs:JSON.parse(map.excluded_programs||'[]')
+        };
+        const all=await DATA_PIPELINE.historicalLeaders(env,scoring,season);
+        const eligible=await DATA_PIPELINE.historicalLeaders(env,scoring,season,selection);
+        const currentRows=all.rows.filter(x=>x.season===season);
+        const historicalRows=eligible.rows.filter(x=>x.season!==season);
+        if(currentRows.length===0||historicalRows.length===0)
+          throw new Error('Scoring healthcheck found empty current or historical totals.');
+        result={
+          status:'ok',season,source:all.quadrant_source,
+          current_programs:currentRows.length,historical_program_seasons:historicalRows.length,
+          current_wins:currentRows.reduce((n,r)=>n+Number(r.regular_wins||0),0),
+          current_fantasy_points:Math.round(currentRows.reduce((n,r)=>n+Number(r.points||0),0)*100)/100,
+          eligible_programs:eligible.directory.length,archive_complete:eligible.archive_complete
+        };
+      }
+      else       if(kind==='live-fast'){
         if(!eligible)result={skipped:'offseason'};
         else{
           // The high-frequency path intentionally avoids slow repairs, schedule

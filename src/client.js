@@ -2570,7 +2570,7 @@
     const boardRows=boardMode==='current'?[activeRound]:Array.from({length:rounds},(_,i)=>i+1)
       .filter(r=>boardMode!=='mine'||Array.from({length:managerCount},(_,i)=>(r-1)*managerCount+i+1)
         .some(slot=>draftOwner(slot)===me.id));
-    const boardWidth='grid-template-columns:62px repeat('+Math.max(1,boardColumns.length)+',minmax(188px,1fr));min-width:'+(62+Math.max(1,boardColumns.length)*188)+'px';
+    const boardWidth='grid-template-columns:62px repeat('+Math.max(1,boardColumns.length)+',minmax(228px,1fr));min-width:'+(62+Math.max(1,boardColumns.length)*228)+'px';
     const managerPickedCount=id=>picks().filter(p=>String(p.manager_id)===String(id)).length;
     const boardHeaders=boardColumns.map((id,pos)=>{
       const member=managerIndex.get(id),vacant=id.startsWith('open-seat-');

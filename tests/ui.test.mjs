@@ -143,6 +143,15 @@ test('program draft, results and standings expose honest contextual visual data'
  league.picks=[];
 });
 
+test('Schools sort controls and draft scouting labels use non-overlapping responsive layouts',()=>{
+  const css=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
+  assert.match(css,/\.schools-hub \.directory-search-row\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css,/\.schools-hub \.directory-sort-tabs\{[^}]*overflow-x:auto/);
+  assert.match(css,/\.schools-hub \.directory-sort-tabs\{[^}]*flex-wrap:wrap;overflow:visible/);
+  assert.match(css,/\.draft-v5 \.draft-cell-scout\{grid-template-columns:minmax\(0,\.8fr\) minmax\(0,\.85fr\) minmax\(0,1\.4fr\) minmax\(0,1\.15fr\)/);
+  assert.match(css,/\.draft-v5 \.draft-scouting-strip\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(source,/minmax\(228px,1fr\)/);
+});
 test('Schools directory uses pills, not conference and sorting dropdowns',()=>{
   app.schools('directory',null);
   const html=app.page('programs');

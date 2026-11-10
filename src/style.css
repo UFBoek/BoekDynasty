@@ -6151,11 +6151,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .draft-v5 .draft-v2-board .draft-cell-team strong{font-size:12px;white-space:normal;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .draft-v5 .draft-v2-board .draft-cell-team small{color:#ffffffc9;font-size:9px}
 .draft-v5 .draft-cell-logo{height:34px;width:34px;flex-basis:34px;border-radius:8px;padding:3px}
-.draft-v5 .draft-cell-scout{grid-template-columns:minmax(0,.82fr) minmax(0,.82fr) minmax(0,1.36fr);gap:4px;padding-top:8px}
-.draft-v5 .draft-cell-scout>span{background:#ffffff12;border:1px solid #ffffff1a;border-radius:4px;padding:5px 2px}
+.draft-v5 .draft-cell-scout{grid-template-columns:minmax(0,.8fr) minmax(0,.85fr) minmax(0,1.4fr) minmax(0,1.15fr);gap:4px;padding-top:8px}
+.draft-v5 .draft-cell-scout>span{background:#ffffff12;border:1px solid #ffffff1a;border-radius:4px;padding:5px 1px;overflow:hidden}
 .draft-v5 .draft-cell-scout small{color:#ffffffbb;font-size:7px;letter-spacing:.1px}
-.draft-v5 .draft-cell-scout b,.draft-v5 .draft-cell-scout>span:last-child b{color:white;font-size:11px}
-.draft-v5 .draft-cell-scout>span:last-child b{overflow:visible;text-overflow:clip}
+.draft-v5 .draft-cell-scout b,.draft-v5 .draft-cell-scout>span:last-child b{color:white;font-size:10.5px}
+.draft-v5 .draft-cell-scout>span:last-child b{overflow:hidden;text-overflow:ellipsis}
 .draft-v5 .draft-board-cell.on-clock{background:linear-gradient(120deg,#fff5e9,#fffaf4);box-shadow:inset 0 0 0 2px #e3a167}
 .draft-v5 .draft-cell-open strong{font-size:13px;color:#965027}
 .draft-v5 .draft-cell-open small{font-size:10px;line-height:1.6;color:#805f45}
@@ -6207,11 +6207,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .draft-v5 .draft-pool-queue{top:5px;right:7px;min-width:32px;min-height:30px;padding:4px;font-size:20px;display:flex;align-items:center;justify-content:center;gap:3px;color:#627b92}
 .draft-v5 .draft-pool-queue.added{color:#a76029;background:#fff4e7}
 .draft-v5 .draft-pool-queue small{font-size:9px}
-.draft-v5 .draft-scouting-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0 12px 12px;border:1px solid #e5ebf2;border-radius:7px;background:#f7f9fc;padding:9px 0}
+.draft-v5 .draft-scouting-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0 12px 12px;border:1px solid #e5ebf2;border-radius:7px;background:#f7f9fc;padding:9px 0}
 .draft-v5 .draft-scouting-strip>span{min-width:0;text-align:center;border-right:1px solid #e0e7ee;display:flex;flex-direction:column;gap:5px}
 .draft-v5 .draft-scouting-strip>span:last-child{border:0}
-.draft-v5 .draft-scouting-strip small{font-size:7px;color:#64788e;letter-spacing:.25px;white-space:nowrap;font-weight:750}
-.draft-v5 .draft-scouting-strip strong{font-size:13px;color:#2b4a67;font-variant-numeric:tabular-nums;white-space:nowrap}
+.draft-v5 .draft-scouting-strip small{font-size:7px;color:#64788e;letter-spacing:0;white-space:normal;overflow-wrap:normal;line-height:1.25;font-weight:750;min-height:17px;padding:0 2px}
+.draft-v5 .draft-scouting-strip strong{font-size:12px;color:#2b4a67;font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .draft-v5 .draft-scouting-strip>span:last-child strong{color:#296c5e}
 .draft-v5 .draft-pool-draft{margin:0 12px 12px;min-height:38px;padding:7px 12px;justify-content:space-between;border:1px solid #cbdbea;border-radius:7px;background:#edf4fb;color:#1c5a92;font-size:11px;box-shadow:none;transition:background .15s}
 .draft-v5 .draft-pool-draft:hover{background:#dcecfb;filter:none;transform:none}
@@ -6669,17 +6669,17 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .schools-hub .directory-live-pick{display:flex;align-items:center;gap:15px;justify-content:space-between;border:1px solid #d48758;border-radius:6px;background:#fff7f0;padding:10px 12px;color:#9c4e27;font-size:10px;font-weight:850;white-space:nowrap;cursor:pointer}
 .schools-hub .directory-live-pick:hover{background:#ffead9}
 .schools-hub .directory-filters{padding:0;background:#fff;border:1px solid var(--sh-line);border-radius:10px 10px 0 0;margin:0;box-shadow:none;overflow:hidden}
-.schools-hub .directory-search-row{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:center;gap:18px;padding:13px 17px;border-bottom:1px solid #e9eef2}
+.schools-hub .directory-search-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:10px;padding:12px 17px;border-bottom:1px solid #e9eef2}
 .schools-hub .directory-search{flex:auto;position:relative;display:flex;align-items:center;min-width:0}
 .schools-hub .directory-search>span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#8499ab;display:flex;align-items:center;pointer-events:none}
 .schools-hub .directory-search svg{width:16px;height:16px}
 .schools-hub .directory-search .field{height:39px;min-height:39px;width:100%;padding:9px 12px 9px 37px;border:1px solid #d9e3ec;border-radius:6px;background:#f8fafc;color:#294961;font-size:11px;box-shadow:none}
 .schools-hub .directory-search .field::placeholder{color:#9aaab8}
 .schools-hub .directory-search .field:focus{border-color:#6598bd;background:#fff;box-shadow:0 0 0 3px rgba(49,111,160,.09)}
-.schools-hub .directory-sort-box{display:flex;align-items:center;gap:10px;min-width:0}
+.schools-hub .directory-sort-box{display:flex;align-items:center;gap:10px;min-width:0;width:100%}
 .schools-hub .directory-sort-box>span,.schools-hub .directory-filter-label{flex:0 0 auto;color:#8f9eac;font-size:8px;font-weight:900;letter-spacing:.085em}
-.schools-hub .directory-sort-tabs{display:flex;align-items:center;gap:2px;background:#f1f4f7;border:1px solid #e6ecf0;border-radius:6px;padding:3px}
-.schools-hub .directory-sort-tabs button{border:0;border-radius:4px;background:transparent;color:#74889a;padding:8px 10px;min-height:31px;font-size:10px;font-weight:750;white-space:nowrap;cursor:pointer}
+.schools-hub .directory-sort-tabs{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:100%;gap:2px;background:#f1f4f7;border:1px solid #e6ecf0;border-radius:6px;padding:3px;overflow-x:auto;scrollbar-width:thin}
+.schools-hub .directory-sort-tabs button{flex:0 0 auto;border:0;border-radius:4px;background:transparent;color:#74889a;padding:8px 10px;min-height:31px;font-size:10px;font-weight:750;white-space:nowrap;cursor:pointer}
 .schools-hub .directory-sort-tabs button:hover:not(.active){background:#e6edf3;color:#385e78}
 .schools-hub .directory-sort-tabs button.active{color:#214d70;background:#fff;box-shadow:0 1px 3px rgba(30,57,80,.1)}
 .schools-hub .directory-conference-line{display:grid;grid-template-columns:87px minmax(0,1fr);align-items:center;gap:10px;border-bottom:1px solid #e9eef2;padding:0 17px}
@@ -6775,8 +6775,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .schools-hub .directory-live-pick{margin-left:auto}
  .schools-hub .directory-search-row{padding:10px 12px}
  .schools-hub .directory-sort-box{gap:8px;flex-wrap:wrap}
- .schools-hub .directory-sort-tabs{flex:1;min-width:0}
- .schools-hub .directory-sort-tabs button{flex:1;min-width:0;font-size:9px;padding:7px 6px}
+ .schools-hub .directory-sort-tabs{flex:1;min-width:0;flex-wrap:wrap;overflow:visible}
+ .schools-hub .directory-sort-tabs button{flex:1 0 auto;min-width:max-content;font-size:9px;padding:7px 8px}
  .schools-hub .directory-conference-line,.schools-hub .directory-alphabet{grid-template-columns:minmax(0,1fr);gap:2px;padding:9px 12px 6px}
  .schools-hub .directory-conference-strip{padding:2px 0 5px;min-height:38px}
  .schools-hub .directory-filter-row{padding:8px 12px;align-items:flex-start;gap:5px}
@@ -6821,8 +6821,9 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .schools-hub .directory-school-arrow,.schools-hub .program-directory-card,.schools-hub .school-view-tabs button{transition:none}
 }
 
-/* Keep the full historical ranking label legible in compact draft-board cells. */
-.draft-v5 .draft-cell-scout>span:nth-child(2) small{white-space:normal;line-height:1.08;overflow-wrap:normal;text-align:center}
+/* Protect full five-year and financial labels in four-column draft-board scouting. */
+.draft-v5 .draft-cell-scout>span:nth-child(3) small{white-space:nowrap;font-size:6.6px;letter-spacing:-.12px;line-height:1.2;text-align:center}
+.draft-v5 .draft-cell-scout>span:nth-child(4) b{font-size:10px}
 
 
 /* My Team v4 — compact franchise operations dashboard. */

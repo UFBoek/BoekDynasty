@@ -1053,12 +1053,14 @@
         +'<strong title="'+escapeHTML(name||'Unknown school')+'">'+escapeHTML(name||'Unknown school')+'</strong></span>'
         +scoreboardOwnership(id)
         +'<small class="daily-team-record">'+dailyRecord(record)+' <span>W–L</span></small></span>'
+        +'<span class="daily-team-ranks" aria-label="National rankings">'
         +'<span class="daily-team-net" title="'+escapeHTML(dailyNetLabel(net))+'"><em>'+(resultsRankingSource==='kenpom'?'KP':resultsRankingSource==='torvik'?'TOR':'NET')+'</em> '+(net===null||net===undefined||!Number.isFinite(Number(net))?'—':Number(net))+'</span>'
         +(resultsRankingSource==='kenpom'?'<span class="daily-team-net daily-team-torvik" title="Bart Torvik national rank"><em>TOR</em> '+(()=>{
           const school=programs().find(p=>String(p.id)===String(id));
           const torvik=Number(ratingOf(school,ratingYear(season()))?.rank);
           return torvik>0&&Number.isInteger(torvik)?torvik:'—';
         })()+'</span>':'')
+        +'</span>'
         +dailyQuad(quad,q1a)
         +'<span class="daily-score">'+(hasScore&&score!==null?escapeHTML(String(score)):'—')+'</span>';
       const cls='daily-team-line'+(isWinner?' is-winner':'')+(isHome?' home':' away');

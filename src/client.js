@@ -311,7 +311,7 @@
     return parsed;
   }
 
-  // Bart Torvik is informational in analytics and provisional for fantasy scoring until official NET arrives.
+  // Bart Torvik is a separate scouting metric; KenPom is the preferred current-season quadrant baseline.
   const ratingYear=(label)=>Number(String(label||season()).slice(0,4))+1;
   const ratingName=(raw)=>String(raw||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
     .replace(/&/g,' and ').replace(/\bsaint\b/g,'st').replace(/\bstate\b/g,'st')
@@ -771,7 +771,7 @@
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
     // The My Team roster shares verified national scouting data with the Draft Desk.
-    if(current==='team'||current==='trades'){
+    if(current==='team'||current==='trades'||current==='manager-detail'){
       const year=ratingYear(season());
       if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
@@ -1487,6 +1487,7 @@
       const history=metrics?.historyIndex?.byId.get(String(p.id));
       const torvik=rating?.rank!=null&&Number(rating.rank)>0?'#'+rating.rank:'—';
       const fiveYear=history?.eligibleForSort?'#'+history.rank:'—';
+      const kp=kenpomRankOf(p);
       return '<tr class="tm-roster-row">'
         +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
         +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
@@ -1494,6 +1495,7 @@
         +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
         +'<span class="tm-school-chevron" aria-hidden="true">↗</span></button></td>'
         +(metrics?'<td class="tm-stat-rank" data-label="TORVIK">'+torvik+'</td>'
+          +'<td class="tm-stat-rank tm-kenpom-rank" data-label="KENPOM">'+(kp?'#'+kp:'—')+'</td>'
           +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
         +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</td>'
         +'</tr>';
@@ -1615,7 +1617,7 @@
       +(owned.length?owned.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
         'Your permanent program roster will appear here after the draft')+'</p></div>'+actions+'</div>'
       +(owned.length?'<div class="tm-roster-scroll"><table class="tm-table">'
-        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
         +'<tbody>'+roster+'</tbody></table></div>'
         :'<div class="tm-empty">'+empty('Your roster is ready to build','Schools selected in the inaugural draft will appear here.')+
         (!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Go to the draft room <span aria-hidden="true">↗</span></button>':'')+'</div>')
@@ -2674,8 +2676,10 @@
     const stats=p=>{
       const h=historyIndex.byId.get(String(p.id)),r=ratingOf(p,ratingYear(season())),cost=rosterCost2026(p);
       const reported=cost&&cost.estimate!==null&&cost.evidence!=='M';
+      const kp=kenpomRankOf(p);
       return '<dl class="td-scout"><div><dt>'+escapeHTML(season())+' PTS</dt><dd>'+currentSeasonPoints(p)+'</dd></div>'
         +'<div><dt>Bart Torvik</dt><dd>'+(r?.rank?'#'+Number(r.rank):'—')+'</dd></div>'
+        +'<div><dt>KenPom</dt><dd>'+(kp?'#'+kp:'—')+'</dd></div>'
         +'<div title="Average fantasy points across '+(h?.count||0)+' available historical seasons"><dt>5Y avg pts</dt><dd>'+(h?.eligibleForSort?historicalPointLabel(h.avg):'—')+'</dd></div>'
         +'<div><dt>2026 roster $</dt><dd>'+escapeHTML(reported?rosterCostAmount2026(cost):'N/A')+'</dd></div></dl>';
     };
@@ -2749,7 +2753,7 @@
         +'<div class="td-package-grid">'+['give','receive'].map(side=>'<div><div class="td-package-title"><strong>'+(side==='give'?'You send':'You receive')+'</strong><span><b id="trade-points-'+side+'">'+(standingsData?.season===season()?'0':'—')+'</b> season pts</span></div><div id="trade-package-'+side+'" class="td-package"><span class="td-package-empty">No assets selected</span></div></div>').join('')+'</div>'
         +'<p class="td-comparison-note">Season points compare selected programs only; they are not a trade valuation or a projected best-ball change. Draft picks have no season points.</p>'
         +'<div class="trade-submit"><div id="trade-selection-summary" role="status" aria-live="polite">Select at least one asset on each side</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></div>'
-        +'<p class="td-data-note">Bart Torvik: current-season national rank. 5Y avg: available prior seasons, minimum three. Roster costs are reported estimates, not verified payrolls; N/A means no sourced figure.</p>':
+        +'<p class="td-data-note">Bart Torvik and KenPom: current-season national ranks (KenPom is the quadrant baseline). 5Y avg: available prior seasons, minimum three. Roster costs are reported estimates, not verified payrolls; N/A means no sourced figure.</p>':
         '<div class="td-empty"><strong>'+(others.length?'New trades paused':'No trade partners yet')+'</strong><p>'+(others.length?'The commissioner has disabled new offers.':'A second manager must join before you can propose a trade.')+'</p></div>')+'</section>'
       +'<section id="trade-outgoing" class="td-outgoing"><div class="td-section-title"><h2>Sent offers</h2><span>'+outgoing.length+' awaiting reply</span></div>'
       +(outgoing.length?'<div class="txn-offer-list">'+outgoing.map(t=>tradeCard(t,'outgoing')).join('')+'</div>':'<p class="td-inbox-empty">No pending offers sent.</p>')+'</section>'
@@ -2778,7 +2782,7 @@
       +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A is a separate +2.5 win category and does not stack with Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'
       +'<p>Appearance points are awarded once for NCAA seeding. Opening Round games use their own win value. The national championship bonus stacks with tournament wins. See the dedicated Pac-12 &amp; Mid-Major Bonuses section for at-large and upset eligibility.</p>'
       +'<p>Regular-season games earn their normal win points; conference tournament wins earn +2 and NCAA Tournament wins earn their configured postseason points. Those wins can additionally earn quadrant bonuses. There is no AP Poll or KenPom bonus.</p>'
-      +'<p class="muted">Provisional Bart Torvik-based points can change. Completed archived seasons use official final NET rankings.</p></section>';
+      +'<p class="muted">Current-season Q1/Q1A/Q2 bonuses use daily KenPom ranks where available, with NET/Torvik as fallback. Completed archived seasons keep verified NCAA NET rankings.</p></section>';
   }
 
   function leaguePage(){
@@ -2802,16 +2806,18 @@
     const leaderMargin=leader&&users.length>1?Math.max(0,valueOf(users[0])-valueOf(users[1])):0;
     const ownerCount=owners().length;
     const countedAcrossLeague=users.reduce((sum,u)=>sum+Number(scoreIndex.get(String(u.id))?.counted_programs||0),0);
-    const sourceLabel=scoring?.quadrant_source==='net'?'NCAA NET':
-      scoring?.quadrant_source==='torvik'?'Bart Torvik · provisional':'Quadrants pending';
+    const sourceLabel=scoring?.quadrant_source==='kenpom'?'KenPom · daily baseline':
+      scoring?.quadrant_source==='net'?'NCAA NET':
+      scoring?.quadrant_source==='torvik'?'Bart Torvik · fallback':'Quadrants pending';
     const scoredAt=scoring?.as_of?new Date(Number(scoring.as_of)*1000).toLocaleTimeString('en-US',{
       timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'';
     const note=standingsError?'Unable to refresh standings: '+standingsError:
       !scoring?'Calculating the current fantasy scores from verified games and awards...':
       !ownerCount?'Managers earn points after drafting their schools.':
-      scoring.quadrant_source==='torvik'?'Quadrant bonuses are provisional using Bart Torvik. NCAA NET will replace them when available.':
-      scoring.quadrant_source==='pending'?'Quadrant bonuses begin once complete Bart Torvik or NCAA NET rankings are available.':
-      'Totals include verified wins, NET quadrant bonuses and confirmed postseason awards.';
+      scoring.quadrant_source==='kenpom'?'Quadrant bonuses use the latest daily KenPom rankings and can change as rankings update.':
+      scoring.quadrant_source==='torvik'?'Quadrant bonuses temporarily use Bart Torvik because KenPom/NET are unavailable.':
+      scoring.quadrant_source==='pending'?'Quadrant bonuses begin once complete KenPom, Bart Torvik or NCAA NET rankings are available.':
+      'Totals include verified wins, venue-adjusted quadrant bonuses and confirmed postseason awards.';
     const programRows=(items,counted)=>{
       if(!items.length)return '<p class="league-breakdown-empty">'+(counted?'No programs counting yet.':'No bench programs.')+'</p>';
       return '<div class="league-breakdown-list">'+items.map((p,i)=>
@@ -2933,7 +2939,8 @@
         '<div class="program-schedule-placeholder">'+escapeHTML(loading?'Loading published 2026–27 schedule…':
           error||'No games match this filter.')+'</div>')+
       '<p class="program-schedule-note">'+escapeHTML(message)+
-      (data?.rankings_source==='torvik'?' Quadrants are provisional until official NCAA NET is published.':
+      (data?.rankings_source==='kenpom'?' Quadrants use the daily KenPom baseline; values may change with new rankings.':
+        data?.rankings_source==='torvik'?' Quadrants use provisional Bart Torvik fallback until KenPom becomes available.':
         data?.rankings_source==='pending'?' Quadrants will appear when team rankings are available.':'')+
       ' Bonus points are earned only for wins.</p></section>';
   }
@@ -2965,7 +2972,7 @@
     const kenpomRank=kenpomRankOf(p);
     const kenpomTag='<a class="pp-kenpom-link" href="https://kenpom.com/" target="_blank" rel="noopener noreferrer" title="KenPom national ranking, updated '+escapeHTML(kenpomData?.snapshot_date||'pending')+'">KENPOM <strong>'+(kenpomRank===null?'—':'#'+kenpomRank)+'</strong><span>↗</span></a>';
     const currentRecord=report?.record?.played?report.record.wins+'–'+report.record.losses:record(currentStats);
-    const ratingLabel=report?.ranking_source==='torvik'?'Bart Torvik (prelim)':'NET rank';
+    const ratingLabel=report?.ranking_source==='kenpom'?'KenPom (Q baseline)':report?.ranking_source==='torvik'?'Bart Torvik (fallback)':'NET rank';
     const state=programProfileTab==='schedule'||programProfileTab==='history'||programProfileTab==='ratings'
       ?programProfileTab:'overview';
     const tabs=[['overview','Overview'],['schedule','Schedule'],['history','History'],['ratings','Ratings']];
@@ -3193,8 +3200,8 @@
       +'<div class="tm-actions"><button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="team">My Team <span aria-hidden="true">↗</span></button>'
       +'<button type="button" class="tm-action" data-act="tab" data-id="league">Standings <span aria-hidden="true">↗</span></button></div></div>'
       +(roster.length?'<div class="tm-roster-scroll"><table class="tm-table">'
-        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
-        +'<tbody>'+teamProgramRows(roster,scoring,pointMap)+'</tbody></table></div>'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<tbody>'+teamProgramRows(roster,scoring,pointMap,{historyIndex:draftHistoricalIndex()})+'</tbody></table></div>'
         :'<div class="tm-empty">'+empty('Awaiting the draft','Programs will appear here when this manager makes selections.')+'</div>')
       +'<footer class="tm-roster-footer"><span>Programs are permanently owned unless traded or dropped.</span>'
       +'<span>'+(scoring?'Points update with the current season standings.':'Season totals will appear once scoring is available.')+'</span></footer>'
@@ -3477,8 +3484,8 @@
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-history-backfill">Import 8 historical dates</button></div>'
         +'<div class="form-row section-gap"><label for="history-net-season">Historical NET season</label><select class="field" id="history-net-season">'+['2025-26','2024-25','2023-24','2022-23','2021-22'].map(year=>'<option value="'+year+'">'+year+'</option>').join('')+'</select></div>'
         +'<button class="btn secondary" data-act="data-history-net">Import archived NET rankings</button></section>'
-        +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='torvik'?'Bart Torvik · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET active':'Awaiting Bart Torvik rankings')
-        +'<p class="hint">Until official NCAA NET is available, Bart Torvik serves as the provisional ranking for Q1/Q1A/Q2 points. League standings recalculate automatically when verified NCAA NET replaces it. Historical seasons are unchanged.</p>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='kenpom'?'KenPom · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='torvik'?'Bart Torvik fallback · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET fallback active':'Awaiting rankings')
+        +'<p class="hint">Current-season Q1/Q1A/Q2 bonuses use the most recent complete daily KenPom ranking snapshot. If KenPom is unavailable, NCAA NET or Bart Torvik is used as fallback. Completed historical seasons stay on verified NCAA NET. Scores update automatically.</p>'
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-torvik-refresh" '+(resultsStatus?.quadrant_source==='net'?'disabled':'')+'>Sync preliminary Bart Torvik</button></div></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'

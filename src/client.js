@@ -126,6 +126,28 @@
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='points',showAllDraft=false,lastAutoPoll=0;
   let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
+  let kenpomData=null,kenpomFetchedAt=0,kenpomLoading=false,kenpomError='';
+  const kenpomRankOf=p=>{
+    const rank=Number(kenpomData?.ranks?.[String(p?.id||'')]);
+    return Number.isInteger(rank)&&rank>=1&&rank<=400?rank:null;
+  };
+  async function loadKenpom(force=false){
+    if(!me||kenpomLoading||(!force&&Date.now()-kenpomFetchedAt<30*60*1000))return;
+    kenpomLoading=true;kenpomFetchedAt=Date.now();
+    try{
+      const data=await api('data/kenpom');
+      if(!data||data.source!=='KenPom'||!data.ranks||typeof data.ranks!=='object')
+        throw new Error('Stored rankings unavailable');
+      kenpomData=data;kenpomError='';
+    }catch(error){kenpomError=String(error?.message||error);}
+    finally{
+      kenpomLoading=false;
+      if(current==='programs'){
+        if(programMode==='directory')refreshSchoolsDirectory();
+        else render();
+      }else if(current==='program-detail')render();
+    }
+  }
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
   let ratingConference='all',ratingOwnership='all',ratingShown=40;
   let selectedProgramId='',selectedManagerId='',programBackPage='programs',managerBackPage='league',selectedHistorySeason='',selectedProgramSeason='',draftRoundView='all';
@@ -392,6 +414,7 @@
           if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
           raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};render();
         }
+        if((current==='programs'||current==='program-detail')&&Date.now()-kenpomFetchedAt>30*60*1000&&!kenpomLoading)loadKenpom();
         if(current==='results'&&Date.now()-resultsFetchedAt>(fastScoreWindow(resultsGames,resultsLoadedDay)?25000:55000)&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>(fastScoreWindow(overviewGames,overviewGamesDay)?25000:90000))&&!overviewGamesLoading)loadOverviewGames();
         if((['home','league','team','manager-detail','trades'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
@@ -629,7 +652,7 @@
     try{
       const next=await api('state'); me=next.user;league=next;reconcileDraftQueue();
       if(new URLSearchParams(location.search).has('notifications'))current='notifications';
-      render();loadNotifications(true);verifyPendingNotificationEmail();
+      render();loadNotifications(true);verifyPendingNotificationEmail();loadKenpom();
       startPolling();
       if(me?.role==='commissioner')autoImportPrograms();
     }catch(e){renderAuth();}
@@ -1629,6 +1652,7 @@
     const cost=rosterCost2026(p),reported=cost&&cost.estimate!==null&&cost.evidence!=='M';
     const torvik=rating?.rank!=null&&Number.isFinite(Number(rating.rank))&&Number(rating.rank)>0?'#'+Number(rating.rank):'—';
     const fiveYear=history?.eligibleForSort?historicalPointLabel(history.avg):'—';
+    const kenpom=kenpomRankOf(p);
     const costFigure=reported?rosterCostAmount2026(cost):cost?.evidence==='M'?'N/A':'—';
     const status=assignment
       ?'<button type="button" class="program-dir-owner" data-act="open-manager" data-id="'+escapeHTML(owner?.id||assignment.manager_id)+'" title="View '+escapeHTML(owner?.display_name||'manager')+' roster"><i aria-hidden="true"></i>'+escapeHTML(owner?.display_name||'Rostered')+'</button>'
@@ -1644,6 +1668,7 @@
       +'<span class="directory-school-arrow" aria-hidden="true">↗</span></button>'
       +'<span class="directory-data-cell directory-points" data-label="'+escapeHTML(season().slice(2))+' PTS" title="'+escapeHTML(season())+' fantasy points"><b>'+currentSeasonPoints(p)+'</b><small>SEASON POINTS</small></span>'
       +'<span class="directory-data-cell directory-torvik" data-label="TORVIK" title="Bart Torvik national rank"><b>'+escapeHTML(torvik)+'</b><small>NATIONAL</small></span>'
+      +'<span class="directory-data-cell directory-kenpom" data-label="KENPOM" title="KenPom national rank · '+escapeHTML(kenpomData?.snapshot_date||'pending')+'"><b>'+(kenpom===null?'—':'#'+kenpom)+'</b><small>KENPOM</small></span>'
       +'<span class="directory-data-cell directory-history" data-label="5Y AVG" title="Verified five-season average fantasy points"><b>'+escapeHTML(fiveYear)+'</b>'
       +'<small>'+(history?.eligibleForSort?'RANK #'+history.rank:history?'LIMITED HISTORY':schoolLeadersLoading?'LOADING':'NO 5Y DATA')+'</small></span>'
       +'<span class="directory-data-cell directory-cost" data-label="ROSTER $" title="'+escapeHTML(rosterCostEvidence2026(cost))+'"><b>'+escapeHTML(costFigure)+'</b>'
@@ -1927,6 +1952,12 @@
         if(aRank===null)return bRank===null?a.name.localeCompare(b.name):1;
         if(bRank===null)return -1;
         return aRank-bRank||a.name.localeCompare(b.name);
+      },
+      kenpom:(a,b)=>{
+        const aRank=kenpomRankOf(a),bRank=kenpomRankOf(b);
+        if(aRank===null)return bRank===null?a.name.localeCompare(b.name):1;
+        if(bRank===null)return -1;
+        return aRank-bRank||a.name.localeCompare(b.name);
       }
     };
     eligible.sort(sorters[programSort]||sorters.points);
@@ -1935,7 +1966,7 @@
       +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
-    const sortButtons=[['points',escapeHTML(season())+' Points'],['history','5Y Average'],['torvik','Bart Torvik']]
+    const sortButtons=[['points',escapeHTML(season())+' Points'],['history','5Y Average'],['torvik','Bart Torvik'],['kenpom','KenPom']]
       .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
     return '<div class="schools-hub">'+header+nav
       +'<section class="program-directory-shell" aria-label="League school directory">'
@@ -1957,12 +1988,13 @@
       +'<div class="directory-letter-strip" role="group" aria-label="First-letter filter">'+letters+'</div></div></div>'
       +(eligible.length?'<div class="directory-table">'
         +'<div class="directory-table-head" aria-hidden="true"><span>PROGRAM / CONFERENCE</span>'
-        +'<span>'+escapeHTML(season())+' PTS</span><span>BART TORVIK</span><span>5Y AVG PTS</span>'
+        +'<span>'+escapeHTML(season())+' PTS</span><span>BART TORVIK</span><span>KENPOM</span><span>5Y AVG PTS</span>'
         +'<span>2026 ROSTER $</span><span>STATUS</span></div>'
         +'<div class="program-grid program-directory-grid">'+eligible.map(p=>programCard(p,isMyTurn(),historyIndex)).join('')+'</div>'
         +'<div id="no-program-results" class="directory-empty" hidden><strong>No matching programs</strong><span>Try a different school, conference, or roster filter.</span></div>'
         +'<div id="directory-load" class="directory-load" hidden><button type="button" data-act="load-programs">Show more programs <span aria-hidden="true">↓</span></button><span id="directory-progress"></span></div></div>'
         :empty('No schools in the pool','The commissioner can add programs in league settings.'))
+      +'<div class="directory-kenpom-source">KenPom national rankings '+(kenpomData?.snapshot_date?'updated '+escapeHTML(formatResultsDay(kenpomData.snapshot_date,{month:'short',day:'numeric',year:'numeric'})):'pending')+' · <a href="https://kenpom.com/" target="_blank" rel="noopener noreferrer">Source: KenPom ↗</a>'+(kenpomError?' · Latest sync unavailable':'')+'</div>'
       +'<div class="directory-method-note"><span>SCOUTING NOTES</span><p>Current-season points reflect the live standings and can be provisional. Torvik is a national efficiency rank. Five-year averages use verified dynasty scoring from completed seasons; limited records are not ranked. Roster spending figures are directional estimates, not audited payrolls. Independent-model-only schools display N/A.</p></div>'
       +'</section></div>';
   }
@@ -2930,6 +2962,8 @@
     const labelStat=(name,value)=>'<div class="pp-mini-stat"><span>'+escapeHTML(name)+'</span><strong>'+
       escapeHTML(value)+'</strong></div>';
     const rankValue=report?.net?.net_rank?'#'+report.net.net_rank:'—';
+    const kenpomRank=kenpomRankOf(p);
+    const kenpomTag='<a class="pp-kenpom-link" href="https://kenpom.com/" target="_blank" rel="noopener noreferrer" title="KenPom national ranking, updated '+escapeHTML(kenpomData?.snapshot_date||'pending')+'">KENPOM <strong>'+(kenpomRank===null?'—':'#'+kenpomRank)+'</strong><span>↗</span></a>';
     const currentRecord=report?.record?.played?report.record.wins+'–'+report.record.losses:record(currentStats);
     const ratingLabel=report?.ranking_source==='torvik'?'Bart Torvik (prelim)':'NET rank';
     const state=programProfileTab==='schedule'||programProfileTab==='history'||programProfileTab==='ratings'
@@ -3062,6 +3096,7 @@
       }).join('')+'</div>'+
       (metrics?'<div class="pp-ratings-grid">'+
         ratingCard('National Bart Torvik','#'+metrics.rank)+
+        (selected===season()?ratingCard('KenPom national rank',kenpomRank===null?'—':'#'+kenpomRank,kenpomData?.snapshot_date?'Updated '+kenpomData.snapshot_date:'Awaiting daily snapshot'):'')+
         ratingCard('Barthag',decimal(metrics.barthag,3))+
         ratingCard('Adjusted offense',decimal(metrics.adj_o),metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Points / 100 possessions')+
         ratingCard('Adjusted defense',decimal(metrics.adj_d),metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Points / 100 possessions')+
@@ -3093,7 +3128,7 @@
       '<div class="pp-identity-text"><span class="pp-conference">'+escapeHTML(conf(p.conference_id))+
       ' <span aria-hidden="true">·</span> NCAA DIVISION I</span>'+
       '<h1>'+escapeHTML(p.name)+'</h1>'+
-      '<div class="pp-owner">Dynasty ownership <span aria-hidden="true">·</span> '+ownerMarkup+'</div></div></div>'+
+      '<div class="pp-owner">Dynasty ownership <span aria-hidden="true">·</span> '+ownerMarkup+'</div>'+kenpomTag+'</div></div>'+ 
       '<div class="pp-masthead-score"><span>'+escapeHTML(season())+' FANTASY POINTS</span>'+
       '<strong>'+points(currentStats)+'</strong><small>'+
       (currentStats?.status==='complete'?'FINAL SEASON TOTAL':currentStats?.status==='partial'?'LIVE SEASON TOTAL':'VERIFIED SCORING')+
@@ -3645,6 +3680,7 @@
       if(id==='notifications')loadNotifications(true);
       globalSearchOpen=false;globalSearchQuery='';
       if(id==='programs'&&current!=='programs')ratingSeason=season();
+      if(id==='programs')loadKenpom();
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();
       if(current==='draft-order'&&officialRace()&&raceState.id!==officialRace().id&&Date.now()-officialRace().started_at*1000<raceTotalMs(officialRace()))startDraftRacePlayback(true);
       window.scrollTo({top:0,behavior:'auto'});return;
@@ -3677,14 +3713,14 @@
     if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
     if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
-    if(act==='directory-sort'){programSort=['points','history','torvik'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
+    if(act==='directory-sort'){programSort=['points','history','torvik','kenpom'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       globalSearchOpen=false;globalSearchQuery='';
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
       if(String(selectedProgramId)!==String(id)){programScheduleView='all';programProfileTab='overview';}
       selectedProgramId=id;selectedProgramSeason=programMode==='leaders'&&leaderSeason!=='all'?leaderSeason:
         programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();
-      loadProgramResults(id);loadProgramSchedule(id);window.scrollTo({top:0});return;
+      loadProgramResults(id);loadProgramSchedule(id);loadKenpom();window.scrollTo({top:0});return;
     }
     if(act==='open-manager'){
       globalSearchOpen=false;globalSearchQuery='';
@@ -4258,7 +4294,7 @@
     if(e.target?.id==='trade-target'){document.querySelectorAll('input[name="trade-receive"],input[name="trade-receive-pick"]').forEach(el=>{el.checked=false;});tradeTargetId=e.target.value;tradeSearch.receive='';render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
-    if(e.target?.id==='directory-sort'){programSort=['points','history','torvik'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
+    if(e.target?.id==='directory-sort'){programSort=['points','history','torvik','kenpom'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
     if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
     if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}

@@ -12,6 +12,7 @@ const injection=`  return {
  mode:mode=>{draftRoundView=mode;},
  sortDraft:sort=>{draftSort=sort;draftScope='all';},
  schools:(mode,data)=>{programMode=mode;schoolLeaders=data;leaderSeason='all';},
+ sortSchools:(sort)=>{programSort=sort;},
  results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsLoadedDay='2026-11-03';resultsSeason=season();resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
  standings:(data)=>{standingsData=data;standingsFetchedAt=Date.now();},
  expandLeague:(id)=>{leagueExpandedManager=String(id);},
@@ -151,6 +152,17 @@ test('Schools directory uses pills, not conference and sorting dropdowns',()=>{
   assert.match(html,/data-act="directory-sort"/);
   assert.doesNotMatch(html,/id="program-conference"/);
   assert.doesNotMatch(html,/id="directory-sort"/);
+});
+test('Schools directory sorts all researched roster costs descending, with missing valuations last',()=>{
+  try{
+    app.schools('directory',null);
+    app.sortSchools('cost');
+    const html=app.page('programs');
+    assert.match(html,/data-act="directory-sort" data-id="cost" class="active" aria-pressed="true">Roster Cost<\/button>/);
+    const ids=[...html.matchAll(/class="program-card program-directory-card[^"]*" data-program="(\d+)"/g)].map(m=>m[1]);
+    assert.deepEqual(ids,['57','59','58','60']); // Florida $26M, Houston $6.4M, Duke $5M, Michigan unestimated.
+    for(const label of ['2026-27 Points','5Y Average','Bart Torvik','KenPom'])assert.ok(html.includes(label));
+  }finally{app.sortSchools('points');}
 });
 test('Historical Leaders compares school points by season with a searchable table',()=>{
   app.schools('leaders',{seasons:['2021-22','2022-23'],directory:programs,

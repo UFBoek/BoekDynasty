@@ -1976,6 +1976,12 @@
         if(aRank===null)return bRank===null?a.name.localeCompare(b.name):1;
         if(bRank===null)return -1;
         return aRank-bRank||a.name.localeCompare(b.name);
+      },
+      cost:(a,b)=>{
+        const aCost=rosterCost2026(a)?.estimate,bCost=rosterCost2026(b)?.estimate;
+        if(!Number.isFinite(aCost))return Number.isFinite(bCost)?1:a.name.localeCompare(b.name);
+        if(!Number.isFinite(bCost))return -1;
+        return bCost-aCost||a.name.localeCompare(b.name);
       }
     };
     eligible.sort(sorters[programSort]||sorters.points);
@@ -1984,7 +1990,7 @@
       +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
-    const sortButtons=[['points',escapeHTML(season())+' Points'],['history','5Y Average'],['torvik','Bart Torvik'],['kenpom','KenPom']]
+    const sortButtons=[['points',escapeHTML(season())+' Points'],['history','5Y Average'],['torvik','Bart Torvik'],['kenpom','KenPom'],['cost','Roster Cost']]
       .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
     return '<div class="schools-hub">'+header+nav
       +'<section class="program-directory-shell" aria-label="League school directory">'
@@ -3734,7 +3740,7 @@
     if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
     if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
-    if(act==='directory-sort'){programSort=['points','history','torvik','kenpom'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
+    if(act==='directory-sort'){programSort=['points','history','torvik','kenpom','cost'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       globalSearchOpen=false;globalSearchQuery='';
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
@@ -4315,7 +4321,7 @@
     if(e.target?.id==='trade-target'){document.querySelectorAll('input[name="trade-receive"],input[name="trade-receive-pick"]').forEach(el=>{el.checked=false;});tradeTargetId=e.target.value;tradeSearch.receive='';render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
-    if(e.target?.id==='directory-sort'){programSort=['points','history','torvik','kenpom'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
+    if(e.target?.id==='directory-sort'){programSort=['points','history','torvik','kenpom','cost'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
     if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
     if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}

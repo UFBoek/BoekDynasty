@@ -105,3 +105,49 @@
  .schools-hub .directory-school-identity strong{font-size:11px}
  .schools-hub .directory-kenpom-source{padding:10px 12px;font-size:9px}
 }
+
+
+/* Dual-source rankings: compact scouting metrics, readable on small screens. */
+.tm-v4 .tm-kenpom-rank{width:105px;color:#885736;font-variant-numeric:tabular-nums}
+.tm-v4 .tm-table th.tm-kenpom-rank{color:#916c53}
+.td-desk .td-scout{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.td-desk .td-scout div:nth-child(3) dd{color:#8c5839}
+.draft-v5 .draft-scouting-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+.draft-v5 .draft-scouting-strip small{font-size:7px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
+.draft-v5 .draft-scouting-strip strong{font-size:12px}
+.draft-v5 .draft-cell-scout{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+.draft-v5 .draft-cell-scout>span{padding:5px 1px 4px}
+.draft-v5 .draft-cell-scout small{font-size:6.5px}
+.draft-v5 .draft-cell-scout b{font-size:10px}
+.draft-compare-rank{white-space:normal;max-width:60%;line-height:1.3}
+.rating-kenpom strong{color:#94613e;font-variant-numeric:tabular-nums}
+.ratings-table .rating-kenpom{width:75px;white-space:nowrap;text-align:center}
+.ratings-table th.rating-kenpom{color:#8c6d56}
+.rank-mobile-metrics .rating-kenpom strong{color:#885736}
+.daily-team-torvik{margin-inline-start:2px;font-size:9px;opacity:.83}
+.daily-team-torvik em{font-size:8px}
+@media(max-width:1100px){
+ .td-desk .td-scout{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:10px}
+}
+@media(max-width:750px){
+ .tm-v4 .tm-table tr.tm-roster-row{
+  grid-template-columns:26px minmax(0,1fr) 85px;
+  grid-template-areas:"num identity score" ". torvik kenpom" ". history history";
+  gap:5px 8px;
+ }
+ .tm-v4 .tm-stat-rank.tm-kenpom-rank{
+   grid-area:kenpom;justify-self:end;width:auto;text-align:right;
+   font-size:9px;color:#8c5839;
+ }
+ .tm-v4 .tm-stat-rank.tm-historical-rank{
+   grid-area:history;justify-self:start;width:auto;
+ }
+ .tm-v4 .tm-table .tm-rank{align-self:start}
+ .draft-v5 .draft-scouting-strip small{font-size:6.6px}
+ .daily-team-torvik{font-size:8px}
+}
+@media(max-width:420px){
+ .tm-v4 .tm-table tr.tm-roster-row{grid-template-columns:22px minmax(0,1fr) 75px}
+ .draft-v5 .draft-scouting-strip strong{font-size:11px}
+ .td-desk .td-scout{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

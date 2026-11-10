@@ -209,3 +209,69 @@ button.daily-team-line:hover{background:#f0f5f9}
 .overview-school-identity{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;padding:3px 0}
 .overview-game-school .overview-school-identity strong{display:block;flex:none;width:100%}
 .overview-school-identity .scoreboard-owner{font-size:9px}
+
+
+/* Keep both ranking sources in one scoreboard grid column.
+   The preceding single-rank grid would otherwise place TOR over KP. */
+.daily-team-ranks{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  min-width:0;
+  width:100%;
+  gap:3px;
+}
+.daily-team-ranks .daily-team-net{
+  display:flex;
+  align-items:baseline;
+  justify-content:flex-start;
+  gap:4px;
+  min-width:0;
+  width:100%;
+  margin:0;
+  color:#59758d;
+  font-size:9px;
+  font-weight:800;
+  line-height:1.2;
+  letter-spacing:0;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.daily-team-ranks .daily-team-net em{
+  flex:0 0 21px;
+  display:inline-block;
+  font-size:8px;
+  font-style:normal;
+  font-weight:850;
+  color:#95a5b4;
+  text-align:left;
+}
+.daily-team-ranks .daily-team-torvik{
+  opacity:1;
+  margin:0;
+  color:#6e8193;
+  font-size:9px;
+}
+@media(max-width:900px){
+  .daily-team-line>.daily-team-ranks{
+    grid-column:3;
+    grid-row:1;
+    align-self:center;
+    justify-self:stretch;
+  }
+}
+@media(max-width:600px){
+  .daily-team-line{
+    grid-template-columns:23px minmax(0,1fr) 56px 23px;
+    row-gap:5px;
+  }
+  .daily-team-ranks{gap:3px}
+  .daily-team-ranks .daily-team-net,
+  .daily-team-ranks .daily-team-torvik{font-size:8px;line-height:1.15}
+  .daily-team-ranks .daily-team-net em{
+    flex-basis:19px;
+    font-size:7px;
+  }
+  .daily-team-line .daily-quad{align-self:start}
+}

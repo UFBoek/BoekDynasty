@@ -308,9 +308,10 @@ export default (function makeWorker(){
           ranking_date:ranking.snapshot_date,ranking_source:ranking.source,
           quadrant_provisional:ranking.provisional,
           record_note:'Records include final games through the selected date.',
-          quadrant_note:ranking.source==='net'?'Quadrants use the latest official NCAA NET and the actual home, away or neutral venue.':
-            ranking.source==='torvik'?'Provisional quadrants and fantasy bonuses use Bart Torvik T-Rank until complete NCAA NET rankings become available. All bonuses will be recalculated from official NET.':
-            'Quadrants are pending until a complete T-Rank or official NCAA NET ranking feed becomes available.'});
+          quadrant_note:ranking.source==='kenpom'?'Quadrants and Q1/Q1A/Q2 bonuses use the latest complete daily KenPom rankings, adjusted for home, away or neutral venue. Rankings update daily; bonuses may change.':
+            ranking.source==='net'?'Quadrants use official NCAA NET and the actual home, away or neutral venue.':
+            ranking.source==='torvik'?'Provisional quadrant bonuses use Bart Torvik rankings while KenPom and NET data are unavailable.':
+            'Quadrants are pending until complete KenPom, NCAA NET or Bart Torvik rankings become available.'});
       }
       if(path==='data/rankings'){
         const poll=await DATA_PIPELINE.apPoll(env,season);

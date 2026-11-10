@@ -53,3 +53,55 @@
 }
 .league-center .league-standings-table .league-breakdown-row>td{width:100%;text-align:left}
 @media(max-width:760px){.league-center .league-standings-table tr.standing-row td{width:auto}.league-center .league-standings-table th:last-child{display:table-cell}}
+
+
+/* KenPom: compact seventh directory metric, with mobile-first score cells. */
+.schools-hub .directory-table-head,
+.schools-hub .program-directory-card{
+  grid-template-columns:minmax(185px,2.15fr) minmax(69px,.67fr)
+  minmax(70px,.7fr) minmax(75px,.72fr) minmax(87px,.8fr)
+  minmax(98px,.85fr) minmax(100px,.94fr);
+  gap:7px;
+}
+.schools-hub .directory-kenpom b{color:#8a5636}
+.schools-hub .directory-kenpom small{color:#9d8b7a}
+.schools-hub .directory-kenpom-source{
+  display:flex;flex-wrap:wrap;gap:4px;align-items:center;
+  padding:11px 16px;border-top:1px solid #e6edf3;
+  color:#6c7e8e;font-size:10px;font-weight:650;
+}
+.schools-hub .directory-kenpom-source a{color:#326486;font-weight:750;text-decoration:none}
+.schools-hub .directory-kenpom-source a:hover{text-decoration:underline}
+.pp-v3 .pp-kenpom-link{
+  display:inline-flex;align-items:center;gap:7px;margin-top:9px;
+  padding:5px 9px;border:1px solid #e2e8ed;border-radius:5px;
+  background:#f8fafb;color:#667b89;font-size:10px;font-weight:800;
+  text-decoration:none;letter-spacing:.04em;max-width:max-content;
+}
+.pp-v3 .pp-kenpom-link strong{color:#7c4a2b;font-size:13px;letter-spacing:0}
+.pp-v3 .pp-kenpom-link span{color:#9baab6}
+.pp-v3 .pp-kenpom-link:hover{border-color:#d1b5a3;background:#fdf8f3}
+@media (min-width:721px) and (max-width:1070px){
+ .schools-hub .directory-table-head,
+ .schools-hub .program-directory-card{
+  grid-template-columns:minmax(145px,1.9fr) minmax(53px,.65fr)
+    minmax(61px,.7fr) minmax(61px,.7fr) minmax(71px,.8fr)
+    minmax(73px,.8fr) minmax(78px,.85fr);gap:5px;
+ }
+ .schools-hub .directory-table-head>span{font-size:7.4px;letter-spacing:.02em}
+}
+@media(max-width:720px){
+ .schools-hub .program-directory-card{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-areas:"school school school status status"
+                      "points torvik kenpom history cost";
+  gap:8px 3px;min-height:95px;
+ }
+ .schools-hub .directory-points{grid-area:points}
+ .schools-hub .directory-kenpom{grid-area:kenpom}
+ .schools-hub .directory-data-cell{min-width:0;padding-top:7px}
+ .schools-hub .directory-data-cell:before{font-size:7px;letter-spacing:.015em}
+ .schools-hub .directory-data-cell b{font-size:11.4px}
+ .schools-hub .directory-school-identity strong{font-size:11px}
+ .schools-hub .directory-kenpom-source{padding:10px 12px;font-size:9px}
+}

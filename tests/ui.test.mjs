@@ -483,7 +483,7 @@ test('League standings show ranked totals, ties, lead gaps and verified program 
   assert.match(html,/T02/);
   assert.match(html,/−7/);
   assert.match(html,/LEADER/);
-  assert.match(html,/Bart Torvik · provisional/);
+  assert.match(html,/Bart Torvik · fallback/);
   assert.match(html,/data-act="league-refresh"/);
   assert.match(html,/data-act="league-toggle-details"/);
   assert.match(html,/aria-expanded="false"/);

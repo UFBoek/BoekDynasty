@@ -392,8 +392,8 @@
           if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
           raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};render();
         }
-        if(current==='results'&&Date.now()-resultsFetchedAt>55000&&!resultsLoading)loadResults();
-        if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000)&&!overviewGamesLoading)loadOverviewGames();
+        if(current==='results'&&Date.now()-resultsFetchedAt>(fastScoreWindow(resultsGames,resultsLoadedDay)?25000:55000)&&!resultsLoading)loadResults();
+        if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>(fastScoreWindow(overviewGames,overviewGamesDay)?25000:90000))&&!overviewGamesLoading)loadOverviewGames();
         if((['home','league','team','manager-detail'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
       }
       if(chosen.length){
@@ -594,6 +594,18 @@
       +(eventList?'<div class="activity-feed">'+eventList+'</div>':empty('No recorded activity yet','New visits and changes will appear as members use the site.'))+'</section>';
   }
 
+  // Fast only while today's games are live or near the scheduled tipoff.
+  // Use a grace window to catch ESPN's transition from scheduled to in-progress.
+  function fastScoreWindow(games,day){
+    if(day!==resultsToday()||!Array.isArray(games))return false;
+    const now=Date.now();
+    return games.some(game=>{
+      if(game.status==='live')return true;
+      if(game.status!=='scheduled')return false;
+      const start=Date.parse(game.start_utc||'');
+      return Number.isFinite(start)&&start>=now-4*3600000&&start<=now+2*60000;
+    });
+  }
   function startPolling(){
     if(refreshId)return;
     lastAutoPoll=Date.now();
@@ -602,7 +614,9 @@
       if(me&&!document.hidden&&Date.now()-notificationFetchedAt>30000)loadNotifications();
       if(!me||busy||syncActive||current==='commissioner'||current==='settings'||document.hidden)return;
       const onMobile=window.matchMedia?.('(max-width: 850px)').matches||false;
-      const interval=current==='draft-order'&&!officialRace()?6000:onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
+      const activeScores=(current==='results'&&fastScoreWindow(resultsGames,resultsLoadedDay))
+        ||(current==='home'&&fastScoreWindow(overviewGames,overviewGamesDay));
+      const interval=activeScores?6000:current==='draft-order'&&!officialRace()?6000:onMobile&&league?.settings?.draft_status!=='live'?30000:12000;
       const now=Date.now();
       if(now-lastAutoPoll<interval)return;
       lastAutoPoll=now;
@@ -804,7 +818,7 @@
   async function loadOverviewGames(){
     if(!me||overviewGamesLoading)return;
     const today=resultsToday();
-    if(overviewGamesDay===today&&Date.now()-overviewGamesFetchedAt<90000)return;
+    if(overviewGamesDay===today&&Date.now()-overviewGamesFetchedAt<(fastScoreWindow(overviewGames,overviewGamesDay)?25000:90000))return;
     overviewGamesLoading=true;
     try{
       const response=await api('data/games?date='+encodeURIComponent(today));

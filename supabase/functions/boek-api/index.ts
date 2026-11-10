@@ -124,6 +124,33 @@ Deno.serve(async (request)=>{
     }},{headers:{...cors,'Cache-Control':'no-store'}});
   }
 
+  if(subpath==='data/kenpom'){
+    if(request.method!=='GET')
+      return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
+    const actor=await activityActor(request);
+    if(!actor)
+      return Response.json({error:'Sign in required.'},{status:401,headers:cors});
+    try{
+      const latest=await db.prepare(
+        "SELECT snapshot_date::text AS snapshot_date FROM private.cbb_kenpom_fetches WHERE status='ready' ORDER BY snapshot_date DESC LIMIT 1"
+      ).first();
+      if(!latest)return Response.json({source:'KenPom',snapshot_date:null,season:null,count:0,ranks:{}},
+        {headers:{...cors,'Cache-Control':'no-store'}});
+      const result=await db.prepare(
+        'SELECT program_id,rank,season FROM private.cbb_kenpom_daily WHERE snapshot_date=? ORDER BY rank'
+      ).bind(latest.snapshot_date).all();
+      const rows=result.results||[];
+      return Response.json({source:'KenPom',snapshot_date:latest.snapshot_date,
+        season:rows[0]?.season||null,count:rows.length,
+        ranks:Object.fromEntries(rows.map(x=>[String(x.program_id),Number(x.rank)]))},
+        {headers:{...cors,'Cache-Control':'no-store'}});
+    }catch(error){
+      console.error('KenPom stored ranking lookup failed',String(error?.message||error));
+      return Response.json({error:'Stored KenPom rankings are currently unavailable.'},
+        {status:503,headers:{...cors,'Cache-Control':'no-store'}});
+    }
+  }
+
   if(subpath==='data/ratings'){
     if(request.method!=='GET')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
     const year=Number(original.searchParams.get('year'));

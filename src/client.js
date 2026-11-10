@@ -145,7 +145,7 @@
       if(current==='programs'){
         if(programMode==='directory')refreshSchoolsDirectory();
         else render();
-      }else if(current==='program-detail')render();
+      }else if(['program-detail','team','manager-detail','draft','trades','results','home'].includes(current))render();
     }
   }
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
@@ -370,7 +370,7 @@
     finally{
       delete ratingLoading[year];
       if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft'||current==='team'||current==='trades')render();
+      else if(current==='programs'&&programMode==='ratings'||['program-detail','draft','team','manager-detail','trades','results'].includes(current))render();
     }
   }
   const ratingExternalLinks=(year=ratingYear(season()))=>'<div class="rating-source-links">'
@@ -1861,6 +1861,7 @@
     const years=Array.from({length:6},(_,i)=>ratingYear(season())-i).filter(y=>y>=2022&&y<=2027);
     const seasons=rankingSeasonNav(years.map(y=>[String(y),(y-1)+'-'+String(y%100).padStart(2,'0')]),'rating-season',String(year),'Bart Torvik season');
     const isCurrent=year===ratingYear(season());
+    const activeRatingSort=!isCurrent&&ratingSort==='kenpom'?'rank':ratingSort;
     const heading='<div class="rank-heading"><div><span class="rank-kicker">PROGRAM RANKINGS · ADVANCED ANALYTICS</span><h2>Power ratings</h2>'
       +'<p>Explore Bart Torvik efficiency rankings alongside daily KenPom national rankings for the current season.</p></div>'
       +'<div class="rank-heading-mark"><span>'+(isCurrent?'CURRENT SEASON':'ARCHIVED SEASON')+'</span><strong>'+(year-1)+'-'+String(year%100).padStart(2,'0')+'</strong><small>Torvik '+year+' ratings</small></div></div>';
@@ -1882,13 +1883,13 @@
     const sortNames={rank:'Overall rank',kenpom:'KenPom rank',offense:'Offensive efficiency',defense:'Defensive efficiency',power:'Barthag',wab:'Wins above bubble',tempo:'Adjusted tempo'};
     const entries=eligiblePrograms().filter(p=>rankingEligible(p,ratingConference,ratingOwnership))
       .map(p=>({p,r:ratingOf(p,year)}));
-    const rows=entries.sort((a,b)=>(metrics[ratingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
+    const rows=entries.sort((a,b)=>(metrics[activeRatingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
     const valid=rows.filter(row=>row.r),dec=(x,n=1)=>rankingNumber(x,n);
-    const featureValue=row=>ratingSort==='kenpom'?'#'+(kenpomRankOf(row.p)??'—'):ratingSort==='offense'?dec(row.r?.adj_o):ratingSort==='defense'?dec(row.r?.adj_d):
+    const featureValue=row=>activeRatingSort==='kenpom'?'#'+(kenpomRankOf(row.p)??'—'):activeRatingSort==='offense'?dec(row.r?.adj_o):ratingSort==='defense'?dec(row.r?.adj_d):
       ratingSort==='power'?dec(row.r?.barthag,3):ratingSort==='wab'?dec(row.r?.wab):
       ratingSort==='tempo'?dec(row.r?.tempo):'#'+(row.r?.rank??'—');
     const metricOptions=[['rank','Overall'],...(isCurrent?[['kenpom','KenPom']]:[]),['offense','Offense'],['defense','Defense'],['power','Barthag'],['wab','WAB'],['tempo','Tempo']];
-    const sortTabs=metricOptions.map(([id,label])=>'<button type="button" data-act="rating-sort" data-id="'+id+'" aria-pressed="'+(ratingSort===id)+'" class="'+(ratingSort===id?'active':'')+'">'+label+'</button>').join('');
+    const sortTabs=metricOptions.map(([id,label])=>'<button type="button" data-act="rating-sort" data-id="'+id+'" aria-pressed="'+(activeRatingSort===id)+'" class="'+(activeRatingSort===id?'active':'')+'">'+label+'</button>').join('');
     const table=rows.map(({p,r})=>
       '<tr class="rank-data-row rating-school-row" data-ranking="ratings" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
       +'<td class="rank-position-cell"><span class="rank-position '+(r?.rank<=25?'is-top':'')+'">'+(r?'#'+r.rank:'—')+'</span></td>'
@@ -1913,7 +1914,7 @@
     return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
       +'<div class="rank-summary-line"><span class="rank-data-indicator"><i></i> '+escapeHTML(data.source||'BART TORVIK')+' · '+(year-1)+'-'+String(year%100).padStart(2,'0')+'</span><span>'+valid.length+' matched / '+entries.length+' eligible</span>'
       +'<span>Source checked '+escapeHTML(new Date(data.fetched_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</span></div>'
-      +rankingFeatured(valid.slice(0,3),'ratings',sortNames[ratingSort]||'National Bart Torvik',featureValue)
+      +rankingFeatured(valid.slice(0,3),'ratings',sortNames[activeRatingSort]||'National Bart Torvik',featureValue)
       +rankingTools('ratings',ratingQuery,ratingConference,ratingOwnership)
       +'<div class="rank-toolbar-bottom"><div class="rank-order rank-rating-order" role="group" aria-label="Sort power ratings">'+sortTabs+'</div>'
       +'<span class="rank-count" id="rating-count">'+entries.length+' schools</span></div>'

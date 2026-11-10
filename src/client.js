@@ -348,7 +348,7 @@
     finally{
       delete ratingLoading[year];
       if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft'||current==='team')render();
+      else if(current==='programs'&&programMode==='ratings'||current==='program-detail'||current==='draft'||current==='team'||current==='trades')render();
     }
   }
   const ratingExternalLinks=(year=ratingYear(season()))=>'<div class="rating-source-links">'
@@ -394,7 +394,7 @@
         }
         if(current==='results'&&Date.now()-resultsFetchedAt>(fastScoreWindow(resultsGames,resultsLoadedDay)?25000:55000)&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>(fastScoreWindow(overviewGames,overviewGamesDay)?25000:90000))&&!overviewGamesLoading)loadOverviewGames();
-        if((['home','league','team','manager-detail'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
+        if((['home','league','team','manager-detail','trades'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
       }
       if(chosen.length){
         document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
@@ -742,13 +742,13 @@
   }
   function render(){
     if(!me||!league)return renderAuth();
-    if((['home','league','team','manager-detail'].includes(current)||current==='programs')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    if((['home','league','team','manager-detail','trades'].includes(current)||current==='programs')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     // The overview previews today's games without requiring a visit to Results.
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
     // The My Team roster shares verified national scouting data with the Draft Desk.
-    if(current==='team'){
+    if(current==='team'||current==='trades'){
       const year=ratingYear(season());
       if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
@@ -767,6 +767,17 @@
       loadRatings(ratingYear(season()));
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
     }
+    const tradeChosen=current==='trades'?[...document.querySelectorAll('.trade-choice input:checked')].map(el=>el.name+':'+el.value):[];
+    const tradeFocus=current==='trades'&&document.activeElement?.closest?.('.td-desk')?{
+      id:document.activeElement.id,name:document.activeElement.name,value:document.activeElement.value,
+      search:document.activeElement.dataset?.tradeSearch,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd
+    }:null;
+    const tradePanels=current==='trades'?[...document.querySelectorAll('.td-roster')].map(el=>({
+      side:el.dataset.tradeSide,scroll:el.querySelector('.td-school-list')?.scrollTop||0,
+      picksOpen:el.querySelector('.td-draft-assets')?.open,pickScroll:el.querySelector('.trade-pick-list')?.scrollTop||0
+    })):[];
+    const tradeHistoryOpen=current==='trades'&&document.querySelector('.td-history')?.open;
+
     const isAdmin=me.role==='commissioner';
     if(current==='commissioner'&&!isAdmin)current='home';
     pingActivity();
@@ -794,6 +805,22 @@
     const notificationBell='<button type="button" class="topbar-bell" data-act="tab" data-id="notifications" title="Notifications" aria-label="Notifications'+(unreadNotifications?', '+unreadNotifications+' unread':'')+'">'+iconSVG('notifications')
       +(unreadNotifications?'<span class="notification-bell-count">'+unreadNotifications+'</span>':'')+'</button>';
     root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+tradeShortcut+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='draft'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='draft'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'')+(draftPrank?draftPrankDialog():'');
+    if(current==='trades'){
+      document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=tradeChosen.includes(el.name+':'+el.value);});
+      updateTradeSelections();for(const side of ['give','receive'])filterTradeAssets(side);
+      for(const panel of tradePanels){
+        const roster=document.querySelector('[data-trade-side="'+panel.side+'"]');
+        const list=roster?.querySelector('.td-school-list'),details=roster?.querySelector('.td-draft-assets'),picks=roster?.querySelector('.trade-pick-list');
+        if(list)list.scrollTop=panel.scroll;if(details&&panel.picksOpen!==undefined)details.open=panel.picksOpen;if(picks)picks.scrollTop=panel.pickScroll;
+      }
+      const history=document.querySelector('.td-history');if(history&&tradeHistoryOpen)history.open=true;
+      if(tradeFocus){
+        const field=tradeFocus.search?document.querySelector('[data-trade-search="'+tradeFocus.search+'"]'):
+          tradeFocus.id?document.getElementById(tradeFocus.id):[...document.querySelectorAll('.trade-choice input')].find(el=>el.name===tradeFocus.name&&el.value===tradeFocus.value);
+        field?.focus({preventScroll:true});
+        if(field&&tradeFocus.start!==null&&tradeFocus.start!==undefined)field.setSelectionRange?.(tradeFocus.start,tradeFocus.end);
+      }
+    }
     if(current==='programs'&&programMode==='directory')filterPrograms();
     if(current==='programs'&&programMode==='leaders')filterSchoolLeaders();
     if(current==='programs'&&programMode==='ratings')filterRatings();
@@ -1634,7 +1661,7 @@
       if(!globalSearchOpen&&current==='programs'){
         if(programMode==='directory')refreshSchoolsDirectory();
         else render();
-      }else if(['home','league','team','manager-detail'].includes(current)&&!globalSearchOpen)render();
+      }else if(['home','league','team','manager-detail','trades'].includes(current)&&!globalSearchOpen)render();
     }
   }
   async function loadSchoolLeaders(){
@@ -1647,7 +1674,7 @@
       schoolLeadersLoading=false;
       if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}
       else if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(current==='team')render();
+      else if(current==='team'||current==='trades')render();
       else if(current==='draft'&&document.activeElement?.id!=='draft-pool-search')render();
     }
   }
@@ -2565,6 +2592,16 @@
       +'<details class="draft-extra-panel" id="draft-recent-details"><summary><span>Recent picks</span><small>Last 6 selections</small></summary>'+foot+'</details></div>'+sheet;
   }
 
+  const tradeSearch={give:'',receive:''};
+  function filterTradeAssets(side){
+    const query=tradeSearch[side].trim().toLowerCase();
+    let visible=0;
+    document.querySelectorAll('[data-trade-side="'+side+'"] .td-school-row').forEach(row=>{
+      row.hidden=!String(row.dataset.search||'').includes(query);if(!row.hidden)visible++;
+    });
+    const empty=document.querySelector('#trade-no-results-'+side);
+    if(empty)empty.hidden=!query||visible>0;
+  }
   function updateTradeSelections(){
     const count=side=>document.querySelectorAll('input[name="trade-'+side+'"]:checked,input[name="trade-'+side+'-pick"]:checked').length;
     const give=count('give'),receive=count('receive');
@@ -2574,6 +2611,15 @@
     if(receiveLabel)receiveLabel.textContent=receive+' selected';
     if(summary)summary.textContent=give&&receive?give+' sent · '+receive+' requested':'Select at least one asset on each side';
     if(submit)submit.disabled=!give||!receive;
+    for(const side of ['give','receive']){
+      const ids=[...document.querySelectorAll('input[name="trade-'+side+'"]:checked')].map(x=>String(x.value));
+      const picks=[...document.querySelectorAll('input[name="trade-'+side+'-pick"]:checked')].map(x=>Number(x.value));
+      const selected=programs().filter(p=>ids.includes(String(p.id)));
+      const target=document.querySelector('#trade-package-'+side);
+      if(target)target.innerHTML=selected.map(p=>'<span>'+escapeHTML(p.name)+'</span>').concat(picks.map(n=>'<span>Pick #'+n+'</span>')).join('')||'<span class="td-package-empty">No assets selected</span>';
+      const points=document.querySelector('#trade-points-'+side);
+      if(points)points.textContent=standingsData?.season===season()?selected.reduce((n,p)=>n+Number(standingsData.program_points?.[String(p.id)]||0),0).toLocaleString('en-US',{maximumFractionDigits:2}):'—';
+    }
   }
   function tradeAssetNames(tradeId,fromId){
     const schools=(league.trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===fromId)
@@ -2592,6 +2638,15 @@
     const mine=myPrograms().sort((a,b)=>a.name.localeCompare(b.name));
     const theirs=owners().filter(o=>o.manager_id===tradeTargetId)
       .map(o=>programs().find(p=>p.id===o.program_id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const historyIndex=draftHistoricalIndex();
+    const stats=p=>{
+      const h=historyIndex.byId.get(String(p.id)),r=ratingOf(p,ratingYear(season())),cost=rosterCost2026(p);
+      const reported=cost&&cost.estimate!==null&&cost.evidence!=='M';
+      return '<dl class="td-scout"><div><dt>'+escapeHTML(season())+' PTS</dt><dd>'+currentSeasonPoints(p)+'</dd></div>'
+        +'<div><dt>Bart Torvik</dt><dd>'+(r?.rank?'#'+Number(r.rank):'—')+'</dd></div>'
+        +'<div title="Average fantasy points across '+(h?.count||0)+' available historical seasons"><dt>5Y avg pts</dt><dd>'+(h?.eligibleForSort?historicalPointLabel(h.avg):'—')+'</dd></div>'
+        +'<div><dt>2026 roster $</dt><dd>'+escapeHTML(reported?rosterCostAmount2026(cost):'N/A')+'</dd></div></dl>';
+    };
     const selections=(schools,ownerId,side)=>{
       const slots=allowPicks?futureDraftPicks(ownerId):[];
       const pickOptions=slots.map(slot=>{
@@ -2600,27 +2655,37 @@
           +'<span class="trade-pick-icon">#'+slot+'</span><span><strong>'+escapeHTML(draftPickText(slot))+'</strong><small>'
           +(from!==ownerId?'From '+escapeHTML(original?.display_name||'another manager'):'Original pick')+'</small></span></label>';
       }).join('');
-      const schoolOptions=schools.map(p=>'<label class="trade-choice"><input type="checkbox" name="trade-'+side+'" value="'+escapeHTML(p.id)+'"/>'
-        +img(p)+'<span>'+escapeHTML(p.name)+'</span></label>').join('');
-      return '<div class="trade-assets">'
-        +(allowPicks?'<div class="trade-asset-group"><h4>Unused draft picks <span>'+slots.length+'</span></h4>'
-          +(pickOptions?'<div class="trade-pick-list">'+pickOptions+'</div>':'<p class="trade-assets-empty">No unused picks</p>')+'</div>':'')
-        +'<div class="trade-asset-group"><h4>Rostered programs <span>'+schools.length+'</span></h4>'
-        +(schoolOptions?'<div class="trade-program-list">'+schoolOptions+'</div>':'<p class="trade-assets-empty">No drafted schools yet</p>')+'</div></div>';
+      const ordered=schools.slice().sort((a,b)=>Number(standingsData?.program_points?.[b.id]||0)-Number(standingsData?.program_points?.[a.id]||0)||a.name.localeCompare(b.name));
+      const schoolOptions=ordered.map(p=>'<div class="td-school-row" data-search="'+escapeHTML((p.name+' '+conf(p.conference_id)).toLowerCase())+'">'
+        +'<label class="trade-choice td-school-select"><input type="checkbox" name="trade-'+side+'" value="'+escapeHTML(p.id)+'"/>'
+        +img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></label>'
+        +stats(p)+'</div>').join('');
+      const manager=members().find(u=>u.id===ownerId),scoring=standingsData?.season===season()?standingsData:null;
+      const total=scoring?.standings?.find(m=>String(m.manager_id)===String(ownerId));
+      return '<div class="td-roster" data-trade-side="'+side+'"><div class="td-manager">'+avatar(manager||me)
+        +'<div><strong>'+escapeHTML(manager?.display_name||'Manager')+'</strong><span>'+schools.length+' programs · '+slots.length+' available picks</span></div>'
+        +'<div class="td-manager-points"><strong>'+(total?historicalPointLabel(Number(total.points||0)):'—')+'</strong><span>Best-ball points</span></div></div>'
+        +'<div class="td-roster-toolbar"><label class="td-search">'+iconSVG('search')+'<input type="search" data-trade-search="'+side+'" aria-label="Search '+(side==='give'?'your':'their')+' programs" placeholder="Search programs or conference" value="'+escapeHTML(tradeSearch[side])+'"/></label></div>'
+        +'<div class="td-school-list">'+(schoolOptions||'<p class="td-empty">No rostered programs yet.</p>')
+        +'<p id="trade-no-results-'+side+'" class="td-empty" hidden>No matching programs. Try another search.</p></div>'
+        +(allowPicks?'<details class="td-draft-assets"'+(!schools.length?' open':'')+'><summary>Unused draft picks <span>'+slots.length+'</span></summary>'
+          +(pickOptions?'<div class="trade-pick-list">'+pickOptions+'</div>':'<p class="td-empty">No unused picks</p>')+'</details>':'')+'</div>';
     };
     const offers=(league.trades||[]).slice().sort((a,b)=>
       Number(b.status==='pending')-Number(a.status==='pending')||Number(b.offered_at||0)-Number(a.offered_at||0));
     const incoming=offers.filter(t=>t.status==='pending'&&t.to_manager_id===me.id);
     const outgoing=offers.filter(t=>t.status==='pending'&&t.from_manager_id===me.id);
+    const offerAssets=(tradeId,ownerId)=>{
+      const schools=(league.trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===ownerId);
+      const slots=(league.draft_pick_trade_items||[]).filter(x=>x.trade_id===tradeId&&x.from_manager_id===ownerId);
+      return schools.map(x=>{const p=programs().find(p=>p.id===x.program_id);return p?'<div class="td-offer-school"><div>'+img(p)+'<strong>'+escapeHTML(p.name)+'</strong></div>'+stats(p)+'</div>':'<p>Program unavailable</p>';}).join('')
+        +slots.map(x=>'<p class="td-offer-pick">Pick #'+x.overall+' (R'+(Math.floor((Number(x.overall)-1)/Math.max(1,order().length))+1)+')</p>').join('')||'<p>No assets</p>';
+    };
     const tradeCard=(t,perspective)=>{
       const from=members().find(m=>m.id===t.from_manager_id),to=members().find(m=>m.id===t.to_manager_id);
-      const theirAssets=tradeAssetNames(t.id,t.from_manager_id);
-      const myAssets=tradeAssetNames(t.id,t.to_manager_id);
       const yourOffer=perspective==='incoming';
       const title=yourOffer?'From '+escapeHTML(from?.display_name||'Manager'):perspective==='outgoing'?'To '+escapeHTML(to?.display_name||'Manager'):
         escapeHTML(from?.display_name||'Manager')+' → '+escapeHTML(to?.display_name||'Manager');
-      const sideA=yourOffer?theirAssets:perspective==='outgoing'?myAssets:theirAssets;
-      const sideB=yourOffer?myAssets:perspective==='outgoing'?theirAssets:myAssets;
       const labelA=yourOffer?'YOU RECEIVE':perspective==='outgoing'?'YOU REQUEST':'FROM '+escapeHTML(from?.display_name||'MANAGER').toUpperCase();
       const labelB=yourOffer?'YOU SEND':perspective==='outgoing'?'YOU SEND':'FROM '+escapeHTML(to?.display_name||'MANAGER').toUpperCase();
       const actions=t.status==='pending'&&ready?
@@ -2628,41 +2693,36 @@
         perspective==='outgoing'?'<button type="button" class="btn small secondary" data-act="trade-cancel" data-id="'+escapeHTML(t.id)+'">Cancel offer</button>':'':'';
       return '<article class="trade-offer txn-trade-card'+(yourOffer?' txn-trade-incoming':'')+'">'
         +'<div class="trade-offer-head"><strong>'+title+'</strong><span class="status '+(t.status==='pending'?'wait':'')+'">'+escapeHTML(t.status.toUpperCase())+'</span></div>'
-        +'<div class="trade-exchange"><div class="trade-exchange-side"><span>'+labelA+'</span><strong>'+escapeHTML(sideA.join(' · ')||'No assets')+'</strong></div>'
-        +'<span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>'+labelB+'</span><strong>'+escapeHTML(sideB.join(' · ')||'No assets')+'</strong></div></div>'
+        +'<div class="trade-exchange"><div class="trade-exchange-side"><span>'+labelA+'</span><div class="td-offer-assets">'+offerAssets(t.id,perspective==='outgoing'?t.to_manager_id:t.from_manager_id)+'</div></div>'
+        +'<span class="trade-exchange-arrow" aria-hidden="true">⇄</span><div class="trade-exchange-side"><span>'+labelB+'</span><div class="td-offer-assets">'+offerAssets(t.id,perspective==='outgoing'?t.from_manager_id:t.to_manager_id)+'</div></div></div>'
         +(actions?'<div class="txn-card-actions">'+actions+'</div>':'')
         +(yourOffer&&!ready?'<p class="txn-unavailable">Trade responses are temporarily disabled by the commissioner.</p>':'')
         +'</article>';
     };
-    return '<main class="txn-workspace">'
-      +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / TRANSACTIONS</span><h1>Trade desk</h1><p>Review offers first. Build a proposal when you are ready.</p></div>'
-      +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="waivers">'+iconSVG('waivers')+' Add / Drop</button>'
-      +(ready?'<a class="txn-link txn-link-primary" href="#trade-proposal">'+iconSVG('trades')+' New trade</a>':'')+'</div></header>'
-      +'<section class="txn-summary" aria-label="Trade summary"><div><strong>'+incoming.length+'</strong><span>NEEDS RESPONSE</span></div>'
-      +'<div><strong>'+outgoing.length+'</strong><span>OFFERS SENT</span></div>'
-      +'<div><strong>'+offers.filter(t=>t.status==='accepted').length+'</strong><span>COMPLETED</span></div></section>'
-      +'<section class="txn-inbox" aria-labelledby="txn-inbox-title"><div class="txn-section-head"><div><span class="txn-kicker">01 / YOUR INBOX</span><h2 id="txn-inbox-title">Incoming offers'
-      +(incoming.length?'<span class="txn-count">'+incoming.length+'</span>':'')+'</h2></div><small>Offers awaiting your decision</small></div>'
-      +(incoming.length?'<div class="txn-offer-list">'+incoming.map(t=>tradeCard(t,'incoming')).join('')+'</div>':
-        '<div class="txn-empty"><span class="txn-empty-dot" aria-hidden="true"></span><div><strong>All caught up</strong><p>No incoming trade offers need a response.</p></div></div>')
-      +'</section>'
-      +(outgoing.length?'<section class="txn-section" aria-labelledby="txn-outgoing-title"><div class="txn-section-head"><div><span class="txn-kicker">02 / AWAITING REPLY</span><h2 id="txn-outgoing-title">Sent offers <span class="txn-count neutral">'+outgoing.length+'</span></h2></div></div>'
-        +'<div class="txn-offer-list">'+outgoing.map(t=>tradeCard(t,'outgoing')).join('')+'</div></section>':'')
-      +(ready?'<section id="trade-proposal" class="txn-section txn-proposal"><div class="txn-section-head"><div><span class="txn-kicker">NEW PROPOSAL</span><h2>Build a trade</h2></div><small>Draft picks and rostered programs</small></div>'
-        +'<div class="trade-builder"><div class="form-row"><label for="trade-target">Trade with</label><select class="field" id="trade-target">'
-        +others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')
-        +'</select></div>'
+    const completed=offers.filter(t=>t.status==='accepted').length;
+    return '<div class="td-desk txn-workspace">'
+      +'<header class="td-head"><div><h1>Trade desk<span class="td-season">'+escapeHTML(season())+'</span></h1><p>Find your next advantage. Build a deal around the programs that matter.</p></div>'
+      +'<button type="button" class="btn secondary" data-act="tab" data-id="waivers">Add / Drop</button></header>'
+      +'<nav class="td-nav" aria-label="Trade desk sections"><a href="#trade-proposal">Build a trade</a><a href="#trade-inbox">Incoming <b>'+incoming.length+'</b></a><a href="#trade-outgoing">Sent <b>'+outgoing.length+'</b></a><a href="#trade-activity">Activity <b aria-label="'+completed+' completed trades">'+completed+'</b></a></nav>'
+      +'<section id="trade-inbox" class="txn-inbox td-inbox" aria-labelledby="txn-inbox-title"><div class="td-section-title"><h2 id="txn-inbox-title">Incoming offers</h2><span>'+ (incoming.length?incoming.length+' awaiting your decision':'You’re all caught up')+'</span></div>'
+      +(incoming.length?'<div class="txn-offer-list">'+incoming.map(t=>tradeCard(t,'incoming')).join('')+'</div>':'<p class="td-inbox-empty">No offers need a response. Start a conversation with a new proposal.</p>')+'</section>'
+      +'<section id="trade-proposal" class="td-proposal"><div class="td-section-title"><div><h2>Build a trade</h2><p>Select programs or picks on both sides to compare your package.</p></div>'
+      +'<span class="td-market-status">'+(ready?'Trading open':'Trading paused')+'</span></div>'
+      +(ready&&others.length?'<div class="td-partner"><label for="trade-target">Trade partner</label><select class="field" id="trade-target">'
+        +others.map(u=>'<option value="'+escapeHTML(u.id)+'" '+(u.id===tradeTargetId?'selected':'')+'>'+escapeHTML(u.display_name)+'</option>').join('')+'</select><span>Programs stay owned until an offer is accepted.</span></div>'
         +(!allowPicks&&status!=='finished'?'<p class="trade-note">Pick trading opens when the commissioner saves the final draft order.</p>':'')
-        +'<div class="trade-columns"><div><h3 class="subhead">YOU SEND <span id="trade-give-count">0 selected</span></h3>'
-        +selections(mine,me.id,'give')+'</div><div><h3 class="subhead">YOU RECEIVE <span id="trade-receive-count">0 selected</span></h3>'
-        +selections(theirs,tradeTargetId,'receive')+'</div></div>'
-        +'<div class="trade-submit"><div id="trade-selection-summary">Select at least one asset on each side</div>'
-        +'<button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div>'
-        +'<p class="trade-footnote">The other manager must accept before ownership changes. Available draft picks transfer on acceptance.</p></div></section>':
-        '<section class="txn-section"><div class="txn-empty"><div><strong>New trades paused</strong><p>The commissioner has disabled new offers.</p></div></div></section>')
-      +'<section class="txn-section txn-history"><div class="txn-section-head"><div><span class="txn-kicker">LEAGUE LEDGER</span><h2>Trade activity</h2></div><small>'+offers.length+' total offers</small></div>'
-      +(offers.length?'<div class="txn-offer-list">'+offers.map(t=>tradeCard(t,'history')).join('')+'</div>':
-        '<div class="txn-empty"><div><strong>No trade activity yet</strong><p>Submitted offers will appear here.</p></div></div>')+'</section></main>';
+        +'<div class="td-comparison"><section><header class="td-side-title"><h3>YOU SEND</h3><span id="trade-give-count">0 selected</span></header>'+selections(mine,me.id,'give')+'</section>'
+        +'<section><header class="td-side-title"><h3>YOU RECEIVE</h3><span id="trade-receive-count">0 selected</span></header>'+selections(theirs,tradeTargetId,'receive')+'</section></div>'
+        +'<div class="td-offer-review"><div class="td-review-head"><h3>Your proposal</h3><button type="button" class="td-text-button" data-act="trade-clear">Clear selections</button></div>'
+        +'<div class="td-package-grid">'+['give','receive'].map(side=>'<div><div class="td-package-title"><strong>'+(side==='give'?'You send':'You receive')+'</strong><span><b id="trade-points-'+side+'">'+(standingsData?.season===season()?'0':'—')+'</b> season pts</span></div><div id="trade-package-'+side+'" class="td-package"><span class="td-package-empty">No assets selected</span></div></div>').join('')+'</div>'
+        +'<p class="td-comparison-note">Season points compare selected programs only; they are not a trade valuation or a projected best-ball change. Draft picks have no season points.</p>'
+        +'<div class="trade-submit"><div id="trade-selection-summary" role="status" aria-live="polite">Select at least one asset on each side</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></div>'
+        +'<p class="td-data-note">Bart Torvik: current-season national rank. 5Y avg: available prior seasons, minimum three. Roster costs are reported estimates, not verified payrolls; N/A means no sourced figure.</p>':
+        '<div class="td-empty"><strong>'+(others.length?'New trades paused':'No trade partners yet')+'</strong><p>'+(others.length?'The commissioner has disabled new offers.':'A second manager must join before you can propose a trade.')+'</p></div>')+'</section>'
+      +'<section id="trade-outgoing" class="td-outgoing"><div class="td-section-title"><h2>Sent offers</h2><span>'+outgoing.length+' awaiting reply</span></div>'
+      +(outgoing.length?'<div class="txn-offer-list">'+outgoing.map(t=>tradeCard(t,'outgoing')).join('')+'</div>':'<p class="td-inbox-empty">No pending offers sent.</p>')+'</section>'
+      +'<details id="trade-activity" class="td-history"><summary><span>Trade activity</span><span>'+offers.length+' total offers</span></summary>'
+      +(offers.length?'<div class="txn-offer-list">'+offers.map(t=>tradeCard(t,'history')).join('')+'</div>':'<p class="td-empty">Submitted offers will appear here.</p>')+'</details></div>';
   }
 
   const scoringGroups=[
@@ -3565,6 +3625,7 @@
     if(act==='search-open'){toggleGlobalSearch(true);return;}
     if(act==='search-close'){toggleGlobalSearch(false);return;}
     if(act==='settings-remove-photo'){avatarDraft='';const preview=root.querySelector('.settings-avatar-preview');if(preview)preview.innerHTML=avatar({...me,avatar_data:null});const hint=root.querySelector('#photo-hint');if(hint)hint.textContent='Profile photo will be removed when you save.';return;}
+    if(act==='trade-clear'){document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=false;});updateTradeSelections();return;}
     if(act==='league-refresh'){await loadStandings(true);return;}
     if(act==='league-my-contributions'){leagueExpandedManager=String(me.id);render();const heading=document.getElementById('league-contributions-'+String(me.id));heading?.focus({preventScroll:true});heading?.scrollIntoView({block:'center',behavior:'instant'});return;}
     if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();return;}
@@ -3902,6 +3963,7 @@
           throw Error('Select at least one asset from both teams.');
         if(!window.confirm('Send this offer? The other manager must accept before picks or programs move.')){busy=false;return;}
         await api('trade/propose',{to_manager_id:tradeTargetId,give_ids,receive_ids,give_picks,receive_picks});
+        document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=false;});
         notice('Trade offer sent.');
       }else if(act==='trade-accept'){
         if(!window.confirm('Accept this trade? All included draft picks and programs will transfer immediately.')){busy=false;return;}
@@ -4193,7 +4255,7 @@
       return;
     }
     if(e.target?.id==='pool-conf-filter'){poolConferenceFilter=e.target.value;poolShown=70;render();return;}
-    if(e.target?.id==='trade-target'){tradeTargetId=e.target.value;render();}
+    if(e.target?.id==='trade-target'){document.querySelectorAll('input[name="trade-receive"],input[name="trade-receive-pick"]').forEach(el=>{el.checked=false;});tradeTargetId=e.target.value;tradeSearch.receive='';render();}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
     if(e.target?.id==='directory-sort'){programSort=['points','history','torvik'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
@@ -4207,6 +4269,7 @@
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"], input[name="trade-give-pick"], input[name="trade-receive-pick"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
+    if(e.target?.dataset?.tradeSearch){const side=e.target.dataset.tradeSearch;tradeSearch[side]=e.target.value;filterTradeAssets(side);return;}
     if(e.target?.id==='global-search-input'){globalSearchQuery=e.target.value;const list=root.querySelector('#global-search-list');if(list)list.innerHTML=globalSearchResults();return;}
     if(e.target?.id==='pool-search'){
       poolQuery=e.target.value;poolShown=70;updatePoolList();return;

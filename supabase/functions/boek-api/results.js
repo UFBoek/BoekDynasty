@@ -71,6 +71,10 @@ export const DATA_PIPELINE=(()=>{
   const scoreboardUrls=(day,group=50)=>{
     const date=day.replace(/-/g,'');
     return [
+      // The site-v2 hosts honor groups=50 and return the complete Division I slate.
+      // ESPN's CDN /core/scoreboard currently ignores that filter and may only
+      // include a small featured subset, so it must be the last resort.
+      'https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+date+'&groups='+group+'&limit=500',
       'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates='+date+'&groups='+group+'&limit=500',
       'https://cdn.espn.com/core/mens-college-basketball/scoreboard?xhr=1&date='+date+'&groups='+group+'&limit=500'
     ];

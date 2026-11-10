@@ -1862,35 +1862,37 @@
     const seasons=rankingSeasonNav(years.map(y=>[String(y),(y-1)+'-'+String(y%100).padStart(2,'0')]),'rating-season',String(year),'Bart Torvik season');
     const isCurrent=year===ratingYear(season());
     const heading='<div class="rank-heading"><div><span class="rank-kicker">PROGRAM RANKINGS · ADVANCED ANALYTICS</span><h2>Power ratings</h2>'
-      +'<p>Explore Bart Torvik’s national efficiency rankings, offense, defense and team strength.</p></div>'
+      +'<p>Explore Bart Torvik efficiency rankings alongside daily KenPom national rankings for the current season.</p></div>'
       +'<div class="rank-heading-mark"><span>'+(isCurrent?'CURRENT SEASON':'ARCHIVED SEASON')+'</span><strong>'+(year-1)+'-'+String(year%100).padStart(2,'0')+'</strong><small>Torvik '+year+' ratings</small></div></div>';
     const source='<div class="rank-source-line"><span class="rank-source-mark"><i></i> '+(isCurrent?'CURRENT '+(year-1)+'-'+String(year%100).padStart(2,'0')+' BART TORVIK':'HISTORICAL '+(year-1)+'-'+String(year%100).padStart(2,'0')+' BART TORVIK')+'</span>'
-      +'<span>'+(isCurrent?'These are the 2026–27 national ratings, not 2025–26. Used for provisional Q1/Q1A/Q2 bonuses until official NCAA NET is available.':'Historical ratings are only for comparison; archived fantasy scores use the verified NCAA NET for that season.')+'</span>'
+      +'<span>'+(isCurrent?'KenPom ranks are updated daily and provide the Q1/Q1A/Q2 baseline. Torvik adds complementary efficiency statistics.':'Historical Torvik ratings are for comparison only; completed fantasy seasons retain verified NCAA NET scoring.')+'</span>'
       +(!isCurrent?'<button type="button" class="rank-current-season-button" data-act="ratings-current">View current '+escapeHTML(season())+' ratings ›</button>':'')+'</div>';
     if(!data)return '<section class="panel ranking-dashboard ratings-shell">'+heading+seasons+source
       +(ratingError[year]?empty('Bart Torvik unavailable',escapeHTML(ratingError[year]))+'<button class="btn secondary small" data-act="ratings-refresh" data-id="'+year+'">Try again</button>'
         :empty('Loading power ratings','Retrieving published national rankings and efficiency numbers.'))+'</section>';
     const metrics={
       rank:(a,b)=>(a.r?.rank??999)-(b.r?.rank??999),
+      kenpom:(a,b)=>(kenpomRankOf(a.p)??999)-(kenpomRankOf(b.p)??999),
       offense:(a,b)=>(a.r?.adj_o_rank??999)-(b.r?.adj_o_rank??999),
       defense:(a,b)=>(a.r?.adj_d_rank??999)-(b.r?.adj_d_rank??999),
       power:(a,b)=>(b.r?.barthag??-1)-(a.r?.barthag??-1),
       wab:(a,b)=>(b.r?.wab??-999)-(a.r?.wab??-999),
       tempo:(a,b)=>(b.r?.tempo??-1)-(a.r?.tempo??-1)
     };
-    const sortNames={rank:'Overall rank',offense:'Offensive efficiency',defense:'Defensive efficiency',power:'Barthag',wab:'Wins above bubble',tempo:'Adjusted tempo'};
+    const sortNames={rank:'Overall rank',kenpom:'KenPom rank',offense:'Offensive efficiency',defense:'Defensive efficiency',power:'Barthag',wab:'Wins above bubble',tempo:'Adjusted tempo'};
     const entries=eligiblePrograms().filter(p=>rankingEligible(p,ratingConference,ratingOwnership))
       .map(p=>({p,r:ratingOf(p,year)}));
     const rows=entries.sort((a,b)=>(metrics[ratingSort]||metrics.rank)(a,b)||a.p.name.localeCompare(b.p.name));
     const valid=rows.filter(row=>row.r),dec=(x,n=1)=>rankingNumber(x,n);
-    const featureValue=row=>ratingSort==='offense'?dec(row.r?.adj_o):ratingSort==='defense'?dec(row.r?.adj_d):
+    const featureValue=row=>ratingSort==='kenpom'?'#'+(kenpomRankOf(row.p)??'—'):ratingSort==='offense'?dec(row.r?.adj_o):ratingSort==='defense'?dec(row.r?.adj_d):
       ratingSort==='power'?dec(row.r?.barthag,3):ratingSort==='wab'?dec(row.r?.wab):
       ratingSort==='tempo'?dec(row.r?.tempo):'#'+(row.r?.rank??'—');
-    const metricOptions=[['rank','Overall'],['offense','Offense'],['defense','Defense'],['power','Barthag'],['wab','WAB'],['tempo','Tempo']];
+    const metricOptions=[['rank','Overall'],...(isCurrent?[['kenpom','KenPom']]:[]),['offense','Offense'],['defense','Defense'],['power','Barthag'],['wab','WAB'],['tempo','Tempo']];
     const sortTabs=metricOptions.map(([id,label])=>'<button type="button" data-act="rating-sort" data-id="'+id+'" aria-pressed="'+(ratingSort===id)+'" class="'+(ratingSort===id?'active':'')+'">'+label+'</button>').join('');
     const table=rows.map(({p,r})=>
       '<tr class="rank-data-row rating-school-row" data-ranking="ratings" data-program="'+escapeHTML(p.id)+'" data-search="'+escapeHTML(rankingSearchText(p))+'">'
       +'<td class="rank-position-cell"><span class="rank-position '+(r?.rank<=25?'is-top':'')+'">'+(r?'#'+r.rank:'—')+'</span></td>'
+      +(isCurrent?'<td class="rating-kenpom"><strong>'+(kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+'</strong></td>':'')
       +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
       +'<td class="current-season-points"><strong>'+currentSeasonPoints(p)+'</strong></td>'
        +'<td class="rating-power"><strong>'+dec(r?.barthag,3)+'</strong></td>'
@@ -1902,8 +1904,9 @@
       +'<button class="rank-mobile-main" type="button" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'
       +'<span class="rank-mobile-index">'+(r?'#'+r.rank:'—')+'</span>'+img(p)
       +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
-      +'<span class="rank-mobile-primary"><strong>'+featureValue({r})+'</strong><small>'+escapeHTML((sortNames[ratingSort]||'Overall').toUpperCase())+'</small></span><span class="rank-mobile-chevron">›</span></button>'
-      +'<div class="rank-mobile-metrics"><div class="current"><span>SEASON PTS</span><strong>'+currentSeasonPoints(p)+'</strong></div><div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
+      +'<span class="rank-mobile-primary"><strong>'+featureValue({p,r})+'</strong><small>'+escapeHTML((sortNames[ratingSort]||'Overall').toUpperCase())+'</small></span><span class="rank-mobile-chevron">›</span></button>'
+      +'<div class="rank-mobile-metrics"><div class="current"><span>SEASON PTS</span><strong>'+currentSeasonPoints(p)+'</strong></div>'
+      +(isCurrent?'<div class="rating-kenpom"><span>KENPOM</span><strong>'+(kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+'</strong></div>':'')+'<div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
       +'<div><span>DEFENSE</span><strong>'+dec(r?.adj_d)+'</strong></div>'
       +'<div><span>WAB</span><strong>'+dec(r?.wab)+'</strong></div>'
       +'<div><span>TEMPO</span><strong>'+dec(r?.tempo)+'</strong></div></div></article>').join('');
@@ -1914,14 +1917,14 @@
       +rankingTools('ratings',ratingQuery,ratingConference,ratingOwnership)
       +'<div class="rank-toolbar-bottom"><div class="rank-order rank-rating-order" role="group" aria-label="Sort power ratings">'+sortTabs+'</div>'
       +'<span class="rank-count" id="rating-count">'+entries.length+' schools</span></div>'
-      +'<div class="rank-table-container ratings-table-wrap"><table class="ratings-table rank-table"><thead><tr><th class="rank-position-cell">NATL RANK</th><th class="rank-school-cell">SCHOOL</th>'
+      +'<div class="rank-table-container ratings-table-wrap"><table class="ratings-table rank-table"><thead><tr><th class="rank-position-cell">TORVIK RANK</th>'+(isCurrent?'<th class="rating-kenpom">KENPOM</th>':'')+'<th class="rank-school-cell">SCHOOL</th>'
       +'<th class="season-points-head">'+escapeHTML(season())+' PTS</th><th title="Probability-based power rating">BARTHAG</th><th title="Adjusted points scored per 100 possessions">OFFENSE</th>'
       +'<th title="Adjusted points allowed per 100 possessions, lower is better">DEFENSE</th><th title="Wins above bubble">WAB</th>'
       +'<th title="Adjusted possessions per game">TEMPO</th></tr></thead><tbody>'+table+'</tbody></table></div>'
       +'<div class="rank-mobile-list">'+cards+'</div>'
       +'<div id="rating-empty" class="rank-empty" hidden>No schools match your filters. Try a different search or conference.</div>'
       +'<div class="rank-load"><button id="rating-more" type="button" data-act="ratings-more" class="rank-load-button" hidden>Show more schools <small></small></button></div>'
-      +'<div class="rank-footnote"><span><strong>Reading the stats:</strong> Higher Barthag and offense are better. Lower defensive efficiency is better. The rank shown is national, even when sorted by another metric.</span>'
+      +'<div class="rank-footnote"><span><strong>Reading the stats:</strong> KenPom drives current-season quadrant bonuses. Torvik and KenPom numbers are separate national rankings; higher Barthag and offense are better, lower defensive efficiency is better.</span>'
       +ratingExternalLinks(year)+'</div></section>';
   }
   function filterRatings(){filterRankingDisplay('ratings');}
@@ -3109,7 +3112,7 @@
     const ratingCard=(title,value,note='')=>'<div class="pp-rating-card"><span>'+escapeHTML(title)+'</span>'+
       '<strong>'+escapeHTML(value)+'</strong>'+(note?'<small>'+escapeHTML(note)+'</small>':'')+'</div>';
     const ratings='<section class="panel pp-section pp-ratings"><div class="pp-section-head"><div>'+
-      '<h2>Power ratings</h2><p>Bart Torvik · '+escapeHTML(selected)+'</p></div></div>'+
+      '<h2>Power ratings</h2><p>'+(selected===season()?'KenPom + Bart Torvik':'Bart Torvik')+' · '+escapeHTML(selected)+'</p></div></div>'+
       '<div class="pp-rating-seasons">'+Array.from({length:Math.max(1,firstYear-2021+1)},(_,i)=>{
         const year=firstYear-i,label=year+'-'+String((year+1)%100).padStart(2,'0');
         return '<button type="button" data-act="program-season" data-id="'+escapeHTML(label)+'" class="'+
@@ -3117,7 +3120,7 @@
       }).join('')+'</div>'+
       (metrics?'<div class="pp-ratings-grid">'+
         ratingCard('National Bart Torvik','#'+metrics.rank)+
-        (selected===season()?ratingCard('KenPom national rank',kenpomRank===null?'—':'#'+kenpomRank,kenpomData?.snapshot_date?'Updated '+kenpomData.snapshot_date:'Awaiting daily snapshot'):'')+
+        (selected===season()?ratingCard('KenPom national rank',kenpomRank===null?'—':'#'+kenpomRank,kenpomData?.snapshot_date?'Updated '+kenpomData.snapshot_date+' · quadrant baseline':'Awaiting daily snapshot'):'')+
         ratingCard('Barthag',decimal(metrics.barthag,3))+
         ratingCard('Adjusted offense',decimal(metrics.adj_o),metrics.adj_o_rank?'#'+metrics.adj_o_rank+' nationally':'Points / 100 possessions')+
         ratingCard('Adjusted defense',decimal(metrics.adj_d),metrics.adj_d_rank?'#'+metrics.adj_d_rank+' nationally':'Points / 100 possessions')+

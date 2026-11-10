@@ -156,7 +156,15 @@ Deno.serve(async (request)=>{
       const season=(await db.prepare("SELECT value FROM settings WHERE key='current_season'").first())?.value||DATA_PIPELINE.seasonOf(today);
       const eligible=[11,12,1,2,3,4].includes(Number(today.slice(5,7)))&&DATA_PIPELINE.dayInSeason(season,today);
       let result;
-      if(kind==='live'){
+      if(kind==='live-fast'){
+        if(!eligible)result={skipped:'offseason'};
+        else{
+          // The high-frequency path intentionally avoids slow repairs, schedule
+          // discovery and notification retries. Those stay on their own jobs.
+          result=await DATA_PIPELINE.importDay(env,season,today,{job:'live-fast'});
+        }
+      }
+      else if(kind==='live'){
         if(!eligible)result={skipped:'offseason'};
         else{
           const scoreboard=await DATA_PIPELINE.importDay(env,season,today,{job:'live'});

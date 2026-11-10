@@ -3198,7 +3198,7 @@
           }).join('')||'No programs archived')+'</div></details>';
       }).join('')+'</div></details>':'';
     const mine=String(u.id)===String(me.id);
-    return '<main class="my-team-page tm-v3 tm-opponent-page">'
+    return '<main class="my-team-page tm-v3 tm-v4 tm-opponent-page">'
       +'<div class="tm-backline">'+profileBack()+'<span>LEAGUE ROSTERS <span aria-hidden="true">/</span> '+escapeHTML(u.display_name)+'</span></div>'
       +'<header class="tm-masthead">'
       +'<div class="tm-masthead-top"><span class="tm-label">'+(mine?'YOUR FRANCHISE':'DYNASTY FRANCHISE')+'</span><span class="tm-year">'+escapeHTML(season())+' SEASON</span></div>'

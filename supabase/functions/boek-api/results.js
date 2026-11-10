@@ -376,9 +376,20 @@ export const DATA_PIPELINE=(()=>{
     const rows=await q(env,"SELECT program_id,net_rank,snapshot_date FROM cbb_net_rankings WHERE season=? AND snapshot_date=(SELECT snapshot_date FROM cbb_net_snapshots WHERE season=? AND status='complete' ORDER BY snapshot_date DESC LIMIT 1)",season,season).all();
     return rows.results||[];
   };
-  // Official NCAA NET ALWAYS wins. The separate T-Rank feed is used only before
-  // a complete official current-season NET snapshot has been stored.
+  // KenPom is the 2026-27+ live quadrant baseline. Prior season scoring keeps
+  // archived NCAA NET. A complete verified daily snapshot is mandatory; no
+  // partial KenPom import can change any Q1/Q1A/Q2 award.
   const activeRankings = async(env,season) => {
+    const kenpom=(await q(env,`SELECT d.program_id,d.rank AS net_rank,d.snapshot_date::text AS snapshot_date
+      FROM private.cbb_kenpom_daily d
+      JOIN private.cbb_kenpom_fetches f ON f.snapshot_date=d.snapshot_date AND f.status='ready'
+      WHERE d.season=? AND d.snapshot_date=(
+        SELECT MAX(k.snapshot_date) FROM private.cbb_kenpom_daily k
+        JOIN private.cbb_kenpom_fetches s ON s.snapshot_date=k.snapshot_date AND s.status='ready'
+        WHERE k.season=? GROUP BY k.snapshot_date HAVING COUNT(*)>=350
+        ORDER BY k.snapshot_date DESC LIMIT 1)
+      ORDER BY d.rank`,season,season).all()).results||[];
+    if(kenpom.length>=350)return {rows:kenpom,source:'kenpom',snapshot_date:kenpom[0]?.snapshot_date||null,provisional:true};
     const official=await netRanks(env,season);
     if(official.length>=350)return {rows:official,source:'net',snapshot_date:official[0]?.snapshot_date||null,provisional:false};
     const prelim=(await q(env,"SELECT program_id,rank AS net_rank,snapshot_date FROM cbb_preliminary_rankings WHERE season=? ORDER BY rank",season).all()).results||[];
@@ -545,13 +556,14 @@ export const DATA_PIPELINE=(()=>{
         rank_tied:isEligible?!!t?.rank_tied:false,
         breakdown:t?.breakdown||[],
         note:state==='complete'?'Final points, including all applicable tournament NET bonuses.':
-          t?.quadrant_provisional?'Provisional Q1/Q1A/Q2 points use Bart Torvik T-Rank until NCAA NET is published.':
+          t?.quadrant_source==='kenpom'?'Provisional Q1/Q1A/Q2 points use the latest daily KenPom rankings.':
+          t?.quadrant_provisional?'Provisional Q1/Q1A/Q2 points use Bart Torvik T-Rank.':
           state==='partial'?'Live fantasy scoring; points will update as games and awards are verified.':
           'No verified games or scoring awards for this program and season.'
       });
     }
     return {program_id:String(id),current_season:currentSeason,seasons:periods,
-      source:'ESPN final scores and venues, NCAA NET where available (otherwise current-season preliminary T-Rank), NCAA bracket, verified conference titles',
+      source:'ESPN final scores and venues, archived NCAA NET, current-season KenPom (NET/Torvik fallback), NCAA bracket, verified conference titles',
       archive_complete:scores.archive_complete,complete:scores.archive_complete};
   }
   // Fair, idempotent historical backfill: each pass advances across every
@@ -1081,13 +1093,25 @@ export const DATA_PIPELINE=(()=>{
     const rows=(await q(env,`WITH latest AS (
         SELECT season,MAX(snapshot_date) AS day
         FROM cbb_net_snapshots WHERE status='complete' AND stored_count>=350 GROUP BY season
+      ), kenpom_day AS (
+        SELECT d.snapshot_date FROM private.cbb_kenpom_daily d
+        JOIN private.cbb_kenpom_fetches f ON f.snapshot_date=d.snapshot_date AND f.status='ready'
+        WHERE d.season=?
+        GROUP BY d.snapshot_date HAVING COUNT(*)>=350
+        ORDER BY d.snapshot_date DESC LIMIT 1
       ), ranks AS (
         SELECT r.season,r.program_id,r.net_rank FROM cbb_net_rankings r
         JOIN latest l ON l.season=r.season AND l.day=r.snapshot_date
+        WHERE r.season<>? OR NOT EXISTS (SELECT 1 FROM kenpom_day)
+        UNION ALL
+        SELECT ? AS season,k.program_id,k.rank AS net_rank
+        FROM private.cbb_kenpom_daily k
+        JOIN kenpom_day kd ON kd.snapshot_date=k.snapshot_date
         UNION ALL
         SELECT t.season,t.program_id,t.rank AS net_rank FROM cbb_preliminary_rankings t
         WHERE t.season=? AND
           (SELECT COUNT(*) FROM cbb_preliminary_rankings WHERE season=t.season)>=350
+          AND NOT EXISTS (SELECT 1 FROM kenpom_day)
           AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.season=t.season)
       ), first_ncaa AS (
         SELECT season,MIN(game_date)::date first_day
@@ -1138,13 +1162,14 @@ export const DATA_PIPELINE=(()=>{
         COALESCE(SUM(CASE WHEN kind IN ('ncaa','first_four') AND winner_seed>loser_seed
           THEN winner_seed-loser_seed ELSE 0 END),0) upset_seed_lines,
         COUNT(*) FILTER(WHERE kind IN ('ncaa','first_four') AND winner_seed>loser_seed) upset_wins
-      FROM classified GROUP BY season,program_id,kind`,currentSeason,currentSeason,currentSeason).all()).results||[];
-    const [awards,nets,preliminary]=(await Promise.all([
+      FROM classified GROUP BY season,program_id,kind`,currentSeason,currentSeason,currentSeason,currentSeason,currentSeason,currentSeason).all()).results||[];
+    const [awards,nets,preliminary,kenpomCount]=(await Promise.all([
       q(env,"SELECT season,program_id,award_type,value FROM cbb_awards WHERE season BETWEEN '2021-22' AND ?",currentSeason).all(),
       q(env,"SELECT season,stored_count FROM cbb_net_snapshots WHERE status='complete' AND season BETWEEN '2021-22' AND ?",currentSeason).all(),
-      q(env,"SELECT COUNT(*) AS n FROM cbb_preliminary_rankings WHERE season=?",currentSeason).all()
+      q(env,"SELECT COUNT(*) AS n FROM private.cbb_kenpom_daily d JOIN private.cbb_kenpom_fetches f ON f.snapshot_date=d.snapshot_date WHERE d.season=? AND f.status='ready' AND d.snapshot_date=(SELECT MAX(snapshot_date) FROM private.cbb_kenpom_fetches WHERE status='ready')",currentSeason).all()
     ])).map(x=>x.results||[]);
     const torvikReady=Number(preliminary[0]?.n||0)>=350;
+    const kenpomReady=Number(kenpomCount[0]?.n||0)>=350;
     const knownTitles=new Set(awards.filter(x=>x.award_type==='conference_regular_champion')
       .map(x=>x.season+'|'+x.program_id));
     for(const archive of HISTORICAL_CONFERENCE_CHAMPIONS.seasons){
@@ -1224,8 +1249,9 @@ export const DATA_PIPELINE=(()=>{
       t.at_large_bid=atLargeBid;
       t.points=round(components.reduce((sum,x)=>sum+x.points,0));
       t.net_verified=verifiedNet.has(t.season);
-      t.quadrant_source=t.net_verified?'net':(t.season===currentSeason&&torvikReady?'torvik':'pending');
-      t.quadrant_provisional=t.quadrant_source==='torvik';
+      t.quadrant_source=t.season===currentSeason&&kenpomReady?'kenpom':
+        t.net_verified?'net':(t.season===currentSeason&&torvikReady?'torvik':'pending');
+      t.quadrant_provisional=t.quadrant_source==='kenpom'||t.quadrant_source==='torvik';
       delete t.awards;
     }
     const selection=Array.isArray(eligibleSelection)?{conferences:eligibleSelection,included_programs:[],excluded_programs:[]}:eligibleSelection;
@@ -1265,8 +1291,8 @@ export const DATA_PIPELINE=(()=>{
     return {seasons:Array.from({length:Number(currentSeason.slice(0,4))-2021+1},(_,i)=>{
         const y=2021+i;return y+'-'+String((y+1)%100).padStart(2,'0');
       }),directory,rank_total:numberEligible,rows:rankedRows,
-      quadrant_source:verifiedNet.has(currentSeason)?'net':(torvikReady?'torvik':'pending'),
-      quadrant_provisional:!verifiedNet.has(currentSeason)&&torvikReady,
+      quadrant_source:kenpomReady?'kenpom':verifiedNet.has(currentSeason)?'net':(torvikReady?'torvik':'pending'),
+      quadrant_provisional:kenpomReady||(!verifiedNet.has(currentSeason)&&torvikReady),
       complete:archiveComplete,archive_complete:archiveComplete,verified_seasons:[...verifiedArchives].sort(),
       note:archiveComplete?'Five archived seasons verified; current-season totals update with new results.':
         'Some archived data remains unverified; historical totals may change.'};

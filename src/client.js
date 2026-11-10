@@ -776,6 +776,8 @@
       if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
     }
+    if(current==='results'&&!ratingCache[ratingYear(season())]&&!ratingLoading[ratingYear(season())]&&!ratingError[ratingYear(season())])
+      loadRatings(ratingYear(season()));
     if(current==='programs'&&programMode==='directory'&&typeof window!=='undefined'){
       const year=ratingYear(season());
       if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
@@ -978,7 +980,10 @@
     return /^\d+$/.test(String(id||''))?'<img class="program-logo" src="https://a.espncdn.com/i/teamlogos/ncaa/500/'+id+'.png" loading="lazy" alt=""/>':'<span class="program-logo program-initial">NCAA</span>';
   };
   const scoreboardRank=(id,map)=>map.has(String(id))?'<span class="scoreboard-rank">'+map.get(String(id))+'</span>':'';
-  const dailyNetLabel=(rank)=>rank===null||rank===undefined?(resultsRankingSource==='torvik'?'Bart Torvik pending':'NET pending'):(resultsRankingSource==='torvik'?'Bart Torvik #':'NET #')+Number(rank);
+  const dailyNetLabel=(rank)=>{
+    const source=resultsRankingSource==='kenpom'?'KenPom':resultsRankingSource==='torvik'?'Bart Torvik':'NCAA NET';
+    return source+(rank===null||rank===undefined?' pending':' #'+Number(rank));
+  };
   const dailyRecord=(record)=>record?Number(record.wins||0)+'–'+Number(record.losses||0):'0–0';
 
   // Quadrant value is a potential win bonus, separate from the base win points.
@@ -994,17 +999,17 @@
     const bonus=quadWinBonus(quad,q1a);
     return bonus>0?'+'+bonus.toLocaleString('en-US',{maximumFractionDigits:2}):'';
   };
-  const quadMeaning=(quad,q1a,preliminary)=>{
+  const quadMeaning=(quad,q1a,source)=>{
     const amount=quadBonusText(quad,q1a);
     return quadLabel(quad,q1a)+(amount?' · '+amount+' bonus if won':' · no quadrant bonus')+
-      (preliminary?' · provisional Bart Torvik':'');
+      (source==='kenpom'?' · KenPom ranking baseline':source==='torvik'?' · provisional Bart Torvik fallback':'');
   };
   const dailyQuad=(quad,q1a)=>{
     if(!Number.isInteger(quad)||quad<1||quad>4)
       return '<span class="daily-quad pending" title="No complete current-season ranking source">Q pending</span>';
     const bonus=quadBonusText(quad,q1a);
-    return '<span class="daily-quad q'+quad+(resultsRankingSource==='torvik'?' preliminary':'')+
-      '" title="'+escapeHTML(quadMeaning(quad,q1a,resultsRankingSource==='torvik'))+'">'+
+    return '<span class="daily-quad q'+quad+(['torvik','kenpom'].includes(resultsRankingSource)?' preliminary':'')+
+      '" title="'+escapeHTML(quadMeaning(quad,q1a,resultsRankingSource))+'">'+
       quadLabel(quad,q1a)+(bonus?'<small class="daily-quad-value">'+bonus+'</small>':'')+'</span>';
   };
   // Pure matchers: shared eligibility logic for scoreboard scopes and status toggles.
@@ -1048,7 +1053,12 @@
         +'<strong title="'+escapeHTML(name||'Unknown school')+'">'+escapeHTML(name||'Unknown school')+'</strong></span>'
         +scoreboardOwnership(id)
         +'<small class="daily-team-record">'+dailyRecord(record)+' <span>W–L</span></small></span>'
-        +'<span class="daily-team-net" title="'+escapeHTML(dailyNetLabel(net))+'"><em>'+(resultsRankingSource==='torvik'?'TOR':'NET')+'</em> '+(net===null||net===undefined||!Number.isFinite(Number(net))?'—':Number(net))+'</span>'
+        +'<span class="daily-team-net" title="'+escapeHTML(dailyNetLabel(net))+'"><em>'+(resultsRankingSource==='kenpom'?'KP':resultsRankingSource==='torvik'?'TOR':'NET')+'</em> '+(net===null||net===undefined||!Number.isFinite(Number(net))?'—':Number(net))+'</span>'
+        +(resultsRankingSource==='kenpom'?'<span class="daily-team-net daily-team-torvik" title="Bart Torvik national rank"><em>TOR</em> '+(()=>{
+          const school=programs().find(p=>String(p.id)===String(id));
+          const torvik=Number(ratingOf(school,ratingYear(season()))?.rank);
+          return torvik>0&&Number.isInteger(torvik)?torvik:'—';
+        })()+'</span>':'')
         +dailyQuad(quad,q1a)
         +'<span class="daily-score">'+(hasScore&&score!==null?escapeHTML(String(score)):'—')+'</span>';
       const cls='daily-team-line'+(isWinner?' is-winner':'')+(isHome?' home':' away');
@@ -1166,7 +1176,7 @@
             'Try another date, conference or school search.')+'</p>'+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
-      +'<div class="daily-footer-info"><span><strong>W–L</strong> Record through selected date</span><span><strong>NET / TOR</strong> '+(resultsRankingSource==='torvik'?'Preliminary Bart Torvik':'NCAA NET')+' ranking</span><span><strong>Q</strong> Potential quadrant win bonus</span><span>'+escapeHTML(note)+'</span></div>'
+      +'<div class="daily-footer-info"><span><strong>W–L</strong> Record through selected date</span><span><strong>'+(resultsRankingSource==='kenpom'?'KP / TOR':'NET / TOR')+'</strong> '+(resultsRankingSource==='kenpom'?'KenPom baseline and Bart Torvik rank':resultsRankingSource==='torvik'?'Bart Torvik fallback rank':'NCAA NET ranking')+'</span><span><strong>Q</strong> Potential quadrant win bonus</span><span>'+escapeHTML(note)+'</span></div>'
       +'</section>';
   }
 
@@ -1362,7 +1372,7 @@
     const school=(id,name,score,hasScore,quad,q1a)=>
       '<span class="overview-game-school">'+scoreboardLogo(id)+
       '<span class="overview-school-identity"><strong>'+escapeHTML(name||'Unknown school')+'</strong>'+scoreboardOwnership(id)+'</span>'+
-      '<span class="overview-quad-value" title="'+escapeHTML(quadMeaning(quad,q1a,overviewRankingSource==='torvik'))+'">'+
+      '<span class="overview-quad-value" title="'+escapeHTML(quadMeaning(quad,q1a,overviewRankingSource))+'">'+
       quadLabel(quad,q1a)+(quadBonusText(quad,q1a)?' '+quadBonusText(quad,q1a):'')+'</span>'+
       '<b>'+((hasScore&&score!==null&&score!==undefined)?escapeHTML(String(score)):'–')+'</b></span>';
     const cards=fixtures.map(g=>{
@@ -2919,7 +2929,7 @@
         '<span class="program-schedule-venue">'+escapeHTML(venue)+'</span>'+
         '<span class="program-schedule-opponent">'+scoreboardLogo(g.opponent_id)+
           '<span><strong>'+escapeHTML(g.opponent_name||'Opponent TBD')+'</strong><small>'+escapeHTML(note)+'</small></span></span>'+
-        '<span class="program-schedule-quad" title="'+escapeHTML(quadMeaning(g.quad,g.q1a,data?.rankings_source==='torvik'))+'">'+
+        '<span class="program-schedule-quad" title="'+escapeHTML(quadMeaning(g.quad,g.q1a,data?.rankings_source))+'">'+
           quad+(bonus?'<small>'+bonus+'</small>':'')+'</span>'+
         '<span class="program-schedule-result">'+escapeHTML(score)+'</span>'+
         (hasLink?'<a class="program-schedule-link" href="https://www.espn.com/mens-college-basketball/game/_/gameId/'+

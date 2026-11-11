@@ -111,7 +111,7 @@
   let leagueExpandedManager='';
   let overviewGames=[],overviewGamesDay='',overviewGamesFetchedAt=0,overviewGamesLoading=false,overviewGamesError='',overviewRankingSource='pending';
   let avatarDraft=null;
-  let inviteLink='', passwordResetReceipt=null, busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',importError='',autoImportAttempted=false;
+  let inviteLink='', passwordResetReceipt=null, busy=false, syncActive=false, refreshId=null,toastId=null,tradeTargetId='',rosterAddPrefillId='',importError='',autoImportAttempted=false;
   let adminSection='general',draftOrderPreview=[];
   let raceState={phase:'idle',id:'',order:[],progress:{},run:0};
   let raceFrame=0;
@@ -3144,13 +3144,32 @@
     const rosterState=owner?'is-rostered':eligible?'is-available':'is-ineligible';
     const rosterLabel=owner?'ROSTERED':eligible?'AVAILABLE':'OUTSIDE DRAFT POOL';
     const draftLabel=selection?'#'+selection.overall+' / RD '+selection.round:'UNDRAFTED';
+    const isMine=owner&&String(owner.manager_id)===String(me.id);
+    const actionKind=isMine?'drop':owner?'trade':'add';
+    const rosterMovesOpen=league.settings.draft_status==='finished'&&league.settings.waivers_enabled;
+    const canTrade=!!(league.settings.trading_enabled&&manager&&String(manager.id)!==String(me.id));
+    const actionEnabled=actionKind==='trade'?canTrade:rosterMovesOpen&&(actionKind==='drop'||eligible);
+    const actionHint=actionEnabled?(
+      actionKind==='drop'?'Release this school from your permanent roster':
+      actionKind==='trade'?'Build an offer for '+p.name+' with '+manager.display_name:
+      'Add '+p.name+' to your permanent roster'
+    ):actionKind==='trade'?'Trading is currently unavailable':
+      !rosterMovesOpen?'Add / Drop opens after the draft when enabled by the commissioner':
+      'This program is outside the eligible league pool';
+    const actionName=actionKind==='drop'?'Drop':actionKind==='trade'?'Trade':'Add';
+    const actionAct=actionKind==='drop'?'team-drop':actionKind==='trade'?'program-start-trade':'program-add';
+    const actionIcon=actionKind==='drop'?'−':actionKind==='trade'?'⇄':'+';
+    const actionButton='<button type="button" class="pp-roster-action is-'+actionKind+'" data-act="'+actionAct+
+      '" data-id="'+escapeHTML(p.id)+'" aria-label="'+escapeHTML(actionName+' '+p.name)+
+      '" title="'+escapeHTML(actionHint)+'" '+(actionEnabled?'':'disabled')+'><span class="pp-action-icon" aria-hidden="true">'+
+      actionIcon+'</span>'+actionName+'</button>';
     return '<div class="pp-page pp-v3">'+
       '<div class="pp-context">'+profileBack()+
       '<span class="pp-context-path">SCHOOLS <span aria-hidden="true">/</span> '+
       escapeHTML(conf(p.conference_id))+' <span aria-hidden="true">/</span> PROFILE</span></div>'+
       '<header class="pp-masthead">'+
       '<div class="pp-masthead-upper"><span class="pp-masthead-kicker">BOEK DYNASTY <span aria-hidden="true">/</span> PROGRAM INTELLIGENCE</span>'+
-      '<span class="pp-status '+rosterState+'">'+rosterLabel+'</span></div>'+
+      '<div class="pp-masthead-actions"><span class="pp-status '+rosterState+'">'+rosterLabel+'</span>'+actionButton+'</div></div>'+
       '<div class="pp-masthead-body"><div class="pp-identity">'+img(p)+
       '<div class="pp-identity-text"><span class="pp-conference">'+escapeHTML(conf(p.conference_id))+
       ' <span aria-hidden="true">·</span> NCAA DIVISION I</span>'+
@@ -3252,7 +3271,7 @@
     const transactions=(league.roster_transactions||[]).filter(t=>t.manager_id===me.id).slice(0,12);
     const oldClaims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
     const programName=id=>programs().find(p=>p.id===id)?.name||'Program';
-    const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+    const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'" '+(String(p.id)===String(rosterAddPrefillId)?'selected':'')+'>'+escapeHTML(p.name)+'</option>').join('');
     const drop='<option value="">'+(mine.length>=rosterLimit?'Select a program (roster full)':'Do not drop a program')+'</option>'
       +mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
     const activity=transactions.map(t=>'<div class="txn-waiver-row"><span class="txn-claim-state">'+(t.action==='claim'?'ADDED':'DROPPED')+'</span>'
@@ -3749,6 +3768,24 @@
         programMode==='ratings'?(ratingSeason||season()):season();current='program-detail';render();
       loadProgramResults(id);loadProgramSchedule(id);loadKenpom();window.scrollTo({top:0});return;
     }
+    if(act==='program-start-trade'){
+      const ownership=programOwned(id);
+      if(!league.settings.trading_enabled||!ownership||String(ownership.manager_id)===String(me.id)){
+        notice('This program is not available for a trade.',true);return;
+      }
+      if(!members().some(u=>String(u.id)===String(ownership.manager_id))){
+        notice('The current owner is unavailable for trading.',true);return;
+      }
+      tradeTargetId=String(ownership.manager_id);
+      tradeSearch.receive='';
+      current='trades';render();
+      const selection=[...document.querySelectorAll('input[name="trade-receive"]')]
+        .find(input=>String(input.value)===String(id));
+      if(selection){selection.checked=true;updateTradeSelections();}
+      else notice('Open the trade desk to choose this program.',true);
+      document.querySelector('#trade-proposal')?.scrollIntoView({block:'start',behavior:'smooth'});
+      return;
+    }
     if(act==='open-manager'){
       globalSearchOpen=false;globalSearchQuery='';
       if(current!=='manager-detail'){managerBackPage=current;managerBackScroll=window.scrollY;}
@@ -3952,6 +3989,23 @@
         const select=[...document.querySelectorAll('.season-champion-select')].find(el=>el.dataset.season===id);
         await api('admin/season/champion',{season:id,manager_id:select?.value||''});
         notice('Archived champion updated.');
+      }else if(act==='program-add'){
+        if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')
+          throw new Error('Add / Drop is currently closed.');
+        const school=programs().find(p=>String(p.id)===String(id));
+        if(!school||!programEligible(school)||programOwned(id))
+          throw new Error('This program is not available to add.');
+        if(myPrograms().length>=Number(league.settings.rounds||20)){
+          rosterAddPrefillId=String(id);
+          current='waivers';render();
+          document.querySelector('#waiver-drop')?.focus();
+          notice('Your roster is full. Select a school to drop before adding '+school.name+'.');
+          busy=false;return;
+        }
+        if(!window.confirm('Add '+school.name+' to your permanent roster?')){busy=false;return;}
+        await api('roster/add',{program_id:id,drop_program_id:null});
+        rosterAddPrefillId='';
+        notice(school.name+' added to your roster.');
       }else if(act==='team-drop'){
         if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')throw new Error('Add / Drop is currently closed.');
         const school=programs().find(p=>p.id===id);
@@ -3969,6 +4023,7 @@
           throw new Error('Choose a program from your roster to drop.');
         if(dropId&&!window.confirm('Drop '+dropped.name+' and add '+added.name+' immediately? This cannot be undone.')){busy=false;return;}
         await api('roster/add',{program_id:programId,drop_program_id:dropId||null});
+        rosterAddPrefillId='';
         notice(added.name+' added'+(dropped?' · '+dropped.name+' dropped':'')+'.');
       }else if(act==='waiver-cancel'){
         await api('waiver/cancel',{claim_id:id});notice('Claim cancelled.');
@@ -4319,6 +4374,7 @@
     }
     if(e.target?.id==='pool-conf-filter'){poolConferenceFilter=e.target.value;poolShown=70;render();return;}
     if(e.target?.id==='trade-target'){document.querySelectorAll('input[name="trade-receive"],input[name="trade-receive-pick"]').forEach(el=>{el.checked=false;});tradeTargetId=e.target.value;tradeSearch.receive='';render();}
+    if(e.target?.id==='waiver-program'){rosterAddPrefillId=e.target.value;return;}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
     if(e.target?.id==='directory-sort'){programSort=['points','history','torvik','kenpom','cost'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}

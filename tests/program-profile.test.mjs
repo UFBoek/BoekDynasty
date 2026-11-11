@@ -36,6 +36,31 @@ app.report({
   ]},games:[]
 });
 
+test('program header offers a Drop, Trade or Add action based on actual ownership',()=>{
+  const originalUsers=state.users,originalOwnership=state.ownership,originalSettings=state.settings;
+  try{
+    const partner={id:'2',display_name:'Fru',username:'fru',role:'manager'};
+    state.users=[user,partner];
+    state.settings={...originalSettings,draft_status:'finished',waivers_enabled:true,trading_enabled:true};
+    state.ownership=[{program_id:'57',manager_id:'1'}];
+    assert.match(app.tab('overview'),/class="pp-roster-action is-drop" data-act="team-drop" data-id="57"/);
+    assert.match(app.tab('overview'),/aria-label="Drop Florida"/);
+    state.ownership=[{program_id:'57',manager_id:'2'}];
+    assert.match(app.tab('overview'),/class="pp-roster-action is-trade" data-act="program-start-trade" data-id="57"/);
+    assert.match(app.tab('overview'),/aria-label="Trade Florida"/);
+    state.ownership=[];
+    assert.match(app.tab('overview'),/class="pp-roster-action is-add" data-act="program-add" data-id="57"/);
+    assert.match(app.tab('overview'),/aria-label="Add Florida"/);
+    state.settings.waivers_enabled=false;
+    assert.match(app.tab('overview'),/class="pp-roster-action is-add"[^>]*disabled/);
+    state.ownership=[{program_id:'57',manager_id:'2'}];
+    state.settings.trading_enabled=false;
+    assert.match(app.tab('overview'),/class="pp-roster-action is-trade"[^>]*disabled/);
+  }finally{
+    state.users=originalUsers;state.ownership=originalOwnership;state.settings=originalSettings;
+  }
+});
+
 test('profile opens with compact summary and does not dump all sections onto the overview',()=>{
   const html=app.tab('overview');
   assert.match(html,/<h1>Florida<\/h1>/);

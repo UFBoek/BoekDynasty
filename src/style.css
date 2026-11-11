@@ -6396,6 +6396,19 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .pp-v3 .pp-status.is-available:before{background:#74d8a1}
 .pp-v3 .pp-status.is-ineligible{background:rgba(177,193,204,.1);border-color:rgba(177,193,204,.22);color:#bac8d3}
 .pp-v3 .pp-status.is-ineligible:before{background:#869bab}
+.pp-v3 .pp-masthead-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0;flex-shrink:0}
+.pp-v3 .pp-roster-action{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:8px 14px;min-height:36px;border:1px solid transparent;border-radius:6px;white-space:nowrap;
+  font:800 11px/1.2 inherit;letter-spacing:.015em;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
+.pp-v3 .pp-roster-action .pp-action-icon{font-size:17px;font-weight:750;line-height:.8}
+.pp-v3 .pp-roster-action.is-drop{background:#b33440;border-color:#d05962;color:#fff}
+.pp-v3 .pp-roster-action.is-drop:hover:not(:disabled){background:#d03d4a}
+.pp-v3 .pp-roster-action.is-trade{background:#e4e9ee;border-color:#ccd5de;color:#27435a}
+.pp-v3 .pp-roster-action.is-trade:hover:not(:disabled){background:#f6f9fc;color:#153b5b}
+.pp-v3 .pp-roster-action.is-add{background:#167e54;border-color:#32a879;color:#fff}
+.pp-v3 .pp-roster-action.is-add:hover:not(:disabled){background:#1a9564}
+.pp-v3 .pp-roster-action:focus-visible{outline:3px solid #f5a46a;outline-offset:3px}
+.pp-v3 .pp-roster-action:disabled{opacity:.5;cursor:not-allowed}
 .pp-v3 .pp-masthead-body{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;min-width:0}
 .pp-v3 .pp-identity{display:flex;align-items:center;gap:18px;min-width:0;flex:1}
 .pp-v3 .pp-identity>.program-logo{width:78px;height:78px;flex:0 0 78px;padding:8px;object-fit:contain;
@@ -6569,6 +6582,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(max-width:700px){
   .pp-v3 .pp-masthead{padding:15px 16px 17px}
   .pp-v3 .pp-masthead-upper{margin-bottom:15px}
+  .pp-v3 .pp-masthead-actions{gap:7px}
+  .pp-v3 .pp-roster-action{min-height:34px;padding:7px 11px}
   .pp-v3 .pp-masthead-body{align-items:flex-start;gap:16px;flex-direction:column}
   .pp-v3 .pp-identity{gap:12px;width:100%}
   .pp-v3 .pp-identity>.program-logo{width:65px;height:65px;flex-basis:65px;padding:6px}
@@ -6596,6 +6611,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
   .pp-v3 .pp-context-path>span{margin:0 4px}
   .pp-v3 .pp-masthead{padding:14px 13px 15px}
   .pp-v3 .pp-masthead-kicker{font-size:8px;letter-spacing:.07em}
+  .pp-v3 .pp-masthead-actions{flex-direction:column;align-items:flex-end;gap:5px}
+  .pp-v3 .pp-roster-action{min-height:33px;padding:7px 11px}
   .pp-v3 .pp-status{font-size:8px;padding:5px 7px}
   .pp-v3 .pp-identity>.program-logo{width:57px;height:57px;flex-basis:57px}
   .pp-v3 .pp-identity h1{font-size:22px}

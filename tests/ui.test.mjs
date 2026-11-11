@@ -108,12 +108,12 @@ test('overview and results never display a draft-queue game view',()=>{
  }finally{league.ownership=oldOwnership;app.queue([]);app.overviewGames([]);}
 });
 
-test('mobile navigation presents six usable primary destinations with Standings under More',()=>{
+test('mobile navigation presents Standings in the bottom bar and Draft under More',()=>{
  const html=app.page('home');
  const mobile=html.slice(html.indexOf('<nav class="bottom"'));
  const tabs=[...mobile.matchAll(/data-id="([^"]+)"/g)].map(x=>x[1]);
- assert.deepEqual(tabs,['home','team','results','programs','draft','more']);
- assert.match(app.page('more'),/data-id="league"/);
+ assert.deepEqual(tabs,['home','team','results','programs','league','more']);
+ assert.match(app.page('more'),/data-id="draft"/);
 });
 test('More has clear account, league and tools groups',()=>{
  const html=app.page('more');

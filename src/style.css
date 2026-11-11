@@ -6399,7 +6399,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .pp-v3 .pp-masthead-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0;flex-shrink:0}
 .pp-v3 .pp-roster-action{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;
   padding:8px 14px;min-height:36px;border:1px solid transparent;border-radius:6px;white-space:nowrap;
-  font:800 11px/1.2 inherit;letter-spacing:.015em;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
+  font-family:inherit;font-size:11px;font-weight:800;line-height:1.2;letter-spacing:.015em;cursor:pointer;transition:background .15s,box-shadow .15s}
 .pp-v3 .pp-roster-action .pp-action-icon{font-size:17px;font-weight:750;line-height:.8}
 .pp-v3 .pp-roster-action.is-drop{background:#b33440;border-color:#d05962;color:#fff}
 .pp-v3 .pp-roster-action.is-drop:hover:not(:disabled){background:#d03d4a}

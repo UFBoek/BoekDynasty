@@ -145,7 +145,7 @@
       if(current==='programs'){
         if(programMode==='directory')refreshSchoolsDirectory();
         else render();
-      }else if(['program-detail','team','manager-detail','draft','trades','results','home'].includes(current))render();
+      }else if(['program-detail','team','manager-detail','draft','trades','waivers','results','home'].includes(current))render();
     }
   }
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
@@ -370,7 +370,7 @@
     finally{
       delete ratingLoading[year];
       if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(current==='programs'&&programMode==='ratings'||['program-detail','draft','team','manager-detail','trades','results'].includes(current))render();
+      else if(current==='programs'&&programMode==='ratings'||['program-detail','draft','team','manager-detail','trades','waivers','results'].includes(current))render();
     }
   }
   const ratingExternalLinks=(year=ratingYear(season()))=>'<div class="rating-source-links">'
@@ -414,10 +414,10 @@
           if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
           raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};render();
         }
-        if(['programs','program-detail','team','manager-detail','draft','trades','results'].includes(current)&&Date.now()-kenpomFetchedAt>30*60*1000&&!kenpomLoading)loadKenpom();
+        if(['programs','program-detail','team','manager-detail','draft','trades','waivers','results'].includes(current)&&Date.now()-kenpomFetchedAt>30*60*1000&&!kenpomLoading)loadKenpom();
         if(current==='results'&&Date.now()-resultsFetchedAt>(fastScoreWindow(resultsGames,resultsLoadedDay)?25000:55000)&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>(fastScoreWindow(overviewGames,overviewGamesDay)?25000:90000))&&!overviewGamesLoading)loadOverviewGames();
-        if((['home','league','team','manager-detail','trades'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
+        if((['home','league','team','manager-detail','trades','waivers'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();
       }
       if(chosen.length){
         document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=chosen.includes(el.name+':'+el.value);});
@@ -765,13 +765,13 @@
   }
   function render(){
     if(!me||!league)return renderAuth();
-    if((['home','league','team','manager-detail','trades'].includes(current)||current==='programs')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
+    if((['home','league','team','manager-detail','trades','waivers'].includes(current)||current==='programs')&&!standingsLoading&&Date.now()-standingsFetchedAt>=60000)loadStandings();
     // The overview previews today's games without requiring a visit to Results.
     if(current==='home'&&!overviewGamesLoading&&
       (overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>90000))loadOverviewGames();
     if(current==='programs'&&programMode==='ratings')loadRatings(ratingYear(ratingSeason||season()));
     // The My Team roster shares verified national scouting data with the Draft Desk.
-    if(current==='team'||current==='trades'||current==='manager-detail'){
+    if(current==='team'||current==='trades'||current==='waivers'||current==='manager-detail'){
       const year=ratingYear(season());
       if(!ratingCache[year]&&!ratingLoading[year]&&!ratingError[year])loadRatings(year);
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
@@ -792,6 +792,8 @@
       loadRatings(ratingYear(season()));
       if(!schoolLeaders&&!schoolLeadersLoading&&!schoolLeadersError)loadSchoolLeaders();
     }
+    const adFocus=current==='waivers'&&document.activeElement?.closest?.('.ad-desk')?{id:document.activeElement.id,act:document.activeElement.dataset?.act,key:document.activeElement.dataset?.id,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;
+    const adScroll=current==='waivers'?document.querySelector('.ad-school-list')?.scrollTop||0:0;
     const tradeChosen=current==='trades'?[...document.querySelectorAll('.trade-choice input:checked')].map(el=>el.name+':'+el.value):[];
     const tradeFocus=current==='trades'&&document.activeElement?.closest?.('.td-desk')?{
       id:document.activeElement.id,name:document.activeElement.name,value:document.activeElement.value,
@@ -830,6 +832,11 @@
     const notificationBell='<button type="button" class="topbar-bell" data-act="tab" data-id="notifications" title="Notifications" aria-label="Notifications'+(unreadNotifications?', '+unreadNotifications+' unread':'')+'">'+iconSVG('notifications')
       +(unreadNotifications?'<span class="notification-bell-count">'+unreadNotifications+'</span>':'')+'</button>';
     root.innerHTML='<a class="skip-link" href="#main-content">Skip to main content</a><div class="shell">'+sidebar()+'<main class="main" id="main-content" tabindex="-1"><header class="topbar"><div class="topbar-heading"><img class="topbar-logo" src="/brand-logo.png?v=3" alt="" width="30" height="30"><span class="title"><span class="topbar-league">'+escapeHTML(league.settings.league_name||'Boek Dynasty')+'</span><span class="sep">/</span><span class="topbar-page">'+(names[current]||'Profile')+'</span></span></div><div class="top-right">'+eventLink+tradeShortcut+notificationBell+'<button type="button" class="global-search-trigger" data-act="search-open" title="Search schools, managers and pages (⌘K)" aria-label="Search the league">'+iconSVG('search')+'<span>Search</span><kbd>'+searchShortcut+'</kbd></button><span class="chip">'+escapeHTML(season())+'</span><button class="header-account-avatar" type="button" title="Edit my profile" data-act="tab" data-id="settings">'+avatar(me)+'</button></div></header><section class="content">'+({home:overview,programs:programsPage,draft:draftPage,trades:tradesPage,notifications:notificationsPage,league:leaguePage,team:myTeamPage,scoring:scoringPage,commissioner:commissionerPage,settings:settingsPage,more:morePage,'draft-order':draftOrderPage,'program-detail':programProfilePage,'manager-detail':managerProfilePage,waivers:waiversPage,history:historyPage,results:resultsPage}[current]||overview)()+'</section></main></div><nav class="bottom" aria-label="Mobile navigation">'+tabs.map(id=>'<button type="button" class="'+(activeMobile===id?'active':'')+((id==='more'&&liveDraft||id==='results'&&liveGames)?' has-live':'')+'" data-act="tab" data-id="'+id+'" '+(activeMobile===id?'aria-current="page"':'')+' aria-label="'+names[id]+(id==='results'&&liveGames?', '+liveGames+' live games':'')+'">'+iconSVG(id)+'<span>'+mobileLabels[id]+'</span>'+((id==='more'&&liveDraft||id==='results'&&liveGames)?'<i class="nav-live-indicator" aria-hidden="true"></i>':'')+(id==='more'&&(pendingTradeOffers||unreadNotifications)?'<span class="bottom-unread">'+Math.min(99,pendingTradeOffers+unreadNotifications)+'</span>':'')+'</button>').join('')+'</nav>'+(globalSearchOpen?globalSearchDialog():'')+(draftPrank?draftPrankDialog():'');
+    if(current==='waivers'){
+      filterAddDrop();const list=document.querySelector('.ad-school-list');if(list)list.scrollTop=adScroll;
+      const field=adFocus?.id?document.getElementById(adFocus.id):adFocus?.act?[...document.querySelectorAll('.ad-desk [data-act]')].find(el=>el.dataset.act===adFocus.act&&el.dataset.id===adFocus.key):null;
+      field?.focus({preventScroll:true});if(field&&adFocus?.start!=null&&field.type==='search')field.setSelectionRange?.(adFocus.start,adFocus.end);
+    }
     if(current==='trades'){
       document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=tradeChosen.includes(el.name+':'+el.value);});
       updateTradeSelections();for(const side of ['give','receive'])filterTradeAssets(side);
@@ -1700,7 +1707,7 @@
       if(!globalSearchOpen&&current==='programs'){
         if(programMode==='directory')refreshSchoolsDirectory();
         else render();
-      }else if(['home','league','team','manager-detail','trades'].includes(current)&&!globalSearchOpen)render();
+      }else if(['home','league','team','manager-detail','trades','waivers'].includes(current)&&!globalSearchOpen)render();
     }
   }
   async function loadSchoolLeaders(){
@@ -1713,7 +1720,7 @@
       schoolLeadersLoading=false;
       if(current==='programs'&&programMode==='leaders'){render();filterSchoolLeaders();}
       else if(current==='programs'&&programMode==='directory')refreshSchoolsDirectory();
-      else if(current==='team'||current==='trades')render();
+      else if(current==='team'||current==='trades'||current==='waivers')render();
       else if(current==='draft'&&document.activeElement?.id!=='draft-pool-search')render();
     }
   }
@@ -3263,47 +3270,63 @@
         +'<div class="history-team-list">'+historyRows+'</div>'
         +'<p class="hint section-gap">Scoring and final positions will populate after the scoring system is configured.</p>':empty('No seasons archived','The inaugural season is still in progress.'))+'</section>';
   }
+  const addDrop={tab:'available',query:'',conference:'all',sort:'points',add:'',drop:'',release:''};
+  function filterAddDrop(){
+    let count=0;
+    document.querySelectorAll('.ad-school').forEach(row=>{
+      row.hidden=!row.dataset.search.includes(addDrop.query.trim().toLowerCase())||
+        !matchesConferenceFilter(row.dataset.conference,addDrop.conference,row.dataset.program);
+      if(!row.hidden)count++;
+    });
+    const label=document.querySelector('#ad-result-count'),empty=document.querySelector('#ad-no-results');
+    if(label)label.textContent=count+' programs';
+    if(empty)empty.hidden=count>0;
+  }
   function waiversPage(){
+    if(rosterAddPrefillId){addDrop.tab='available';addDrop.add=String(rosterAddPrefillId);addDrop.drop='';addDrop.query='';addDrop.conference='all';rosterAddPrefillId='';}
     const enabled=league.settings.waivers_enabled&&league.settings.draft_status==='finished';
-    const eligible=eligiblePrograms().filter(p=>!programOwned(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
+    const eligible=eligiblePrograms().filter(p=>!programOwned(p.id));
     const mine=myPrograms().slice().sort((a,b)=>a.name.localeCompare(b.name));
-    const rosterLimit=Number(league.settings.rounds||20);
+    const limit=Number(league.settings.rounds||20),full=mine.length>=limit;
+    // Ownership can change during a background refresh. Never retain a stale move.
+    if(!eligible.some(p=>String(p.id)===addDrop.add))addDrop.add='';
+    if(!mine.some(p=>String(p.id)===addDrop.drop))addDrop.drop='';
+    if(!mine.some(p=>String(p.id)===addDrop.release))addDrop.release='';
+    const history=draftHistoricalIndex(),rank=p=>ratingOf(p,ratingYear(season()))?.rank;
+    const avg=p=>{const h=history.byId.get(String(p.id));return h?.eligibleForSort?h.avg:null;};
+    const numeric=p=>addDrop.sort==='kenpom'?kenpomRankOf(p):addDrop.sort==='torvik'?rank(p):addDrop.sort==='history'?avg(p):addDrop.sort==='cost'?rosterCost2026(p)?.estimate:standingsData?.season===season()?Number(standingsData.program_points?.[String(p.id)]??0):null;
+    const list=(addDrop.tab==='available'?eligible:mine).slice().sort((a,b)=>{
+      if(addDrop.sort==='name')return a.name.localeCompare(b.name);
+      const x=numeric(a),y=numeric(b),valid=n=>n!==null&&n!==undefined&&Number.isFinite(Number(n));
+      return (valid(x)&&valid(y)?(Number(x)-Number(y))*(addDrop.sort==='kenpom'||addDrop.sort==='torvik'?1:-1):valid(x)?-1:valid(y)?1:0)||a.name.localeCompare(b.name);
+    });
+    const metric=(label,value,title='')=>'<div'+(title?' title="'+escapeHTML(title)+'"':'')+'><dt>'+label+'</dt><dd>'+value+'</dd></div>';
+    const stats=p=>'<dl class="ad-stats">'+metric(escapeHTML(season())+' pts',currentSeasonPoints(p))
+      +metric('KenPom',kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+metric('Torvik',rank(p)?'#'+Number(rank(p)):'—')
+      +metric('5Y avg pts',avg(p)!==null?historicalPointLabel(avg(p)):'—')+metric('Roster cost',escapeHTML(Number.isFinite(rosterCost2026(p)?.estimate)?rosterCostAmount2026(rosterCost2026(p)):'N/A'),rosterCostEvidence2026(rosterCost2026(p)))+'</dl>';
+    const selected=programs().find(p=>String(p.id)===(addDrop.tab==='available'?addDrop.add:addDrop.release));
+    const dropping=mine.find(p=>String(p.id)===addDrop.drop);
+    const school=p=>'<div class="ad-school-identity">'+img(p)+'<div><button type="button" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</button><small>'+escapeHTML(conf(p.conference_id))+'</small></div></div>';
+    const rows=list.map(p=>{const chosen=String(p.id)===(addDrop.tab==='available'?addDrop.add:addDrop.release);return '<article class="ad-school '+(chosen?'is-selected':'')+'" data-program="'+escapeHTML(p.id)+'" data-conference="'+escapeHTML(p.conference_id)+'" data-search="'+escapeHTML((p.name+' '+conf(p.conference_id)).toLowerCase())+'">'+school(p)+stats(p)+'<button type="button" class="ad-select" data-act="ad-select" data-id="'+escapeHTML(p.id)+'" aria-pressed="'+chosen+'" aria-label="'+(chosen?'Selected ':addDrop.tab==='available'?'Select to add ':'Select to drop ')+escapeHTML(p.name)+'">'+(chosen?'Selected':addDrop.tab==='available'?'Add':'Drop')+'</button></article>';}).join('');
+    const options=mine.map(p=>'<option value="'+escapeHTML(p.id)+'" '+(String(p.id)===addDrop.drop?'selected':'')+'>'+escapeHTML(p.name)+'</option>').join('');
     const transactions=(league.roster_transactions||[]).filter(t=>t.manager_id===me.id).slice(0,12);
     const oldClaims=(league.waiver_claims||[]).filter(c=>c.manager_id===me.id);
-    const programName=id=>programs().find(p=>p.id===id)?.name||'Program';
-    const opts=eligible.map(p=>'<option value="'+escapeHTML(p.id)+'" '+(String(p.id)===String(rosterAddPrefillId)?'selected':'')+'>'+escapeHTML(p.name)+'</option>').join('');
-    const drop='<option value="">'+(mine.length>=rosterLimit?'Select a program (roster full)':'Do not drop a program')+'</option>'
-      +mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
-    const activity=transactions.map(t=>'<div class="txn-waiver-row"><span class="txn-claim-state">'+(t.action==='claim'?'ADDED':'DROPPED')+'</span>'
-      +'<span class="txn-waiver-program"><strong>'+escapeHTML(programName(t.program_id))+'</strong><small>'+escapeHTML(t.season)+'</small></span></div>').join('');
-    const previous=oldClaims.map(c=>'<div class="txn-waiver-row"><span class="txn-claim-state '+(c.status==='pending'?'pending':'')+'">'+escapeHTML(c.status)+'</span>'
-      +'<span class="txn-waiver-program"><strong>'+escapeHTML(programName(c.program_id))+'</strong><small>Previous waiver claim'+(c.drop_program_id?' · Drop '+escapeHTML(programName(c.drop_program_id)):'')+'</small></span>'
-      +(c.status==='pending'?'<button type="button" class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
-    return '<main class="txn-workspace txn-waivers">'
-      +'<header class="txn-head"><div><span class="txn-overline">FRONT OFFICE / ROSTER MOVES</span><h1>Add / Drop</h1>'
-      +'<p>Add available programs immediately, or release programs from your permanent roster. No claims or commissioner approvals.</p></div>'
-      +'<div class="txn-head-links"><button type="button" class="txn-link" data-act="tab" data-id="trades">'+iconSVG('trades')+' Trade desk</button></div></header>'
-      +'<section class="txn-summary" aria-label="Roster summary"><div><strong>'+eligible.length+'</strong><span>AVAILABLE PROGRAMS</span></div>'
-      +'<div><strong>'+mine.length+' / '+rosterLimit+'</strong><span>ROSTER SLOTS USED</span></div></section>'
-      +(enabled?'<div class="txn-waiver-grid"><section class="txn-section txn-waiver-form">'
-        +'<div class="txn-section-head"><div><span class="txn-kicker">01 / ACQUIRE</span><h2>Add a program</h2></div></div>'
-        +'<div class="form-row"><label for="waiver-program">Available program</label><select id="waiver-program" class="field">'+opts+'</select></div>'
-        +'<div class="form-row"><label for="waiver-drop">Drop a program (if needed)</label><select id="waiver-drop" class="field">'+drop+'</select></div>'
-        +'<div class="txn-form-foot"><p>'+(mine.length>=rosterLimit?'Your roster is full. Select a program to drop.':'Open roster spots can be filled without a drop.')+' Changes take effect immediately.</p>'
-        +'<button class="btn" data-act="roster-add" '+(!eligible.length?'disabled':'')+'>Add program</button></div></section>'
-        +'<section class="txn-section txn-waiver-form txn-release"><div class="txn-section-head"><div><span class="txn-kicker">02 / RELEASE</span><h2>Drop a program</h2></div></div>'
-        +'<p class="txn-form-description">Release a program without adding a replacement. Other managers can add it immediately.</p>'
-        +'<div class="form-row"><label for="waiver-release">Your programs</label><select id="waiver-release" class="field">'
-        +mine.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('')+'</select></div>'
-        +'<div class="txn-form-foot"><p>Dropping a program permanently releases your rights to it.</p>'
-        +'<button class="btn secondary" data-act="roster-drop" '+(!mine.length?'disabled':'')+'>Drop program</button></div></section></div>'
-        :'<section class="txn-section"><div class="txn-empty"><div><strong>Add / Drop is currently closed</strong><p>'
-        +(league.settings.draft_status==='finished'?'The commissioner has disabled roster moves.':'Roster moves open after the inaugural draft ends.')
-        +'</p></div></div></section>')
-      +'<section class="txn-section"><div class="txn-section-head"><div><span class="txn-kicker">03 / ACTIVITY</span><h2>Recent roster moves</h2></div></div>'
-      +(activity?'<div class="txn-waiver-list">'+activity+'</div>':'<div class="txn-empty"><div><strong>No roster moves yet</strong><p>Additions and drops will appear here.</p></div></div>')+'</section>'
-      +(oldClaims.length?'<details class="txn-section"><summary>Previous waiver claims ('+oldClaims.length+')</summary><div class="txn-waiver-list">'+previous+'</div></details>':'')
-      +'</main>';
+    const name=id=>programs().find(p=>p.id===id)?.name||'Program';
+    const activity=transactions.map(t=>'<div class="ad-activity-row"><span class="ad-move-type '+(t.action==='claim'?'added':'')+'">'+(t.action==='claim'?'Added':'Dropped')+'</span><strong>'+escapeHTML(name(t.program_id))+'</strong><span>'+escapeHTML(t.season)+'</span></div>').join('');
+    const previous=oldClaims.map(c=>'<div class="txn-waiver-row"><span class="txn-claim-state">'+escapeHTML(c.status)+'</span><span class="txn-waiver-program"><strong>'+escapeHTML(name(c.program_id))+'</strong><small>Previous waiver claim'+(c.drop_program_id?' · Drop '+escapeHTML(name(c.drop_program_id)):'')+'</small></span>'+(c.status==='pending'?'<button type="button" class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
+    return '<div class="ad-desk"><header class="ad-header"><div><h1>Add / Drop</h1><p>Find your next program. Build your permanent roster.</p></div><button type="button" class="btn secondary" data-act="tab" data-id="trades">'+iconSVG('trades')+' Trade desk</button></header>'
+      +'<div class="ad-status"><span class="ad-status-label '+(enabled?'is-open':'')+'">'+(enabled?'Roster moves open':'Roster moves closed')+'</span><span><strong>'+mine.length+' / '+limit+'</strong> roster spots</span><span><strong>'+Math.max(0,limit-mine.length)+'</strong> open</span><span>Immediate transactions</span></div>'
+      +(!enabled?'<p class="ad-closed">'+(league.settings.draft_status==='finished'?'The commissioner has paused roster moves.':'Roster moves open after the inaugural draft ends.')+' You can still scout programs and plan your next move.</p>':'')
+      +'<div class="ad-layout"><section class="ad-market" aria-label="Program market"><nav class="ad-tabs" aria-label="Program pool"><button type="button" data-act="ad-tab" data-id="available" aria-pressed="'+(addDrop.tab==='available')+'">Free agents <span>'+eligible.length+'</span></button><button type="button" data-act="ad-tab" data-id="roster" aria-pressed="'+(addDrop.tab==='roster')+'">My roster <span>'+mine.length+'</span></button></nav>'
+      +'<div class="ad-tools"><label class="ad-search">'+iconSVG('search')+'<input id="ad-search" type="search" placeholder="Search programs or conferences" aria-label="Search programs or conferences" value="'+escapeHTML(addDrop.query)+'"></label><div class="ad-filters"><label>Conference<select id="ad-conference"><option value="all">All conferences</option>'+[['power','Power conferences'],['mid-major','Mid-Major'],...Object.entries(conferenceNames).filter(([id])=>[...eligible,...mine].some(p=>String(p.conference_id)===id))].map(([id,n])=>'<option value="'+id+'" '+(id===addDrop.conference?'selected':'')+'>'+escapeHTML(n)+'</option>').join('')+'</select></label><label>Sort by<select id="ad-sort">'+[['points',season()+' points'],['kenpom','KenPom rank'],['torvik','Torvik rank'],['history','5Y average points'],['cost','Roster cost'],['name','Program name']].map(([id,n])=>'<option value="'+id+'" '+(id===addDrop.sort?'selected':'')+'>'+escapeHTML(n)+'</option>').join('')+'</select></label></div></div>'
+      +'<div class="ad-board-note"><span id="ad-result-count" aria-live="polite">'+list.length+' programs</span><span>Rankings: lower is better</span></div><div class="ad-school-list">'+rows+'<div id="ad-no-results" class="ad-empty" '+(list.length?'hidden':'')+'><strong>No programs found</strong><p>Try another search or conference.</p><button type="button" class="btn secondary" data-act="ad-reset">Clear filters</button></div></div><p class="ad-data-note">5Y average uses at least three available seasons. Roster costs are 2026–27 estimates, not audited payroll. Missing data appears as — or N/A.</p></section>'
+      +'<aside class="ad-move" id="ad-move" aria-label="Review roster move"><div class="ad-move-heading"><h2>Your move</h2>'+(selected?'<button type="button" data-act="ad-clear" class="ad-clear">Clear</button>':'')+'</div>'
+      +(selected?'<div class="ad-selected"><span class="ad-direction">'+(addDrop.tab==='available'?'Adding to your roster':'Releasing from your roster')+'</span>'+school(selected)+stats(selected)+'</div>':'<div class="ad-empty ad-move-empty">'+iconSVG('waivers')+'<strong>Select a program</strong><p>'+(addDrop.tab==='available'?'Choose a free agent to review an addition or swap.':'Choose a program from your roster to review a drop.')+'</p></div>')
+      +(addDrop.tab==='available'?'<input type="hidden" id="waiver-program" value="'+escapeHTML(addDrop.add)+'"><div class="ad-drop-field"><label for="waiver-drop">'+(full?'Select a program to drop':'Optional drop')+'</label><select id="waiver-drop" class="field"><option value="">'+(full?'Roster full · choose a program':'Keep all current programs')+'</option>'+options+'</select>'+(dropping?'<div class="ad-outgoing"><span>Dropping</span>'+school(dropping)+'</div>':'')+'</div><div class="ad-move-footer"><p>'+(full?'A full roster requires a drop with every addition.':'You can add a program without dropping one.')+'</p><button type="button" class="btn" data-act="roster-add" '+(!enabled||busy||!selected||(full&&!dropping)?'disabled':'')+'>'+(dropping?'Confirm swap':'Confirm addition')+'</button></div>'
+        :'<input type="hidden" id="waiver-release" value="'+escapeHTML(addDrop.release)+'"><div class="ad-move-footer"><p>A dropped program becomes available to every manager immediately. You give up your permanent roster rights.</p><button type="button" class="btn ad-danger" data-act="roster-drop" '+(!enabled||busy||!selected?'disabled':'')+'>Confirm drop</button></div>')
+      +'<p class="ad-rule-note">No claims or commissioner approvals. '+(enabled?'Confirmed moves take effect immediately.':'Confirmation is disabled while roster moves are closed.')+'</p></aside></div>'
+      +'<section class="ad-activity"><header><h2>My recent moves</h2><span>Latest '+transactions.length+'</span></header>'+(activity||'<p class="ad-activity-empty">No roster moves yet. Your additions and drops will appear here.</p>')+'</section>'
+      +(oldClaims.length?'<details class="ad-legacy"><summary>Previous waiver claims ('+oldClaims.length+')</summary><div class="txn-waiver-list">'+previous+'</div></details>':'')+'</div>';
   }
 
   function backendHealthPanel(){
@@ -3607,6 +3630,16 @@
   }
   async function action(button){
     const act=button.dataset.act,id=button.dataset.id;
+    if(act==='ad-tab'){addDrop.tab=id==='roster'?'roster':'available';render();return;}
+    if(act==='ad-reset'){addDrop.query='';addDrop.conference='all';render();return;}
+    if(act==='ad-clear'){addDrop.add='';addDrop.drop='';addDrop.release='';render();return;}
+    if(act==='ad-select'){
+      if(addDrop.tab==='available')addDrop.add=String(id);else addDrop.release=String(id);
+      render();
+      if(window.matchMedia('(max-width: 1000px)').matches){document.querySelector('#ad-move')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});document.querySelector('#ad-move button:not([disabled]),#ad-move select')?.focus({preventScroll:true});}
+      return;
+    }
+
     if(act==='notifications-enable-push'){
       try{
         if(!('serviceWorker' in navigator)||typeof Notification==='undefined'||!('PushManager' in window))
@@ -3726,7 +3759,7 @@
       if(id==='notifications')loadNotifications(true);
       globalSearchOpen=false;globalSearchQuery='';
       if(id==='programs'&&current!=='programs')ratingSeason=season();
-      if(id==='programs')loadKenpom();
+      if(id==='programs'||id==='waivers')loadKenpom();
       current=id;render();if(current==='programs')filterPrograms();if(current==='results')loadResults();
       if(current==='draft-order'&&officialRace()&&raceState.id!==officialRace().id&&Date.now()-officialRace().started_at*1000<raceTotalMs(officialRace()))startDraftRacePlayback(true);
       window.scrollTo({top:0,behavior:'auto'});return;
@@ -4014,6 +4047,7 @@
         await api('roster/drop',{program_id:id});
         notice(school.name+' released.');
       }else if(act==='roster-add'){
+        if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')throw new Error('Add / Drop is currently closed.');
         const programId=v('#waiver-program'),dropId=v('#waiver-drop');
         const added=programs().find(p=>p.id===programId),dropped=programs().find(p=>p.id===dropId);
         if(!added||programOwned(programId))throw new Error('Choose an available program.');
@@ -4022,17 +4056,20 @@
         if(dropId&&(!dropped||programOwned(dropId)?.manager_id!==me.id))
           throw new Error('Choose a program from your roster to drop.');
         if(dropId&&!window.confirm('Drop '+dropped.name+' and add '+added.name+' immediately? This cannot be undone.')){busy=false;return;}
+        button.disabled=true;button.textContent='Saving move…';
         await api('roster/add',{program_id:programId,drop_program_id:dropId||null});
-        rosterAddPrefillId='';
+        addDrop.add='';addDrop.drop='';
         notice(added.name+' added'+(dropped?' · '+dropped.name+' dropped':'')+'.');
       }else if(act==='waiver-cancel'){
         await api('waiver/cancel',{claim_id:id});notice('Claim cancelled.');
       }else if(act==='roster-drop'){
+        if(!league.settings.waivers_enabled||league.settings.draft_status!=='finished')throw new Error('Add / Drop is currently closed.');
         const programId=v('#waiver-release');
         if(!programId)throw new Error('Choose a school.');
         const school=programs().find(p=>p.id===programId);
         if(!window.confirm('Drop '+(school?.name||'this program')+' from your permanent roster?')){busy=false;return;}
-        await api('roster/drop',{program_id:programId});notice('Program released.');
+        button.disabled=true;button.textContent='Releasing…';
+        await api('roster/drop',{program_id:programId});addDrop.release='';notice('Program released.');
       }else if(act==='waiver-review'){
         if(!window.confirm((button.dataset.mode==='approve'?'Approve':'Deny')+' this waiver claim?')){busy=false;return;}
         await api('admin/waiver/review',{claim_id:id,mode:button.dataset.mode});
@@ -4220,7 +4257,7 @@
         busy=false;return;
       }
       await refresh(true);
-    }catch(e){notice(e.message,true);}finally{busy=false;}
+    }catch(e){notice(e.message,true);}finally{busy=false;if(current==='waivers')render();}
   }
   root.addEventListener('click',e=>{
     const summary=e.target.closest('#draft-queue-details > summary');
@@ -4339,6 +4376,10 @@
     }catch(err){notice(err.message,true);}finally{busy=false;}
   });
   root.addEventListener('change',async e=>{
+    if(e.target?.id==='ad-conference'){addDrop.conference=e.target.value;filterAddDrop();return;}
+    if(e.target?.id==='ad-sort'){addDrop.sort=e.target.value;render();return;}
+    if(e.target?.id==='waiver-drop'){addDrop.drop=e.target.value;render();return;}
+
     if(e.target?.id==='activity-range'){activityRange=e.target.value;activitySnapshot=null;activityFetchedAt=0;render();return;}
     if(e.target?.id==='activity-member'){activityMemberFilter=e.target.value;render();return;}
     if(e.target?.id==='settings-photo-input'){
@@ -4388,6 +4429,8 @@
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"], input[name="trade-give-pick"], input[name="trade-receive-pick"]'))updateTradeSelections();
   });
   root.addEventListener('input',e=>{
+    if(e.target?.id==='ad-search'){addDrop.query=e.target.value;filterAddDrop();return;}
+
     if(e.target?.dataset?.tradeSearch){const side=e.target.dataset.tradeSearch;tradeSearch[side]=e.target.value;filterTradeAssets(side);return;}
     if(e.target?.id==='global-search-input'){globalSearchQuery=e.target.value;const list=root.querySelector('#global-search-list');if(list)list.innerHTML=globalSearchResults();return;}
     if(e.target?.id==='pool-search'){

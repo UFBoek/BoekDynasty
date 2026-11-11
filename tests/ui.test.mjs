@@ -3,6 +3,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/client.js',import.meta.url),'utf8');
 const injection=`  return {
+ move:values=>Object.assign(addDrop,values),
+ prefill:id=>{rosterAddPrefillId=id;},
  set:(user,state)=>{me=user;league=state;standingsData=null;},
  search:query=>{globalSearchQuery=query;return globalSearchDialog();},
  manager:(id,data)=>{selectedManagerId=id;standingsData=data;standingsFetchedAt=Date.now();return managerProfilePage();},
@@ -108,12 +110,13 @@ test('overview and results never display a draft-queue game view',()=>{
  }finally{league.ownership=oldOwnership;app.queue([]);app.overviewGames([]);}
 });
 
-test('mobile navigation presents Standings in the bottom bar and Draft under More',()=>{
+test('mobile navigation presents Standings directly and keeps Draft under More',()=>{
  const html=app.page('home');
  const mobile=html.slice(html.indexOf('<nav class="bottom"'));
  const tabs=[...mobile.matchAll(/data-id="([^"]+)"/g)].map(x=>x[1]);
  assert.deepEqual(tabs,['home','team','results','programs','league','more']);
  assert.match(app.page('more'),/data-id="draft"/);
+ assert.match(app.page('more'),/data-id="league"/);
 });
 test('More has clear account, league and tools groups',()=>{
  const html=app.page('more');
@@ -591,7 +594,9 @@ test('front office preserves pending trades and supports instant Add / Drop with
   assert.match(waivers,/txn-waiver-list/);
   assert.match(waivers,/data-act="waiver-cancel" data-id="claim-1"/);
   assert.match(waivers,/data-act="roster-add"/);
-  assert.match(waivers,/data-act="roster-drop"/);
+  app.move({tab:"roster"});
+  assert.match(app.page("waivers"),/data-act="roster-drop"/);
+  app.move({tab:"available"});
   assert.match(waivers,/No claims or commissioner approvals/);
   assert.doesNotMatch(waivers,/data-act="waiver-claim"/);
   const more=app.page('more');
@@ -618,4 +623,27 @@ test('trade scouting uses season standings and preserves missing values without 
  app.standings({season:'2025-26',program_points:{57:999},standings:[]});
  assert.doesNotMatch(app.page('trades'),/<dd>999<\/dd>/);
  league.ownership=original;
+});
+
+ test('Add/Drop validates selection after ownership changes and enforces full and closed roster states',()=>{
+ const state={...league,settings:{...league.settings,rounds:1,draft_status:'finished',waivers_enabled:true},ownership:[{program_id:'57',manager_id:'1'}]};
+ app.set(users[0],state);
+ try{
+  app.move({tab:'roster',add:'',drop:'',query:'old search',conference:'23'});
+  app.prefill('58');
+  const prefilled=app.page('waivers');
+  assert.match(prefilled,/id="waiver-program" value="58"/);
+  assert.match(prefilled,/id="ad-search"[^>]*value=""/);
+  assert.match(app.page('waivers'),/data-act="roster-add" disabled/);
+  app.move({drop:'57'});
+  assert.match(app.page('waivers'),/data-act="roster-add" >Confirm swap/);
+  state.settings.waivers_enabled=false;
+  assert.match(app.page('waivers'),/data-act="roster-add" disabled/);
+  state.settings.waivers_enabled=true;state.ownership.push({program_id:'58',manager_id:'2'});
+  const stale=app.page('waivers');
+  assert.match(stale,/id="waiver-program" value=""/);
+  assert.match(stale,/data-act="roster-add" disabled/);
+  app.move({tab:'roster',release:'57'});
+  assert.match(app.page('waivers'),/data-act="roster-drop" >Confirm drop/);
+ }finally{app.move({tab:'available',add:'',drop:'',release:''});app.set(users[0],league);}
 });

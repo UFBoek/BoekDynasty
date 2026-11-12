@@ -59,6 +59,25 @@ test('standings do not show a redundant schools count',()=>{
  assert.doesNotMatch(html,/<th class="numerical">SCHOOLS<\/th>/);
  assert.match(html,/FANTASY POINTS/);
 });
+test('verified season W–L appears with actual fantasy points across standings and rosters',()=>{
+ const previousOwners=league.ownership;
+ try{
+  league.ownership=[{program_id:'57',manager_id:'1'},{program_id:'58',manager_id:'1'},{program_id:'59',manager_id:'2'}];
+  const data={season:'2026-27',best_programs:2,program_points:{57:12,58:8,59:7},
+    program_records:{57:{wins:3,losses:1},58:{wins:2,losses:2},59:{wins:1,losses:3}},
+    standings:[{manager_id:'1',points:20,counted_programs:2,counted_program_ids:['57','58']},
+      {manager_id:'2',points:7,counted_programs:1,counted_program_ids:['59']}]};
+  app.standings(data);
+  const leagueHtml=app.page('league');
+  assert.match(leagueHtml,/20 <span class="league-standing-record"[^>]*>5–3 W–L<\/span>/);
+  app.expandLeague('1');
+  assert.match(app.page('league'),/12 <span class="league-program-record">3–1 W–L<\/span>/);
+  assert.match(app.page('home'),/5–3 W–L/);
+  assert.match(app.team(data),/class="tm-score-record">5–3 W–L<\/span>/);
+  assert.match(app.team(data),/class="tm-row-record">3–1 W–L<\/span>/);
+  assert.match(app.page('programs'),/class="season-point-record">3–1 W–L<\/span>/);
+ }finally{league.ownership=previousOwners;app.standings(null);app.expandLeague('');}
+});
 test('best ball has its own commissioner control',()=>{
  const html=app.section('general');
  assert.match(html,/id="bestball-count"/);

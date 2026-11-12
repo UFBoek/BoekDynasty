@@ -1462,7 +1462,7 @@
     const personOf=id=>memberIndex.get(String(id))?.display_name||'Manager';
     const seasonScores=standingsData?.season===season()?standingsData:null;
     const scoreIndex=new Map((seasonScores?.standings||[]).map(x=>[String(x.manager_id),x]));
-    const standings=users.map(u=>({u,score:scoreIndex.get(String(u.id))?.points||0}))
+    const standings=users.map(u=>({u,score:scoreIndex.get(String(u.id))?.points||0,record:managerSeasonRecord(scoreIndex.get(String(u.id)))}))
       .sort((a,b)=>b.score-a.score||a.u.display_name.localeCompare(b.u.display_name));
     const scoreText=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
     const eventItems=[
@@ -1485,7 +1485,7 @@
       const points=scoreIndex.get(String(u.id))?.points;
       return '<button type="button" class="league-team-tile overview-team-tile'+(u.id===me.id?' is-mine':'')+'" data-act="open-manager" data-id="'+escapeHTML(u.id)+'" aria-label="View '+escapeHTML(u.display_name)+' roster">'
         +'<span class="league-tile-top">'+avatar(u)+'<span class="grow"><strong>'+escapeHTML(u.display_name)+(u.id===me.id?'<em class="team-self-pill">YOU</em>':'')+'</strong>'
-        +'<small>'+(hasRosters&&seasonScores&&owned.length?scoreText(points)+' pts · ':'')+
+        +'<small>'+(hasRosters&&seasonScores&&owned.length?scoreText(points)+' pts · '+managerSeasonRecord(scoreIndex.get(String(u.id)))+' W–L · ':'')+
           (owned.length?owned.length+' program'+(owned.length===1?'':'s'):'Awaiting draft')+'</small></span>'
         +'<span class="league-tile-arrow" aria-hidden="true">›</span></span>'
         +(owned.length?'<span class="league-logo-strip">'+owned.map(p=>
@@ -1506,10 +1506,10 @@
       :{page:'team',label:'Manage your team',description:'View your permanent programs and season performance.'};
     const standingsPanel=hasRosters&&seasonScores
       ?'<section class="panel overview-standings">'+panelHeading('League standings','Current season','<button type="button" class="overview-text-link" data-act="tab" data-id="league">Full standings ›</button>')
-        +'<div class="overview-standings-list">'+standings.slice(0,Math.min(5,users.length)).map(({u,score},index)=>
+        +'<div class="overview-standings-list">'+standings.slice(0,Math.min(5,users.length)).map(({u,score,record},index)=>
           '<button type="button" class="overview-standing-row'+(u.id===me.id?' is-mine':'')+'" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'
           +'<span class="overview-standing-rank">'+(index+1)+'</span>'+avatar(u)
-          +'<strong>'+escapeHTML(u.display_name)+'</strong><span>'+scoreText(score)+'</span></button>').join('')+'</div>'
+          +'<strong>'+escapeHTML(u.display_name)+'</strong><span class="overview-standing-score">'+scoreText(score)+'<small>'+record+' W–L</small></span></button>').join('')+'</div>'
         +'<div class="overview-aside-note">Best '+Number(league.settings.scoring?.best_programs||8)+' programs count each season.</div></section>'
       :'<section class="panel overview-quick-panel">'+panelHeading('Quick access',state==='pending'?'Prepare for the season':'Your league tools')
         +'<div class="overview-next-step"><span class="overview-next-step-icon">'+iconSVG(nextAction.page)+'</span>'
@@ -1562,7 +1562,7 @@
         +(metrics?'<td class="tm-stat-rank" data-label="TORVIK">'+torvik+'</td>'
           +'<td class="tm-stat-rank tm-kenpom-rank" data-label="KENPOM">'+(kp?'#'+kp:'—')+'</td>'
           +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
-        +'<td class="tm-points"><span class="tm-points-earned"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</span>'
+        +'<td class="tm-points"><span class="tm-points-earned"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+' <span class="tm-row-record">'+(scoring?programSeasonRecord(p.id):'—')+' W–L</span></strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</span>'
         +(metrics?'<span class="tm-mobile-projection"><b>'+fpLabel(projected?.points)+'</b><small>'+(projected?'PROJ PTS · #'+projected.rank:'PROJ PTS')+'</small></span>':'')+'</td>'
         +(metrics?'<td class="tm-projected" data-label="PROJECTED"><strong>'+fpLabel(projected?.points)+'</strong><small>'+(projected?'FORECAST #'+projected.rank:'PENDING')+'</small></td>':'')
         +'</tr>';
@@ -1589,7 +1589,7 @@
       const mini=owned.length?owned.slice(0,3).map(p=>'<span class="tm-directory-logo" title="'+escapeHTML(p.name)+'">'+img(p)+'</span>').join(''):'<span class="tm-directory-awaiting">Draft pending</span>';
       return '<button type="button" class="tm-directory-card" data-act="open-manager" data-id="'+escapeHTML(u.id)+'" aria-label="View '+escapeHTML(u.display_name)+' roster">'
         +'<span class="tm-directory-top">'+avatar(u)+'<span class="tm-directory-person"><strong>'+escapeHTML(u.display_name)+'</strong>'
-        +'<small>'+(scoring&&owned.length?points+' pts':owned.length?'Roster available':'Awaiting draft')+'</small></span>'
+        +'<small>'+(scoring&&owned.length?points+' pts · '+managerSeasonRecord(score)+' W–L':owned.length?'Roster available':'Awaiting draft')+'</small></span>'
         +'<span class="tm-directory-arrow" aria-hidden="true">↗</span></span>'
         +'<span class="tm-directory-bottom">'+mini+'</span></button>';
     }).join('');
@@ -1676,7 +1676,7 @@
       +'<h1>'+escapeHTML(me.display_name)+'</h1>'
       +'<p>@'+escapeHTML(me.username)+' <span aria-hidden="true">·</span> PERMANENT ROSTER</p></div></div>'
       +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
-      +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small>'
+      +'<strong>'+currentPoints+' <span class="tm-score-record">'+managerSeasonRecord(managerScore)+' W–L</span></strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small>'
       +'<div class="tm-forecast-summary"><span>PROJECTED BEST '+bestCount+'</span><b>'+fpLabel(projectedBest)+' <em>PTS</em></b></div></div>'
       +'</div></header>'
       +frontOffice+incomingPreview
@@ -1712,6 +1712,28 @@
     return '<table class="table"><thead><tr><th>MANAGER</th><th class="last">PROGRAMS</th></tr></thead><tbody>'+members().map(u=>'<tr><td><button class="table-user" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+'</button>'+(u.id===me.id?' <span class="muted tiny">(you)</span>':'')+'</td><td class="last">'+owners().filter(p=>p.manager_id===u.id).length+'</td></tr>').join('')+'</tbody></table>';
   }
   // The same current-season program totals used by Standings appear in every Schools view.
+  // W–L is based on verified final games, not projections or fantasy bonuses.
+  // Manager totals combine only the programs contributing in best ball.
+  function programSeasonRecord(id){
+    if(standingsData?.season!==season()||!standingsData.program_records)return '—';
+    const record=standingsData.program_records[String(id)];
+    return Number(record?.wins||0)+'–'+Number(record?.losses||0);
+  }
+  function managerSeasonRecord(manager){
+    if(standingsData?.season!==season()||!standingsData.program_records||!manager?.counted_program_ids?.length)return '—';
+    const records=standingsData.program_records;
+    const total=manager.counted_program_ids.reduce((acc,id)=>{
+      const record=records[String(id)];
+      acc.wins+=Number(record?.wins||0);
+      acc.losses+=Number(record?.losses||0);
+      return acc;
+    },{wins:0,losses:0});
+    return total.wins+'–'+total.losses;
+  }
+  function currentSeasonPointLine(p){
+    return '<span class="season-point-value">'+currentSeasonPoints(p)+'</span>'+
+      '<span class="season-point-record">'+programSeasonRecord(p.id)+' W–L</span>';
+  }
   function currentSeasonPoints(p){
     if(standingsData?.season!==season())return '—';
     const points=Number(standingsData.program_points?.[String(p.id)]??0);
@@ -1738,7 +1760,7 @@
       +'<span class="directory-school-logo">'+img(p)+'</span>'
       +'<span class="directory-school-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
       +'<span class="directory-school-arrow" aria-hidden="true">↗</span></button>'
-      +'<span class="directory-data-cell directory-points" data-label="'+escapeHTML(season().slice(2))+' PTS" title="'+escapeHTML(season())+' fantasy points"><b>'+currentSeasonPoints(p)+'</b><small>SEASON POINTS</small></span>'
+      +'<span class="directory-data-cell directory-points" data-label="'+escapeHTML(season().slice(2))+' PTS" title="'+escapeHTML(season())+' fantasy points"><b>'+currentSeasonPointLine(p)+'</b><small>SEASON POINTS</small></span>'
       +'<span class="directory-data-cell directory-forecast" data-label="PROJ. PTS" title="Conference-adjusted full-season projection; updated with earned points"><b>'+fpLabel(projected?.points)+'</b><small>'+(projected?'FORECAST #'+projected.rank:'PENDING')+'</small></span>'
       +'<span class="directory-data-cell directory-torvik" data-label="TORVIK" title="Bart Torvik national rank"><b>'+escapeHTML(torvik)+'</b><small>NATIONAL</small></span>'
       +'<span class="directory-data-cell directory-kenpom" data-label="KENPOM" title="KenPom national rank · '+escapeHTML(kenpomData?.snapshot_date||'pending')+'"><b>'+(kenpom===null?'—':'#'+kenpom)+'</b><small>KENPOM</small></span>'
@@ -1752,7 +1774,18 @@
     if(!me||standingsLoading||(!force&&Date.now()-standingsFetchedAt<60000))return;
     standingsLoading=true;standingsFetchedAt=Date.now();
     if(force&&current==='league')render();
-    try{standingsData=await api('data/standings');standingsError='';}
+    try{
+      const [scores,records]=await Promise.all([
+        api('data/standings'),
+        // A missing records feed must not hide valid fantasy standings.
+        api('data/records').catch(()=>null)
+      ]);
+      scores.program_records=Array.isArray(records?.records)&&records.season===scores.season?
+        Object.fromEntries(records.records.map(r=>[String(r.program_id),{
+          wins:Number(r.wins)||0,losses:Number(r.losses)||0
+        }])):null;
+      standingsData=scores;standingsError='';
+    }
     catch(e){standingsError=e.message;}
     finally{
       standingsLoading=false;
@@ -1888,7 +1921,7 @@
         +'<td class="rank-position-cell"><span class="rank-position '+(rank<=3?'is-top':'')+'">'+rankText+'</span></td>'
         +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
         +'<td class="school-leader-points"><strong>'+format(row.selected)+'</strong><small>PTS</small></td>'
-        + '<td class="current-season-points"><strong>'+currentSeasonPoints(p)+'</strong></td>'
+        + '<td class="current-season-points"><strong>'+currentSeasonPointLine(p)+'</strong></td>'
          +previousYears.map(y=>'<td class="rank-year-cell '+(y===period?'active':'')+'">'+format(row.history.get(y)?.points??null)+'</td>').join('')
         +'</tr>';
     }).join('');
@@ -1899,7 +1932,7 @@
         +'<span class="rank-mobile-index">'+(row.selected===null?'—':'#'+rank)+'</span>'+img(p)
         +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
         +'<span class="rank-mobile-primary"><strong>'+value+'</strong><small>PTS</small></span><span class="rank-mobile-chevron">›</span></button>'
-        +'<div class="rank-mini-years"><div class="current"><span>'+escapeHTML(season().slice(2))+' PTS</span><strong>'+currentSeasonPoints(p)+'</strong></div>'+previewYears.map(y=>'<div class="'+(y===period?'active':'')+'"><span>'+escapeHTML(y.slice(2))+'</span><strong>'+format(row.history.get(y)?.points??null)+'</strong></div>').join('')+'</div></article>';
+        +'<div class="rank-mini-years"><div class="current"><span>'+escapeHTML(season().slice(2))+' PTS</span><strong>'+currentSeasonPointLine(p)+'</strong></div>'+previewYears.map(y=>'<div class="'+(y===period?'active':'')+'"><span>'+escapeHTML(y.slice(2))+'</span><strong>'+format(row.history.get(y)?.points??null)+'</strong></div>').join('')+'</div></article>';
     }).join('');
     const notes=all.archive_complete?'Archived seasons are verified. Current-season totals are live and may change.':
       'Scores reflect available verified results; unfinished historical imports may change totals.';
@@ -1956,7 +1989,7 @@
       +'<td class="rank-position-cell"><span class="rank-position '+(r?.rank<=25?'is-top':'')+'">'+(r?'#'+r.rank:'—')+'</span></td>'
       +(isCurrent?'<td class="rating-kenpom"><strong>'+(kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+'</strong></td>':'')
       +'<td class="rank-school-cell"><button type="button" class="school-leader-school" data-act="open-program" data-id="'+escapeHTML(p.id)+'">'+img(p)+'<span><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span></button></td>'
-      +'<td class="current-season-points"><strong>'+currentSeasonPoints(p)+'</strong></td>'
+      +'<td class="current-season-points"><strong>'+currentSeasonPointLine(p)+'</strong></td>'
        +'<td class="rating-power"><strong>'+dec(r?.barthag,3)+'</strong></td>'
       +'<td class="rating-numeric"><strong>'+dec(r?.adj_o)+'</strong><small>'+(r?.adj_o_rank?'#'+r.adj_o_rank+' nationally':'—')+'</small></td>'
       +'<td class="rating-numeric"><strong>'+dec(r?.adj_d)+'</strong><small>'+(r?.adj_d_rank?'#'+r.adj_d_rank+' nationally':'—')+'</small></td>'
@@ -1967,7 +2000,7 @@
       +'<span class="rank-mobile-index">'+(r?'#'+r.rank:'—')+'</span>'+img(p)
       +'<span class="rank-mobile-name"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
       +'<span class="rank-mobile-primary"><strong>'+featureValue({p,r})+'</strong><small>'+escapeHTML((sortNames[ratingSort]||'Overall').toUpperCase())+'</small></span><span class="rank-mobile-chevron">›</span></button>'
-      +'<div class="rank-mobile-metrics"><div class="current"><span>SEASON PTS</span><strong>'+currentSeasonPoints(p)+'</strong></div>'
+      +'<div class="rank-mobile-metrics"><div class="current"><span>SEASON PTS</span><strong>'+currentSeasonPointLine(p)+'</strong></div>'
       +(isCurrent?'<div class="rating-kenpom"><span>KENPOM</span><strong>'+(kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+'</strong></div>':'')+'<div><span>OFFENSE</span><strong>'+dec(r?.adj_o)+'</strong></div>'
       +'<div><span>DEFENSE</span><strong>'+dec(r?.adj_d)+'</strong></div>'
       +'<div><span>WAB</span><strong>'+dec(r?.wab)+'</strong></div>'
@@ -2759,7 +2792,7 @@
       const h=historyIndex.byId.get(String(p.id)),r=ratingOf(p,ratingYear(season())),cost=rosterCost2026(p);
       const reported=cost&&Number.isFinite(cost.estimate);
       const kp=kenpomRankOf(p);
-      return '<dl class="td-scout"><div><dt>'+escapeHTML(season())+' PTS</dt><dd>'+currentSeasonPoints(p)+'</dd></div>'
+      return '<dl class="td-scout"><div><dt>'+escapeHTML(season())+' PTS</dt><dd>'+currentSeasonPointLine(p)+'</dd></div>'
         +'<div><dt>Bart Torvik</dt><dd>'+(r?.rank?'#'+Number(r.rank):'—')+'</dd></div>'
         +'<div><dt>KenPom</dt><dd>'+(kp?'#'+kp:'—')+'</dd></div>'
         +'<div class="td-projection"><dt>Projected pts</dt><dd>'+fpPoints(p)+'</dd></div>'
@@ -2907,7 +2940,7 @@
         '<button type="button" class="league-breakdown-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="Open '+escapeHTML(p.name)+' profile">'+
         '<span class="league-breakdown-number">'+String(i+1).padStart(2,'0')+'</span>'+img(p)+
         '<span class="league-breakdown-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'+
-        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+'<small>Proj. '+fpPoints(p)+'</small></strong>'+
+        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+' <span class="league-program-record">'+(scoring?programSeasonRecord(p.id):'—')+' W–L</span><small>Proj. '+fpPoints(p)+'</small></strong>'+
         '<span class="league-breakdown-chevron" aria-hidden="true">↗</span></button>'
       ).join('')+'</div>';
     };
@@ -2946,7 +2979,7 @@
         '<td class="standings-count-cell"><strong>'+(scoring?Number(manager?.counted_programs||0):'—')+'</strong><small>/ '+best+'</small></td>'+
         '<td class="standings-gap-cell">'+(hasPoints?(gap<=0?'<span class="league-gap-leader">LEADER</span>':'<span>−'+fmtPoints(gap)+'</span>'):'<span class="league-gap-muted">—</span>')+'</td>'+
         '<td class="numerical standings-points-cell"><div class="league-standing-points">'+
-          (scoring&&owned.length?'<strong>'+fmtPoints(pts)+'</strong>':'<span class="pending-score">—</span>')+
+          (scoring&&owned.length?'<strong>'+fmtPoints(pts)+' <span class="league-standing-record" title="Combined record of best-ball counting programs">'+managerSeasonRecord(manager)+' W–L</span></strong>':'<span class="pending-score">—</span>')+
           (hasPoints&&owned.length?'<span class="league-score-track" aria-hidden="true"><i style="width:'+Math.max(0,Math.min(100,pts/leaderTotal*100)).toFixed(2)+'%"></i></span>':'')+
            (hasPoints&&owned.length?'<small class="league-mobile-gap">'+(gap===0?'Leader':'−'+fmtPoints(gap)+' from 1st')+'</small>':'')+
            (owned.length?'<small class="league-forecast-line">Proj. best '+best+': '+fpLabel(projectedBest)+'</small>':'')+
@@ -3243,7 +3276,7 @@
       '<h1>'+escapeHTML(p.name)+'</h1>'+
       '<div class="pp-owner">Dynasty ownership <span aria-hidden="true">·</span> '+ownerMarkup+'</div>'+kenpomTag+'</div></div>'+ 
       '<div class="pp-masthead-score"><span>'+escapeHTML(season())+' FANTASY POINTS</span>'+
-      '<strong>'+points(currentStats)+'</strong><small>'+
+      '<strong>'+points(currentStats)+' <span class="pp-score-record">'+escapeHTML(currentRecord)+' W–L</span></strong><small>'+
       (currentStats?.status==='complete'?'FINAL SEASON TOTAL':currentStats?.status==='partial'?'LIVE SEASON TOTAL':'VERIFIED SCORING')+
       '</small></div></div></header>'+
       '<div class="pp-statbar">'+
@@ -3296,7 +3329,7 @@
       +'<div class="tm-avatar">'+avatar(u)+'</div><div class="tm-identity-copy">'
       +'<h1>'+escapeHTML(u.display_name)+'</h1>'
       +'<p>@'+escapeHTML(u.username||'manager')+' <span aria-hidden="true">·</span> '+(mine?'Your franchise':'League manager')+'</p></div></div>'
-      +'<div class="tm-score"><span>SEASON POINTS</span><strong>'+points+'</strong><small>'
+      +'<div class="tm-score"><span>SEASON POINTS</span><strong>'+points+' <span class="tm-score-record">'+managerSeasonRecord(managerScore)+' W–L</span></strong><small>'
       +(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small>'
       +'<div class="tm-forecast-summary"><span>PROJECTED BEST '+bestCount+'</span><b>'+fpLabel(projectedBest)+' <em>PTS</em></b></div></div></div></header>'
       +teamLeagueSwitcher(u.id)
@@ -3363,7 +3396,7 @@
       return (valid(x)&&valid(y)?(Number(x)-Number(y))*(addDrop.sort==='kenpom'||addDrop.sort==='torvik'?1:-1):valid(x)?-1:valid(y)?1:0)||a.name.localeCompare(b.name);
     });
     const metric=(label,value,title='')=>'<div'+(title?' title="'+escapeHTML(title)+'"':'')+'><dt>'+label+'</dt><dd>'+value+'</dd></div>';
-    const stats=p=>'<dl class="ad-stats">'+metric(escapeHTML(season())+' pts',currentSeasonPoints(p))
+    const stats=p=>'<dl class="ad-stats">'+metric(escapeHTML(season())+' pts',currentSeasonPointLine(p))
       +metric('Projected pts',fpPoints(p),'Conference-adjusted KenPom and earned fantasy-points forecast')
       +metric('KenPom',kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+metric('Torvik',rank(p)?'#'+Number(rank(p)):'—')
       +metric('5Y avg pts',avg(p)!==null?historicalPointLabel(avg(p)):'—')+metric('Roster cost',escapeHTML(Number.isFinite(rosterCost2026(p)?.estimate)?rosterCostAmount2026(rosterCost2026(p)):'N/A'),rosterCostEvidence2026(rosterCost2026(p)))+'</dl>';

@@ -151,3 +151,8 @@
  .draft-v5 .draft-scouting-strip strong{font-size:11px}
  .td-desk .td-scout{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Standings W–L matches the counted best-ball roster. */
+.league-center .league-standing-record{display:inline-block;margin-left:6px;color:#647e8f;font-size:11px;line-height:1.3;font-weight:750;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
+.league-center .league-program-record{display:inline-block;margin-left:4px;font-size:10px;line-height:1.3;color:#71899b;font-weight:750;white-space:nowrap;vertical-align:baseline}
+@media(max-width:760px){.league-center .league-standing-record{margin-left:3px;font-size:9px}.league-center .league-program-record{font-size:9px}}

@@ -7575,3 +7575,13 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
   .tm-v4 .tm-table .tm-mobile-projection small{font-size:7px}
   .tm-v4 .tm-score>.tm-forecast-summary span{font-size:8px}
 }
+
+/* Verified current-season W–L beside earned points across compact views. */
+.overview-standing-row .overview-standing-score{display:flex;flex-direction:column;flex:0 0 auto;align-items:flex-end;gap:2px;font-weight:850;font-variant-numeric:tabular-nums;color:#225c92;white-space:nowrap}
+.overview-standing-row .overview-standing-score small{display:block;color:#7b91a3;font-size:9px;font-weight:700}
+.tm-v4 .tm-score>strong{white-space:normal}
+.tm-v4 .tm-score .tm-score-record{display:inline-block;margin-left:8px;color:#a8d1dc;font-size:11px;font-weight:750;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
+.tm-v4 .tm-table .tm-row-record{color:#7d91a2;font-size:9px;font-weight:750;letter-spacing:0;white-space:nowrap}
+.season-point-record{display:inline-block;margin-left:5px;color:#8296a5;font-size:9px;font-weight:750;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
+.pp-v3 .pp-masthead-score .pp-score-record{display:inline-block;margin-left:6px;color:#b8d3e4;font-size:12px;font-weight:750;letter-spacing:0;white-space:nowrap}
+@media(max-width:750px){.tm-v4 .tm-score .tm-score-record{margin-left:5px;font-size:9px}.tm-v4 .tm-table .tm-row-record{font-size:8px}.pp-v3 .pp-masthead-score .pp-score-record{font-size:10px}.season-point-record{margin-left:3px;font-size:8px}}

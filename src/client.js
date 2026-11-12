@@ -458,7 +458,7 @@
           if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(raceFrame);
           raceState={phase:'idle',id:'',order:[],progress:{},run:raceState.run+1};render();
         }
-        if(['programs','program-detail','team','manager-detail','draft','trades','waivers','results'].includes(current)&&Date.now()-kenpomFetchedAt>30*60*1000&&!kenpomLoading)loadKenpom();
+        if(['programs','program-detail','team','manager-detail','draft','trades','waivers','results','home','league'].includes(current)&&Date.now()-kenpomFetchedAt>30*60*1000&&!kenpomLoading)loadKenpom();
         if(current==='results'&&Date.now()-resultsFetchedAt>(fastScoreWindow(resultsGames,resultsLoadedDay)?25000:55000)&&!resultsLoading)loadResults();
         if(current==='home'&&(overviewGamesDay!==resultsToday()||Date.now()-overviewGamesFetchedAt>(fastScoreWindow(overviewGames,overviewGamesDay)?25000:90000))&&!overviewGamesLoading)loadOverviewGames();
         if((['home','league','team','manager-detail','trades','waivers'].includes(current)||current==='programs')&&Date.now()-standingsFetchedAt>=60000&&!standingsLoading)loadStandings();

@@ -1556,11 +1556,14 @@
         +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
         +'<span class="tm-school-logo">'+img(p)+'</span>'
         +'<span class="tm-school-copy"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
-        +'<span class="tm-school-chevron" aria-hidden="true">↗</span></button></td>'
+        +'<span class="tm-school-chevron" aria-hidden="true">↗</span></button>'
+        +(metrics?'<div class="tm-mobile-metrics" aria-label="National and historical rankings">'
+          +'<span>TOR <b>'+torvik+'</b></span><span>KP <b>'+(kp?'#'+kp:'—')+'</b></span><span>5Y <b>'+fiveYear+'</b></span></div>':'')+'</td>'
         +(metrics?'<td class="tm-stat-rank" data-label="TORVIK">'+torvik+'</td>'
           +'<td class="tm-stat-rank tm-kenpom-rank" data-label="KENPOM">'+(kp?'#'+kp:'—')+'</td>'
           +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
-        +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</td>'
+        +'<td class="tm-points"><span class="tm-points-earned"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</span>'
+        +(metrics?'<span class="tm-mobile-projection"><b>'+fpLabel(projected?.points)+'</b><small>'+(projected?'PROJ PTS · #'+projected.rank:'PROJ PTS')+'</small></span>':'')+'</td>'
         +(metrics?'<td class="tm-projected" data-label="PROJECTED"><strong>'+fpLabel(projected?.points)+'</strong><small>'+(projected?'FORECAST #'+projected.rank:'PENDING')+'</small></td>':'')
         +'</tr>';
     }).join('');
@@ -1674,7 +1677,7 @@
       +'<p>@'+escapeHTML(me.username)+' <span aria-hidden="true">·</span> PERMANENT ROSTER</p></div></div>'
       +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
       +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small>'
-      +'<span class="tm-forecast-summary">Projected best '+bestCount+': <b>'+fpLabel(projectedBest)+'</b> pts</span></div>'
+      +'<div class="tm-forecast-summary"><span>PROJECTED BEST '+bestCount+'</span><b>'+fpLabel(projectedBest)+' <em>PTS</em></b></div></div>'
       +'</div></header>'
       +frontOffice+incomingPreview
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
@@ -3295,7 +3298,7 @@
       +'<p>@'+escapeHTML(u.username||'manager')+' <span aria-hidden="true">·</span> '+(mine?'Your franchise':'League manager')+'</p></div></div>'
       +'<div class="tm-score"><span>SEASON POINTS</span><strong>'+points+'</strong><small>'
       +(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small>'
-      +'<span class="tm-forecast-summary">Projected best '+bestCount+': <b>'+fpLabel(projectedBest)+'</b> pts</span></div></div></header>'
+      +'<div class="tm-forecast-summary"><span>PROJECTED BEST '+bestCount+'</span><b>'+fpLabel(projectedBest)+' <em>PTS</em></b></div></div></div></header>'
       +teamLeagueSwitcher(u.id)
       +'<section class="tm-roster" aria-labelledby="tm-opponent-roster-title">'
       +'<div class="tm-roster-heading"><div><span class="tm-overline">'+escapeHTML(season())+' ROSTER</span>'

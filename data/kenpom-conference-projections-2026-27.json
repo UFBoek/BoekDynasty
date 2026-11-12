@@ -1,0 +1,3435 @@
+{
+  "model": "2026-27 conference-conditioned rank-to-points v0.1 (NET-proxy trained)",
+  "as_of": "2026-11-11",
+  "training_source": "2021-22 through 2025-26 completed league scores + final NCAA NET ranks; NOT historical KenPom",
+  "current_source": "2026-27 KenPom rank snapshot",
+  "training_rows": 1792,
+  "validation": {
+    "holdout": "leave-one-season-out",
+    "rank_only": {
+      "lambda": 0.3,
+      "mae": 5.5451027628046585,
+      "rmse": 8.404132422459456,
+      "bySeason": {
+        "2021-22": 5.69,
+        "2022-23": 5.52,
+        "2023-24": 5.63,
+        "2024-25": 5.41,
+        "2025-26": 5.48
+      }
+    },
+    "conference_adjusted": {
+      "lambda": 0.1,
+      "mae": 4.397860679698673,
+      "rmse": 6.93099434156581,
+      "bySeason": {
+        "2021-22": 4.57,
+        "2022-23": 4.63,
+        "2023-24": 4.75,
+        "2024-25": 4.04,
+        "2025-26": 4.02
+      }
+    },
+    "conference_improvement_points": 1.15
+  },
+  "coefficients": {
+    "lambda": 0.1,
+    "conferences": [
+      "1",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "16",
+      "18",
+      "19",
+      "2",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "29",
+      "3",
+      "30",
+      "4",
+      "44",
+      "45",
+      "46",
+      "49",
+      "5",
+      "6",
+      "62",
+      "7",
+      "8",
+      "9"
+    ],
+    "weights": [
+      15.750057558665048,
+      53.550236100418786,
+      -10.110423965369465,
+      -1.6430508591417454,
+      69.08692657677273,
+      -50.99626829423393,
+      27.525289267671155,
+      -13.630076136458438,
+      -0.9463817567406861,
+      22.33750878686885,
+      0.673634676187461,
+      -0.00800070351994801,
+      1.2414581168382273,
+      -0.3243991129948655,
+      1.329548989937862,
+      -0.3335248863069849,
+      0.37122676523288106,
+      -0.1751315193518511,
+      0.32508872400598593,
+      -1.2443937944541548,
+      1.47368211247154,
+      -1.8010792283935109,
+      0.4333950313820625,
+      -1.5888978337572424,
+      1.2147523481182023,
+      0.1684401687351912,
+      -1.106836788360493,
+      0.5530509478251132,
+      -1.2481064756158953,
+      0.7432005143250124,
+      0.2739945323924923,
+      -0.867427879234127,
+      0.06370919825915457,
+      1.7787485641866254,
+      -0.003314456759755123,
+      0.12635803135897766,
+      0.7264157235608905,
+      0.7748893840903566,
+      -0.19337005060168722,
+      -1.0242508265115045,
+      -2.671464516904428,
+      0.31860424386075203,
+      0.40408389184987137,
+      -0.4593893150411753,
+      0.04635257295029806,
+      0.2157522937733817,
+      0.6189583999980265,
+      -0.5092178658055696,
+      0.6646995914373208,
+      -0.2565374000390269,
+      0.08542777747976306,
+      0.13479018412951507,
+      0.07976381760400322,
+      -0.4606849154167944,
+      0.08020037313506388,
+      -0.32494482437473066,
+      0.17740163125627276,
+      -0.11118126552035065,
+      0.45814363306445305,
+      -0.4653678622535123,
+      -1.6810740884173423,
+      0.38301408375089874,
+      -0.23971263244152036,
+      0.9660790799684337,
+      0.2740627862141227,
+      0.6197954094203295,
+      -0.06492116191463759,
+      -0.34978053089364414,
+      0.08702954723505536,
+      0.4959164432739037,
+      -0.43607209869985253,
+      0.10849133848315276,
+      -0.18521572019888818,
+      -0.1416622296059625
+    ]
+  },
+  "current_projections": [
+    {
+      "id": "57",
+      "name": "Florida Gators",
+      "conference_id": "23",
+      "kenpom_rank": 1,
+      "conference_mean_kenpom_rank": 34.7,
+      "projected_points": 86.5,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "150",
+      "name": "Duke Blue Devils",
+      "conference_id": "2",
+      "kenpom_rank": 2,
+      "conference_mean_kenpom_rank": 63.2,
+      "projected_points": 86.3,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2305",
+      "name": "Kansas Jayhawks",
+      "conference_id": "8",
+      "kenpom_rank": 3,
+      "conference_mean_kenpom_rank": 45.5,
+      "projected_points": 81.5,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "248",
+      "name": "Houston Cougars",
+      "conference_id": "8",
+      "kenpom_rank": 4,
+      "conference_mean_kenpom_rank": 45.4,
+      "projected_points": 79.4,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "127",
+      "name": "Michigan State Spartans",
+      "conference_id": "7",
+      "kenpom_rank": 5,
+      "conference_mean_kenpom_rank": 47.8,
+      "projected_points": 79.3,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "356",
+      "name": "Illinois Fighting Illini",
+      "conference_id": "7",
+      "kenpom_rank": 6,
+      "conference_mean_kenpom_rank": 47.7,
+      "projected_points": 77.3,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "238",
+      "name": "Vanderbilt Commodores",
+      "conference_id": "23",
+      "kenpom_rank": 7,
+      "conference_mean_kenpom_rank": 34.3,
+      "projected_points": 74.1,
+      "owner": "Maciej"
+    },
+    {
+      "id": "258",
+      "name": "Virginia Cavaliers",
+      "conference_id": "2",
+      "kenpom_rank": 9,
+      "conference_mean_kenpom_rank": 62.8,
+      "projected_points": 72.4,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "251",
+      "name": "Texas Longhorns",
+      "conference_id": "23",
+      "kenpom_rank": 8,
+      "conference_mean_kenpom_rank": 34.2,
+      "projected_points": 72.2,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "41",
+      "name": "UConn Huskies",
+      "conference_id": "4",
+      "kenpom_rank": 10,
+      "conference_mean_kenpom_rank": 53.7,
+      "projected_points": 70.9,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2250",
+      "name": "Gonzaga Bulldogs",
+      "conference_id": "21",
+      "kenpom_rank": 11,
+      "conference_mean_kenpom_rank": 94.9,
+      "projected_points": 70.5,
+      "owner": "Maciej"
+    },
+    {
+      "id": "12",
+      "name": "Arizona Wildcats",
+      "conference_id": "8",
+      "kenpom_rank": 12,
+      "conference_mean_kenpom_rank": 44.9,
+      "projected_points": 64.9,
+      "owner": "Maciej"
+    },
+    {
+      "id": "66",
+      "name": "Iowa State Cyclones",
+      "conference_id": "8",
+      "kenpom_rank": 13,
+      "conference_mean_kenpom_rank": 44.8,
+      "projected_points": 63.3,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "333",
+      "name": "Alabama Crimson Tide",
+      "conference_id": "23",
+      "kenpom_rank": 14,
+      "conference_mean_kenpom_rank": 33.8,
+      "projected_points": 62.4,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "158",
+      "name": "Nebraska Cornhuskers",
+      "conference_id": "7",
+      "kenpom_rank": 15,
+      "conference_mean_kenpom_rank": 47.2,
+      "projected_points": 62.2,
+      "owner": "Maciej"
+    },
+    {
+      "id": "26",
+      "name": "UCLA Bruins",
+      "conference_id": "7",
+      "kenpom_rank": 16,
+      "conference_mean_kenpom_rank": 47.1,
+      "projected_points": 60.8,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "97",
+      "name": "Louisville Cardinals",
+      "conference_id": "2",
+      "kenpom_rank": 18,
+      "conference_mean_kenpom_rank": 62.3,
+      "projected_points": 58.6,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2599",
+      "name": "St. John's Red Storm",
+      "conference_id": "4",
+      "kenpom_rank": 19,
+      "conference_mean_kenpom_rank": 52.8,
+      "projected_points": 57.6,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2641",
+      "name": "Texas Tech Red Raiders",
+      "conference_id": "8",
+      "kenpom_rank": 17,
+      "conference_mean_kenpom_rank": 44.5,
+      "projected_points": 57.5,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2272",
+      "name": "High Point Panthers",
+      "conference_id": "6",
+      "kenpom_rank": 69,
+      "conference_mean_kenpom_rank": 289.8,
+      "projected_points": 55.2,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2390",
+      "name": "Miami Hurricanes",
+      "conference_id": "2",
+      "kenpom_rank": 21,
+      "conference_mean_kenpom_rank": 62.1,
+      "projected_points": 54.8,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2",
+      "name": "Auburn Tigers",
+      "conference_id": "23",
+      "kenpom_rank": 20,
+      "conference_mean_kenpom_rank": 33.4,
+      "projected_points": 54.3,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "142",
+      "name": "Missouri Tigers",
+      "conference_id": "23",
+      "kenpom_rank": 22,
+      "conference_mean_kenpom_rank": 33.3,
+      "projected_points": 51.9,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2633",
+      "name": "Tennessee Volunteers",
+      "conference_id": "23",
+      "kenpom_rank": 23,
+      "conference_mean_kenpom_rank": 33.2,
+      "projected_points": 50.7,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "245",
+      "name": "Texas A&M Aggies",
+      "conference_id": "23",
+      "kenpom_rank": 24,
+      "conference_mean_kenpom_rank": 33.1,
+      "projected_points": 49.7,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "269",
+      "name": "Marquette Golden Eagles",
+      "conference_id": "4",
+      "kenpom_rank": 26,
+      "conference_mean_kenpom_rank": 52.1,
+      "projected_points": 49.5,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "252",
+      "name": "BYU Cougars",
+      "conference_id": "8",
+      "kenpom_rank": 25,
+      "conference_mean_kenpom_rank": 44,
+      "projected_points": 47.9,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "99",
+      "name": "LSU Tigers",
+      "conference_id": "23",
+      "kenpom_rank": 27,
+      "conference_mean_kenpom_rank": 32.9,
+      "projected_points": 46.6,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "145",
+      "name": "Ole Miss Rebels",
+      "conference_id": "23",
+      "kenpom_rank": 28,
+      "conference_mean_kenpom_rank": 32.9,
+      "projected_points": 45.6,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "139",
+      "name": "Saint Louis Billikens",
+      "conference_id": "3",
+      "kenpom_rank": 38,
+      "conference_mean_kenpom_rank": 118.6,
+      "projected_points": 45,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "8",
+      "name": "Arkansas Razorbacks",
+      "conference_id": "23",
+      "kenpom_rank": 29,
+      "conference_mean_kenpom_rank": 32.8,
+      "projected_points": 44.7,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "130",
+      "name": "Michigan Wolverines",
+      "conference_id": "7",
+      "kenpom_rank": 31,
+      "conference_mean_kenpom_rank": 46.2,
+      "projected_points": 44.1,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "239",
+      "name": "Baylor Bears",
+      "conference_id": "8",
+      "kenpom_rank": 30,
+      "conference_mean_kenpom_rank": 43.7,
+      "projected_points": 43.1,
+      "owner": "Maciej"
+    },
+    {
+      "id": "30",
+      "name": "USC Trojans",
+      "conference_id": "7",
+      "kenpom_rank": 33,
+      "conference_mean_kenpom_rank": 46.1,
+      "projected_points": 42.4,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "194",
+      "name": "Ohio State Buckeyes",
+      "conference_id": "7",
+      "kenpom_rank": 34,
+      "conference_mean_kenpom_rank": 46.1,
+      "projected_points": 41.6,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "277",
+      "name": "West Virginia Mountaineers",
+      "conference_id": "8",
+      "kenpom_rank": 32,
+      "conference_mean_kenpom_rank": 43.5,
+      "projected_points": 41.4,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "135",
+      "name": "Minnesota Golden Gophers",
+      "conference_id": "7",
+      "kenpom_rank": 35,
+      "conference_mean_kenpom_rank": 46,
+      "projected_points": 40.8,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2253",
+      "name": "Grand Canyon Lopes",
+      "conference_id": "44",
+      "kenpom_rank": 49,
+      "conference_mean_kenpom_rank": 143.7,
+      "projected_points": 39.9,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2509",
+      "name": "Purdue Boilermakers",
+      "conference_id": "7",
+      "kenpom_rank": 37,
+      "conference_mean_kenpom_rank": 45.9,
+      "projected_points": 39.3,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2750",
+      "name": "Wright State Raiders",
+      "conference_id": "45",
+      "kenpom_rank": 111,
+      "conference_mean_kenpom_rank": 256.7,
+      "projected_points": 38.4,
+      "owner": null
+    },
+    {
+      "id": "197",
+      "name": "Oklahoma State Cowboys",
+      "conference_id": "8",
+      "kenpom_rank": 36,
+      "conference_mean_kenpom_rank": 43.3,
+      "projected_points": 38.2,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "47",
+      "name": "Howard Bison",
+      "conference_id": "16",
+      "kenpom_rank": 198,
+      "conference_mean_kenpom_rank": 344.7,
+      "projected_points": 38.1,
+      "owner": null
+    },
+    {
+      "id": "2752",
+      "name": "Xavier Musketeers",
+      "conference_id": "4",
+      "kenpom_rank": 40,
+      "conference_mean_kenpom_rank": 50.7,
+      "projected_points": 37.9,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "261",
+      "name": "Vermont Catamounts",
+      "conference_id": "1",
+      "kenpom_rank": 178,
+      "conference_mean_kenpom_rank": 322.6,
+      "projected_points": 37.5,
+      "owner": null
+    },
+    {
+      "id": "96",
+      "name": "Kentucky Wildcats",
+      "conference_id": "23",
+      "kenpom_rank": 39,
+      "conference_mean_kenpom_rank": 32.1,
+      "projected_points": 36.8,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "222",
+      "name": "Villanova Wildcats",
+      "conference_id": "4",
+      "kenpom_rank": 42,
+      "conference_mean_kenpom_rank": 50.5,
+      "projected_points": 36.7,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2377",
+      "name": "McNeese Cowboys",
+      "conference_id": "25",
+      "kenpom_rank": 107,
+      "conference_mean_kenpom_rank": 252.4,
+      "projected_points": 36.7,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "167",
+      "name": "New Mexico Lobos",
+      "conference_id": "44",
+      "kenpom_rank": 56,
+      "conference_mean_kenpom_rank": 142.9,
+      "projected_points": 36.4,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "328",
+      "name": "Utah State Aggies",
+      "conference_id": "21",
+      "kenpom_rank": 44,
+      "conference_mean_kenpom_rank": 90.8,
+      "projected_points": 36,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "259",
+      "name": "Virginia Tech Hokies",
+      "conference_id": "2",
+      "kenpom_rank": 43,
+      "conference_mean_kenpom_rank": 60.8,
+      "projected_points": 35.7,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2132",
+      "name": "Cincinnati Bearcats",
+      "conference_id": "8",
+      "kenpom_rank": 41,
+      "conference_mean_kenpom_rank": 42.9,
+      "projected_points": 34.8,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2294",
+      "name": "Iowa Hawkeyes",
+      "conference_id": "7",
+      "kenpom_rank": 45,
+      "conference_mean_kenpom_rank": 45.4,
+      "projected_points": 34.2,
+      "owner": "Maciej"
+    },
+    {
+      "id": "153",
+      "name": "North Carolina Tar Heels",
+      "conference_id": "2",
+      "kenpom_rank": 46,
+      "conference_mean_kenpom_rank": 60.6,
+      "projected_points": 34,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2670",
+      "name": "VCU Rams",
+      "conference_id": "3",
+      "kenpom_rank": 58,
+      "conference_mean_kenpom_rank": 117.1,
+      "projected_points": 33.8,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2440",
+      "name": "Nevada Wolf Pack",
+      "conference_id": "44",
+      "kenpom_rank": 62,
+      "conference_mean_kenpom_rank": 142.2,
+      "projected_points": 33.8,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "44",
+      "name": "American University Eagles",
+      "conference_id": "22",
+      "kenpom_rank": 190,
+      "conference_mean_kenpom_rank": 313.6,
+      "projected_points": 33.7,
+      "owner": null
+    },
+    {
+      "id": "275",
+      "name": "Wisconsin Badgers",
+      "conference_id": "7",
+      "kenpom_rank": 47,
+      "conference_mean_kenpom_rank": 45.3,
+      "projected_points": 33.2,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "147",
+      "name": "Montana State Bobcats",
+      "conference_id": "5",
+      "kenpom_rank": 130,
+      "conference_mean_kenpom_rank": 253.2,
+      "projected_points": 33.2,
+      "owner": null
+    },
+    {
+      "id": "84",
+      "name": "Indiana Hoosiers",
+      "conference_id": "7",
+      "kenpom_rank": 48,
+      "conference_mean_kenpom_rank": 45.2,
+      "projected_points": 32.6,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2065",
+      "name": "Bethune-Cookman Wildcats",
+      "conference_id": "26",
+      "kenpom_rank": 197,
+      "conference_mean_kenpom_rank": 322.6,
+      "projected_points": 32.6,
+      "owner": null
+    },
+    {
+      "id": "2507",
+      "name": "Providence Friars",
+      "conference_id": "4",
+      "kenpom_rank": 50,
+      "conference_mean_kenpom_rank": 49.7,
+      "projected_points": 32.3,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "231",
+      "name": "Furman Paladins",
+      "conference_id": "24",
+      "kenpom_rank": 128,
+      "conference_mean_kenpom_rank": 238.7,
+      "projected_points": 31.9,
+      "owner": null
+    },
+    {
+      "id": "68",
+      "name": "Boise State Broncos",
+      "conference_id": "21",
+      "kenpom_rank": 53,
+      "conference_mean_kenpom_rank": 89.6,
+      "projected_points": 31.2,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "52",
+      "name": "Florida State Seminoles",
+      "conference_id": "2",
+      "kenpom_rank": 52,
+      "conference_mean_kenpom_rank": 60.3,
+      "projected_points": 31,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2608",
+      "name": "Saint Mary's Gaels",
+      "conference_id": "29",
+      "kenpom_rank": 67,
+      "conference_mean_kenpom_rank": 146.9,
+      "projected_points": 30.5,
+      "owner": "Maciej"
+    },
+    {
+      "id": "156",
+      "name": "Creighton Bluejays",
+      "conference_id": "4",
+      "kenpom_rank": 54,
+      "conference_mean_kenpom_rank": 49.3,
+      "projected_points": 30.4,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "93",
+      "name": "Murray State Racers",
+      "conference_id": "18",
+      "kenpom_rank": 81,
+      "conference_mean_kenpom_rank": 165,
+      "projected_points": 29.9,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "314",
+      "name": "Iona Gaels",
+      "conference_id": "13",
+      "kenpom_rank": 203,
+      "conference_mean_kenpom_rank": 297.3,
+      "projected_points": 29.9,
+      "owner": null
+    },
+    {
+      "id": "28",
+      "name": "UC San Diego Tritons",
+      "conference_id": "9",
+      "kenpom_rank": 91,
+      "conference_mean_kenpom_rank": 180.2,
+      "projected_points": 29.8,
+      "owner": null
+    },
+    {
+      "id": "2540",
+      "name": "UC Santa Barbara Gauchos",
+      "conference_id": "9",
+      "kenpom_rank": 92,
+      "conference_mean_kenpom_rank": 180.1,
+      "projected_points": 29.6,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2628",
+      "name": "TCU Horned Frogs",
+      "conference_id": "8",
+      "kenpom_rank": 51,
+      "conference_mean_kenpom_rank": 42.3,
+      "projected_points": 29.4,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "331",
+      "name": "Eastern Washington Eagles",
+      "conference_id": "5",
+      "kenpom_rank": 153,
+      "conference_mean_kenpom_rank": 250.9,
+      "projected_points": 29.4,
+      "owner": null
+    },
+    {
+      "id": "350",
+      "name": "UNC Wilmington Seahawks",
+      "conference_id": "10",
+      "kenpom_rank": 114,
+      "conference_mean_kenpom_rank": 213.3,
+      "projected_points": 29.3,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "305",
+      "name": "DePaul Blue Demons",
+      "conference_id": "4",
+      "kenpom_rank": 57,
+      "conference_mean_kenpom_rank": 49,
+      "projected_points": 29.2,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2617",
+      "name": "Stephen F. Austin Lumberjacks",
+      "conference_id": "25",
+      "kenpom_rank": 150,
+      "conference_mean_kenpom_rank": 248.5,
+      "projected_points": 28.9,
+      "owner": null
+    },
+    {
+      "id": "235",
+      "name": "Memphis Tigers",
+      "conference_id": "62",
+      "kenpom_rank": 79,
+      "conference_mean_kenpom_rank": 149.5,
+      "projected_points": 28.7,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2142",
+      "name": "Colgate Raiders",
+      "conference_id": "22",
+      "kenpom_rank": 220,
+      "conference_mean_kenpom_rank": 310.2,
+      "projected_points": 28.6,
+      "owner": null
+    },
+    {
+      "id": "344",
+      "name": "Mississippi State Bulldogs",
+      "conference_id": "23",
+      "kenpom_rank": 55,
+      "conference_mean_kenpom_rank": 31.1,
+      "projected_points": 28.5,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2724",
+      "name": "Wichita State Shockers",
+      "conference_id": "62",
+      "kenpom_rank": 80,
+      "conference_mean_kenpom_rank": 149.4,
+      "projected_points": 28.5,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2110",
+      "name": "Central Arkansas Bears",
+      "conference_id": "30",
+      "kenpom_rank": 155,
+      "conference_mean_kenpom_rank": 248.3,
+      "projected_points": 28.3,
+      "owner": null
+    },
+    {
+      "id": "2900",
+      "name": "St. Thomas Tommies",
+      "conference_id": "49",
+      "kenpom_rank": 182,
+      "conference_mean_kenpom_rank": 271.3,
+      "projected_points": 27.7,
+      "owner": null
+    },
+    {
+      "id": "2561",
+      "name": "Siena Saints",
+      "conference_id": "13",
+      "kenpom_rank": 217,
+      "conference_mean_kenpom_rank": 296.2,
+      "projected_points": 27.7,
+      "owner": null
+    },
+    {
+      "id": "2483",
+      "name": "Oregon Ducks",
+      "conference_id": "7",
+      "kenpom_rank": 60,
+      "conference_mean_kenpom_rank": 44.5,
+      "projected_points": 27.5,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2541",
+      "name": "Santa Clara Broncos",
+      "conference_id": "29",
+      "kenpom_rank": 77,
+      "conference_mean_kenpom_rank": 145.8,
+      "projected_points": 27.5,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2571",
+      "name": "South Dakota State Jackrabbits",
+      "conference_id": "49",
+      "kenpom_rank": 183,
+      "conference_mean_kenpom_rank": 271.1,
+      "projected_points": 27.5,
+      "owner": null
+    },
+    {
+      "id": "2634",
+      "name": "Tennessee State Tigers",
+      "conference_id": "20",
+      "kenpom_rank": 236,
+      "conference_mean_kenpom_rank": 311.4,
+      "projected_points": 27.5,
+      "owner": null
+    },
+    {
+      "id": "152",
+      "name": "NC State Wolfpack",
+      "conference_id": "2",
+      "kenpom_rank": 61,
+      "conference_mean_kenpom_rank": 59.8,
+      "projected_points": 27.4,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2006",
+      "name": "Akron Zips",
+      "conference_id": "14",
+      "kenpom_rank": 98,
+      "conference_mean_kenpom_rank": 176.2,
+      "projected_points": 27.2,
+      "owner": "Maciej"
+    },
+    {
+      "id": "256",
+      "name": "James Madison Dukes",
+      "conference_id": "27",
+      "kenpom_rank": 145,
+      "conference_mean_kenpom_rank": 228.6,
+      "projected_points": 27.2,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "232",
+      "name": "Charleston Cougars",
+      "conference_id": "10",
+      "kenpom_rank": 127,
+      "conference_mean_kenpom_rank": 212.3,
+      "projected_points": 27.1,
+      "owner": null
+    },
+    {
+      "id": "221",
+      "name": "Pittsburgh Panthers",
+      "conference_id": "2",
+      "kenpom_rank": 63,
+      "conference_mean_kenpom_rank": 59.6,
+      "projected_points": 26.7,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "58",
+      "name": "South Florida Bulls",
+      "conference_id": "62",
+      "kenpom_rank": 88,
+      "conference_mean_kenpom_rank": 148.8,
+      "projected_points": 26.6,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "2511",
+      "name": "Queens University Royals",
+      "conference_id": "46",
+      "kenpom_rank": 179,
+      "conference_mean_kenpom_rank": 259.9,
+      "projected_points": 26.4,
+      "owner": null
+    },
+    {
+      "id": "120",
+      "name": "Maryland Terrapins",
+      "conference_id": "7",
+      "kenpom_rank": 64,
+      "conference_mean_kenpom_rank": 44.3,
+      "projected_points": 26.2,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "9",
+      "name": "Arizona State Sun Devils",
+      "conference_id": "8",
+      "kenpom_rank": 59,
+      "conference_mean_kenpom_rank": 41.7,
+      "projected_points": 26.1,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "219",
+      "name": "Pennsylvania Quakers",
+      "conference_id": "12",
+      "kenpom_rank": 129,
+      "conference_mean_kenpom_rank": 208.3,
+      "projected_points": 26.1,
+      "owner": null
+    },
+    {
+      "id": "2717",
+      "name": "Western Carolina Catamounts",
+      "conference_id": "24",
+      "kenpom_rank": 166,
+      "conference_mean_kenpom_rank": 234.9,
+      "projected_points": 26,
+      "owner": null
+    },
+    {
+      "id": "2193",
+      "name": "East Tennessee State Buccaneers",
+      "conference_id": "24",
+      "kenpom_rank": 167,
+      "conference_mean_kenpom_rank": 234.8,
+      "projected_points": 25.9,
+      "owner": null
+    },
+    {
+      "id": "300",
+      "name": "UC Irvine Anteaters",
+      "conference_id": "9",
+      "kenpom_rank": 112,
+      "conference_mean_kenpom_rank": 178.3,
+      "projected_points": 25.8,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2630",
+      "name": "UT Martin Skyhawks",
+      "conference_id": "20",
+      "kenpom_rank": 247,
+      "conference_mean_kenpom_rank": 310,
+      "projected_points": 25.8,
+      "owner": null
+    },
+    {
+      "id": "21",
+      "name": "San Diego State Aztecs",
+      "conference_id": "21",
+      "kenpom_rank": 68,
+      "conference_mean_kenpom_rank": 87.8,
+      "projected_points": 25.5,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "112358",
+      "name": "Long Island University Sharks",
+      "conference_id": "19",
+      "kenpom_rank": 271,
+      "conference_mean_kenpom_rank": 338.1,
+      "projected_points": 25.4,
+      "owner": null
+    },
+    {
+      "id": "98",
+      "name": "Western Kentucky Hilltoppers",
+      "conference_id": "11",
+      "kenpom_rank": 126,
+      "conference_mean_kenpom_rank": 182.9,
+      "projected_points": 25.2,
+      "owner": null
+    },
+    {
+      "id": "295",
+      "name": "Old Dominion Monarchs",
+      "conference_id": "27",
+      "kenpom_rank": 160,
+      "conference_mean_kenpom_rank": 227.5,
+      "projected_points": 25.1,
+      "owner": null
+    },
+    {
+      "id": "61",
+      "name": "Georgia Bulldogs",
+      "conference_id": "23",
+      "kenpom_rank": 65,
+      "conference_mean_kenpom_rank": 30.4,
+      "projected_points": 25,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "276",
+      "name": "Marshall Thundering Herd",
+      "conference_id": "27",
+      "kenpom_rank": 161,
+      "conference_mean_kenpom_rank": 227.4,
+      "projected_points": 25,
+      "owner": null
+    },
+    {
+      "id": "43",
+      "name": "Yale Bulldogs",
+      "conference_id": "12",
+      "kenpom_rank": 137,
+      "conference_mean_kenpom_rank": 207.1,
+      "projected_points": 24.9,
+      "owner": null
+    },
+    {
+      "id": "82",
+      "name": "UIC Flames",
+      "conference_id": "18",
+      "kenpom_rank": 105,
+      "conference_mean_kenpom_rank": 162.6,
+      "projected_points": 24.8,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "201",
+      "name": "Oklahoma Sooners",
+      "conference_id": "23",
+      "kenpom_rank": 66,
+      "conference_mean_kenpom_rank": 30.3,
+      "projected_points": 24.7,
+      "owner": "Maciej"
+    },
+    {
+      "id": "45",
+      "name": "George Washington Revolutionaries",
+      "conference_id": "3",
+      "kenpom_rank": 90,
+      "conference_mean_kenpom_rank": 114.6,
+      "projected_points": 24.7,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2567",
+      "name": "SMU Mustangs",
+      "conference_id": "2",
+      "kenpom_rank": 70,
+      "conference_mean_kenpom_rank": 59.2,
+      "projected_points": 24.6,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "108",
+      "name": "Harvard Crimson",
+      "conference_id": "12",
+      "kenpom_rank": 140,
+      "conference_mean_kenpom_rank": 206.7,
+      "projected_points": 24.4,
+      "owner": null
+    },
+    {
+      "id": "288",
+      "name": "Lipscomb Bisons",
+      "conference_id": "46",
+      "kenpom_rank": 192,
+      "conference_mean_kenpom_rank": 258,
+      "projected_points": 24.4,
+      "owner": null
+    },
+    {
+      "id": "2514",
+      "name": "Quinnipiac Bobcats",
+      "conference_id": "13",
+      "kenpom_rank": 239,
+      "conference_mean_kenpom_rank": 294.3,
+      "projected_points": 24.4,
+      "owner": null
+    },
+    {
+      "id": "87",
+      "name": "Notre Dame Fighting Irish",
+      "conference_id": "2",
+      "kenpom_rank": 71,
+      "conference_mean_kenpom_rank": 59.2,
+      "projected_points": 24.3,
+      "owner": "Maciej"
+    },
+    {
+      "id": "3084",
+      "name": "Utah Valley Wolverines",
+      "conference_id": "9",
+      "kenpom_rank": 122,
+      "conference_mean_kenpom_rank": 177.4,
+      "projected_points": 24.3,
+      "owner": null
+    },
+    {
+      "id": "294",
+      "name": "Jacksonville Dolphins",
+      "conference_id": "46",
+      "kenpom_rank": 193,
+      "conference_mean_kenpom_rank": 257.9,
+      "projected_points": 24.3,
+      "owner": null
+    },
+    {
+      "id": "228",
+      "name": "Clemson Tigers",
+      "conference_id": "2",
+      "kenpom_rank": 72,
+      "conference_mean_kenpom_rank": 59.1,
+      "projected_points": 24.1,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2439",
+      "name": "UNLV Rebels",
+      "conference_id": "44",
+      "kenpom_rank": 100,
+      "conference_mean_kenpom_rank": 138,
+      "projected_points": 23.9,
+      "owner": null
+    },
+    {
+      "id": "2739",
+      "name": "Green Bay Phoenix",
+      "conference_id": "45",
+      "kenpom_rank": 201,
+      "conference_mean_kenpom_rank": 248.5,
+      "projected_points": 23.9,
+      "owner": null
+    },
+    {
+      "id": "2344",
+      "name": "Longwood Lancers",
+      "conference_id": "6",
+      "kenpom_rank": 216,
+      "conference_mean_kenpom_rank": 271.4,
+      "projected_points": 23.9,
+      "owner": null
+    },
+    {
+      "id": "183",
+      "name": "Syracuse Orange",
+      "conference_id": "2",
+      "kenpom_rank": 73,
+      "conference_mean_kenpom_rank": 59.1,
+      "projected_points": 23.8,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2546",
+      "name": "Southeast Missouri State Redhawks",
+      "conference_id": "20",
+      "kenpom_rank": 260,
+      "conference_mean_kenpom_rank": 308.4,
+      "projected_points": 23.8,
+      "owner": null
+    },
+    {
+      "id": "166",
+      "name": "New Mexico State Aggies",
+      "conference_id": "11",
+      "kenpom_rank": 138,
+      "conference_mean_kenpom_rank": 181.6,
+      "projected_points": 23.6,
+      "owner": null
+    },
+    {
+      "id": "24",
+      "name": "Stanford Cardinal",
+      "conference_id": "2",
+      "kenpom_rank": 75,
+      "conference_mean_kenpom_rank": 58.9,
+      "projected_points": 23.3,
+      "owner": null
+    },
+    {
+      "id": "2275",
+      "name": "Hofstra Pride",
+      "conference_id": "10",
+      "kenpom_rank": 154,
+      "conference_mean_kenpom_rank": 210,
+      "projected_points": 23.3,
+      "owner": null
+    },
+    {
+      "id": "2166",
+      "name": "Davidson Wildcats",
+      "conference_id": "3",
+      "kenpom_rank": 99,
+      "conference_mean_kenpom_rank": 113.9,
+      "projected_points": 23.1,
+      "owner": "UF Boek"
+    },
+    {
+      "id": "357",
+      "name": "Texas A&M-Corpus Christi Islanders",
+      "conference_id": "25",
+      "kenpom_rank": 191,
+      "conference_mean_kenpom_rank": 244.7,
+      "projected_points": 23.1,
+      "owner": null
+    },
+    {
+      "id": "164",
+      "name": "Rutgers Scarlet Knights",
+      "conference_id": "7",
+      "kenpom_rank": 76,
+      "conference_mean_kenpom_rank": 43.6,
+      "projected_points": 23,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2550",
+      "name": "Seton Hall Pirates",
+      "conference_id": "4",
+      "kenpom_rank": 78,
+      "conference_mean_kenpom_rank": 46.9,
+      "projected_points": 23,
+      "owner": null
+    },
+    {
+      "id": "193",
+      "name": "Miami (OH) RedHawks",
+      "conference_id": "14",
+      "kenpom_rank": 124,
+      "conference_mean_kenpom_rank": 173.8,
+      "projected_points": 23,
+      "owner": null
+    },
+    {
+      "id": "257",
+      "name": "Richmond Spiders",
+      "conference_id": "3",
+      "kenpom_rank": 101,
+      "conference_mean_kenpom_rank": 113.8,
+      "projected_points": 22.8,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "249",
+      "name": "North Texas Mean Green",
+      "conference_id": "62",
+      "kenpom_rank": 109,
+      "conference_mean_kenpom_rank": 147,
+      "projected_points": 22.8,
+      "owner": null
+    },
+    {
+      "id": "119",
+      "name": "Towson Tigers",
+      "conference_id": "10",
+      "kenpom_rank": 158,
+      "conference_mean_kenpom_rank": 209.7,
+      "projected_points": 22.8,
+      "owner": null
+    },
+    {
+      "id": "94",
+      "name": "Northern Kentucky Norse",
+      "conference_id": "45",
+      "kenpom_rank": 210,
+      "conference_mean_kenpom_rank": 247.7,
+      "projected_points": 22.8,
+      "owner": null
+    },
+    {
+      "id": "2287",
+      "name": "Illinois State Redbirds",
+      "conference_id": "18",
+      "kenpom_rank": 119,
+      "conference_mean_kenpom_rank": 161.2,
+      "projected_points": 22.7,
+      "owner": null
+    },
+    {
+      "id": "2046",
+      "name": "Austin Peay Governors",
+      "conference_id": "30",
+      "kenpom_rank": 194,
+      "conference_mean_kenpom_rank": 243.4,
+      "projected_points": 22.7,
+      "owner": null
+    },
+    {
+      "id": "2335",
+      "name": "Liberty Flames",
+      "conference_id": "11",
+      "kenpom_rank": 146,
+      "conference_mean_kenpom_rank": 180.7,
+      "projected_points": 22.6,
+      "owner": null
+    },
+    {
+      "id": "2244",
+      "name": "George Mason Patriots",
+      "conference_id": "3",
+      "kenpom_rank": 103,
+      "conference_mean_kenpom_rank": 113.6,
+      "projected_points": 22.5,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2674",
+      "name": "Valparaiso Beacons",
+      "conference_id": "18",
+      "kenpom_rank": 120,
+      "conference_mean_kenpom_rank": 161.1,
+      "projected_points": 22.5,
+      "owner": null
+    },
+    {
+      "id": "526",
+      "name": "Florida Gulf Coast Eagles",
+      "conference_id": "46",
+      "kenpom_rank": 207,
+      "conference_mean_kenpom_rank": 255.9,
+      "projected_points": 22.3,
+      "owner": null
+    },
+    {
+      "id": "46",
+      "name": "Georgetown Hoyas",
+      "conference_id": "4",
+      "kenpom_rank": 82,
+      "conference_mean_kenpom_rank": 46.5,
+      "projected_points": 22.2,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "202",
+      "name": "Tulsa Golden Hurricane",
+      "conference_id": "62",
+      "kenpom_rank": 113,
+      "conference_mean_kenpom_rank": 146.7,
+      "projected_points": 22.2,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2635",
+      "name": "Tennessee Tech Golden Eagles",
+      "conference_id": "24",
+      "kenpom_rank": 195,
+      "conference_mean_kenpom_rank": 232,
+      "projected_points": 22.2,
+      "owner": null
+    },
+    {
+      "id": "2653",
+      "name": "Troy Trojans",
+      "conference_id": "27",
+      "kenpom_rank": 185,
+      "conference_mean_kenpom_rank": 225.5,
+      "projected_points": 22,
+      "owner": null
+    },
+    {
+      "id": "2771",
+      "name": "Merrimack Warriors",
+      "conference_id": "13",
+      "kenpom_rank": 257,
+      "conference_mean_kenpom_rank": 292.8,
+      "projected_points": 21.9,
+      "owner": null
+    },
+    {
+      "id": "2535",
+      "name": "Samford Bulldogs",
+      "conference_id": "24",
+      "kenpom_rank": 199,
+      "conference_mean_kenpom_rank": 231.6,
+      "projected_points": 21.8,
+      "owner": null
+    },
+    {
+      "id": "2116",
+      "name": "UCF Knights",
+      "conference_id": "8",
+      "kenpom_rank": 74,
+      "conference_mean_kenpom_rank": 40.7,
+      "projected_points": 21.7,
+      "owner": null
+    },
+    {
+      "id": "2429",
+      "name": "Charlotte 49ers",
+      "conference_id": "62",
+      "kenpom_rank": 117,
+      "conference_mean_kenpom_rank": 146.3,
+      "projected_points": 21.7,
+      "owner": null
+    },
+    {
+      "id": "195",
+      "name": "Ohio Bobcats",
+      "conference_id": "14",
+      "kenpom_rank": 134,
+      "conference_mean_kenpom_rank": 172.9,
+      "projected_points": 21.7,
+      "owner": null
+    },
+    {
+      "id": "36",
+      "name": "Colorado State Rams",
+      "conference_id": "21",
+      "kenpom_rank": 84,
+      "conference_mean_kenpom_rank": 85.8,
+      "projected_points": 21.6,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2751",
+      "name": "Wyoming Cowboys",
+      "conference_id": "44",
+      "kenpom_rank": 115,
+      "conference_mean_kenpom_rank": 136.3,
+      "projected_points": 21.6,
+      "owner": null
+    },
+    {
+      "id": "264",
+      "name": "Washington Huskies",
+      "conference_id": "7",
+      "kenpom_rank": 83,
+      "conference_mean_kenpom_rank": 43.2,
+      "projected_points": 21.5,
+      "owner": null
+    },
+    {
+      "id": "338",
+      "name": "Kennesaw State Owls",
+      "conference_id": "11",
+      "kenpom_rank": 156,
+      "conference_mean_kenpom_rank": 179.6,
+      "projected_points": 21.5,
+      "owner": null
+    },
+    {
+      "id": "2547",
+      "name": "Seattle U Redhawks",
+      "conference_id": "29",
+      "kenpom_rank": 108,
+      "conference_mean_kenpom_rank": 142.3,
+      "projected_points": 21.3,
+      "owner": null
+    },
+    {
+      "id": "77",
+      "name": "Northwestern Wildcats",
+      "conference_id": "7",
+      "kenpom_rank": 85,
+      "conference_mean_kenpom_rank": 43.1,
+      "projected_points": 21.2,
+      "owner": "KU Joe"
+    },
+    {
+      "id": "2458",
+      "name": "Northern Colorado Bears",
+      "conference_id": "5",
+      "kenpom_rank": 212,
+      "conference_mean_kenpom_rank": 245,
+      "projected_points": 21.2,
+      "owner": null
+    },
+    {
+      "id": "2754",
+      "name": "Youngstown State Penguins",
+      "conference_id": "45",
+      "kenpom_rank": 223,
+      "conference_mean_kenpom_rank": 246.5,
+      "projected_points": 21.2,
+      "owner": null
+    },
+    {
+      "id": "2349",
+      "name": "UMass Lowell River Hawks",
+      "conference_id": "1",
+      "kenpom_rank": 276,
+      "conference_mean_kenpom_rank": 310.4,
+      "projected_points": 21.1,
+      "owner": null
+    },
+    {
+      "id": "204",
+      "name": "Oregon State Beavers",
+      "conference_id": "21",
+      "kenpom_rank": 87,
+      "conference_mean_kenpom_rank": 85.4,
+      "projected_points": 21,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2309",
+      "name": "Kent State Golden Flashes",
+      "conference_id": "14",
+      "kenpom_rank": 139,
+      "conference_mean_kenpom_rank": 172.5,
+      "projected_points": 21,
+      "owner": null
+    },
+    {
+      "id": "13",
+      "name": "Cal Poly Mustangs",
+      "conference_id": "9",
+      "kenpom_rank": 148,
+      "conference_mean_kenpom_rank": 175,
+      "projected_points": 21,
+      "owner": null
+    },
+    {
+      "id": "2729",
+      "name": "William & Mary Tribe",
+      "conference_id": "10",
+      "kenpom_rank": 173,
+      "conference_mean_kenpom_rank": 208.4,
+      "projected_points": 21,
+      "owner": null
+    },
+    {
+      "id": "2086",
+      "name": "Butler Bulldogs",
+      "conference_id": "4",
+      "kenpom_rank": 89,
+      "conference_mean_kenpom_rank": 45.8,
+      "projected_points": 20.9,
+      "owner": null
+    },
+    {
+      "id": "2277",
+      "name": "Houston Christian Huskies",
+      "conference_id": "25",
+      "kenpom_rank": 208,
+      "conference_mean_kenpom_rank": 243.2,
+      "projected_points": 20.9,
+      "owner": null
+    },
+    {
+      "id": "2523",
+      "name": "Robert Morris Colonials",
+      "conference_id": "45",
+      "kenpom_rank": 225,
+      "conference_mean_kenpom_rank": 246.4,
+      "projected_points": 20.9,
+      "owner": null
+    },
+    {
+      "id": "2168",
+      "name": "Dayton Flyers",
+      "conference_id": "3",
+      "kenpom_rank": 116,
+      "conference_mean_kenpom_rank": 112.6,
+      "projected_points": 20.8,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2649",
+      "name": "Toledo Rockets",
+      "conference_id": "14",
+      "kenpom_rank": 141,
+      "conference_mean_kenpom_rank": 172.3,
+      "projected_points": 20.8,
+      "owner": null
+    },
+    {
+      "id": "2230",
+      "name": "Fordham Rams",
+      "conference_id": "3",
+      "kenpom_rank": 118,
+      "conference_mean_kenpom_rank": 112.5,
+      "projected_points": 20.6,
+      "owner": null
+    },
+    {
+      "id": "2217",
+      "name": "Fairfield Stags",
+      "conference_id": "13",
+      "kenpom_rank": 267,
+      "conference_mean_kenpom_rank": 292,
+      "projected_points": 20.6,
+      "owner": null
+    },
+    {
+      "id": "227",
+      "name": "Rhode Island Rams",
+      "conference_id": "3",
+      "kenpom_rank": 121,
+      "conference_mean_kenpom_rank": 112.2,
+      "projected_points": 20.3,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2473",
+      "name": "Oakland Golden Grizzlies",
+      "conference_id": "45",
+      "kenpom_rank": 230,
+      "conference_mean_kenpom_rank": 245.9,
+      "projected_points": 20.3,
+      "owner": null
+    },
+    {
+      "id": "2329",
+      "name": "Lehigh Mountain Hawks",
+      "conference_id": "22",
+      "kenpom_rank": 275,
+      "conference_mean_kenpom_rank": 304.1,
+      "projected_points": 20.3,
+      "owner": null
+    },
+    {
+      "id": "2350",
+      "name": "Loyola Chicago Ramblers",
+      "conference_id": "3",
+      "kenpom_rank": 123,
+      "conference_mean_kenpom_rank": 112.1,
+      "projected_points": 20.1,
+      "owner": null
+    },
+    {
+      "id": "2534",
+      "name": "Sam Houston Bearkats",
+      "conference_id": "11",
+      "kenpom_rank": 169,
+      "conference_mean_kenpom_rank": 178.1,
+      "projected_points": 20.1,
+      "owner": null
+    },
+    {
+      "id": "2382",
+      "name": "Mercer Bears",
+      "conference_id": "24",
+      "kenpom_rank": 214,
+      "conference_mean_kenpom_rank": 230.1,
+      "projected_points": 20,
+      "owner": null
+    },
+    {
+      "id": "250",
+      "name": "UT Arlington Mavericks",
+      "conference_id": "30",
+      "kenpom_rank": 215,
+      "conference_mean_kenpom_rank": 240.8,
+      "projected_points": 20,
+      "owner": null
+    },
+    {
+      "id": "154",
+      "name": "Wake Forest Demon Deacons",
+      "conference_id": "2",
+      "kenpom_rank": 94,
+      "conference_mean_kenpom_rank": 57.8,
+      "projected_points": 19.8,
+      "owner": null
+    },
+    {
+      "id": "2460",
+      "name": "Northern Iowa Panthers",
+      "conference_id": "18",
+      "kenpom_rank": 143,
+      "conference_mean_kenpom_rank": 158.8,
+      "projected_points": 19.8,
+      "owner": null
+    },
+    {
+      "id": "2210",
+      "name": "Elon Phoenix",
+      "conference_id": "10",
+      "kenpom_rank": 184,
+      "conference_mean_kenpom_rank": 207.5,
+      "projected_points": 19.8,
+      "owner": null
+    },
+    {
+      "id": "104",
+      "name": "Boston University Terriers",
+      "conference_id": "22",
+      "kenpom_rank": 278,
+      "conference_mean_kenpom_rank": 303.8,
+      "projected_points": 19.8,
+      "owner": null
+    },
+    {
+      "id": "103",
+      "name": "Boston College Eagles",
+      "conference_id": "2",
+      "kenpom_rank": 95,
+      "conference_mean_kenpom_rank": 57.8,
+      "projected_points": 19.6,
+      "owner": null
+    },
+    {
+      "id": "5",
+      "name": "UAB Blazers",
+      "conference_id": "62",
+      "kenpom_rank": 135,
+      "conference_mean_kenpom_rank": 144.8,
+      "projected_points": 19.6,
+      "owner": null
+    },
+    {
+      "id": "2226",
+      "name": "Florida Atlantic Owls",
+      "conference_id": "62",
+      "kenpom_rank": 136,
+      "conference_mean_kenpom_rank": 144.8,
+      "projected_points": 19.5,
+      "owner": null
+    },
+    {
+      "id": "55",
+      "name": "Jacksonville State Gamecocks",
+      "conference_id": "11",
+      "kenpom_rank": 175,
+      "conference_mean_kenpom_rank": 177.4,
+      "projected_points": 19.5,
+      "owner": null
+    },
+    {
+      "id": "213",
+      "name": "Penn State Nittany Lions",
+      "conference_id": "7",
+      "kenpom_rank": 97,
+      "conference_mean_kenpom_rank": 42.4,
+      "projected_points": 19.4,
+      "owner": null
+    },
+    {
+      "id": "2737",
+      "name": "Winthrop Eagles",
+      "conference_id": "6",
+      "kenpom_rank": 249,
+      "conference_mean_kenpom_rank": 267.3,
+      "projected_points": 19.4,
+      "owner": null
+    },
+    {
+      "id": "38",
+      "name": "Colorado Buffaloes",
+      "conference_id": "8",
+      "kenpom_rank": 86,
+      "conference_mean_kenpom_rank": 39.9,
+      "projected_points": 19.3,
+      "owner": null
+    },
+    {
+      "id": "2184",
+      "name": "Duquesne Dukes",
+      "conference_id": "3",
+      "kenpom_rank": 131,
+      "conference_mean_kenpom_rank": 111.5,
+      "projected_points": 19.3,
+      "owner": null
+    },
+    {
+      "id": "2181",
+      "name": "Drake Bulldogs",
+      "conference_id": "18",
+      "kenpom_rank": 147,
+      "conference_mean_kenpom_rank": 158.4,
+      "projected_points": 19.3,
+      "owner": null
+    },
+    {
+      "id": "2463",
+      "name": "Cal State Northridge Matadors",
+      "conference_id": "9",
+      "kenpom_rank": 164,
+      "conference_mean_kenpom_rank": 173.5,
+      "projected_points": 19.3,
+      "owner": null
+    },
+    {
+      "id": "163",
+      "name": "Princeton Tigers",
+      "conference_id": "12",
+      "kenpom_rank": 180,
+      "conference_mean_kenpom_rank": 201,
+      "projected_points": 19.3,
+      "owner": null
+    },
+    {
+      "id": "2579",
+      "name": "South Carolina Gamecocks",
+      "conference_id": "23",
+      "kenpom_rank": 93,
+      "conference_mean_kenpom_rank": 28.5,
+      "projected_points": 19.2,
+      "owner": "WinstonBC"
+    },
+    {
+      "id": "2582",
+      "name": "Southern Jaguars",
+      "conference_id": "26",
+      "kenpom_rank": 281,
+      "conference_mean_kenpom_rank": 315,
+      "projected_points": 19.2,
+      "owner": null
+    },
+    {
+      "id": "279",
+      "name": "Pacific Tigers",
+      "conference_id": "29",
+      "kenpom_rank": 125,
+      "conference_mean_kenpom_rank": 140.4,
+      "projected_points": 19.1,
+      "owner": null
+    },
+    {
+      "id": "2603",
+      "name": "Saint Joseph's Hawks",
+      "conference_id": "3",
+      "kenpom_rank": 133,
+      "conference_mean_kenpom_rank": 111.3,
+      "projected_points": 19.1,
+      "owner": null
+    },
+    {
+      "id": "113",
+      "name": "Massachusetts Minutemen",
+      "conference_id": "14",
+      "kenpom_rank": 157,
+      "conference_mean_kenpom_rank": 170.8,
+      "projected_points": 19.1,
+      "owner": null
+    },
+    {
+      "id": "2011",
+      "name": "Alabama State Hornets",
+      "conference_id": "26",
+      "kenpom_rank": 282,
+      "conference_mean_kenpom_rank": 314.9,
+      "projected_points": 19.1,
+      "owner": null
+    },
+    {
+      "id": "2565",
+      "name": "SIU Edwardsville Cougars",
+      "conference_id": "20",
+      "kenpom_rank": 293,
+      "conference_mean_kenpom_rank": 304.3,
+      "projected_points": 19.1,
+      "owner": null
+    },
+    {
+      "id": "2026",
+      "name": "App State Mountaineers",
+      "conference_id": "27",
+      "kenpom_rank": 213,
+      "conference_mean_kenpom_rank": 223.4,
+      "projected_points": 18.9,
+      "owner": null
+    },
+    {
+      "id": "2057",
+      "name": "Belmont Bruins",
+      "conference_id": "18",
+      "kenpom_rank": 152,
+      "conference_mean_kenpom_rank": 157.9,
+      "projected_points": 18.8,
+      "owner": null
+    },
+    {
+      "id": "25",
+      "name": "California Golden Bears",
+      "conference_id": "2",
+      "kenpom_rank": 102,
+      "conference_mean_kenpom_rank": 57.4,
+      "projected_points": 18.7,
+      "owner": "IsaiahBrownEnthusiast"
+    },
+    {
+      "id": "2627",
+      "name": "Tarleton State Texans",
+      "conference_id": "30",
+      "kenpom_rank": 226,
+      "conference_mean_kenpom_rank": 239.4,
+      "projected_points": 18.7,
+      "owner": null
+    },
+    {
+      "id": "2837",
+      "name": "East Texas A&M Lions",
+      "conference_id": "25",
+      "kenpom_rank": 227,
+      "conference_mean_kenpom_rank": 241.5,
+      "projected_points": 18.7,
+      "owner": null
+    },
+    {
+      "id": "62",
+      "name": "Hawai'i Rainbow Warriors",
+      "conference_id": "44",
+      "kenpom_rank": 142,
+      "conference_mean_kenpom_rank": 133.3,
+      "projected_points": 18.6,
+      "owner": null
+    },
+    {
+      "id": "16",
+      "name": "Sacramento State Hornets",
+      "conference_id": "9",
+      "kenpom_rank": 171,
+      "conference_mean_kenpom_rank": 172.9,
+      "projected_points": 18.6,
+      "owner": null
+    },
+    {
+      "id": "2385",
+      "name": "Mercyhurst Lakers",
+      "conference_id": "19",
+      "kenpom_rank": 315,
+      "conference_mean_kenpom_rank": 332.6,
+      "projected_points": 18.6,
+      "owner": null
+    },
+    {
+      "id": "326",
+      "name": "Texas State Bobcats",
+      "conference_id": "21",
+      "kenpom_rank": 104,
+      "conference_mean_kenpom_rank": 83.3,
+      "projected_points": 18.4,
+      "owner": null
+    },
+    {
+      "id": "23",
+      "name": "San José State Spartans",
+      "conference_id": "44",
+      "kenpom_rank": 144,
+      "conference_mean_kenpom_rank": 133.1,
+      "projected_points": 18.4,
+      "owner": null
+    },
+    {
+      "id": "2247",
+      "name": "Georgia State Panthers",
+      "conference_id": "27",
+      "kenpom_rank": 218,
+      "conference_mean_kenpom_rank": 223,
+      "projected_points": 18.4,
+      "owner": null
+    },
+    {
+      "id": "236",
+      "name": "Chattanooga Mocs",
+      "conference_id": "24",
+      "kenpom_rank": 229,
+      "conference_mean_kenpom_rank": 228.6,
+      "projected_points": 18.3,
+      "owner": null
+    },
+    {
+      "id": "2502",
+      "name": "Portland State Vikings",
+      "conference_id": "5",
+      "kenpom_rank": 237,
+      "conference_mean_kenpom_rank": 242.5,
+      "projected_points": 18.3,
+      "owner": null
+    },
+    {
+      "id": "218",
+      "name": "Temple Owls",
+      "conference_id": "62",
+      "kenpom_rank": 149,
+      "conference_mean_kenpom_rank": 143.7,
+      "projected_points": 18.2,
+      "owner": null
+    },
+    {
+      "id": "2393",
+      "name": "Middle Tennessee Blue Raiders",
+      "conference_id": "11",
+      "kenpom_rank": 188,
+      "conference_mean_kenpom_rank": 176,
+      "projected_points": 18.2,
+      "owner": null
+    },
+    {
+      "id": "2330",
+      "name": "Le Moyne Dolphins",
+      "conference_id": "19",
+      "kenpom_rank": 318,
+      "conference_mean_kenpom_rank": 332.3,
+      "projected_points": 18.1,
+      "owner": null
+    },
+    {
+      "id": "2031",
+      "name": "Little Rock Trojans",
+      "conference_id": "30",
+      "kenpom_rank": 233,
+      "conference_mean_kenpom_rank": 238.5,
+      "projected_points": 17.9,
+      "owner": null
+    },
+    {
+      "id": "149",
+      "name": "Montana Grizzlies",
+      "conference_id": "5",
+      "kenpom_rank": 240,
+      "conference_mean_kenpom_rank": 242.2,
+      "projected_points": 17.9,
+      "owner": null
+    },
+    {
+      "id": "254",
+      "name": "Utah Utes",
+      "conference_id": "8",
+      "kenpom_rank": 96,
+      "conference_mean_kenpom_rank": 39.3,
+      "projected_points": 17.8,
+      "owner": null
+    },
+    {
+      "id": "59",
+      "name": "Georgia Tech Yellow Jackets",
+      "conference_id": "2",
+      "kenpom_rank": 110,
+      "conference_mean_kenpom_rank": 56.9,
+      "projected_points": 17.8,
+      "owner": null
+    },
+    {
+      "id": "2449",
+      "name": "North Dakota State Bison",
+      "conference_id": "49",
+      "kenpom_rank": 253,
+      "conference_mean_kenpom_rank": 261.1,
+      "projected_points": 17.8,
+      "owner": null
+    },
+    {
+      "id": "2506",
+      "name": "Presbyterian Blue Hose",
+      "conference_id": "6",
+      "kenpom_rank": 262,
+      "conference_mean_kenpom_rank": 265.6,
+      "projected_points": 17.8,
+      "owner": null
+    },
+    {
+      "id": "2032",
+      "name": "Arkansas State Red Wolves",
+      "conference_id": "27",
+      "kenpom_rank": 224,
+      "conference_mean_kenpom_rank": 222.5,
+      "projected_points": 17.7,
+      "owner": null
+    },
+    {
+      "id": "2378",
+      "name": "UMBC Retrievers",
+      "conference_id": "1",
+      "kenpom_rank": 300,
+      "conference_mean_kenpom_rank": 307.4,
+      "projected_points": 17.7,
+      "owner": null
+    },
+    {
+      "id": "189",
+      "name": "Bowling Green Falcons",
+      "conference_id": "14",
+      "kenpom_rank": 172,
+      "conference_mean_kenpom_rank": 169.5,
+      "projected_points": 17.6,
+      "owner": null
+    },
+    {
+      "id": "116",
+      "name": "Mount St. Mary's Mountaineers",
+      "conference_id": "13",
+      "kenpom_rank": 290,
+      "conference_mean_kenpom_rank": 290.1,
+      "projected_points": 17.6,
+      "owner": null
+    },
+    {
+      "id": "2405",
+      "name": "Monmouth Hawks",
+      "conference_id": "10",
+      "kenpom_rank": 206,
+      "conference_mean_kenpom_rank": 205.7,
+      "projected_points": 17.5,
+      "owner": null
+    },
+    {
+      "id": "2368",
+      "name": "Marist Red Foxes",
+      "conference_id": "13",
+      "kenpom_rank": 291,
+      "conference_mean_kenpom_rank": 290,
+      "projected_points": 17.5,
+      "owner": null
+    },
+    {
+      "id": "253",
+      "name": "Southern Utah Thunderbirds",
+      "conference_id": "5",
+      "kenpom_rank": 246,
+      "conference_mean_kenpom_rank": 241.6,
+      "projected_points": 17.3,
+      "owner": null
+    },
+    {
+      "id": "2515",
+      "name": "Radford Highlanders",
+      "conference_id": "6",
+      "kenpom_rank": 266,
+      "conference_mean_kenpom_rank": 265.1,
+      "projected_points": 17.3,
+      "owner": null
+    },
+    {
+      "id": "2229",
+      "name": "Florida International Panthers",
+      "conference_id": "11",
+      "kenpom_rank": 200,
+      "conference_mean_kenpom_rank": 174.7,
+      "projected_points": 17.1,
+      "owner": null
+    },
+    {
+      "id": "6",
+      "name": "South Alabama Jaguars",
+      "conference_id": "27",
+      "kenpom_rank": 231,
+      "conference_mean_kenpom_rank": 222,
+      "projected_points": 17,
+      "owner": null
+    },
+    {
+      "id": "70",
+      "name": "Idaho Vandals",
+      "conference_id": "5",
+      "kenpom_rank": 248,
+      "conference_mean_kenpom_rank": 241.4,
+      "projected_points": 17,
+      "owner": null
+    },
+    {
+      "id": "2000",
+      "name": "Abilene Christian Wildcats",
+      "conference_id": "30",
+      "kenpom_rank": 242,
+      "conference_mean_kenpom_rank": 237.4,
+      "projected_points": 16.9,
+      "owner": null
+    },
+    {
+      "id": "2450",
+      "name": "Norfolk State Spartans",
+      "conference_id": "16",
+      "kenpom_rank": 321,
+      "conference_mean_kenpom_rank": 327.1,
+      "projected_points": 16.9,
+      "owner": null
+    },
+    {
+      "id": "2199",
+      "name": "Eastern Michigan Eagles",
+      "conference_id": "14",
+      "kenpom_rank": 181,
+      "conference_mean_kenpom_rank": 168.6,
+      "projected_points": 16.8,
+      "owner": null
+    },
+    {
+      "id": "2755",
+      "name": "Grambling Tigers",
+      "conference_id": "26",
+      "kenpom_rank": 298,
+      "conference_mean_kenpom_rank": 313.5,
+      "projected_points": 16.8,
+      "owner": null
+    },
+    {
+      "id": "2815",
+      "name": "Lindenwood Lions",
+      "conference_id": "20",
+      "kenpom_rank": 310,
+      "conference_mean_kenpom_rank": 302.1,
+      "projected_points": 16.8,
+      "owner": null
+    },
+    {
+      "id": "2306",
+      "name": "Kansas State Wildcats",
+      "conference_id": "8",
+      "kenpom_rank": 106,
+      "conference_mean_kenpom_rank": 38.6,
+      "projected_points": 16.6,
+      "owner": null
+    },
+    {
+      "id": "179",
+      "name": "St. Bonaventure Bonnies",
+      "conference_id": "3",
+      "kenpom_rank": 163,
+      "conference_mean_kenpom_rank": 109,
+      "projected_points": 16.6,
+      "owner": "Maciej"
+    },
+    {
+      "id": "2572",
+      "name": "Southern Miss Golden Eagles",
+      "conference_id": "27",
+      "kenpom_rank": 235,
+      "conference_mean_kenpom_rank": 221.7,
+      "projected_points": 16.6,
+      "owner": null
+    },
+    {
+      "id": "2539",
+      "name": "San Francisco Dons",
+      "conference_id": "29",
+      "kenpom_rank": 151,
+      "conference_mean_kenpom_rank": 137.6,
+      "projected_points": 16.5,
+      "owner": null
+    },
+    {
+      "id": "2655",
+      "name": "Tulane Green Wave",
+      "conference_id": "62",
+      "kenpom_rank": 168,
+      "conference_mean_kenpom_rank": 142.1,
+      "projected_points": 16.5,
+      "owner": null
+    },
+    {
+      "id": "79",
+      "name": "Southern Illinois Salukis",
+      "conference_id": "18",
+      "kenpom_rank": 177,
+      "conference_mean_kenpom_rank": 155.4,
+      "projected_points": 16.5,
+      "owner": null
+    },
+    {
+      "id": "2870",
+      "name": "Purdue Fort Wayne Mastodons",
+      "conference_id": "45",
+      "kenpom_rank": 264,
+      "conference_mean_kenpom_rank": 242.8,
+      "projected_points": 16.5,
+      "owner": null
+    },
+    {
+      "id": "151",
+      "name": "East Carolina Pirates",
+      "conference_id": "62",
+      "kenpom_rank": 174,
+      "conference_mean_kenpom_rank": 141.6,
+      "projected_points": 16.1,
+      "owner": null
+    },
+    {
+      "id": "2711",
+      "name": "Western Michigan Broncos",
+      "conference_id": "14",
+      "kenpom_rank": 189,
+      "conference_mean_kenpom_rank": 167.9,
+      "projected_points": 16.1,
+      "owner": null
+    },
+    {
+      "id": "172",
+      "name": "Cornell Big Red",
+      "conference_id": "12",
+      "kenpom_rank": 211,
+      "conference_mean_kenpom_rank": 196.6,
+      "projected_points": 16,
+      "owner": null
+    },
+    {
+      "id": "2619",
+      "name": "Stony Brook Seawolves",
+      "conference_id": "10",
+      "kenpom_rank": 222,
+      "conference_mean_kenpom_rank": 204.3,
+      "projected_points": 16,
+      "owner": null
+    },
+    {
+      "id": "3101",
+      "name": "Utah Tech Trailblazers",
+      "conference_id": "5",
+      "kenpom_rank": 258,
+      "conference_mean_kenpom_rank": 240.4,
+      "projected_points": 16,
+      "owner": null
+    },
+    {
+      "id": "2459",
+      "name": "Northern Illinois Huskies",
+      "conference_id": "45",
+      "kenpom_rank": 268,
+      "conference_mean_kenpom_rank": 242.5,
+      "projected_points": 16,
+      "owner": null
+    },
+    {
+      "id": "2351",
+      "name": "Loyola Marymount Lions",
+      "conference_id": "29",
+      "kenpom_rank": 159,
+      "conference_mean_kenpom_rank": 136.7,
+      "projected_points": 15.9,
+      "owner": null
+    },
+    {
+      "id": "88",
+      "name": "Southern Indiana Screaming Eagles",
+      "conference_id": "20",
+      "kenpom_rank": 317,
+      "conference_mean_kenpom_rank": 301.3,
+      "projected_points": 15.9,
+      "owner": null
+    },
+    {
+      "id": "27",
+      "name": "UC Riverside Highlanders",
+      "conference_id": "9",
+      "kenpom_rank": 202,
+      "conference_mean_kenpom_rank": 170.1,
+      "projected_points": 15.8,
+      "owner": null
+    },
+    {
+      "id": "2296",
+      "name": "Jackson State Tigers",
+      "conference_id": "26",
+      "kenpom_rank": 306,
+      "conference_mean_kenpom_rank": 312.7,
+      "projected_points": 15.8,
+      "owner": null
+    },
+    {
+      "id": "2638",
+      "name": "UTEP Miners",
+      "conference_id": "44",
+      "kenpom_rank": 176,
+      "conference_mean_kenpom_rank": 129.6,
+      "projected_points": 15.7,
+      "owner": null
+    },
+    {
+      "id": "292",
+      "name": "UT Rio Grande Valley Vaqueros",
+      "conference_id": "25",
+      "kenpom_rank": 254,
+      "conference_mean_kenpom_rank": 239,
+      "projected_points": 15.7,
+      "owner": null
+    },
+    {
+      "id": "2426",
+      "name": "Navy Midshipmen",
+      "conference_id": "22",
+      "kenpom_rank": 309,
+      "conference_mean_kenpom_rank": 300.3,
+      "projected_points": 15.7,
+      "owner": null
+    },
+    {
+      "id": "2569",
+      "name": "South Carolina State Bulldogs",
+      "conference_id": "16",
+      "kenpom_rank": 330,
+      "conference_mean_kenpom_rank": 325.9,
+      "projected_points": 15.7,
+      "owner": null
+    },
+    {
+      "id": "2492",
+      "name": "Pepperdine Waves",
+      "conference_id": "29",
+      "kenpom_rank": 162,
+      "conference_mean_kenpom_rank": 136.3,
+      "projected_points": 15.6,
+      "owner": null
+    },
+    {
+      "id": "2239",
+      "name": "Cal State Fullerton Titans",
+      "conference_id": "9",
+      "kenpom_rank": 204,
+      "conference_mean_kenpom_rank": 169.9,
+      "projected_points": 15.6,
+      "owner": null
+    },
+    {
+      "id": "2681",
+      "name": "Wagner Seahawks",
+      "conference_id": "19",
+      "kenpom_rank": 336,
+      "conference_mean_kenpom_rank": 330,
+      "projected_points": 15.6,
+      "owner": null
+    },
+    {
+      "id": "265",
+      "name": "Washington State Cougars",
+      "conference_id": "21",
+      "kenpom_rank": 132,
+      "conference_mean_kenpom_rank": 79.8,
+      "projected_points": 15.5,
+      "owner": null
+    },
+    {
+      "id": "48",
+      "name": "Delaware Blue Hens",
+      "conference_id": "11",
+      "kenpom_rank": 219,
+      "conference_mean_kenpom_rank": 172.6,
+      "projected_points": 15.5,
+      "owner": null
+    },
+    {
+      "id": "2529",
+      "name": "Sacred Heart Pioneers",
+      "conference_id": "13",
+      "kenpom_rank": 307,
+      "conference_mean_kenpom_rank": 288.7,
+      "projected_points": 15.5,
+      "owner": null
+    },
+    {
+      "id": "2501",
+      "name": "Portland Pilots",
+      "conference_id": "29",
+      "kenpom_rank": 165,
+      "conference_mean_kenpom_rank": 136,
+      "projected_points": 15.4,
+      "owner": null
+    },
+    {
+      "id": "270",
+      "name": "Milwaukee Panthers",
+      "conference_id": "45",
+      "kenpom_rank": 274,
+      "conference_mean_kenpom_rank": 241.9,
+      "projected_points": 15.4,
+      "owner": null
+    },
+    {
+      "id": "2115",
+      "name": "Central Connecticut Blue Devils",
+      "conference_id": "19",
+      "kenpom_rank": 337,
+      "conference_mean_kenpom_rank": 329.9,
+      "projected_points": 15.4,
+      "owner": null
+    },
+    {
+      "id": "301",
+      "name": "San Diego Toreros",
+      "conference_id": "29",
+      "kenpom_rank": 170,
+      "conference_mean_kenpom_rank": 135.4,
+      "projected_points": 15,
+      "owner": null
+    },
+    {
+      "id": "2325",
+      "name": "La Salle Explorers",
+      "conference_id": "3",
+      "kenpom_rank": 186,
+      "conference_mean_kenpom_rank": 107.2,
+      "projected_points": 15,
+      "owner": null
+    },
+    {
+      "id": "282",
+      "name": "Indiana State Sycamores",
+      "conference_id": "18",
+      "kenpom_rank": 196,
+      "conference_mean_kenpom_rank": 153.5,
+      "projected_points": 15,
+      "owner": null
+    },
+    {
+      "id": "2803",
+      "name": "Bryant Bulldogs",
+      "conference_id": "1",
+      "kenpom_rank": 320,
+      "conference_mean_kenpom_rank": 304.9,
+      "projected_points": 15,
+      "owner": null
+    },
+    {
+      "id": "309",
+      "name": "Louisiana Ragin' Cajuns",
+      "conference_id": "27",
+      "kenpom_rank": 252,
+      "conference_mean_kenpom_rank": 220.4,
+      "projected_points": 14.9,
+      "owner": null
+    },
+    {
+      "id": "2320",
+      "name": "Lamar Cardinals",
+      "conference_id": "25",
+      "kenpom_rank": 263,
+      "conference_mean_kenpom_rank": 238.2,
+      "projected_points": 14.8,
+      "owner": null
+    },
+    {
+      "id": "140",
+      "name": "Kansas City Roos",
+      "conference_id": "49",
+      "kenpom_rank": 279,
+      "conference_mean_kenpom_rank": 257.4,
+      "projected_points": 14.8,
+      "owner": null
+    },
+    {
+      "id": "324",
+      "name": "Coastal Carolina Chanticleers",
+      "conference_id": "27",
+      "kenpom_rank": 259,
+      "conference_mean_kenpom_rank": 219.8,
+      "projected_points": 14.3,
+      "owner": null
+    },
+    {
+      "id": "2415",
+      "name": "Morgan State Bears",
+      "conference_id": "16",
+      "kenpom_rank": 340,
+      "conference_mean_kenpom_rank": 324.4,
+      "projected_points": 14.2,
+      "owner": null
+    },
+    {
+      "id": "2130",
+      "name": "Chicago State Cougars",
+      "conference_id": "19",
+      "kenpom_rank": 346,
+      "conference_mean_kenpom_rank": 328.8,
+      "projected_points": 14.2,
+      "owner": null
+    },
+    {
+      "id": "2348",
+      "name": "Louisiana Tech Bulldogs",
+      "conference_id": "27",
+      "kenpom_rank": 261,
+      "conference_mean_kenpom_rank": 219.7,
+      "projected_points": 14.1,
+      "owner": null
+    },
+    {
+      "id": "2545",
+      "name": "SE Louisiana Lions",
+      "conference_id": "25",
+      "kenpom_rank": 269,
+      "conference_mean_kenpom_rank": 237.6,
+      "projected_points": 14.1,
+      "owner": null
+    },
+    {
+      "id": "160",
+      "name": "New Hampshire Wildcats",
+      "conference_id": "1",
+      "kenpom_rank": 327,
+      "conference_mean_kenpom_rank": 304,
+      "projected_points": 14.1,
+      "owner": null
+    },
+    {
+      "id": "2182",
+      "name": "Drexel Dragons",
+      "conference_id": "10",
+      "kenpom_rank": 243,
+      "conference_mean_kenpom_rank": 202.6,
+      "projected_points": 14,
+      "owner": null
+    },
+    {
+      "id": "2363",
+      "name": "Manhattan Jaspers",
+      "conference_id": "13",
+      "kenpom_rank": 319,
+      "conference_mean_kenpom_rank": 287.7,
+      "projected_points": 14,
+      "owner": null
+    },
+    {
+      "id": "311",
+      "name": "Maine Black Bears",
+      "conference_id": "1",
+      "kenpom_rank": 328,
+      "conference_mean_kenpom_rank": 303.9,
+      "projected_points": 14,
+      "owner": null
+    },
+    {
+      "id": "2430",
+      "name": "UNC Greensboro Spartans",
+      "conference_id": "24",
+      "kenpom_rank": 272,
+      "conference_mean_kenpom_rank": 224.3,
+      "projected_points": 13.9,
+      "owner": null
+    },
+    {
+      "id": "171",
+      "name": "Columbia Lions",
+      "conference_id": "12",
+      "kenpom_rank": 234,
+      "conference_mean_kenpom_rank": 193.3,
+      "projected_points": 13.8,
+      "owner": null
+    },
+    {
+      "id": "2437",
+      "name": "Omaha Mavericks",
+      "conference_id": "49",
+      "kenpom_rank": 287,
+      "conference_mean_kenpom_rank": 256.3,
+      "projected_points": 13.8,
+      "owner": null
+    },
+    {
+      "id": "161",
+      "name": "Fairleigh Dickinson Knights",
+      "conference_id": "19",
+      "kenpom_rank": 349,
+      "conference_mean_kenpom_rank": 328.4,
+      "projected_points": 13.8,
+      "owner": null
+    },
+    {
+      "id": "290",
+      "name": "Georgia Southern Eagles",
+      "conference_id": "27",
+      "kenpom_rank": 265,
+      "conference_mean_kenpom_rank": 219.4,
+      "projected_points": 13.7,
+      "owner": null
+    },
+    {
+      "id": "2453",
+      "name": "North Alabama Lions",
+      "conference_id": "30",
+      "kenpom_rank": 273,
+      "conference_mean_kenpom_rank": 233.5,
+      "projected_points": 13.6,
+      "owner": null
+    },
+    {
+      "id": "2504",
+      "name": "Prairie View A&M Panthers",
+      "conference_id": "26",
+      "kenpom_rank": 322,
+      "conference_mean_kenpom_rank": 311.3,
+      "projected_points": 13.6,
+      "owner": null
+    },
+    {
+      "id": "2066",
+      "name": "Binghamton Bearcats",
+      "conference_id": "1",
+      "kenpom_rank": 331,
+      "conference_mean_kenpom_rank": 303.5,
+      "projected_points": 13.6,
+      "owner": null
+    },
+    {
+      "id": "2441",
+      "name": "New Haven Chargers",
+      "conference_id": "19",
+      "kenpom_rank": 350,
+      "conference_mean_kenpom_rank": 328.3,
+      "projected_points": 13.6,
+      "owner": null
+    },
+    {
+      "id": "2010",
+      "name": "Alabama A&M Bulldogs",
+      "conference_id": "26",
+      "kenpom_rank": 323,
+      "conference_mean_kenpom_rank": 311.2,
+      "projected_points": 13.5,
+      "owner": null
+    },
+    {
+      "id": "111",
+      "name": "Northeastern Huskies",
+      "conference_id": "10",
+      "kenpom_rank": 250,
+      "conference_mean_kenpom_rank": 202,
+      "projected_points": 13.4,
+      "owner": null
+    },
+    {
+      "id": "302",
+      "name": "UC Davis Aggies",
+      "conference_id": "44",
+      "kenpom_rank": 209,
+      "conference_mean_kenpom_rank": 125.9,
+      "projected_points": 13.3,
+      "owner": null
+    },
+    {
+      "id": "2198",
+      "name": "Eastern Kentucky Colonels",
+      "conference_id": "30",
+      "kenpom_rank": 277,
+      "conference_mean_kenpom_rank": 233,
+      "projected_points": 13.2,
+      "owner": null
+    },
+    {
+      "id": "2413",
+      "name": "Morehead State Eagles",
+      "conference_id": "20",
+      "kenpom_rank": 338,
+      "conference_mean_kenpom_rank": 298.6,
+      "projected_points": 13.2,
+      "owner": null
+    },
+    {
+      "id": "2428",
+      "name": "North Carolina Central Eagles",
+      "conference_id": "16",
+      "kenpom_rank": 348,
+      "conference_mean_kenpom_rank": 323.3,
+      "projected_points": 13.1,
+      "owner": null
+    },
+    {
+      "id": "284",
+      "name": "Stonehill Skyhawks",
+      "conference_id": "19",
+      "kenpom_rank": 354,
+      "conference_mean_kenpom_rank": 327.8,
+      "projected_points": 13.1,
+      "owner": null
+    },
+    {
+      "id": "71",
+      "name": "Bradley Braves",
+      "conference_id": "18",
+      "kenpom_rank": 221,
+      "conference_mean_kenpom_rank": 151,
+      "projected_points": 13,
+      "owner": null
+    },
+    {
+      "id": "233",
+      "name": "South Dakota Coyotes",
+      "conference_id": "49",
+      "kenpom_rank": 294,
+      "conference_mean_kenpom_rank": 255.3,
+      "projected_points": 13,
+      "owner": null
+    },
+    {
+      "id": "2084",
+      "name": "Buffalo Bulls",
+      "conference_id": "14",
+      "kenpom_rank": 228,
+      "conference_mean_kenpom_rank": 164.4,
+      "projected_points": 12.9,
+      "owner": null
+    },
+    {
+      "id": "2934",
+      "name": "Cal State Bakersfield Roadrunners",
+      "conference_id": "9",
+      "kenpom_rank": 238,
+      "conference_mean_kenpom_rank": 166.8,
+      "projected_points": 12.8,
+      "owner": null
+    },
+    {
+      "id": "2261",
+      "name": "Hampton Pirates",
+      "conference_id": "10",
+      "kenpom_rank": 256,
+      "conference_mean_kenpom_rank": 201.5,
+      "projected_points": 12.8,
+      "owner": null
+    },
+    {
+      "id": "2612",
+      "name": "Saint Peter's Peacocks",
+      "conference_id": "13",
+      "kenpom_rank": 329,
+      "conference_mean_kenpom_rank": 286.8,
+      "projected_points": 12.8,
+      "owner": null
+    },
+    {
+      "id": "2447",
+      "name": "Nicholls Colonels",
+      "conference_id": "25",
+      "kenpom_rank": 283,
+      "conference_mean_kenpom_rank": 236.4,
+      "projected_points": 12.7,
+      "owner": null
+    },
+    {
+      "id": "2050",
+      "name": "Ball State Cardinals",
+      "conference_id": "14",
+      "kenpom_rank": 232,
+      "conference_mean_kenpom_rank": 164,
+      "projected_points": 12.6,
+      "owner": null
+    },
+    {
+      "id": "2443",
+      "name": "LSU New Orleans Privateers",
+      "conference_id": "25",
+      "kenpom_rank": 284,
+      "conference_mean_kenpom_rank": 236.3,
+      "projected_points": 12.6,
+      "owner": null
+    },
+    {
+      "id": "91",
+      "name": "Bellarmine Knights",
+      "conference_id": "46",
+      "kenpom_rank": 288,
+      "conference_mean_kenpom_rank": 244.3,
+      "projected_points": 12.6,
+      "owner": null
+    },
+    {
+      "id": "2172",
+      "name": "Denver Pioneers",
+      "conference_id": "29",
+      "kenpom_rank": 205,
+      "conference_mean_kenpom_rank": 131.6,
+      "projected_points": 12.5,
+      "owner": null
+    },
+    {
+      "id": "2623",
+      "name": "Missouri State Bears",
+      "conference_id": "11",
+      "kenpom_rank": 255,
+      "conference_mean_kenpom_rank": 168.6,
+      "projected_points": 12.5,
+      "owner": null
+    },
+    {
+      "id": "198",
+      "name": "Oral Roberts Golden Eagles",
+      "conference_id": "49",
+      "kenpom_rank": 299,
+      "conference_mean_kenpom_rank": 254.6,
+      "projected_points": 12.5,
+      "owner": null
+    },
+    {
+      "id": "299",
+      "name": "Long Beach State Beach",
+      "conference_id": "9",
+      "kenpom_rank": 244,
+      "conference_mean_kenpom_rank": 166.3,
+      "projected_points": 12.4,
+      "owner": null
+    },
+    {
+      "id": "322",
+      "name": "Lafayette Leopards",
+      "conference_id": "22",
+      "kenpom_rank": 335,
+      "conference_mean_kenpom_rank": 297.4,
+      "projected_points": 12.4,
+      "owner": null
+    },
+    {
+      "id": "85",
+      "name": "IU Indianapolis Jaguars",
+      "conference_id": "45",
+      "kenpom_rank": 303,
+      "conference_mean_kenpom_rank": 239.3,
+      "projected_points": 12.3,
+      "owner": null
+    },
+    {
+      "id": "2640",
+      "name": "Texas Southern Tigers",
+      "conference_id": "26",
+      "kenpom_rank": 332,
+      "conference_mean_kenpom_rank": 310.4,
+      "projected_points": 12.3,
+      "owner": null
+    },
+    {
+      "id": "315",
+      "name": "Niagara Purple Eagles",
+      "conference_id": "13",
+      "kenpom_rank": 333,
+      "conference_mean_kenpom_rank": 286.5,
+      "projected_points": 12.3,
+      "owner": null
+    },
+    {
+      "id": "278",
+      "name": "Fresno State Bulldogs",
+      "conference_id": "21",
+      "kenpom_rank": 187,
+      "conference_mean_kenpom_rank": 72.9,
+      "projected_points": 12.2,
+      "owner": null
+    },
+    {
+      "id": "225",
+      "name": "Brown Bears",
+      "conference_id": "12",
+      "kenpom_rank": 251,
+      "conference_mean_kenpom_rank": 190.9,
+      "projected_points": 12.2,
+      "owner": null
+    },
+    {
+      "id": "2169",
+      "name": "Delaware State Hornets",
+      "conference_id": "16",
+      "kenpom_rank": 355,
+      "conference_mean_kenpom_rank": 322.3,
+      "projected_points": 12.2,
+      "owner": null
+    },
+    {
+      "id": "56",
+      "name": "Stetson Hatters",
+      "conference_id": "46",
+      "kenpom_rank": 292,
+      "conference_mean_kenpom_rank": 243.7,
+      "projected_points": 12.1,
+      "owner": null
+    },
+    {
+      "id": "2127",
+      "name": "Charleston Southern Buccaneers",
+      "conference_id": "6",
+      "kenpom_rank": 311,
+      "conference_mean_kenpom_rank": 259.5,
+      "projected_points": 12,
+      "owner": null
+    },
+    {
+      "id": "399",
+      "name": "UAlbany Great Danes",
+      "conference_id": "1",
+      "kenpom_rank": 343,
+      "conference_mean_kenpom_rank": 302,
+      "projected_points": 12,
+      "owner": null
+    },
+    {
+      "id": "2117",
+      "name": "Central Michigan Chippewas",
+      "conference_id": "14",
+      "kenpom_rank": 241,
+      "conference_mean_kenpom_rank": 163.2,
+      "projected_points": 11.9,
+      "owner": null
+    },
+    {
+      "id": "155",
+      "name": "North Dakota Fighting Hawks",
+      "conference_id": "49",
+      "kenpom_rank": 304,
+      "conference_mean_kenpom_rank": 253.9,
+      "projected_points": 11.9,
+      "owner": null
+    },
+    {
+      "id": "2454",
+      "name": "North Florida Ospreys",
+      "conference_id": "46",
+      "kenpom_rank": 295,
+      "conference_mean_kenpom_rank": 243.3,
+      "projected_points": 11.8,
+      "owner": null
+    },
+    {
+      "id": "2464",
+      "name": "Northern Arizona Lumberjacks",
+      "conference_id": "5",
+      "kenpom_rank": 297,
+      "conference_mean_kenpom_rank": 236.5,
+      "projected_points": 11.8,
+      "owner": null
+    },
+    {
+      "id": "2154",
+      "name": "Coppin State Eagles",
+      "conference_id": "16",
+      "kenpom_rank": 359,
+      "conference_mean_kenpom_rank": 321.7,
+      "projected_points": 11.6,
+      "owner": null
+    },
+    {
+      "id": "2747",
+      "name": "Wofford Terriers",
+      "conference_id": "24",
+      "kenpom_rank": 296,
+      "conference_mean_kenpom_rank": 221.9,
+      "projected_points": 11.5,
+      "owner": null
+    },
+    {
+      "id": "2379",
+      "name": "Maryland Eastern Shore Hawks",
+      "conference_id": "16",
+      "kenpom_rank": 360,
+      "conference_mean_kenpom_rank": 321.6,
+      "projected_points": 11.5,
+      "owner": null
+    },
+    {
+      "id": "325",
+      "name": "Cleveland State Vikings",
+      "conference_id": "45",
+      "kenpom_rank": 312,
+      "conference_mean_kenpom_rank": 238.5,
+      "projected_points": 11.4,
+      "owner": null
+    },
+    {
+      "id": "2427",
+      "name": "UNC Asheville Bulldogs",
+      "conference_id": "6",
+      "kenpom_rank": 316,
+      "conference_mean_kenpom_rank": 258.9,
+      "projected_points": 11.4,
+      "owner": null
+    },
+    {
+      "id": "2692",
+      "name": "Weber State Wildcats",
+      "conference_id": "5",
+      "kenpom_rank": 302,
+      "conference_mean_kenpom_rank": 236,
+      "projected_points": 11.3,
+      "owner": null
+    },
+    {
+      "id": "2083",
+      "name": "Bucknell Bison",
+      "conference_id": "22",
+      "kenpom_rank": 344,
+      "conference_mean_kenpom_rank": 296.4,
+      "projected_points": 11.3,
+      "owner": null
+    },
+    {
+      "id": "2174",
+      "name": "Detroit Mercy Titans",
+      "conference_id": "45",
+      "kenpom_rank": 314,
+      "conference_mean_kenpom_rank": 238.3,
+      "projected_points": 11.2,
+      "owner": null
+    },
+    {
+      "id": "2016",
+      "name": "Alcorn State Braves",
+      "conference_id": "26",
+      "kenpom_rank": 341,
+      "conference_mean_kenpom_rank": 309.5,
+      "projected_points": 11.2,
+      "owner": null
+    },
+    {
+      "id": "349",
+      "name": "Army Black Knights",
+      "conference_id": "22",
+      "kenpom_rank": 345,
+      "conference_mean_kenpom_rank": 296.3,
+      "projected_points": 11.2,
+      "owner": null
+    },
+    {
+      "id": "50",
+      "name": "Florida A&M Rattlers",
+      "conference_id": "26",
+      "kenpom_rank": 342,
+      "conference_mean_kenpom_rank": 309.5,
+      "projected_points": 11.1,
+      "owner": null
+    },
+    {
+      "id": "242",
+      "name": "Rice Owls",
+      "conference_id": "62",
+      "kenpom_rank": 245,
+      "conference_mean_kenpom_rank": 135.7,
+      "projected_points": 11,
+      "owner": null
+    },
+    {
+      "id": "2885",
+      "name": "NJIT Highlanders",
+      "conference_id": "1",
+      "kenpom_rank": 356,
+      "conference_mean_kenpom_rank": 300.4,
+      "projected_points": 10.4,
+      "owner": null
+    },
+    {
+      "id": "2197",
+      "name": "Eastern Illinois Panthers",
+      "conference_id": "20",
+      "kenpom_rank": 362,
+      "conference_mean_kenpom_rank": 295.6,
+      "projected_points": 10.3,
+      "owner": null
+    },
+    {
+      "id": "2097",
+      "name": "Campbell Fighting Camels",
+      "conference_id": "10",
+      "kenpom_rank": 286,
+      "conference_mean_kenpom_rank": 199,
+      "projected_points": 10.2,
+      "owner": null
+    },
+    {
+      "id": "2352",
+      "name": "Loyola Maryland Greyhounds",
+      "conference_id": "22",
+      "kenpom_rank": 353,
+      "conference_mean_kenpom_rank": 295.4,
+      "projected_points": 10.2,
+      "owner": null
+    },
+    {
+      "id": "2710",
+      "name": "Western Illinois Leathernecks",
+      "conference_id": "20",
+      "kenpom_rank": 364,
+      "conference_mean_kenpom_rank": 295.4,
+      "projected_points": 10,
+      "owner": null
+    },
+    {
+      "id": "2433",
+      "name": "UL Monroe Warhawks",
+      "conference_id": "27",
+      "kenpom_rank": 308,
+      "conference_mean_kenpom_rank": 216.1,
+      "projected_points": 9.7,
+      "owner": null
+    },
+    {
+      "id": "2466",
+      "name": "Northwestern State Demons",
+      "conference_id": "25",
+      "kenpom_rank": 313,
+      "conference_mean_kenpom_rank": 233.6,
+      "projected_points": 9.7,
+      "owner": null
+    },
+    {
+      "id": "339",
+      "name": "Evansville Purple Aces",
+      "conference_id": "18",
+      "kenpom_rank": 270,
+      "conference_mean_kenpom_rank": 146.1,
+      "projected_points": 9.5,
+      "owner": null
+    },
+    {
+      "id": "2520",
+      "name": "Rider Broncs",
+      "conference_id": "13",
+      "kenpom_rank": 358,
+      "conference_mean_kenpom_rank": 284.4,
+      "projected_points": 9.4,
+      "owner": null
+    },
+    {
+      "id": "2856",
+      "name": "California Baptist Lancers",
+      "conference_id": "9",
+      "kenpom_rank": 285,
+      "conference_mean_kenpom_rank": 162.5,
+      "projected_points": 9.3,
+      "owner": null
+    },
+    {
+      "id": "2029",
+      "name": "Arkansas-Pine Bluff Golden Lions",
+      "conference_id": "26",
+      "kenpom_rank": 357,
+      "conference_mean_kenpom_rank": 308.1,
+      "projected_points": 9.2,
+      "owner": null
+    },
+    {
+      "id": "2099",
+      "name": "Canisius Golden Griffins",
+      "conference_id": "13",
+      "kenpom_rank": 361,
+      "conference_mean_kenpom_rank": 284.2,
+      "projected_points": 9.1,
+      "owner": null
+    },
+    {
+      "id": "107",
+      "name": "Holy Cross Crusaders",
+      "conference_id": "22",
+      "kenpom_rank": 363,
+      "conference_mean_kenpom_rank": 294.3,
+      "projected_points": 9,
+      "owner": null
+    },
+    {
+      "id": "2448",
+      "name": "North Carolina A&T Aggies",
+      "conference_id": "10",
+      "kenpom_rank": 301,
+      "conference_mean_kenpom_rank": 197.8,
+      "projected_points": 8.9,
+      "owner": null
+    },
+    {
+      "id": "2636",
+      "name": "UTSA Roadrunners",
+      "conference_id": "62",
+      "kenpom_rank": 280,
+      "conference_mean_kenpom_rank": 132.8,
+      "projected_points": 8.8,
+      "owner": null
+    },
+    {
+      "id": "2643",
+      "name": "The Citadel Bulldogs",
+      "conference_id": "24",
+      "kenpom_rank": 324,
+      "conference_mean_kenpom_rank": 219.1,
+      "projected_points": 8.8,
+      "owner": null
+    },
+    {
+      "id": "2678",
+      "name": "VMI Keydets",
+      "conference_id": "24",
+      "kenpom_rank": 325,
+      "conference_mean_kenpom_rank": 219,
+      "projected_points": 8.7,
+      "owner": null
+    },
+    {
+      "id": "2005",
+      "name": "Air Force Falcons",
+      "conference_id": "44",
+      "kenpom_rank": 289,
+      "conference_mean_kenpom_rank": 117,
+      "projected_points": 8.5,
+      "owner": null
+    },
+    {
+      "id": "2698",
+      "name": "West Georgia Wolves",
+      "conference_id": "30",
+      "kenpom_rank": 326,
+      "conference_mean_kenpom_rank": 226.9,
+      "projected_points": 8.3,
+      "owner": null
+    },
+    {
+      "id": "2400",
+      "name": "Mississippi Valley State Delta Devils",
+      "conference_id": "26",
+      "kenpom_rank": 365,
+      "conference_mean_kenpom_rank": 307.4,
+      "projected_points": 8.2,
+      "owner": null
+    },
+    {
+      "id": "2908",
+      "name": "South Carolina Upstate Spartans",
+      "conference_id": "6",
+      "kenpom_rank": 347,
+      "conference_mean_kenpom_rank": 255,
+      "projected_points": 8,
+      "owner": null
+    },
+    {
+      "id": "304",
+      "name": "Idaho State Bengals",
+      "conference_id": "5",
+      "kenpom_rank": 339,
+      "conference_mean_kenpom_rank": 232.3,
+      "projected_points": 7.7,
+      "owner": null
+    },
+    {
+      "id": "2916",
+      "name": "Incarnate Word Cardinals",
+      "conference_id": "25",
+      "kenpom_rank": 334,
+      "conference_mean_kenpom_rank": 231.7,
+      "projected_points": 7.6,
+      "owner": null
+    },
+    {
+      "id": "2241",
+      "name": "Gardner-Webb Runnin' Bulldogs",
+      "conference_id": "6",
+      "kenpom_rank": 351,
+      "conference_mean_kenpom_rank": 254.5,
+      "projected_points": 7.6,
+      "owner": null
+    },
+    {
+      "id": "159",
+      "name": "Dartmouth Big Green",
+      "conference_id": "12",
+      "kenpom_rank": 305,
+      "conference_mean_kenpom_rank": 183.1,
+      "projected_points": 7.5,
+      "owner": null
+    },
+    {
+      "id": "2697",
+      "name": "West Florida Argonauts",
+      "conference_id": "46",
+      "kenpom_rank": 352,
+      "conference_mean_kenpom_rank": 235.1,
+      "projected_points": 6,
+      "owner": null
+    }
+  ]
+}

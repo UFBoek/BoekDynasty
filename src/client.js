@@ -131,6 +131,50 @@
     const rank=Number(kenpomData?.ranks?.[String(p?.id||'')]);
     return Number.isInteger(rank)&&rank>=1&&rank<=400?rank:null;
   };
+
+  // Conference-adjusted season points trained on historic NET-proxy, with live KenPom input.
+  const FP_MODEL={"ids":["1","10","11","12","13","14","16","18","19","2","20","21","22","23","24","25","26","27","29","3","30","4","44","45","46","49","5","6","62","7","8","9"],"w":[15.750057558665048,53.550236100418786,-10.110423965369465,-1.6430508591417454,69.08692657677273,-50.99626829423393,27.525289267671155,-13.630076136458438,-0.9463817567406861,22.33750878686885,0.673634676187461,-0.00800070351994801,1.2414581168382273,-0.3243991129948655,1.329548989937862,-0.3335248863069849,0.37122676523288106,-0.1751315193518511,0.32508872400598593,-1.2443937944541548,1.47368211247154,-1.8010792283935109,0.4333950313820625,-1.5888978337572424,1.2147523481182023,0.1684401687351912,-1.106836788360493,0.5530509478251132,-1.2481064756158953,0.7432005143250124,0.2739945323924923,-0.867427879234127,0.06370919825915457,1.7787485641866254,-0.003314456759755123,0.12635803135897766,0.7264157235608905,0.7748893840903566,-0.19337005060168722,-1.0242508265115045,-2.671464516904428,0.31860424386075203,0.40408389184987137,-0.4593893150411753,0.04635257295029806,0.2157522937733817,0.6189583999980265,-0.5092178658055696,0.6646995914373208,-0.2565374000390269,0.08542777747976306,0.13479018412951507,0.07976381760400322,-0.4606849154167944,0.08020037313506388,-0.32494482437473066,0.17740163125627276,-0.11118126552035065,0.45814363306445305,-0.4653678622535123,-1.6810740884173423,0.38301408375089874,-0.23971263244152036,0.9660790799684337,0.2740627862141227,0.6197954094203295,-0.06492116191463759,-0.34978053089364414,0.08702954723505536,0.4959164432739037,-0.43607209869985253,0.10849133848315276,-0.18521572019888818,-0.1416622296059625]};
+  let fpMemo=null;
+  const fpLabel=n=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+  function fpProgress(){
+    const y=Number(season().slice(0,4)),now=Date.now(),start=Date.UTC(y,9,30),conference=Date.UTC(y+1,2,10),finish=Date.UTC(y+1,3,10);
+    const clip=x=>Math.max(0,Math.min(1,x));
+    return now<conference?.72*clip((now-start)/(conference-start)):.72+.28*clip((now-conference)/(finish-conference));
+  }
+  function fpIndex(){
+    const ranks=kenpomData?.ranks;
+    if(!ranks||!programs().length)return null;
+    const scoring=standingsData?.season===season()?standingsData:null,progress=fpProgress();
+    const key=[season(),kenpomData.snapshot_date,kenpomFetchedAt,scoring?.as_of||0,Math.floor(progress*1000)].join('|');
+    if(fpMemo?.key===key)return fpMemo.values;
+    const rank=id=>{const x=Number(ranks[String(id)]);return Number.isInteger(x)&&x>=1&&x<=400?x:null;};
+    const groups=new Map();
+    for(const p of programs()){const k=rank(p.id);if(k==null)continue;const id=String(p.conference_id),g=groups.get(id)||[];g.push(k);groups.set(id,g);}
+    const values=new Map(),w=FP_MODEL.w,ids=FP_MODEL.ids;
+    for(const p of programs()){
+      const r=rank(p.id),id=String(p.conference_id),group=groups.get(id);
+      if(r==null||!group||group.length<2)continue;
+      const cr=(group.reduce((a,b)=>a+b,0)-r)/(group.length-1),x=(365-r)/364,y=(365-cr)/364;
+      const v=[1,x,x*x,x*x*x,Math.exp(-r/30),y,y*y,x*y,Math.tanh((cr-r)/80),(x-y)*(x-y),
+        ...ids.map(k=>id===k?1:0),...ids.map(k=>id===k?x-.5:0)];
+      if(v.length!==w.length)continue;
+      const baseline=Math.max(0,Math.min(145,v.reduce((a,b,i)=>a+b*w[i],0)));
+      const raw=Number(scoring?.program_points?.[String(p.id)]||0),earned=Number.isFinite(raw)?Math.max(0,raw):0;
+      const maxChange=2.5+12*progress,correction=Math.max(-maxChange,Math.min(maxChange,(earned-baseline*progress)*(.16+.84*progress*progress)));
+      const projected=scoring&&progress>=1?earned:scoring?Math.max(earned,baseline+correction):baseline;
+      values.set(String(p.id),{points:Math.round(projected*10)/10,baseline:Math.round(baseline*10)/10,earned,rank:0});
+    }
+    [...values.entries()].sort((a,b)=>b[1].points-a[1].points||a[0].localeCompare(b[0])).forEach(([,v],i)=>v.rank=i+1);
+    fpMemo={key,values};return values;
+  }
+  const fpOf=p=>p?fpIndex()?.get(String(p.id))||null:null;
+  const fpPoints=p=>fpLabel(fpOf(p)?.points);
+  function fpBest(roster,best=Number(league?.settings?.scoring?.best_programs||15)){
+    if(!fpIndex())return null;
+    const n=roster.map(p=>fpOf(p)?.points).filter(Number.isFinite).sort((a,b)=>b-a).slice(0,Math.max(1,best));
+    return n.length?Math.round(n.reduce((a,b)=>a+b,0)*10)/10:null;
+  }
+
   async function loadKenpom(force=false){
     if(!me||kenpomLoading||(!force&&Date.now()-kenpomFetchedAt<30*60*1000))return;
     kenpomLoading=true;kenpomFetchedAt=Date.now();

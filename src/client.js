@@ -2730,6 +2730,8 @@
       if(target)target.innerHTML=selected.map(p=>'<span>'+escapeHTML(p.name)+'</span>').concat(picks.map(n=>'<span>Pick #'+n+'</span>')).join('')||'<span class="td-package-empty">No assets selected</span>';
       const points=document.querySelector('#trade-points-'+side);
       if(points)points.textContent=standingsData?.season===season()?selected.reduce((n,p)=>n+Number(standingsData.program_points?.[String(p.id)]||0),0).toLocaleString('en-US',{maximumFractionDigits:2}):'—';
+      const projected=document.querySelector('#trade-projected-'+side);
+      if(projected)projected.textContent=fpLabel(fpBest(selected,selected.length||1));
     }
   }
   function tradeAssetNames(tradeId,fromId){
@@ -2757,6 +2759,7 @@
       return '<dl class="td-scout"><div><dt>'+escapeHTML(season())+' PTS</dt><dd>'+currentSeasonPoints(p)+'</dd></div>'
         +'<div><dt>Bart Torvik</dt><dd>'+(r?.rank?'#'+Number(r.rank):'—')+'</dd></div>'
         +'<div><dt>KenPom</dt><dd>'+(kp?'#'+kp:'—')+'</dd></div>'
+        +'<div class="td-projection"><dt>Projected pts</dt><dd>'+fpPoints(p)+'</dd></div>'
         +'<div title="Average fantasy points across '+(h?.count||0)+' available historical seasons"><dt>5Y avg pts</dt><dd>'+(h?.eligibleForSort?historicalPointLabel(h.avg):'—')+'</dd></div>'
         +'<div><dt>2026 roster $</dt><dd>'+escapeHTML(reported?rosterCostAmount2026(cost):'N/A')+'</dd></div></dl>';
     };
@@ -2777,7 +2780,7 @@
       const total=scoring?.standings?.find(m=>String(m.manager_id)===String(ownerId));
       return '<div class="td-roster" data-trade-side="'+side+'"><div class="td-manager">'+avatar(manager||me)
         +'<div><strong>'+escapeHTML(manager?.display_name||'Manager')+'</strong><span>'+schools.length+' programs · '+slots.length+' available picks</span></div>'
-        +'<div class="td-manager-points"><strong>'+(total?historicalPointLabel(Number(total.points||0)):'—')+'</strong><span>Best-ball points</span></div></div>'
+        +'<div class="td-manager-points"><strong>'+(total?historicalPointLabel(Number(total.points||0)):'—')+'</strong><span>Best-ball points</span><small>Projected: '+fpLabel(fpBest(schools))+'</small></div></div>'
         +'<div class="td-roster-toolbar"><label class="td-search">'+iconSVG('search')+'<input type="search" data-trade-search="'+side+'" aria-label="Search '+(side==='give'?'your':'their')+' programs" placeholder="Search programs or conference" value="'+escapeHTML(tradeSearch[side])+'"/></label></div>'
         +'<div class="td-school-list">'+(schoolOptions||'<p class="td-empty">No rostered programs yet.</p>')
         +'<p id="trade-no-results-'+side+'" class="td-empty" hidden>No matching programs. Try another search.</p></div>'
@@ -2828,7 +2831,7 @@
         +'<section><header class="td-side-title"><h3>YOU RECEIVE</h3><span id="trade-receive-count">0 selected</span></header>'+selections(theirs,tradeTargetId,'receive')+'</section></div>'
         +'<div class="td-offer-review"><div class="td-review-head"><h3>Your proposal</h3><button type="button" class="td-text-button" data-act="trade-clear">Clear selections</button></div>'
         +'<div class="td-package-grid">'+['give','receive'].map(side=>'<div><div class="td-package-title"><strong>'+(side==='give'?'You send':'You receive')+'</strong><span><b id="trade-points-'+side+'">'+(standingsData?.season===season()?'0':'—')+'</b> season pts</span></div><div id="trade-package-'+side+'" class="td-package"><span class="td-package-empty">No assets selected</span></div></div>').join('')+'</div>'
-        +'<p class="td-comparison-note">Season points compare selected programs only; they are not a trade valuation or a projected best-ball change. Draft picks have no season points.</p>'
+        +'<p class="td-comparison-note">Projected points use conference-adjusted KenPom and earned season points. Package totals are not trade values or projected marginal best-ball gains; draft picks have no fantasy-point estimate.</p>'
         +'<div class="trade-submit"><div id="trade-selection-summary" role="status" aria-live="polite">Select at least one asset on each side</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></div>'
         +'<p class="td-data-note">Bart Torvik and KenPom: current-season national ranks (KenPom is the quadrant baseline). 5Y avg: available prior seasons, minimum three. Roster costs are estimates, not verified payrolls; model-based valuations have greater uncertainty.</p>':
         '<div class="td-empty"><strong>'+(others.length?'New trades paused':'No trade partners yet')+'</strong><p>'+(others.length?'The commissioner has disabled new offers.':'A second manager must join before you can propose a trade.')+'</p></div>')+'</section>'
@@ -2901,7 +2904,7 @@
         '<button type="button" class="league-breakdown-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="Open '+escapeHTML(p.name)+' profile">'+
         '<span class="league-breakdown-number">'+String(i+1).padStart(2,'0')+'</span>'+img(p)+
         '<span class="league-breakdown-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'+
-        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+'</strong>'+
+        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+'<small>Proj. '+fpPoints(p)+'</small></strong>'+
         '<span class="league-breakdown-chevron" aria-hidden="true">↗</span></button>'
       ).join('')+'</div>';
     };
@@ -2922,6 +2925,7 @@
         (owned.length>5?'<span class="standings-roster-more">+'+(owned.length-5)+'</span>':'')+'</span>':
         '<span class="standings-roster-pending">Awaiting draft</span>';
       const meta=owned.length?owned.length+' owned · '+(scoring?Number(manager?.counted_programs||0):'—')+' counting':'Awaiting selections';
+      const projectedBest=fpBest(owned,best);
       const details=expanded?'<tr class="league-breakdown-row"><td colspan="7"><div class="league-breakdown">'+
         '<div class="league-breakdown-top"><div><h3 tabindex="-1" id="league-contributions-'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+' · Program contributions</h3></div>'+
         '<button type="button" class="league-breakdown-profile" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">Full team profile <span aria-hidden="true">↗</span></button></div>'+
@@ -2942,6 +2946,7 @@
           (scoring&&owned.length?'<strong>'+fmtPoints(pts)+'</strong>':'<span class="pending-score">—</span>')+
           (hasPoints&&owned.length?'<span class="league-score-track" aria-hidden="true"><i style="width:'+Math.max(0,Math.min(100,pts/leaderTotal*100)).toFixed(2)+'%"></i></span>':'')+
            (hasPoints&&owned.length?'<small class="league-mobile-gap">'+(gap===0?'Leader':'−'+fmtPoints(gap)+' from 1st')+'</small>':'')+
+           (owned.length?'<small class="league-forecast-line">Proj. best '+best+': '+fpLabel(projectedBest)+'</small>':'')+
           '</div></td>'+
         '<td class="standings-expand-cell"><button type="button" class="league-expand-button'+(expanded?' is-open':'')+'" data-act="league-toggle-details" data-id="'+escapeHTML(u.id)+'" aria-label="'+(expanded?'Hide':'Show')+' '+escapeHTML(u.display_name)+' program breakdown" aria-expanded="'+expanded+'" title="Show program breakdown">'+
           '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></td></tr>'+details;
@@ -3348,7 +3353,7 @@
     if(!mine.some(p=>String(p.id)===addDrop.release))addDrop.release='';
     const history=draftHistoricalIndex(),rank=p=>ratingOf(p,ratingYear(season()))?.rank;
     const avg=p=>{const h=history.byId.get(String(p.id));return h?.eligibleForSort?h.avg:null;};
-    const numeric=p=>addDrop.sort==='kenpom'?kenpomRankOf(p):addDrop.sort==='torvik'?rank(p):addDrop.sort==='history'?avg(p):addDrop.sort==='cost'?rosterCost2026(p)?.estimate:standingsData?.season===season()?Number(standingsData.program_points?.[String(p.id)]??0):null;
+    const numeric=p=>addDrop.sort==='projected'?fpOf(p)?.points:addDrop.sort==='kenpom'?kenpomRankOf(p):addDrop.sort==='torvik'?rank(p):addDrop.sort==='history'?avg(p):addDrop.sort==='cost'?rosterCost2026(p)?.estimate:standingsData?.season===season()?Number(standingsData.program_points?.[String(p.id)]??0):null;
     const list=(addDrop.tab==='available'?eligible:mine).slice().sort((a,b)=>{
       if(addDrop.sort==='name')return a.name.localeCompare(b.name);
       const x=numeric(a),y=numeric(b),valid=n=>n!==null&&n!==undefined&&Number.isFinite(Number(n));
@@ -3356,6 +3361,7 @@
     });
     const metric=(label,value,title='')=>'<div'+(title?' title="'+escapeHTML(title)+'"':'')+'><dt>'+label+'</dt><dd>'+value+'</dd></div>';
     const stats=p=>'<dl class="ad-stats">'+metric(escapeHTML(season())+' pts',currentSeasonPoints(p))
+      +metric('Projected pts',fpPoints(p),'Conference-adjusted KenPom and earned fantasy-points forecast')
       +metric('KenPom',kenpomRankOf(p)?'#'+kenpomRankOf(p):'—')+metric('Torvik',rank(p)?'#'+Number(rank(p)):'—')
       +metric('5Y avg pts',avg(p)!==null?historicalPointLabel(avg(p)):'—')+metric('Roster cost',escapeHTML(Number.isFinite(rosterCost2026(p)?.estimate)?rosterCostAmount2026(rosterCost2026(p)):'N/A'),rosterCostEvidence2026(rosterCost2026(p)))+'</dl>';
     const selected=programs().find(p=>String(p.id)===(addDrop.tab==='available'?addDrop.add:addDrop.release));
@@ -3372,7 +3378,7 @@
       +'<div class="ad-status"><span class="ad-status-label '+(enabled?'is-open':'')+'">'+(enabled?'Roster moves open':'Roster moves closed')+'</span><span><strong>'+mine.length+' / '+limit+'</strong> roster spots</span><span><strong>'+Math.max(0,limit-mine.length)+'</strong> open</span><span>Immediate transactions</span></div>'
       +(!enabled?'<p class="ad-closed">'+(league.settings.draft_status==='finished'?'The commissioner has paused roster moves.':'Roster moves open after the inaugural draft ends.')+' You can still scout programs and plan your next move.</p>':'')
       +'<div class="ad-layout"><section class="ad-market" aria-label="Program market"><nav class="ad-tabs" aria-label="Program pool"><button type="button" data-act="ad-tab" data-id="available" aria-pressed="'+(addDrop.tab==='available')+'">Free agents <span>'+eligible.length+'</span></button><button type="button" data-act="ad-tab" data-id="roster" aria-pressed="'+(addDrop.tab==='roster')+'">My roster <span>'+mine.length+'</span></button></nav>'
-      +'<div class="ad-tools"><label class="ad-search">'+iconSVG('search')+'<input id="ad-search" type="search" placeholder="Search programs or conferences" aria-label="Search programs or conferences" value="'+escapeHTML(addDrop.query)+'"></label><div class="ad-filters"><label>Conference<select id="ad-conference"><option value="all">All conferences</option>'+[['power','Power conferences'],['mid-major','Mid-Major'],...Object.entries(conferenceNames).filter(([id])=>[...eligible,...mine].some(p=>String(p.conference_id)===id))].map(([id,n])=>'<option value="'+id+'" '+(id===addDrop.conference?'selected':'')+'>'+escapeHTML(n)+'</option>').join('')+'</select></label><label>Sort by<select id="ad-sort">'+[['points',season()+' points'],['kenpom','KenPom rank'],['torvik','Torvik rank'],['history','5Y average points'],['cost','Roster cost'],['name','Program name']].map(([id,n])=>'<option value="'+id+'" '+(id===addDrop.sort?'selected':'')+'>'+escapeHTML(n)+'</option>').join('')+'</select></label></div></div>'
+      +'<div class="ad-tools"><label class="ad-search">'+iconSVG('search')+'<input id="ad-search" type="search" placeholder="Search programs or conferences" aria-label="Search programs or conferences" value="'+escapeHTML(addDrop.query)+'"></label><div class="ad-filters"><label>Conference<select id="ad-conference"><option value="all">All conferences</option>'+[['power','Power conferences'],['mid-major','Mid-Major'],...Object.entries(conferenceNames).filter(([id])=>[...eligible,...mine].some(p=>String(p.conference_id)===id))].map(([id,n])=>'<option value="'+id+'" '+(id===addDrop.conference?'selected':'')+'>'+escapeHTML(n)+'</option>').join('')+'</select></label><label>Sort by<select id="ad-sort">'+[['points',season()+' points'],['projected','Projected fantasy points'],['kenpom','KenPom rank'],['torvik','Torvik rank'],['history','5Y average points'],['cost','Roster cost'],['name','Program name']].map(([id,n])=>'<option value="'+id+'" '+(id===addDrop.sort?'selected':'')+'>'+escapeHTML(n)+'</option>').join('')+'</select></label></div></div>'
       +'<div class="ad-board-note"><span id="ad-result-count" aria-live="polite">'+list.length+' programs</span><span>Rankings: lower is better</span></div><div class="ad-school-list">'+rows+'<div id="ad-no-results" class="ad-empty" '+(list.length?'hidden':'')+'><strong>No programs found</strong><p>Try another search or conference.</p><button type="button" class="btn secondary" data-act="ad-reset">Clear filters</button></div></div><p class="ad-data-note">5Y average uses at least three available seasons. Roster costs are 2026–27 estimates, not audited payroll. Missing data appears as — or N/A.</p></section>'
       +'<aside class="ad-move" id="ad-move" aria-label="Review roster move"><div class="ad-move-heading"><h2>Your move</h2>'+(selected?'<button type="button" data-act="ad-clear" class="ad-clear">Clear</button>':'')+'</div>'
       +(selected?'<div class="ad-selected"><span class="ad-direction">'+(addDrop.tab==='available'?'Adding to your roster':'Releasing from your roster')+'</span>'+school(selected)+stats(selected)+'</div>':'<div class="ad-empty ad-move-empty">'+iconSVG('waivers')+'<strong>Select a program</strong><p>'+(addDrop.tab==='available'?'Choose a free agent to review an addition or swap.':'Choose a program from your roster to review a drop.')+'</p></div>')

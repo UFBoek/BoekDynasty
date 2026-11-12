@@ -2945,8 +2945,8 @@
         '<button type="button" class="league-breakdown-program" data-act="open-program" data-id="'+escapeHTML(p.id)+'" title="Open '+escapeHTML(p.name)+' profile">'+
         '<span class="league-breakdown-number">'+String(i+1).padStart(2,'0')+'</span>'+img(p)+
         '<span class="league-breakdown-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'+
-        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+' <span class="league-program-record">'+(scoring?programSeasonRecord(p.id):'—')+' W–L</span><small>Proj. '+fpPoints(p)+'</small></strong>'+
-        '<span class="league-breakdown-chevron" aria-hidden="true">↗</span></button>'
+        '<strong class="league-breakdown-score">'+(scoring?fmtPoints(pointMap[String(p.id)]):'—')+' <span class="league-program-record">'+(scoring?programSeasonRecord(p.id):'—')+' W–L</span></strong><span class="league-program-projection"><small>Projected</small><strong>'+fpPoints(p)+'</strong></span>'+
+        '</button>'
       ).join('')+'</div>';
     };
     const rows=users.map((u,index)=>{
@@ -2967,8 +2967,8 @@
         '<span class="standings-roster-pending">Awaiting draft</span>';
       const meta=owned.length?owned.length+' owned · '+(scoring?Number(manager?.counted_programs||0):'—')+' counting':'Awaiting selections';
       const projectedBest=fpBest(owned,best);
-      const details=expanded?'<tr class="league-breakdown-row"><td colspan="7"><div class="league-breakdown">'+
-        '<div class="league-breakdown-top"><div><h3 tabindex="-1" id="league-contributions-'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+' · Program contributions</h3></div>'+
+      const details=expanded?'<tr class="league-breakdown-row" id="league-details-'+escapeHTML(u.id)+'"><td colspan="7"><div class="league-breakdown">'+
+        '<div class="league-breakdown-top"><div><h3 tabindex="-1" id="league-contributions-'+escapeHTML(u.id)+'">'+escapeHTML(u.display_name)+' · Program contributions</h3><p>Earned points and W–L reflect this season. Projections estimate the full season.</p></div>'+
         '<button type="button" class="league-breakdown-profile" data-act="open-manager" data-id="'+escapeHTML(u.id)+'">Full team profile <span aria-hidden="true">↗</span></button></div>'+
         '<div class="league-breakdown-columns"><section><div class="league-breakdown-section-label"><strong>COUNTING IN BEST BALL</strong><span>'+counted.length+' / '+best+'</span></div>'+
         programRows(counted,true)+'</section>'+
@@ -2981,25 +2981,22 @@
           avatar(u)+'<span class="league-manager-copy"><strong>'+escapeHTML(u.display_name)+'</strong><small>'+
           (mine?'YOUR FRANCHISE · ':'')+escapeHTML(meta)+'</small></span><span class="league-manager-arrow" aria-hidden="true">↗</span></button></td>'+
         '<td class="standing-school-cell">'+schoolPreview+'</td>'+
-        '<td class="standings-count-cell"><strong>'+(scoring?Number(manager?.counted_programs||0):'—')+'</strong><small>/ '+best+'</small></td>'+
-        '<td class="standings-gap-cell">'+(hasPoints?(gap<=0?'<span class="league-gap-leader">LEADER</span>':'<span>−'+fmtPoints(gap)+'</span>'):'<span class="league-gap-muted">—</span>')+'</td>'+
         '<td class="numerical standings-points-cell"><div class="league-standing-points">'+
           (scoring&&owned.length?'<strong>'+fmtPoints(pts)+' <span class="league-standing-record" title="Combined record of best-ball counting programs">'+managerSeasonRecord(manager)+' W–L</span></strong>':'<span class="pending-score">—</span>')+
-          (hasPoints&&owned.length?'<span class="league-score-track" aria-hidden="true"><i style="width:'+Math.max(0,Math.min(100,pts/leaderTotal*100)).toFixed(2)+'%"></i></span>':'')+
-           (hasPoints&&owned.length?'<small class="league-mobile-gap">'+(gap===0?'Leader':'−'+fmtPoints(gap)+' from 1st')+'</small>':'')+
-           (owned.length?'<small class="league-forecast-line">Proj. best '+best+': '+fpLabel(projectedBest)+'</small>':'')+
           '</div></td>'+
-        '<td class="standings-expand-cell"><button type="button" class="league-expand-button'+(expanded?' is-open':'')+'" data-act="league-toggle-details" data-id="'+escapeHTML(u.id)+'" aria-label="'+(expanded?'Hide':'Show')+' '+escapeHTML(u.display_name)+' program breakdown" aria-expanded="'+expanded+'" title="Show program breakdown">'+
+        '<td class="standings-projection-cell"><span class="league-mobile-label">Projected</span><strong>'+ (owned.length?fpLabel(projectedBest):'—')+'</strong></td>'+
+        '<td class="standings-gap-cell"><span class="league-mobile-label">Behind</span>'+(hasPoints?(gap<=0?'<span class="league-gap-leader">LEADER</span>':'<span>−'+fmtPoints(gap)+'</span>'):'<span class="league-gap-muted">—</span>')+'</td>'+
+        '<td class="standings-expand-cell"><button type="button" class="league-expand-button'+(expanded?' is-open':'')+'" data-act="league-toggle-details" data-id="'+escapeHTML(u.id)+'" aria-label="'+(expanded?'Hide':'Show')+' '+escapeHTML(u.display_name)+' program breakdown" aria-expanded="'+expanded+'" title="'+(expanded?'Hide':'Show')+' program breakdown" aria-controls="league-details-'+escapeHTML(u.id)+'">'+
           '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></td></tr>'+details;
     }).join('');
     const standingsStatus=hasPoints?'SEASON IN PROGRESS':ownerCount?'SEASON OPEN':'PRESEASON';
-    return '<div class="league-center">'+
-      '<header class="league-masthead"><div><h1>Standings <span>'+escapeHTML(season())+'</span></h1><p>'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' · '+users.length+' managers · Best '+best+' programs count</p></div>'+
+    return '<div class="league-center league-v2">'+
+      '<header class="league-masthead"><div><h1>Standings <span class="league-season-badge">'+escapeHTML(season())+'</span></h1><p>'+escapeHTML(league.settings.league_name||'Boek Dynasty')+' · '+users.length+' managers · Best '+best+' programs count</p></div>'+
       '<button type="button" class="league-refresh" data-act="league-refresh"'+(standingsLoading?' disabled':'')+'>'+(standingsLoading?'Updating…':'Refresh standings')+'</button></header>'+
       '<nav class="league-local-nav" aria-label="Standings shortcuts"><span class="league-season-state">'+standingsStatus+'</span><div><button type="button" data-act="league-my-contributions" data-id="'+escapeHTML(me.id)+'">My contributions</button><button type="button" data-act="tab" data-id="scoring">Scoring rules</button></div></nav>'+
       '<section class="standings-panel league-standings" aria-label="Current season league standings" aria-busy="'+standingsLoading+'">'+
       '<div class="standings-table-wrap"><table class="standings-table league-standings-table"><caption class="sr-only">Season standings, ranked by best-ball fantasy points</caption>'+
-      '<thead><tr><th scope="col" class="standings-rank-cell">RANK</th><th scope="col">FRANCHISE</th><th scope="col">PROGRAMS</th><th scope="col">COUNTING</th><th scope="col">BEHIND</th><th scope="col" class="numerical">FANTASY POINTS</th><th scope="col"><span class="sr-only">Program breakdown</span></th></tr></thead>'+
+      '<thead><tr><th scope="col" class="standings-rank-cell">RANK</th><th scope="col">FRANCHISE</th><th scope="col">PROGRAMS</th><th scope="col" class="numerical">FANTASY POINTS<small>Counting roster W–L</small></th><th scope="col" class="numerical">PROJECTED<small>Full-season best '+best+'</small></th><th scope="col" class="numerical">BEHIND</th><th scope="col"><span class="sr-only">Program breakdown</span></th></tr></thead>'+
       '<tbody>'+rows+(!users.length?'<tr><td colspan="7" class="league-empty">No managers yet. Standings appear when managers join the league.</td></tr>':'')+'</tbody></table></div>'+
       '<footer class="league-standings-footer"><span>Season totals'+(scoredAt?' · Updated '+escapeHTML(scoredAt)+' ET':'')+'</span><span>Select a team to view its roster. Expand to inspect points.</span></footer></section>'+
       '<div class="league-race-strip" aria-label="League season overview"><div><h2>The championship race</h2><p>'+(leader?'<strong>'+escapeHTML(leader.display_name)+'</strong> '+(leaderMargin>0?'leads by <strong>'+fmtPoints(leaderMargin)+' points</strong>.':'is tied at the top.'):'Awaiting first points')+'</p></div><div><span>League roster</span><p><strong>'+ownerCount+'</strong> programs owned · <strong>'+countedAcrossLeague+'</strong> counting</p></div></div>'+
@@ -3843,7 +3840,7 @@
     if(act==='trade-clear'){document.querySelectorAll('.trade-choice input').forEach(el=>{el.checked=false;});updateTradeSelections();return;}
     if(act==='league-refresh'){await loadStandings(true);return;}
     if(act==='league-my-contributions'){leagueExpandedManager=String(me.id);render();const heading=document.getElementById('league-contributions-'+String(me.id));heading?.focus({preventScroll:true});heading?.scrollIntoView({block:'center',behavior:'instant'});return;}
-    if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();return;}
+    if(act==='league-toggle-details'){leagueExpandedManager=leagueExpandedManager===String(id)?'':String(id);render();Array.from(document.querySelectorAll('[data-act="league-toggle-details"]')).find(el=>el.dataset.id===String(id))?.focus({preventScroll:true});return;}
     if(act==='overview-today-results'){
       resultsSelectedDay=resultsToday();resultsScope='owned';resultsSearch='';resultsStatusFilter='all';resultsShown=40;
       current='results';render();loadResults();window.scrollTo({top:0,behavior:'smooth'});return;

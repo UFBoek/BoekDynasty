@@ -1,6 +1,6 @@
 # Conference-conditioned fantasy point projections (2026–27)
 
-**Status:** Exploratory research baseline; not a verified historical-KenPom model and not deployed to the league site.
+**Status:** Live in the Cloudflare-hosted Boek Dynasty frontend as of November 11, 2026. Still an exploratory NET-proxy-trained model, not a verified historical-KenPom model.
 
 - Output: `data/kenpom-conference-projections-2026-27.csv` and `.json`, 365 Division I programs, captured November 11, 2026.
 - Current input: current-season KenPom national ranking in `private.cbb_kenpom_daily`.
@@ -24,8 +24,32 @@ The conference model reduces historical MAE by **20.7%**. The test leaves out ea
 2. Final NET and current early-season KenPom are different measures and time points. College programs can rise or fall substantially from November to March. Projected values should be treated as provisional baselines, not confident win totals or betting probabilities.
 3. The season-specific conference difficulty comes from actual historical opponents. The shrunken conference-ID effects use *current* program membership, so conference realignment still introduces noise. This should be improved by backfilling historical conference memberships from verified season-specific conference sources.
 4. Outputs depend on historical game/award completeness and the **current** league scoring configuration as of the snapshot date. Recalculate after scoring changes, historical repairs or new daily KenPom data.
-5. These CSV/JSON results are a **static research snapshot**. Committing them does not deploy a site change or set up a nightly refresh.
+5. The CSV/JSON exports are **static November 11 research snapshots**, but the live website recomputes projections from the latest existing KenPom snapshot and current earned scoring whenever those feeds refresh. Forecast coefficients themselves are fixed until the model is retrained. No separate projection scraper or scheduled task was introduced.
 
 ## Reusing the projection
 
 `src/conference-projection.js` implements the coefficient formula for any new rank and conference strength and can project a full 365-program ratings snapshot after importing the saved JSON model. If you later train with true historical KenPom inputs, retain the source labels and rerun the season-based validation; do not silently relabel this baseline as KenPom-trained.
+
+## Live site implementation (November 11, 2026)
+
+The Cloudflare Worker `boek-dynasty` now serves `src/client.js` and `src/style.css` with this model embedded. The API and official fantasy scoring rules are unchanged. Forecasts are displayed separately from verified earned points on **My Team**, **other manager rosters**, **Schools → Program index**, **school profiles**, **Standings**, **Trade Desk** and **Add / Drop**. The Schools and Add / Drop lists can sort by projected points. **Draft Board intentionally has no projection display.**
+
+The model is recomputed from the latest already-imported current-season KenPom national rankings and the conference-average ranks of the other programs in each team's current conference. The frontend refreshes KenPom about every 30 minutes when a relevant page is active and earned scoring about every 60 seconds. Refresh frequency reflects the site polling intervals, *not* a promise of fresh KenPom upstream data each time.
+
+### Earned-points effect
+
+`baseline` is the model's full-season estimate. `progress` is approximately 0 at October 30, 72% at March 10, and 100% at April 10, using an intentionally simple season progress calendar. Each verified earning update changes the full-season forecast by a **small residual correction**, not by simply adding points already earned:
+
+```js
+maxChange = 2.5 + 12 * progress
+correction = clamp(
+  (earnedPoints - baseline * progress) * (0.16 + 0.84 * progress * progress),
+  -maxChange, maxChange
+)
+forecast = max(earnedPoints, baseline + correction)
+if (progress >= 1 && earnedScoringAvailable) forecast = earnedPoints
+```
+
+Until the live standings feed is available, the model displays its pure KenPom baseline. The UI ranking is the national ordinal rank by projected points (with program ID as a stable tie breaker), **not** the source KenPom ranking. Official standings continue to be ranked by verified earned fantasy points; projected best-ball is secondary context. If KenPom is unavailable, the forecast shows a dash instead of fabricating an estimate. Once the model has historical early-season snapshots, replace the heuristic earned-points correction with a properly backtested in-season residual model.
+
+To redeploy future frontend changes, rebuild the stateless Worker bundle using `node scripts/build-worker-proxy.mjs` and deploy to the existing Cloudflare Worker. Source commits alone do not update this deployed Worker.

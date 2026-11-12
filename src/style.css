@@ -7415,3 +7415,73 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 @media(max-width:1000px){.ad-layout{grid-template-columns:1fr}.ad-move{position:static}.ad-school-list{max-height:560px}.ad-move-empty{padding:24px}.ad-selected .ad-stats{grid-template-columns:repeat(5,minmax(0,1fr))}.ad-status>span:last-child{margin-left:0}.ad-stats dt{font-size:10px}}
 @media(max-width:600px){.ad-header{gap:12px;margin-bottom:18px;align-items:flex-start}.ad-header h1{font-size:27px}.ad-header p{font-size:12px;max-width:220px;line-height:1.5}.ad-header .btn{font-size:11px;padding:8px 10px;white-space:nowrap;gap:4px}.ad-header .btn svg{width:16px}.ad-status{gap:10px 16px;font-size:11px}.ad-status>span:last-child{display:none}.ad-layout{margin-top:18px;gap:20px}.ad-tools{padding:14px}.ad-tabs{padding:0 14px;gap:24px}.ad-tabs button{font-size:13px}.ad-school{padding:16px 14px;gap:14px}.ad-school-identity button{font-size:14px}.ad-select{min-height:44px}.ad-stats{grid-template-columns:1.2fr .9fr .9fr 1.1fr 1.1fr;gap:6px}.ad-stats dt{font-size:9px}.ad-stats dd{font-size:12px}.ad-board-note{padding:10px 14px;font-size:10px}.ad-filters{gap:10px}.ad-filters select{font-size:11px;min-height:44px;padding:6px}.ad-school-list{max-height:500px}.ad-data-note{padding:12px 14px;font-size:10px}.ad-move{scroll-margin-top:14px}.ad-activity-row{gap:10px;grid-template-columns:60px 1fr auto}.ad-activity-row strong{font-size:12px}.ad-selected .ad-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.ad-selected .ad-stats dt{font-size:10px}.ad-selected .ad-stats dd{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.ad-school{transition:none}.ad-desk{scroll-behavior:auto}}
+
+
+/* Conference-adjusted projections: official season scoring remains the primary number. */
+.tm-v4 .tm-projected{width:126px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tm-v4 .tm-projected strong{display:block;color:#256d65;font-size:14px;font-weight:850;letter-spacing:-.02em}
+.tm-v4 .tm-projected small{display:block;margin-top:3px;color:#7f9c98;font-size:8px;font-weight:800;letter-spacing:.025em}
+.tm-v4 .tm-table th.tm-projected{color:#357b72}
+.tm-v4 .tm-forecast-summary{display:block;margin-top:8px;color:#4a8c82;font-size:10.5px;font-weight:750;white-space:normal;line-height:1.45}
+.tm-v4 .tm-forecast-summary b{font-size:12px;font-variant-numeric:tabular-nums;color:#246c63}
+.tm-v4 .tm-score{min-width:185px}
+.schools-hub .directory-table-head,.schools-hub .program-directory-card{grid-template-columns:minmax(185px,2.2fr) minmax(58px,.63fr) minmax(65px,.72fr) minmax(66px,.7fr) minmax(65px,.68fr) minmax(73px,.76fr) minmax(98px,1fr) minmax(95px,.93fr)}
+.schools-hub .directory-forecast b{color:#267467;font-weight:900}
+.schools-hub .directory-forecast small{color:#5e9a8e}
+.pp-projection-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px;border:1px solid #d8ebe6;border-radius:9px;background:#f5fbf8;padding:14px 16px}
+.pp-projection-banner>div{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
+.pp-projection-banner span{font-size:9px;font-weight:850;letter-spacing:.1em;color:#4c8e7f}
+.pp-projection-banner strong{font-size:28px;line-height:1;color:#226b60;font-weight:850;font-variant-numeric:tabular-nums}
+.pp-projection-banner strong small{font-size:12px;color:#4c8e7f}
+.pp-projection-banner p{max-width:310px;color:#587c75;font-size:11px;line-height:1.55;margin:0}
+.td-scout{grid-template-columns:repeat(3,minmax(0,1fr))}
+.td-scout .td-projection dd{color:#267467;font-weight:850}
+.td-manager-points small{display:block;font-size:10px;color:#277b71;font-weight:750;margin-top:3px}
+.td-package-title span{line-height:1.5}
+.td-package-title span b[id^="trade-projected-"]{color:#267467}
+.ad-stats{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:10px}
+.ad-stats>div:nth-child(2) dd{color:#267467;font-weight:850}
+.ad-selected .ad-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.league-forecast-line{display:block;font-size:10px;color:#328578;font-weight:800;margin-top:4px;white-space:nowrap}
+.league-breakdown-score small{display:block;color:#428a7e;font-size:9px;font-weight:750;margin-top:4px;white-space:nowrap}
+@media(min-width:721px) and (max-width:1100px){
+  .schools-hub .directory-table{overflow-x:auto}
+  .schools-hub .directory-table-head,.schools-hub .program-directory-card{min-width:945px;grid-template-columns:minmax(185px,2fr) 70px 75px 70px 70px 80px 100px 110px}
+}
+@media(max-width:720px){
+  .schools-hub .directory-table-head{display:none}
+  .schools-hub .program-directory-card{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-areas:
+    "school school school school school school school school status status status status"
+    "points points points forecast forecast forecast kenpom kenpom kenpom torvik torvik torvik"
+    "history history history history history history cost cost cost cost cost cost";
+    gap:7px 6px;padding:12px}
+  .schools-hub .directory-forecast{grid-area:forecast}
+  .schools-hub .directory-torvik{grid-area:torvik}
+  .schools-hub .directory-kenpom{grid-area:kenpom}
+  .schools-hub .directory-history{grid-area:history}
+  .schools-hub .directory-cost{grid-area:cost}
+  .schools-hub .directory-data-cell{align-items:center;text-align:center;padding-top:6px}
+  .schools-hub .directory-data-cell:before{display:block;content:attr(data-label)}
+  .schools-hub .directory-data-cell small{display:none}
+  .tm-v4 .tm-table tr.tm-roster-row{grid-template-columns:26px minmax(0,1fr) 89px;grid-template-areas:
+    "num identity score"
+    ". torvik kenpom"
+    ". history projection";row-gap:6px}
+  .tm-v4 .tm-table .tm-projected{grid-area:projection;width:auto;text-align:right;justify-self:end;align-self:end}
+  .tm-v4 .tm-projected strong{font-size:12px}
+  .tm-v4 .tm-projected small{font-size:7px}
+  .tm-v4 .tm-table .tm-stat-rank:not(.tm-kenpom-rank):not(.tm-historical-rank){grid-area:torvik;justify-self:start}
+  .tm-v4 .tm-table .tm-kenpom-rank{grid-area:kenpom;justify-self:end}
+  .tm-v4 .tm-table .tm-historical-rank{grid-area:history;justify-self:start}
+  .tm-v4 .tm-forecast-summary{font-size:9.5px}
+  .pp-projection-banner{align-items:flex-start;flex-direction:column;gap:8px}
+  .pp-projection-banner strong{font-size:23px}
+  .pp-projection-banner p{max-width:none}
+  .ad-stats,.ad-selected .ad-stats{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:10px}
+}
+@media(max-width:380px){
+  .tm-v4 .tm-table tr.tm-roster-row{grid-template-columns:22px minmax(0,1fr) 77px}
+  .schools-hub .program-directory-card{gap:6px 3px}
+  .schools-hub .directory-data-cell b{font-size:11px}
+  .ad-stats dt{font-size:8px}
+}

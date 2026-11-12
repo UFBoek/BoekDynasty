@@ -74,7 +74,11 @@ test('verified season W–L appears with actual fantasy points across standings 
   assert.match(app.page('league'),/12 <span class="league-program-record">3–1 W–L<\/span>/);
   assert.match(app.page('home'),/5–3 W–L/);
   assert.match(app.team(data),/class="tm-score-record">5–3 W–L<\/span>/);
-  assert.match(app.team(data),/class="tm-row-record">3–1 W–L<\/span>/);
+  assert.match(app.team(data),/class="tm-row-record">3–1 W–L<\/small>/);
+  // The W–L is separate from the earned number, not another number on the same baseline.
+  assert.match(app.team(data),/class="tm-earned-number">12<\/strong><small class="tm-row-record">3–1 W–L<\/small>/);
+  assert.match(app.team(data),/class="tm-projection-label">PROJECTED PTS<\/small>/);
+  assert.doesNotMatch(app.team(data),/12 <span class="tm-row-record">/);
   assert.match(app.page('programs'),/class="season-point-record">3–1 W–L<\/span>/);
  }finally{league.ownership=previousOwners;app.standings(null);app.expandLeague('');}
 });

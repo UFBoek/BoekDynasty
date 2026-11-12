@@ -7585,3 +7585,50 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .season-point-record{display:inline-block;margin-left:5px;color:#8296a5;font-size:9px;font-weight:750;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
 .pp-v3 .pp-masthead-score .pp-score-record{display:inline-block;margin-left:6px;color:#b8d3e4;font-size:12px;font-weight:750;letter-spacing:0;white-space:nowrap}
 @media(max-width:750px){.tm-v4 .tm-score .tm-score-record{margin-left:5px;font-size:9px}.tm-v4 .tm-table .tm-row-record{font-size:8px}.pp-v3 .pp-masthead-score .pp-score-record{font-size:10px}.season-point-record{margin-left:3px;font-size:8px}}
+
+/* Roster scoring clarity: earned points are primary, W–L gets its own line,
+   and the future projection is deliberately smaller and quieter. */
+.tm-v4 .tm-table .tm-points-earned{
+  display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;
+}
+.tm-v4 .tm-table .tm-points-earned .tm-earned-number{
+  display:block;line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.tm-v4 .tm-table .tm-points-earned .tm-row-record{
+  display:block;margin:0;color:#758d9e;font-size:10px;font-weight:750;letter-spacing:0;
+  line-height:1.3;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+@media(max-width:720px){
+  .tm-v4 .tm-table .tm-points{gap:9px}
+  .tm-v4 .tm-table .tm-points-earned{align-items:flex-end;gap:2px}
+  .tm-v4 .tm-table .tm-points-earned .tm-points-label{
+    display:block;order:0;margin:0;color:#718da0;font-size:8px;font-weight:850;line-height:1.25;
+    letter-spacing:.025em;white-space:nowrap;
+  }
+  .tm-v4 .tm-table .tm-points-earned .tm-earned-number{
+    order:1;font-size:23px;line-height:1.05;color:#17577e;font-weight:900;letter-spacing:-.04em;
+  }
+  .tm-v4 .tm-table .tm-points-earned .tm-row-record{
+    order:2;font-size:9.5px;font-weight:750;color:#597789;line-height:1.25;
+  }
+  .tm-v4 .tm-table .tm-mobile-projection{
+    gap:2px;padding-top:8px;border-top:1px solid #e1e9ed;
+  }
+  .tm-v4 .tm-table .tm-mobile-projection .tm-projection-label{
+    display:block;font-size:7.5px;line-height:1.25;letter-spacing:.035em;
+    font-weight:850;color:#8ba3a3;white-space:nowrap;
+  }
+  .tm-v4 .tm-table .tm-mobile-projection b{
+    font-size:15px;line-height:1.1;color:#288274;font-weight:800;letter-spacing:-.02em;
+  }
+  .tm-v4 .tm-table .tm-mobile-projection .tm-projection-rank{
+    display:block;color:#93aaa4;font-size:7.5px;line-height:1.25;font-weight:750;
+    letter-spacing:.03em;white-space:nowrap;
+  }
+}
+@media(max-width:380px){
+  .tm-v4 .tm-table .tm-points-earned .tm-points-label{font-size:7.25px}
+  .tm-v4 .tm-table .tm-points-earned .tm-earned-number{font-size:21px}
+  .tm-v4 .tm-table .tm-mobile-projection .tm-projection-label{font-size:7px}
+  .tm-v4 .tm-table .tm-points-earned .tm-row-record{font-size:9px}
+}

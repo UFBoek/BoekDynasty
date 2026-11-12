@@ -1562,8 +1562,13 @@
         +(metrics?'<td class="tm-stat-rank" data-label="TORVIK">'+torvik+'</td>'
           +'<td class="tm-stat-rank tm-kenpom-rank" data-label="KENPOM">'+(kp?'#'+kp:'—')+'</td>'
           +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
-        +'<td class="tm-points"><span class="tm-points-earned"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+' <span class="tm-row-record">'+(scoring?programSeasonRecord(p.id):'—')+' W–L</span></strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</span>'
-        +(metrics?'<span class="tm-mobile-projection"><b>'+fpLabel(projected?.points)+'</b><small>'+(projected?'PROJ PTS · #'+projected.rank:'PROJ PTS')+'</small></span>':'')+'</td>'
+        // Each number gets its own label: earned points, verified W–L, then the forecast.
+        +'<td class="tm-points"><span class="tm-points-earned">'
+        +(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')
+        +'<strong class="tm-earned-number">'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'
+        +'<small class="tm-row-record">'+(scoring?programSeasonRecord(p.id):'—')+' W–L</small></span>'
+        +(metrics?'<span class="tm-mobile-projection"><small class="tm-projection-label">PROJECTED PTS</small><b>'+fpLabel(projected?.points)+'</b>'
+          +'<small class="tm-projection-rank">'+(projected?'RANK #'+projected.rank:'PENDING')+'</small></span>':'')+'</td>'
         +(metrics?'<td class="tm-projected" data-label="PROJECTED"><strong>'+fpLabel(projected?.points)+'</strong><small>'+(projected?'FORECAST #'+projected.rank:'PENDING')+'</small></td>':'')
         +'</tr>';
     }).join('');

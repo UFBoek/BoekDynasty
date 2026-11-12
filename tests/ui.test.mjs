@@ -636,7 +636,7 @@ test('trade scouting uses season standings and preserves missing values without 
  app.standings({season:'2026-27',program_points:{57:12.5,58:7},standings:[{manager_id:'1',points:12.5},{manager_id:'2',points:7}]});
  const html=app.page('trades');
  assert.match(html,/td-comparison/);
- assert.match(html,/2026-27 PTS<\/dt><dd>12.5/);
+ assert.match(html,/2026-27 PTS<\/dt><dd><span class="season-point-value">12\.5<\/span><span class="season-point-record">— W–L<\/span>/);
  assert.match(html,/Bart Torvik<\/dt><dd>—/);
  assert.match(html,/5Y avg pts/);
  assert.match(html,/<strong>12.5<\/strong><span>Best-ball points/);
@@ -644,7 +644,9 @@ test('trade scouting uses season standings and preserves missing values without 
  assert.match(html,/id="trade-package-receive"/);
  assert.match(html,/data-act="trade-clear"/);
  app.standings({season:'2025-26',program_points:{57:999},standings:[]});
- assert.doesNotMatch(app.page('trades'),/<dd>999<\/dd>/);
+ const staleHtml=app.page('trades');
+ assert.doesNotMatch(staleHtml,/<span class="season-point-value">999<\/span>/);
+ assert.match(staleHtml,/2026-27 PTS<\/dt><dd><span class="season-point-value">—<\/span>/);
  league.ownership=original;
 });
 

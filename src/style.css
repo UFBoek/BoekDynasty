@@ -7485,3 +7485,93 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
   .schools-hub .directory-data-cell b{font-size:11px}
   .ad-stats dt{font-size:8px}
 }
+
+
+/* Franchise roster refinement — keep projections visually subordinate to actual points.
+   Mobile shows one compact identity / score row with all scouting metrics aligned. */
+.tm-v4 .tm-mobile-metrics,.tm-v4 .tm-mobile-projection{display:none}
+.tm-v4 .tm-points-earned{display:contents}
+.tm-v4 .tm-score>.tm-forecast-summary{
+  display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  margin-top:12px;padding-top:11px;border-top:1px solid rgba(196,221,236,.21);
+  letter-spacing:normal;color:#bbd4dc;line-height:1.35;
+}
+.tm-v4 .tm-score>.tm-forecast-summary span{
+  color:#a7c8d1;font-size:9px;font-weight:850;letter-spacing:.09em;
+}
+.tm-v4 .tm-score>.tm-forecast-summary b{
+  color:#94dfca;font-size:18px;line-height:1.2;font-weight:850;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;
+}
+.tm-v4 .tm-score>.tm-forecast-summary em{
+  color:#9ec9c3;font-size:10px;font-weight:750;font-style:normal;letter-spacing:.045em;
+}
+@media(max-width:750px){
+  .tm-v4 .tm-score{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:auto auto auto;
+    grid-template-areas:"label points" "hint points" "forecast forecast";
+    column-gap:15px;row-gap:3px;align-content:center;
+    padding:15px 17px 14px;min-height:0;
+  }
+  .tm-v4 .tm-score>span:first-child{grid-area:label;align-self:end;min-width:0}
+  .tm-v4 .tm-score>strong{grid-area:points;align-self:center;margin:0}
+  .tm-v4 .tm-score>small{grid-area:hint;align-self:start;min-width:0}
+  .tm-v4 .tm-score>.tm-forecast-summary{
+    grid-area:forecast;display:flex;flex-direction:row;align-items:center;
+    justify-content:space-between;gap:12px;margin:11px 0 0;padding-top:11px;
+    min-width:0;
+  }
+  .tm-v4 .tm-score>.tm-forecast-summary b{font-size:17px}
+}
+@media(max-width:720px){
+  .tm-v4 .tm-table tr.tm-roster-row{
+    display:grid;grid-template-columns:25px minmax(0,1fr) 94px;
+    grid-template-areas:"num identity score";
+    gap:9px;align-items:center;min-height:88px;
+    padding:12px 13px;
+  }
+  .tm-v4 .tm-table .tm-rank{grid-area:num;align-self:start;padding-top:4px!important}
+  .tm-v4 .tm-table .tm-school{grid-area:identity;min-width:0;align-self:center}
+  .tm-v4 .tm-school-link{display:flex;align-items:center;gap:9px}
+  .tm-v4 .tm-school-copy strong{
+    font-size:11.4px;line-height:1.28;
+    white-space:normal;overflow-wrap:normal;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .tm-v4 .tm-school-copy small{font-size:9px;line-height:1.3;margin-top:3px}
+  .tm-v4 .tm-table td.tm-stat-rank,.tm-v4 .tm-table td.tm-projected{display:none!important}
+  .tm-v4 .tm-mobile-metrics{
+    display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;
+    margin:7px 0 0 0;max-width:100%;min-width:0;
+    font-size:8px;font-weight:800;line-height:1.3;color:#9aabb7;
+    letter-spacing:.035em;
+  }
+  .tm-v4 .tm-mobile-metrics span{display:inline-flex;gap:3px;align-items:baseline;white-space:nowrap}
+  .tm-v4 .tm-mobile-metrics b{font-weight:850;color:#52758d;font-variant-numeric:tabular-nums;letter-spacing:0}
+  .tm-v4 .tm-table .tm-points{
+    grid-area:score;display:flex;flex-direction:column;align-items:flex-end;
+    justify-content:center;justify-self:stretch;align-self:stretch;
+    gap:6px;width:auto;min-width:0;margin:0;
+  }
+  .tm-v4 .tm-table .tm-points-earned,
+  .tm-v4 .tm-table .tm-mobile-projection{
+    display:flex;flex-direction:column;align-items:flex-end;gap:1px;
+    width:100%;min-width:0;line-height:1.15;
+  }
+  .tm-v4 .tm-table .tm-points-earned strong{font-size:16px;line-height:1.12;color:#1c5277}
+  .tm-v4 .tm-table .tm-mobile-projection{border-top:1px solid #e4ecef;padding-top:6px}
+  .tm-v4 .tm-mobile-projection b{font-size:15px;line-height:1.12;color:#26766b;font-weight:850;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+  .tm-v4 .tm-table .tm-mobile-projection small{color:#8ba49c;font-size:7.3px;font-weight:850;letter-spacing:.045em;line-height:1.3;white-space:nowrap}
+  .tm-v4 .tm-points-label{display:block;color:#9aadb9;font-size:7.3px;letter-spacing:.04em}
+}
+@media(max-width:380px){
+  .tm-v4 .tm-table tr.tm-roster-row{
+    grid-template-columns:21px minmax(0,1fr) 84px;gap:6px;
+    padding:12px 10px;min-height:84px;
+  }
+  .tm-v4 .tm-mobile-metrics{gap:3px 6px;font-size:7.5px}
+  .tm-v4 .tm-school-copy strong{font-size:10.8px}
+  .tm-v4 .tm-table .tm-mobile-projection small{font-size:7px}
+  .tm-v4 .tm-score>.tm-forecast-summary span{font-size:8px}
+}

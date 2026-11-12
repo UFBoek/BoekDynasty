@@ -189,7 +189,7 @@
       if(current==='programs'){
         if(programMode==='directory')refreshSchoolsDirectory();
         else render();
-      }else if(['program-detail','team','manager-detail','draft','trades','waivers','results','home'].includes(current))render();
+      }else if(['program-detail','team','manager-detail','draft','trades','waivers','results','home','league'].includes(current))render();
     }
   }
   let leaderConference='all',leaderOwnership='all',leaderOrder='points',leaderShown=40;
@@ -1550,7 +1550,7 @@
       const history=metrics?.historyIndex?.byId.get(String(p.id));
       const torvik=rating?.rank!=null&&Number(rating.rank)>0?'#'+rating.rank:'—';
       const fiveYear=history?.eligibleForSort?'#'+history.rank:'—';
-      const kp=kenpomRankOf(p);
+      const kp=kenpomRankOf(p),projected=fpOf(p);
       return '<tr class="tm-roster-row">'
         +'<td class="tm-rank">'+String(index+1).padStart(2,'0')+'</td>'
         +'<td class="tm-school"><button type="button" class="tm-school-link" data-act="open-program" data-id="'+escapeHTML(p.id)+'" aria-label="Open '+escapeHTML(p.name)+' profile">'
@@ -1561,6 +1561,7 @@
           +'<td class="tm-stat-rank tm-kenpom-rank" data-label="KENPOM">'+(kp?'#'+kp:'—')+'</td>'
           +'<td class="tm-stat-rank tm-historical-rank" data-label="5Y RANK">'+fiveYear+'</td>':'')
         +'<td class="tm-points"><strong>'+(scoring?fmt(pointMap[String(p.id)]):'—')+'</strong>'+(metrics?'<small class="tm-points-label">SEASON PTS</small>':'')+'</td>'
+        +(metrics?'<td class="tm-projected" data-label="PROJECTED"><strong>'+fpLabel(projected?.points)+'</strong><small>'+(projected?'FORECAST #'+projected.rank:'PENDING')+'</small></td>':'')
         +'</tr>';
     }).join('');
   }
@@ -1653,6 +1654,7 @@
         +'<button type="button" class="btn small ghost" data-act="tab" data-id="trades">View all offers ↗</button></div></section>';
     })():'';
     const roster=teamProgramRows(owned,scoring,pointMap,{historyIndex:draftHistoricalIndex()});
+    const projectedBest=fpBest(owned,bestCount);
     const waiverRows=claims.slice(0,5).map(c=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(c.program_id))+'</strong><small>'+escapeHTML(c.status.toUpperCase())+(c.drop_program_id?' · Dropping '+escapeHTML(getName(c.drop_program_id)):'')+'</small></div>'
       +(c.status==='pending'?'<button class="btn small secondary" data-act="waiver-cancel" data-id="'+escapeHTML(c.id)+'">Cancel</button>':'')+'</div>').join('');
     const transactionRows=transactions.slice(0,4).map(t=>'<div class="team-claim"><div class="grow"><strong>'+escapeHTML(getName(t.program_id))+'</strong><small>'+escapeHTML(t.action==='claim'?'Added':'Dropped')+' · '+escapeHTML(t.season)+'</small></div></div>').join('');
@@ -1671,7 +1673,8 @@
       +'<h1>'+escapeHTML(me.display_name)+'</h1>'
       +'<p>@'+escapeHTML(me.username)+' <span aria-hidden="true">·</span> PERMANENT ROSTER</p></div></div>'
       +'<div class="tm-score" aria-label="Current season fantasy points"><span>SEASON POINTS</span>'
-      +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small></div>'
+      +'<strong>'+currentPoints+'</strong><small>'+(scoring?'Top '+bestCount+' programs contribute':'Awaiting live scoring')+'</small>'
+      +'<span class="tm-forecast-summary">Projected best '+bestCount+': <b>'+fpLabel(projectedBest)+'</b> pts</span></div>'
       +'</div></header>'
       +frontOffice+incomingPreview
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
@@ -1680,7 +1683,7 @@
       +(owned.length?owned.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
         'Your permanent program roster will appear here after the draft')+'</p></div>'+actions+'</div>'
       +(owned.length?'<div class="tm-roster-scroll"><table class="tm-table">'
-        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th><th class="tm-projected">PROJ. PTS</th></tr></thead>'
         +'<tbody>'+roster+'</tbody></table></div>'
         :'<div class="tm-empty">'+empty('Your roster is ready to build','Schools selected in the inaugural draft will appear here.')+
         (!draftFinished?'<button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="draft">Go to the draft room <span aria-hidden="true">↗</span></button>':'')+'</div>')
@@ -1717,6 +1720,7 @@
     const cost=rosterCost2026(p),reported=cost&&Number.isFinite(cost.estimate);
     const torvik=rating?.rank!=null&&Number.isFinite(Number(rating.rank))&&Number(rating.rank)>0?'#'+Number(rating.rank):'—';
     const fiveYear=history?.eligibleForSort?historicalPointLabel(history.avg):'—';
+    const projected=fpOf(p);
     const kenpom=kenpomRankOf(p);
     const costFigure=reported?rosterCostAmount2026(cost):'—';
     const status=assignment
@@ -1732,6 +1736,7 @@
       +'<span class="directory-school-identity"><strong>'+escapeHTML(p.name)+'</strong><small>'+escapeHTML(conf(p.conference_id))+'</small></span>'
       +'<span class="directory-school-arrow" aria-hidden="true">↗</span></button>'
       +'<span class="directory-data-cell directory-points" data-label="'+escapeHTML(season().slice(2))+' PTS" title="'+escapeHTML(season())+' fantasy points"><b>'+currentSeasonPoints(p)+'</b><small>SEASON POINTS</small></span>'
+      +'<span class="directory-data-cell directory-forecast" data-label="PROJ. PTS" title="Conference-adjusted full-season projection; updated with earned points"><b>'+fpLabel(projected?.points)+'</b><small>'+(projected?'FORECAST #'+projected.rank:'PENDING')+'</small></span>'
       +'<span class="directory-data-cell directory-torvik" data-label="TORVIK" title="Bart Torvik national rank"><b>'+escapeHTML(torvik)+'</b><small>NATIONAL</small></span>'
       +'<span class="directory-data-cell directory-kenpom" data-label="KENPOM" title="KenPom national rank · '+escapeHTML(kenpomData?.snapshot_date||'pending')+'"><b>'+(kenpom===null?'—':'#'+kenpom)+'</b><small>KENPOM</small></span>'
       +'<span class="directory-data-cell directory-history" data-label="5Y AVG" title="Verified five-season average fantasy points"><b>'+escapeHTML(fiveYear)+'</b>'
@@ -2010,6 +2015,7 @@
     };
     const sorters={
       points:(a,b)=>pointsOf(b)-pointsOf(a)||a.name.localeCompare(b.name),
+      projected:(a,b)=>(fpOf(b)?.points??-1)-(fpOf(a)?.points??-1)||a.name.localeCompare(b.name),
       history:(a,b)=>{
         const aAvg=fiveYearOf(a),bAvg=fiveYearOf(b);
         if(aAvg===null)return bAvg===null?a.name.localeCompare(b.name):1;
@@ -2041,7 +2047,7 @@
       +eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b))).map(id=>chip(id,conf(id))).join('');
     const filter=(key,title)=>'<button type="button" data-act="directory-ownership" data-id="'+key+'" class="'+(programOwnership===key?'active':'')+'" aria-pressed="'+(programOwnership===key)+'">'+title+'</button>';
     const letters=['all',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(key=>'<button type="button" data-act="directory-letter" data-id="'+key+'" class="'+(programLetter===key?'active':'')+'" aria-pressed="'+(programLetter===key)+'" aria-label="'+(key==='all'?'All letters':'Schools starting with '+key)+'">'+(key==='all'?'All':key)+'</button>').join('');
-    const sortButtons=[['points',escapeHTML(season())+' Points'],['history','5Y Average'],['torvik','Bart Torvik'],['kenpom','KenPom'],['cost','Roster Cost']]
+    const sortButtons=[['points',escapeHTML(season())+' Points'],['projected','Projected points'],['history','5Y Average'],['torvik','Bart Torvik'],['kenpom','KenPom'],['cost','Roster Cost']]
       .map(([id,title])=>'<button type="button" data-act="directory-sort" data-id="'+id+'" class="'+(programSort===id?'active':'')+'" aria-pressed="'+(programSort===id)+'">'+title+'</button>').join('');
     return '<div class="schools-hub">'+header+nav
       +'<section class="program-directory-shell" aria-label="League school directory">'
@@ -2063,7 +2069,7 @@
       +'<div class="directory-letter-strip" role="group" aria-label="First-letter filter">'+letters+'</div></div></div>'
       +(eligible.length?'<div class="directory-table">'
         +'<div class="directory-table-head" aria-hidden="true"><span>PROGRAM / CONFERENCE</span>'
-        +'<span>'+escapeHTML(season())+' PTS</span><span>BART TORVIK</span><span>KENPOM</span><span>5Y AVG PTS</span>'
+        +'<span>'+escapeHTML(season())+' PTS</span><span>PROJ. PTS</span><span>BART TORVIK</span><span>KENPOM</span><span>5Y AVG PTS</span>'
         +'<span>2026 ROSTER $</span><span>STATUS</span></div>'
         +'<div class="program-grid program-directory-grid">'+eligible.map(p=>programCard(p,isMyTurn(),historyIndex)).join('')+'</div>'
         +'<div id="no-program-results" class="directory-empty" hidden><strong>No matching programs</strong><span>Try a different school, conference, or roster filter.</span></div>'
@@ -3040,6 +3046,7 @@
     const labelStat=(name,value)=>'<div class="pp-mini-stat"><span>'+escapeHTML(name)+'</span><strong>'+
       escapeHTML(value)+'</strong></div>';
     const rankValue=report?.net?.net_rank?'#'+report.net.net_rank:'—';
+    const programForecast=fpOf(p);
     const kenpomRank=kenpomRankOf(p);
     const kenpomTag='<a class="pp-kenpom-link" href="https://kenpom.com/" target="_blank" rel="noopener noreferrer" title="KenPom national ranking, updated '+escapeHTML(kenpomData?.snapshot_date||'pending')+'">KENPOM <strong>'+(kenpomRank===null?'—':'#'+kenpomRank)+'</strong><span>↗</span></a>';
     const currentRecord=report?.record?.played?report.record.wins+'–'+report.record.losses:record(currentStats);
@@ -3077,6 +3084,7 @@
       '<div class="pp-section-head"><div><span class="pp-section-kicker">SEASON PERFORMANCE</span><h2>Fantasy scoring</h2>'+
       '<p>'+escapeHTML(season())+' · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
       '<div class="pp-score-inline"><strong>'+points(currentStats)+'</strong><small>POINTS</small></div></div>'+
+      '<div class="pp-projection-banner"><div><span>FULL-SEASON PROJECTION</span><strong>'+fpLabel(programForecast?.points)+' <small>PTS</small></strong></div><p>'+(programForecast?'Forecast #'+programForecast.rank+' · Conference-adjusted KenPom and earned points.':'Current KenPom data pending.')+'</p></div>'+
       '<div class="pp-fact-strip pp-fact-four">'+
       labelStat('Regular wins',currentStats?.games?currentStats.regular_wins:'—')+
       labelStat('Q1 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1??'—')+
@@ -3258,6 +3266,7 @@
     const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
     const points=managerScore&&roster.length?fmt(managerScore.points):scoring&&roster.length?'0':'—';
     const bestCount=Number(league.settings.scoring?.best_programs||8);
+    const projectedBest=fpBest(roster,bestCount);
     const records=(league.season_records||[]).filter(x=>String(x.manager_id)===String(u.id))
       .sort((a,b)=>String(b.season).localeCompare(String(a.season)));
     const archived=records.length?'<details class="tm-archive"><summary><span>Past seasons</span><small>'+records.length+' archived <span aria-hidden="true">⌄</span></small></summary>'
@@ -3280,7 +3289,8 @@
       +'<h1>'+escapeHTML(u.display_name)+'</h1>'
       +'<p>@'+escapeHTML(u.username||'manager')+' <span aria-hidden="true">·</span> '+(mine?'Your franchise':'League manager')+'</p></div></div>'
       +'<div class="tm-score"><span>SEASON POINTS</span><strong>'+points+'</strong><small>'
-      +(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small></div></div></header>'
+      +(scoring?'Best '+bestCount+' program scores count':'Awaiting live scoring')+'</small>'
+      +'<span class="tm-forecast-summary">Projected best '+bestCount+': <b>'+fpLabel(projectedBest)+'</b> pts</span></div></div></header>'
       +teamLeagueSwitcher(u.id)
       +'<section class="tm-roster" aria-labelledby="tm-opponent-roster-title">'
       +'<div class="tm-roster-heading"><div><span class="tm-overline">'+escapeHTML(season())+' ROSTER</span>'
@@ -3290,7 +3300,7 @@
       +'<div class="tm-actions"><button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="team">My Team <span aria-hidden="true">↗</span></button>'
       +'<button type="button" class="tm-action" data-act="tab" data-id="league">Standings <span aria-hidden="true">↗</span></button></div></div>'
       +(roster.length?'<div class="tm-roster-scroll"><table class="tm-table">'
-        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th></tr></thead>'
+        +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th><th class="tm-projected">PROJ. PTS</th></tr></thead>'
         +'<tbody>'+teamProgramRows(roster,scoring,pointMap,{historyIndex:draftHistoricalIndex()})+'</tbody></table></div>'
         :'<div class="tm-empty">'+empty('Awaiting the draft','Programs will appear here when this manager makes selections.')+'</div>')
       +'<footer class="tm-roster-footer"><span>Programs are permanently owned unless traded or dropped.</span>'

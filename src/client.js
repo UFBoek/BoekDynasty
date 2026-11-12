@@ -139,7 +139,7 @@
   function fpProgress(){
     const y=Number(season().slice(0,4)),now=Date.now(),start=Date.UTC(y,9,30),conference=Date.UTC(y+1,2,10),finish=Date.UTC(y+1,3,10);
     const clip=x=>Math.max(0,Math.min(1,x));
-    return now<conference?.72*clip((now-start)/(conference-start)):.72+.28*clip((now-conference)/(finish-conference));
+    return now<conference ? .72*clip((now-start)/(conference-start)) : .72+.28*clip((now-conference)/(finish-conference));
   }
   function fpIndex(){
     const ranks=kenpomData?.ranks;
@@ -2830,7 +2830,7 @@
         +'<div class="td-comparison"><section><header class="td-side-title"><h3>YOU SEND</h3><span id="trade-give-count">0 selected</span></header>'+selections(mine,me.id,'give')+'</section>'
         +'<section><header class="td-side-title"><h3>YOU RECEIVE</h3><span id="trade-receive-count">0 selected</span></header>'+selections(theirs,tradeTargetId,'receive')+'</section></div>'
         +'<div class="td-offer-review"><div class="td-review-head"><h3>Your proposal</h3><button type="button" class="td-text-button" data-act="trade-clear">Clear selections</button></div>'
-        +'<div class="td-package-grid">'+['give','receive'].map(side=>'<div><div class="td-package-title"><strong>'+(side==='give'?'You send':'You receive')+'</strong><span><b id="trade-points-'+side+'">'+(standingsData?.season===season()?'0':'—')+'</b> season pts</span></div><div id="trade-package-'+side+'" class="td-package"><span class="td-package-empty">No assets selected</span></div></div>').join('')+'</div>'
+        +'<div class="td-package-grid">'+['give','receive'].map(side=>'<div><div class="td-package-title"><strong>'+(side==='give'?'You send':'You receive')+'</strong><span><b id="trade-points-'+side+'">'+(standingsData?.season===season()?'0':'—')+'</b> earned · <b id="trade-projected-'+side+'">—</b> projected</span></div><div id="trade-package-'+side+'" class="td-package"><span class="td-package-empty">No assets selected</span></div></div>').join('')+'</div>'
         +'<p class="td-comparison-note">Projected points use conference-adjusted KenPom and earned season points. Package totals are not trade values or projected marginal best-ball gains; draft picks have no fantasy-point estimate.</p>'
         +'<div class="trade-submit"><div id="trade-selection-summary" role="status" aria-live="polite">Select at least one asset on each side</div><button class="btn" data-act="trade-propose" disabled>Send trade offer</button></div></div>'
         +'<p class="td-data-note">Bart Torvik and KenPom: current-season national ranks (KenPom is the quadrant baseline). 5Y avg: available prior seasons, minimum three. Roster costs are estimates, not verified payrolls; model-based valuations have greater uncertainty.</p>':
@@ -3852,7 +3852,7 @@
     if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
     if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
-    if(act==='directory-sort'){programSort=['points','history','torvik','kenpom','cost'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
+    if(act==='directory-sort'){programSort=['points','projected','history','torvik','kenpom','cost'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       globalSearchOpen=false;globalSearchQuery='';
       if(current!=='program-detail'){programBackPage=current;programBackScroll=window.scrollY;}
@@ -4478,7 +4478,7 @@
     if(e.target?.id==='waiver-program'){rosterAddPrefillId=e.target.value;return;}
     if(e.target?.id==='program-conference'){programConference=e.target.value;programLetter='all';programShown=36;render();filterPrograms();}
     if(e.target?.id==='program-ownership'){programOwnership=e.target.value;programShown=36;render();filterPrograms();}
-    if(e.target?.id==='directory-sort'){programSort=['points','history','torvik','kenpom','cost'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
+    if(e.target?.id==='directory-sort'){programSort=['points','projected','history','torvik','kenpom','cost'].includes(e.target.value)?e.target.value:'points';programShown=36;render();filterPrograms();}
     if(e.target?.id==='leader-conference'){leaderConference=e.target.value;leaderShown=40;render();return;}
     if(e.target?.id==='rating-conference'){ratingConference=e.target.value;ratingShown=40;render();return;}
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}

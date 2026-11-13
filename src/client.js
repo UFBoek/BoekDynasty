@@ -2883,7 +2883,7 @@
   }
 
   const scoringGroups=[
-    ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win'],['quad_1a_win','Quad 1A win']]],
+    ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['secondary_postseason_win','NIT / other postseason win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win'],['quad_1a_win','Quad 1A win']]],
     ['Conference championships',[['conference_regular_title','Power regular-season champion'],['conference_tournament_title','Power tournament champion'],['conference_regular_title_mid_major','Mid-major regular-season champion'],['conference_tournament_title_mid_major','Mid-major tournament champion']]],
     ['NCAA Tournament seeding',Array.from({length:16},(_,i)=>['ncaa_seed_'+(i+1),'Seed #'+(i+1)])],
     ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]],

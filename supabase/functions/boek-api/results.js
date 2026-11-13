@@ -545,6 +545,7 @@ export const DATA_PIPELINE=(()=>{
         games:completed.length,wins:wins.length,losses:completed.length-wins.length,
         regular_wins:t?.regular_wins||0,
         conference_tournament_wins:t?.conference_tournament_wins||0,
+        secondary_postseason_wins:t?.secondary_postseason_wins||0,
         q1:t?.q1||0,q1a:t?.q1a||0,q2:t?.q2||0,
         quad_by_type:t?.quad_by_type||null,
         ncaa_wins:t?.ncaa_wins||0,opening_round_wins:t?.opening_round_wins||0,
@@ -587,7 +588,7 @@ export const DATA_PIPELINE=(()=>{
         const season=y+'-'+String((y+1)%100).padStart(2,'0');
         for(let day=y+'-11-01';day<=(y+1)+'-04-15';day=shiftDay(day,1)){
           const key=season+'|'+day;
-          if(selected.has(key)||groupsForDay(day).every(g=>checked.has(key+'|'+g)))continue;
+          if(selected.has(key)||groupsForDay(day,true).every(g=>checked.has(key+'|'+g)))continue;
           const failure=attempts.get(key);
           if(failure&&Number(failure.tries)>=3&&now-Number(failure.last_try)<86400)continue;
           candidate={season,day};
@@ -600,7 +601,7 @@ export const DATA_PIPELINE=(()=>{
     }
     const imported=[];
     for(const target of targets){
-      try{imported.push({ok:true,season:target.season,...await importDay(env,target.season,target.day,{job:'historical'})});}
+      try{imported.push({ok:true,season:target.season,...await importDay(env,target.season,target.day,{job:'historical',includeSecondary:true})});}
       catch(e){imported.push({ok:false,season:target.season,date:target.day,error:err(e)});}
     }
     return {requested:targets.length,results:imported};
@@ -622,7 +623,7 @@ export const DATA_PIPELINE=(()=>{
         const season=y+'-'+String((y+1)%100).padStart(2,'0');
         for(let day=(y+1)+'-03-10';day<=(y+1)+'-04-10';day=shiftDay(day,1)){
           const key=season+'|'+day;
-          if(used.has(key)||groupsForDay(day).every(g=>checked.has(key+'|'+g)))continue;
+          if(used.has(key)||groupsForDay(day,true).every(g=>checked.has(key+'|'+g)))continue;
           const failure=errors.get(key);
           if(failure&&Number(failure.tries)>=3&&now-Number(failure.last_try)<86400)continue;
           selected={season,day};used.add(key);break;
@@ -633,7 +634,7 @@ export const DATA_PIPELINE=(()=>{
     }
     const rows=[];
     for(const t of targets){
-      try{rows.push({ok:true,season:t.season,...await importDay(env,t.season,t.day,{job:'postseason-priority'})});}
+      try{rows.push({ok:true,season:t.season,...await importDay(env,t.season,t.day,{job:'postseason-priority',includeSecondary:true})});}
       catch(e){rows.push({ok:false,season:t.season,date:t.day,error:err(e)});}
     }
     return {requested:targets.length,results:rows};
@@ -1133,11 +1134,12 @@ export const DATA_PIPELINE=(()=>{
         WHERE g.status='final' AND g.home_score IS NOT NULL AND g.away_score IS NOT NULL
           AND g.home_score<>g.away_score AND g.season BETWEEN '2021-22' AND ?
           AND ((g.season_type=2 AND (g.tournament_tag IS NULL OR g.tournament_tag='conference'))
-            OR (g.season_type=3 AND g.tournament_tag='ncaa'))
+            OR g.season_type=3)
       ), categorized AS (
         SELECT v.*,
           CASE WHEN v.season_type=2 AND v.tournament_tag='conference' THEN 'conference'
             WHEN v.season_type=2 THEN 'regular'
+            WHEN v.season_type=3 AND COALESCE(v.tournament_tag,'')<>'ncaa' THEN 'secondary'
             WHEN v.verified_opening_round=1 THEN 'first_four'
             WHEN v.verified_opening_round=0 THEN 'ncaa'
             WHEN v.first_day IS NOT NULL AND v.game_date::date<=v.first_day+1 THEN 'first_four'
@@ -1156,9 +1158,9 @@ export const DATA_PIPELINE=(()=>{
           AND loser_seed.program_id=c.opponent_id AND loser_seed.award_type='ncaa_seed'
       )
       SELECT season,program_id,kind,COUNT(*) wins,
-        COUNT(*) FILTER(WHERE net_rank>q1amax AND net_rank<=q1max) q1,
-        COUNT(*) FILTER(WHERE net_rank BETWEEN 1 AND q1amax) q1a,
-        COUNT(*) FILTER(WHERE net_rank>q1max AND net_rank<=q2max) q2,
+        COUNT(*) FILTER(WHERE kind<>'secondary' AND net_rank>q1amax AND net_rank<=q1max) q1,
+        COUNT(*) FILTER(WHERE kind<>'secondary' AND net_rank BETWEEN 1 AND q1amax) q1a,
+        COUNT(*) FILTER(WHERE kind<>'secondary' AND net_rank>q1max AND net_rank<=q2max) q2,
         COALESCE(SUM(CASE WHEN kind IN ('ncaa','first_four') AND winner_seed>loser_seed
           THEN winner_seed-loser_seed ELSE 0 END),0) upset_seed_lines,
         COUNT(*) FILTER(WHERE kind IN ('ncaa','first_four') AND winner_seed>loser_seed) upset_wins
@@ -1195,7 +1197,7 @@ export const DATA_PIPELINE=(()=>{
       const key=season+'|'+String(id);
       if(!table.has(key))table.set(key,{
         season,program_id:String(id),regular_wins:0,conference_tournament_wins:0,
-        ncaa_wins:0,opening_round_wins:0,upset_seed_lines:0,upset_wins:0,q1:0,q1a:0,q2:0,
+        secondary_postseason_wins:0,ncaa_wins:0,opening_round_wins:0,upset_seed_lines:0,upset_wins:0,q1:0,q1a:0,q2:0,
         quad_by_type:{regular:{q1:0,q1a:0,q2:0},conference:{q1:0,q1a:0,q2:0},
           ncaa:{q1:0,q1a:0,q2:0}},awards:{}
       });
@@ -1207,10 +1209,12 @@ export const DATA_PIPELINE=(()=>{
       else if(kind==='conference')t.conference_tournament_wins+=n;
       else if(kind==='first_four')t.opening_round_wins+=n;
       else if(kind==='ncaa')t.ncaa_wins+=n;
+      else if(kind==='secondary')t.secondary_postseason_wins+=n;
       if(isBonusEligible(row.program_id)){
         t.upset_seed_lines+=Number(row.upset_seed_lines)||0;
         t.upset_wins+=Number(row.upset_wins)||0;
       }
+      if(kind==='secondary')continue; // No quadrant or NCAA bonuses for secondary postseason wins.
       const q1=Number(row.q1)||0,q1a=Number(row.q1a)||0,q2=Number(row.q2)||0;
       t.q1+=q1;t.q1a+=q1a;t.q2+=q2;
       const group=kind==='regular'?'regular':kind==='conference'?'conference':'ncaa';
@@ -1240,6 +1244,7 @@ export const DATA_PIPELINE=(()=>{
       const components=[
         {key:'regular_win',label:'Regular-season victories',count:t.regular_wins,rate:wt('regular_win')},
         {key:'conference_tournament_win',label:'Conference tournament victories',count:t.conference_tournament_wins,rate:wt('conference_tournament_win')},
+        {key:'secondary_postseason_win',label:'NIT / secondary postseason victories',count:t.secondary_postseason_wins,rate:wt('secondary_postseason_win')},
         {key:'quad_2_win',label:'Quad 2 victory bonuses',count:t.q2,rate:wt('quad_2_win')},
         {key:'quad_1_win',label:'Quad 1 wins',count:t.q1,rate:wt('quad_1_win')},
         {key:'quad_1a_win',label:'Quad 1A wins',count:t.q1a,rate:wt('quad_1a_win')},

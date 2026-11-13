@@ -44,3 +44,26 @@ test('Pac-12 and mid-major schools earn both bonuses, Gonzaga earns neither',asy
   assert.equal(school('pac').at_large_bid,true);
   assert.equal(school('pac').upset_seed_lines,7);
 });
+
+test('power conference titles pay eight, mid-major titles pay six, and main-bracket wins pay four',async()=>{
+  const data=fixture();
+  for(const program_id of ['power','mid','2250']){
+    data.awards.push({season,program_id,award_type:'conference_regular_champion',value:1});
+    data.awards.push({season,program_id,award_type:'conference_tournament_champion',value:1});
+  }
+  const scored=await pipeline.historicalLeaders(mock(data),{
+    ncaa_seed_9:5,ncaa_tournament_win:4,ncaa_at_large_bid:5,ncaa_upset_per_seed:1,
+    conference_regular_title:8,conference_tournament_title:8,
+    conference_regular_title_mid_major:6,conference_tournament_title_mid_major:6
+  },'2026-27');
+  const school=id=>scored.rows.find(r=>r.program_id===id&&r.season===season);
+  assert.equal(school('power').points,25); // seed 5 + win 4 + two power titles at 8
+  assert.equal(school('mid').points,28); // seed 5 + win 4 + upset 7 + two mid titles at 6
+  assert.equal(school('2250').points,21); // Gonzaga: mid-major titles, no other mid-major bonuses
+  for(const [id,value] of [['power',8],['mid',6],['2250',6]]){
+    for(const title of ['conference_regular_title','conference_tournament_title']){
+      assert.equal(school(id).breakdown.find(p=>p.key===title).rate,value);
+    }
+    assert.equal(school(id).breakdown.find(p=>p.key==='ncaa_tournament_win').rate,4);
+  }
+});

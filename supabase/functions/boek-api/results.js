@@ -1218,6 +1218,14 @@ export const DATA_PIPELINE=(()=>{
     }
     for(const award of awards)find(award.season,award.program_id).awards[award.award_type]=Number(award.value)||0;
     const wt=k=>Number(scoring?.[k]||0),verifiedNet=new Set(nets.filter(x=>Number(x.stored_count)>=350).map(x=>x.season));
+    // Power championships retain their configured value. Every other
+    // conference uses the separate mid-major value, including Gonzaga.
+    // Old league settings without the mid-major fields retain legacy scoring.
+    const titleRate=(programId,key)=>{
+      const conference=programConference.get(String(programId));
+      const midMajor=conference!==undefined&&!POWER_CONFERENCES.has(conference);
+      return Number(scoring?.[midMajor?key+'_mid_major':key]??scoring?.[key]??0);
+    };
     const round=n=>Math.round((Number(n)||0)*100)/100;
     for(const t of table.values()){
       const a=t.awards,seed=Number(a.ncaa_seed)||0;
@@ -1235,8 +1243,8 @@ export const DATA_PIPELINE=(()=>{
         {key:'quad_2_win',label:'Quad 2 victory bonuses',count:t.q2,rate:wt('quad_2_win')},
         {key:'quad_1_win',label:'Quad 1 wins',count:t.q1,rate:wt('quad_1_win')},
         {key:'quad_1a_win',label:'Quad 1A wins',count:t.q1a,rate:wt('quad_1a_win')},
-        {key:'conference_regular_title',label:'Conference regular-season championship',count:titles,rate:wt('conference_regular_title')},
-        {key:'conference_tournament_title',label:'Conference tournament championship',count:tournaments,rate:wt('conference_tournament_title')},
+        {key:'conference_regular_title',label:'Conference regular-season championship',count:titles,rate:titleRate(t.program_id,'conference_regular_title')},
+        {key:'conference_tournament_title',label:'Conference tournament championship',count:tournaments,rate:titleRate(t.program_id,'conference_tournament_title')},
         {key:'ncaa_seed',label:seed?'NCAA Tournament seed #'+seed:'NCAA Tournament seeding',count:seed?1:0,rate:seedPoints},
         {key:'ncaa_at_large_bid',label:'Mid-major NCAA at-large selection',count:atLargeBid?1:0,rate:wt('ncaa_at_large_bid')},
         {key:'ncaa_tournament_win',label:'NCAA Tournament main-bracket wins',count:t.ncaa_wins,rate:wt('ncaa_tournament_win')},

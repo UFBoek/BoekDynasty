@@ -2884,7 +2884,7 @@
 
   const scoringGroups=[
     ['Regular season and tournament wins',[['regular_win','Regular-season win'],['conference_tournament_win','Conference tournament win'],['quad_2_win','Quad 2 win bonus'],['quad_1_win','Quad 1 win'],['quad_1a_win','Quad 1A win']]],
-    ['Conference championships',[['conference_regular_title','Regular-season champion'],['conference_tournament_title','Tournament champion']]],
+    ['Conference championships',[['conference_regular_title','Power regular-season champion'],['conference_tournament_title','Power tournament champion'],['conference_regular_title_mid_major','Mid-major regular-season champion'],['conference_tournament_title_mid_major','Mid-major tournament champion']]],
     ['NCAA Tournament seeding',Array.from({length:16},(_,i)=>['ncaa_seed_'+(i+1),'Seed #'+(i+1)])],
     ['NCAA Tournament wins',[['ncaa_tournament_win','Tournament win'],['ncaa_opening_round_win','Opening Round win'],['national_championship','National champion bonus']]],
     ['PAC-12 & MID-MAJOR BONUSES',[['ncaa_at_large_bid','NCAA at-large bid'],['ncaa_upset_per_seed','NCAA upset bonus per seed line']]]
@@ -2898,6 +2898,7 @@
       +(title==='NCAA Tournament seeding'?'<div class="seed-scale-grid">':'')
       +fields.map(([key,label])=>'<div class="score-row"><span>'+escapeHTML(label)+'</span><strong>+'+Number(r[key]||0).toLocaleString('en-US',{maximumFractionDigits:2})+'</strong></div>').join('')
       +(title==='NCAA Tournament seeding'?'</div><p class="hint section-gap">Each seed receives its own appearance bonus once per NCAA Tournament.</p>':'')
+      +(title==='Conference championships'?'<p class="hint section-gap">Power-conference titles: ACC, Big East, Big Ten, Big 12 and SEC. All other conferences, including Gonzaga’s, use the mid-major title values. Regular-season and tournament championships can both score.</p>':'')
       +(title==='PAC-12 & MID-MAJOR BONUSES'?'<p class="hint section-gap">Applies to every eligible non-Power school, including individually selected programs and Pac-12 schools, <strong>excluding Gonzaga</strong>. The at-large bonus is awarded for an NCAA bid without winning the conference tournament (+5 per selection), after automatic bids are verified. Upset points are earned only by beating a better-seeded NCAA opponent (+1 per seed line, no cap). Both stack with normal tournament and quadrant points.</p>':'')+'</section>').join('')+'</div>'
       +'<section class="panel section-gap scoring-panel">'+panelHeading('Rules and notes')
       +'<p>Every regular-season, conference tournament and NCAA Tournament win can earn Q1, Q1A or Q2 bonuses. Q1A is a separate +2.5 win category and does not stack with Q1. Before official NCAA NET is available, provisional quadrants use Bart Torvik and each school’s actual home, away or neutral venue. Once complete NCAA NET is imported, all quadrant bonuses are recalculated automatically.</p>'

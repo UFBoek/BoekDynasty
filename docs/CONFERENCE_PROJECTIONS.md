@@ -1,6 +1,6 @@
 # Conference-conditioned fantasy point projections (2026–27)
 
-**Status:** Live in the Cloudflare-hosted Boek Dynasty frontend as of November 11, 2026. Still an exploratory NET-proxy-trained model, not a verified historical-KenPom model.
+**Status:** Revised live in the Cloudflare-hosted Boek Dynasty frontend on November 15, 2026. Still an exploratory NET-proxy-trained baseline, not a verified historical-KenPom model or backtested early-season forecast.
 
 - Output: `data/kenpom-conference-projections-2026-27.csv` and `.json`, 365 Division I programs, captured November 11, 2026.
 - Current input: current-season KenPom national ranking in `private.cbb_kenpom_daily`.
@@ -30,26 +30,26 @@ The conference model reduces historical MAE by **20.7%**. The test leaves out ea
 
 `src/conference-projection.js` implements the coefficient formula for any new rank and conference strength and can project a full 365-program ratings snapshot after importing the saved JSON model. If you later train with true historical KenPom inputs, retain the source labels and rerun the season-based validation; do not silently relabel this baseline as KenPom-trained.
 
-## Live site implementation (November 11, 2026)
+## Live site implementation (revised November 15, 2026)
 
 The Cloudflare Worker `boek-dynasty` now serves `src/client.js` and `src/style.css` with this model embedded. The API and official fantasy scoring rules are unchanged. Forecasts are displayed separately from verified earned points on **My Team**, **other manager rosters**, **Schools → Program index**, **school profiles**, **Standings**, **Trade Desk** and **Add / Drop**. The Schools and Add / Drop lists can sort by projected points. **Draft Board intentionally has no projection display.**
 
 The model is recomputed from the latest already-imported current-season KenPom national rankings and the conference-average ranks of the other programs in each team's current conference. The frontend refreshes KenPom about every 30 minutes when a relevant page is active and earned scoring about every 60 seconds. Refresh frequency reflects the site polling intervals, *not* a promise of fresh KenPom upstream data each time.
 
-### Earned-points effect
+### In-season earned-points and conference-competition corrections (November 15)
 
-`baseline` is the model's full-season estimate. `progress` is approximately 0 at October 30, 72% at March 10, and 100% at April 10, using an intentionally simple season progress calendar. Each verified earning update changes the full-season forecast by a **small residual correction**, not by simply adding points already earned:
+The baseline still uses the previously fitted 2021–22 to 2025–26 final-NET proxy coefficients with current-season KenPom **ordinal ranks**. Its historical coefficients have not been retrained on the latest scoring revision.
 
-```js
-maxChange = 2.5 + 12 * progress
-correction = clamp(
-  (earnedPoints - baseline * progress) * (0.16 + 0.84 * progress * progress),
-  -maxChange, maxChange
-)
-forecast = max(earnedPoints, baseline + correction)
-if (progress >= 1 && earnedScoringAvailable) forecast = earnedPoints
-```
+The revised live forecast makes two deliberately moderate adjustments:
 
-Until the live standings feed is available, the model displays its pure KenPom baseline. The UI ranking is the national ordinal rank by projected points (with program ID as a stable tie breaker), **not** the source KenPom ranking. Official standings continue to be ranked by verified earned fantasy points; projected best-ball is secondary context. If KenPom is unavailable, the forecast shows a dash instead of fabricating an estimate. Once the model has historical early-season snapshots, replace the heuristic earned-points correction with a properly backtested in-season residual model.
+1. **Verified earned points / actual games played.** The old heuristic compared earned points to a wall-clock fraction of the entire fantasy season and muted November surprise to ~16%. The new calculation instead starts with expected regular-season scoring after `g` verified final games, taken as `0.65 * baseline * min(g,31) / 31`. It applies a bounded correction to the surprise `earned - expected`. The multiplier is `0.75 + 0.25*g/(g+14) + 0.35*(31-g)/(g+14)` for `g<=31`, with asymmetric caps to avoid runaway extrapolation. Games and earned points must come from the same verified standings response. When the season finishes, the forecast equals earned points exactly, blending out remaining upside during the final 15% of the season.
+
+2. **Concentration of conference title competitors.** The old baseline sees a conference's *average* opponent rank, which can overstate title odds when one or two rival teams are much stronger than the mean. For regular-season and conference-tournament titles separately, we calculate a rank-based softmax share against **every ranked team in that conference** (temperature 35 national-rank places for regular, 55 for tournament). We subtract the analogous hypothetical share if every opponent were ranked at the conference mean. The difference is multiplied by the league's current conference-title point values and shrunk 35% (0.65 retained), capped at ±4 forecast points. Mid-major title values apply to the American and to the Pac-12, matching official fantasy scoring. This is a corrective overlay, *not* an independently calibrated championship probability model.
+
+Memphis demonstration from the November 15 stored KenPom snapshot: Memphis #78, Wichita State #77, South Florida #98, baseline 28.5, earned 6.5 after four finals (3–1). The rank-distribution correction is about −0.6, the earned-points/form correction about +5.5, giving **33.3 projected points** (versus ~29.1 under the previous heuristic). Memphis is not a dominant conference favorite with Wichita State virtually tied.
+
+**Limitations:** The KenPom pipeline stores ranks only, **not AdjEM or point-spread strength**, so the ranking-distance softmax cannot capture true numeric KenPom efficiency gaps. The 65% regular-season split, softmax temperatures and earned-points shrinkage are heuristic and have **not** passed an early-season walk-forward backtest. For a statistically calibrated upgrade, collect permitted historical KenPom rating *snapshots* (not just final NET ranks), program/game-point snapshots and actual AdjEM; then run time-consistent backtests across November/December/January before choosing parameters. Also retrain the baseline after the November scoring-rule revisions. Do not present this live result as proven forecasting accuracy.
+
+The UI ranking is national order by current full-season forecast (with program ID as a stable tie breaker), not the input KenPom ranking. Official standings continue to use verified earned fantasy points; best-ball projections are secondary context. If KenPom is unavailable, the forecast displays a dash.
 
 To redeploy future frontend changes, rebuild the stateless Worker bundle using `node scripts/build-worker-proxy.mjs` and deploy to the existing Cloudflare Worker. Source commits alone do not update this deployed Worker.

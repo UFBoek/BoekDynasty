@@ -136,16 +136,60 @@
   const FP_MODEL={"ids":["1","10","11","12","13","14","16","18","19","2","20","21","22","23","24","25","26","27","29","3","30","4","44","45","46","49","5","6","62","7","8","9"],"w":[15.750057558665048,53.550236100418786,-10.110423965369465,-1.6430508591417454,69.08692657677273,-50.99626829423393,27.525289267671155,-13.630076136458438,-0.9463817567406861,22.33750878686885,0.673634676187461,-0.00800070351994801,1.2414581168382273,-0.3243991129948655,1.329548989937862,-0.3335248863069849,0.37122676523288106,-0.1751315193518511,0.32508872400598593,-1.2443937944541548,1.47368211247154,-1.8010792283935109,0.4333950313820625,-1.5888978337572424,1.2147523481182023,0.1684401687351912,-1.106836788360493,0.5530509478251132,-1.2481064756158953,0.7432005143250124,0.2739945323924923,-0.867427879234127,0.06370919825915457,1.7787485641866254,-0.003314456759755123,0.12635803135897766,0.7264157235608905,0.7748893840903566,-0.19337005060168722,-1.0242508265115045,-2.671464516904428,0.31860424386075203,0.40408389184987137,-0.4593893150411753,0.04635257295029806,0.2157522937733817,0.6189583999980265,-0.5092178658055696,0.6646995914373208,-0.2565374000390269,0.08542777747976306,0.13479018412951507,0.07976381760400322,-0.4606849154167944,0.08020037313506388,-0.32494482437473066,0.17740163125627276,-0.11118126552035065,0.45814363306445305,-0.4653678622535123,-1.6810740884173423,0.38301408375089874,-0.23971263244152036,0.9660790799684337,0.2740627862141227,0.6197954094203295,-0.06492116191463759,-0.34978053089364414,0.08702954723505536,0.4959164432739037,-0.43607209869985253,0.10849133848315276,-0.18521572019888818,-0.1416622296059625]};
   let fpMemo=null;
   const fpLabel=n=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+  // Forecast 2: separate the national-rank baseline, conference title competition,
+  // and verified in-season performance. KenPom stores ranks, not adjusted EM; these
+  // are rank-gap title probabilities, NOT claimed efficiency-margin probabilities.
+  const fpClamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+  const fpTitlePowerConferences=new Set(['2','4','7','8','23']);
   function fpProgress(){
     const y=Number(season().slice(0,4)),now=Date.now(),start=Date.UTC(y,9,30),conference=Date.UTC(y+1,2,10),finish=Date.UTC(y+1,3,10);
-    const clip=x=>Math.max(0,Math.min(1,x));
+    const clip=x=>fpClamp(x,0,1);
     return now<conference ? .72*clip((now-start)/(conference-start)) : .72+.28*clip((now-conference)/(finish-conference));
+  }
+  function fpTitleRate(conferenceId,key){
+    const rules=league?.settings?.scoring||{},isPower=fpTitlePowerConferences.has(String(conferenceId));
+    const amount=rules[isPower?key:key+'_mid_major']??rules[key]??0;
+    const value=Number(amount);
+    return Number.isFinite(value)?Math.max(0,value):0;
+  }
+  function fpConferenceAdjustment(rank,otherMean,conferenceRanks,conferenceId){
+    // The rank+conference-mean baseline sees the average opponent, but a
+    // concentrated set of strong challengers lowers the chance of winning titles.
+    // Compare full-league softmax title share against a same-mean peer proxy.
+    if(conferenceRanks.length<3)return 0;
+    const shares=temperature=>{
+      const actual=1/conferenceRanks.reduce((sum,opponent)=>sum+Math.exp((rank-opponent)/temperature),0);
+      const meanProxy=1/(1+(conferenceRanks.length-1)*Math.exp((rank-otherMean)/temperature));
+      return actual-meanProxy;
+    };
+    const reg=fpTitleRate(conferenceId,'conference_regular_title');
+    const tournament=fpTitleRate(conferenceId,'conference_tournament_title');
+    // Shrink the overlay: the historical baseline already embeds some title value.
+    return fpClamp(.65*(reg*shares(35)+tournament*shares(55)),-4,4);
+  }
+  function fpFormAdjustment(baseline,earned,finalGames){
+    // A full-season fantasy baseline includes awards/NCAA points that cannot be
+    // earned in November. Only ~65% is allocated to expected regular-season pace.
+    // Record count, not wall-clock time, governs the sample-size correction.
+    const games=fpClamp(finalGames,0,31);
+    if(!games)return 0;
+    const expected=baseline*.65*games/31;
+    const surprise=earned-expected;
+    const evidence=games/(games+14);
+    const carryover=.35*Math.max(0,31-games)/(games+14);
+    const correction=surprise*(.75+.25*evidence+carryover);
+    const capUp=6+baseline*.45*Math.min(1,games/10);
+    const capDown=4+baseline*.35*Math.min(1,games/10);
+    return fpClamp(correction,-capDown,capUp);
   }
   function fpIndex(){
     const ranks=kenpomData?.ranks;
     if(!ranks||!programs().length)return null;
     const scoring=standingsData?.season===season()?standingsData:null,progress=fpProgress();
-    const key=[season(),kenpomData.snapshot_date,kenpomFetchedAt,scoring?.as_of||0,Math.floor(progress*1000)].join('|');
+    const key=[season(),kenpomData.snapshot_date,kenpomFetchedAt,scoring?.as_of||0,
+      league?.settings?.scoring?.conference_regular_title,league?.settings?.scoring?.conference_tournament_title,
+      league?.settings?.scoring?.conference_regular_title_mid_major,league?.settings?.scoring?.conference_tournament_title_mid_major,
+      Math.floor(progress*1000)].join('|');
     if(fpMemo?.key===key)return fpMemo.values;
     const rank=id=>{const x=Number(ranks[String(id)]);return Number.isInteger(x)&&x>=1&&x<=400?x:null;};
     const groups=new Map();
@@ -158,11 +202,20 @@
       const v=[1,x,x*x,x*x*x,Math.exp(-r/30),y,y*y,x*y,Math.tanh((cr-r)/80),(x-y)*(x-y),
         ...ids.map(k=>id===k?1:0),...ids.map(k=>id===k?x-.5:0)];
       if(v.length!==w.length)continue;
-      const baseline=Math.max(0,Math.min(145,v.reduce((a,b,i)=>a+b*w[i],0)));
-      const raw=Number(scoring?.program_points?.[String(p.id)]||0),earned=Number.isFinite(raw)?Math.max(0,raw):0;
-      const maxChange=2.5+12*progress,correction=Math.max(-maxChange,Math.min(maxChange,(earned-baseline*progress)*(.16+.84*progress*progress)));
-      const projected=scoring&&progress>=1?earned:scoring?Math.max(earned,baseline+correction):baseline;
-      values.set(String(p.id),{points:Math.round(projected*10)/10,baseline:Math.round(baseline*10)/10,earned,rank:0});
+      const baseline=fpClamp(v.reduce((a,b,i)=>a+b*w[i],0),0,145);
+      const conferenceAdjustment=fpConferenceAdjustment(r,cr,group,id);
+      const raw=Number(scoring?.program_points?.[String(p.id)]??0),earned=Number.isFinite(raw)?Math.max(0,raw):0;
+      const record=scoring?.program_records?.[String(p.id)];
+      const finalGames=record?Math.max(0,Number(record.wins||0)+Number(record.losses||0)):0;
+      const formAdjustment=scoring?fpFormAdjustment(baseline,earned,finalGames):0;
+      const estimated=fpClamp(baseline+conferenceAdjustment+formAdjustment,0,145);
+      // Wind down unearned upside as the actual season ends; at finish only
+      // verified earned points remain, with no arbitrary forecasts lingering.
+      const remainingFactor=fpClamp((1-progress)/.15,0,1);
+      const projected=scoring?earned+Math.max(0,estimated-earned)*remainingFactor:estimated;
+      values.set(String(p.id),{points:Math.round(projected*10)/10,baseline:Math.round(baseline*10)/10,
+        conferenceAdjustment:Math.round(conferenceAdjustment*10)/10,
+        formAdjustment:Math.round(formAdjustment*10)/10,earned,rank:0});
     }
     [...values.entries()].sort((a,b)=>b[1].points-a[1].points||a[0].localeCompare(b[0])).forEach(([,v],i)=>v.rank=i+1);
     fpMemo={key,values};return values;

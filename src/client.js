@@ -134,6 +134,7 @@
 
   // Conference-adjusted season points trained on historic NET-proxy, with live KenPom input.
   const FP_MODEL={"ids":["1","10","11","12","13","14","16","18","19","2","20","21","22","23","24","25","26","27","29","3","30","4","44","45","46","49","5","6","62","7","8","9"],"w":[15.750057558665048,53.550236100418786,-10.110423965369465,-1.6430508591417454,69.08692657677273,-50.99626829423393,27.525289267671155,-13.630076136458438,-0.9463817567406861,22.33750878686885,0.673634676187461,-0.00800070351994801,1.2414581168382273,-0.3243991129948655,1.329548989937862,-0.3335248863069849,0.37122676523288106,-0.1751315193518511,0.32508872400598593,-1.2443937944541548,1.47368211247154,-1.8010792283935109,0.4333950313820625,-1.5888978337572424,1.2147523481182023,0.1684401687351912,-1.106836788360493,0.5530509478251132,-1.2481064756158953,0.7432005143250124,0.2739945323924923,-0.867427879234127,0.06370919825915457,1.7787485641866254,-0.003314456759755123,0.12635803135897766,0.7264157235608905,0.7748893840903566,-0.19337005060168722,-1.0242508265115045,-2.671464516904428,0.31860424386075203,0.40408389184987137,-0.4593893150411753,0.04635257295029806,0.2157522937733817,0.6189583999980265,-0.5092178658055696,0.6646995914373208,-0.2565374000390269,0.08542777747976306,0.13479018412951507,0.07976381760400322,-0.4606849154167944,0.08020037313506388,-0.32494482437473066,0.17740163125627276,-0.11118126552035065,0.45814363306445305,-0.4653678622535123,-1.6810740884173423,0.38301408375089874,-0.23971263244152036,0.9660790799684337,0.2740627862141227,0.6197954094203295,-0.06492116191463759,-0.34978053089364414,0.08702954723505536,0.4959164432739037,-0.43607209869985253,0.10849133848315276,-0.18521572019888818,-0.1416622296059625]};
+  let forecastInputs=null;
   let fpMemo=null;
   const fpLabel=n=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
   // Forecast 2: separate the national-rank baseline, conference title competition,
@@ -182,42 +183,297 @@
     const capDown=4+baseline*.35*Math.min(1,games/10);
     return fpClamp(correction,-capDown,capUp);
   }
+  // Schedule-driven, componentized expected fantasy points. Earned fantasy
+  // points are locked in, while only not-yet-final games are simulated.
+  // All probabilities are explicit rank-based estimates, not calibrated KenPom
+  // adjusted-efficiency ratings or sportsbook probabilities.
+  function fpScheduleModel(programList,ranks,feed,standings,rules){
+    const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+    const val=(name,fallback=0)=>{const n=Number(rules?.[name]);return Number.isFinite(n)?n:fallback;};
+    const power=new Set(['2','4','7','8','23']);
+    const state=new Map(),groups=new Map(),gamesByConference=new Map();
+    const getRank=id=>{const r=Number(ranks[String(id)]);return Number.isInteger(r)&&r>=1&&r<=400?r:null;};
+    const titlePoints=(team,key)=>val(power.has(team.conf)?key:key+'_mid_major',val(key));
+    const eligibleUpsets=team=>!power.has(team.conf)&&team.id!=='2250';
+    const winChance=(a,b,venue=0)=>{
+      const ra=Number.isFinite(a)?a:355,rb=Number.isFinite(b)?b:355;
+      const margin=.98*Math.log((rb+12)/(ra+12))+.33*venue;
+      return clip(1/(1+Math.exp(-margin)),.02,.98);
+    };
+    const quadBonus=(opponentRank,venue)=>{
+      if(!Number.isInteger(opponentRank))return 0;
+      const limits=venue>0?[30,75]:venue<0?[75,135]:[50,100];
+      const q1aLimit=venue>0?15:venue<0?40:25;
+      return opponentRank<=q1aLimit?val('quad_1a_win'):opponentRank<=limits[0]?
+        val('quad_1_win'):opponentRank<=limits[1]?val('quad_2_win'):0;
+    };
+    for(const p of programList){
+      const rank=getRank(p.id);if(rank===null)continue;
+      const id=String(p.id),conf=String(p.conference_id),raw=Number(standings?.program_points?.[id]??0);
+      const t={id,conf,rank,earned:Number.isFinite(raw)?Math.max(0,raw):0,
+        remaining:0,expectedWins:0,winPts:0,quadPts:0,confWins:0,confExpectedWins:0,
+        regularProb:0,tourneyProb:0,tourneyWins:0,tourneyQuads:0,components:null};
+      state.set(id,t);
+      if(!groups.has(conf))groups.set(conf,[]);
+      groups.get(conf).push(t);
+    }
+    const awards=new Map();
+    for(const a of feed.awards||[]){
+      if(!Array.isArray(a)||a.length<3)continue;
+      const id=String(a[0]),entry=awards.get(id)||{};
+      entry[String(a[1])]=Number(a[2])||0;awards.set(id,entry);
+    }
+    const granted=(t,kind)=>Number(awards.get(t.id)?.[kind]||0)>0;
+    const knownTitles=new Map();
+    for(const [conf,teams] of groups){
+      knownTitles.set(conf,{
+        regular:teams.some(t=>granted(t,'conference_regular_champion')),
+        tournament:teams.some(t=>granted(t,'conference_tournament_champion'))
+      });
+    }
+    const eliminatedByConference=new Map();
+    for(const rawGame of feed.games||[]){
+      if(!Array.isArray(rawGame)||rawGame.length<7)continue;
+      const home=state.get(String(rawGame[0])),away=state.get(String(rawGame[1]));
+      if(!home&&!away)continue;
+      const phase=Number(rawGame[2]),homeScore=rawGame[3],awayScore=rawGame[4];
+      const neutral=Number(rawGame[5])===1;
+      const tournament=Number(rawGame[7])===1;
+      const within=!!home&&!!away&&home.conf===away.conf;
+      if(tournament){
+        if(within&&phase===1&&Number.isFinite(Number(homeScore))&&Number.isFinite(Number(awayScore))&&Number(homeScore)!==Number(awayScore)){
+          const loser=Number(homeScore)>Number(awayScore)?away:home;
+          const set=eliminatedByConference.get(home.conf)||new Set();
+          set.add(loser.id);eliminatedByConference.set(home.conf,set);
+        }
+        continue;
+      }
+      if(within){
+        const list=gamesByConference.get(home.conf)||[];
+        list.push({home,away,phase,homeScore,awayScore,p:winChance(home.rank,away.rank,neutral?0:1)});
+        gamesByConference.set(home.conf,list);
+      }
+      if(phase===1)continue; // already included in verified earned points
+      if(home){
+        const p=winChance(home.rank,away?.rank??getRank(rawGame[1]),neutral?0:1);
+        home.remaining++;home.expectedWins+=p;
+        home.winPts+=p*val('regular_win',1);
+        home.quadPts+=p*quadBonus(away?.rank??getRank(rawGame[1]),neutral?0:1);
+        if(within)home.confExpectedWins+=p;
+      }
+      if(away){
+        const p=winChance(away.rank,home?.rank??getRank(rawGame[0]),neutral?0:-1);
+        away.remaining++;away.expectedWins+=p;
+        away.winPts+=p*val('regular_win',1);
+        away.quadPts+=p*quadBonus(home?.rank??getRank(rawGame[0]),neutral?0:-1);
+        if(within)away.confExpectedWins+=p;
+      }
+    }
+    // Reconstruct completed conference records from actual winners. ESPN has
+    // conference_game=0 on numerous future American Athletic matchups.
+    for(const games of gamesByConference.values()){
+      for(const g of games){
+        if(g.phase!==1||g.homeScore===null||g.awayScore===null)continue;
+        if(Number(g.homeScore)>Number(g.awayScore))g.home.confWins++;
+        else if(Number(g.awayScore)>Number(g.homeScore))g.away.confWins++;
+      }
+    }
+    const bracket16=[1,16,8,9,5,12,4,13,6,11,3,14,7,10,2,15];
+    const slotsFor=n=>n<=2?[1,2]:n<=4?[1,4,2,3]:
+      n<=8?[1,8,4,5,2,7,3,6]:n<=16?bracket16:
+      bracket16.flatMap(seed=>[seed,33-seed]);
+    const simulations=520;
+    for(const [conf,teams] of groups){
+      if(teams.length<2)continue;
+      const conferenceGames=gamesByConference.get(conf)||[];
+      const upcoming=conferenceGames.filter(g=>g.phase!==1);
+      const awarded=knownTitles.get(conf);
+      const eliminated=eliminatedByConference.get(conf)||new Set();
+      let random=0x62f7aa91^(Number(conf)*2654435761);
+      const roll=()=>{
+        random^=random<<13;random^=random>>>17;random^=random<<5;
+        return (random>>>0)/4294967296;
+      };
+      const regCounts=new Map(teams.map(t=>[t.id,0])),tournamentCounts=new Map(teams.map(t=>[t.id,0]));
+      const tournamentWins=new Map(teams.map(t=>[t.id,0])),tournamentQuads=new Map(teams.map(t=>[t.id,0]));
+      for(let i=0;i<simulations;i++){
+        const wins=new Map(teams.map(t=>[t.id,t.confWins]));
+        for(const g of upcoming){
+          const winner=roll()<g.p?g.home:g.away;
+          wins.set(winner.id,(wins.get(winner.id)||0)+1);
+        }
+        if(!awarded.regular){
+          const maximum=Math.max(...wins.values());
+          for(const t of teams)if(wins.get(t.id)===maximum)
+            regCounts.set(t.id,regCounts.get(t.id)+1);
+        }
+        if(awarded.tournament)continue;
+        // Order the postseason by projected conference finish in each season
+        // realization. Actual tournament formats/byes are approximated.
+        const seeded=teams.filter(t=>!eliminated.has(t.id))
+          .sort((a,b)=>(wins.get(b.id)||0)-(wins.get(a.id)||0)||
+            a.rank-b.rank||a.id.localeCompare(b.id));
+        if(!seeded.length)continue;
+        if(seeded.length===1){
+          tournamentCounts.set(seeded[0].id,tournamentCounts.get(seeded[0].id)+1);
+          continue;
+        }
+        let bracket=slotsFor(seeded.length).map(seed=>seeded[seed-1]||null);
+        while(bracket.length>1){
+          const next=[];
+          for(let j=0;j<bracket.length;j+=2){
+            const left=bracket[j],right=bracket[j+1];
+            if(!left||!right){next.push(left||right||null);continue;}
+            const winner=roll()<winChance(left.rank,right.rank)?left:right;
+            const loser=winner===left?right:left;
+            tournamentWins.set(winner.id,tournamentWins.get(winner.id)+1);
+            tournamentQuads.set(winner.id,tournamentQuads.get(winner.id)+quadBonus(loser.rank,0));
+            next.push(winner);
+          }
+          bracket=next;
+        }
+        if(bracket[0])tournamentCounts.set(bracket[0].id,tournamentCounts.get(bracket[0].id)+1);
+      }
+      for(const t of teams){
+        t.regularProb=awarded.regular?(granted(t,'conference_regular_champion')?1:0):
+          regCounts.get(t.id)/simulations;
+        t.tourneyProb=awarded.tournament?(granted(t,'conference_tournament_champion')?1:0):
+          tournamentCounts.get(t.id)/simulations;
+        t.tourneyWins=tournamentWins.get(t.id)/simulations;
+        t.tourneyQuads=tournamentQuads.get(t.id)/simulations;
+      }
+    }
+    // NCAA bracket approximations are conditional on qualification and
+    // seed. They include win, opponent quad and eligible upset bonuses.
+    const bracketSeedRank=[0,3,11,19,27,35,44,54,63,72,84,99,130,170,215,265,315];
+    const nextOpponentSeeds=seed=>{
+      const i=bracket16.indexOf(seed);
+      const minBetween=(a,b)=>Math.min(...bracket16.slice(a,b));
+      const pairStart=i-i%2,quadStart=i-i%4,halfStart=i-i%8;
+      const otherPair=quadStart+(i%4<2?2:0);
+      const otherQuad=halfStart+(i%8<4?4:0);
+      const otherHalf=i<8?8:0;
+      return [bracket16[i^1],minBetween(otherPair,otherPair+2),
+        minBetween(otherQuad,otherQuad+4),minBetween(otherHalf,otherHalf+8),
+        seed===1?2:1,1];
+    };
+    const ncaaPath=(team,seed)=>{
+      let survive=1,wins=0,quads=0,upsets=0;
+      for(const opponentSeed of nextOpponentSeeds(seed)){
+        const opponent=bracketSeedRank[opponentSeed];
+        const p=winChance(team.rank,opponent);
+        const win=survive*p;
+        wins+=win;quads+=win*quadBonus(opponent,0);
+        if(eligibleUpsets(team)&&seed>opponentSeed)
+          upsets+=win*(seed-opponentSeed)*val('ncaa_upset_per_seed');
+        survive=win;
+      }
+      return {wins,quads,upsets,championship:survive};
+    };
+    const result=new Map();
+    const round=n=>Math.round(n*10)/10;
+    for(const t of state.values()){
+      const titles=knownTitles.get(t.conf)||{regular:false,tournament:false};
+      const wonTitle=granted(t,'conference_tournament_champion');
+      const seedAward=Number(awards.get(t.id)?.ncaa_seed||0);
+      const regularTitle=titles.regular?0:t.regularProb*titlePoints(t,'conference_regular_title');
+      const tournamentTitle=titles.tournament?0:t.tourneyProb*titlePoints(t,'conference_tournament_title');
+      // At-large odds are a conservative, continuously ranked proxy. There is
+      // no claim of a fitted selection committee or published bracket forecast.
+      const projectedRecord=Number(standings?.program_records?.[t.id]?.wins||0)+t.expectedWins;
+      const bubble=clip(1/(1+Math.exp((t.rank-74)/17-.045*(projectedRecord-20))),.001,.999);
+      const pAuto=wonTitle?1:t.tourneyProb;
+      const pAtLarge=seedAward>0?0:(1-pAuto)*bubble;
+      const pBid=seedAward>0?1:pAuto+pAtLarge;
+      const atLargeSeed=clip(Math.round((t.rank+3)/8),1,16);
+      const autoSeed=clip(Math.round(t.rank/9.5+1.5),1,16);
+      const seedPoint=s=>val('ncaa_seed_'+s,5);
+      const ncaaFor=(prob,seed)=>{const chance=ncaaPath(t,seed);return {
+        seed:prob*seedPoint(seed),wins:prob*chance.wins*val('ncaa_tournament_win',4),
+        quads:prob*chance.quads,upsets:prob*chance.upsets,
+        championship:prob*chance.championship*val('national_championship'),
+        firstFour:prob*(seed===11||seed===16?.1:0)*val('ncaa_opening_round_win')
+      };};
+      const futureNCAA=seedAward>0?ncaaFor(1,clip(Math.round(seedAward),1,16)):null;
+      const autoPart=seedAward?null:ncaaFor(pAuto,autoSeed);
+      const atLargePart=seedAward?null:ncaaFor(pAtLarge,atLargeSeed);
+      const sumNCAA=key=>(futureNCAA?.[key]||0)+(autoPart?.[key]||0)+(atLargePart?.[key]||0);
+      const atLargeBonus=seedAward?0:eligibleUpsets(t)?pAtLarge*val('ncaa_at_large_bid'):0;
+      // Small NIT/other postseason win component for non-NCAA teams.
+      const nitOpportunity=(1-pBid)*(1/(1+Math.exp((t.rank-155)/24)))*
+        (1/(1+Math.exp((52-t.rank)/16)));
+      const nitWins=nitOpportunity*(.45+.55/(1+Math.exp((t.rank-110)/35)));
+      const components={
+        earned:t.earned,regularWins:t.winPts,regularQuads:t.quadPts,
+        conferenceRegularTitle:regularTitle,
+        conferenceTournamentWins:t.tourneyWins*val('conference_tournament_win',2),
+        conferenceTournamentQuads:t.tourneyQuads,
+        conferenceTournamentTitle:tournamentTitle,
+        ncaaSeeding:seedAward?0:sumNCAA('seed'),ncaaAtLarge:atLargeBonus,
+        ncaaWins:sumNCAA('wins'),ncaaQuads:sumNCAA('quads'),ncaaUpsets:sumNCAA('upsets'),
+        ncaaFirstFour:sumNCAA('firstFour'),nationalChampionship:sumNCAA('championship'),
+        secondaryPostseason:nitWins*val('secondary_postseason_win',1)
+      };
+      // Never count points already earned a second time. A completed award is
+      // in earned, so its incremental projected component is exactly zero.
+      if(titles.tournament)components.conferenceTournamentWins=0;
+      const estimate=Object.values(components).reduce((total,value)=>total+value,0);
+      result.set(t.id,{
+        points:round(clip(Math.max(t.earned,estimate),0,170)),earned:round(t.earned),
+        components:Object.fromEntries(Object.entries(components).map(([key,value])=>[key,round(value)])),
+        probability:{regularTitle:round(t.regularProb*100),tournamentTitle:round(t.tourneyProb*100),
+          ncaaBid:round(pBid*100)},
+        remaining:t.remaining,expectedRemainingWins:round(t.expectedWins),
+        projectedRegularWins:round(projectedRecord),model:'schedule-v3',rank:0
+      });
+    }
+    return result;
+  }
+
   function fpIndex(){
     const ranks=kenpomData?.ranks;
     if(!ranks||!programs().length)return null;
     const scoring=standingsData?.season===season()?standingsData:null,progress=fpProgress();
+    const feed=forecastInputs?.season===season()&&Array.isArray(forecastInputs.games)&&forecastInputs.games.length>=1000?
+      forecastInputs:null;
     const key=[season(),kenpomData.snapshot_date,kenpomFetchedAt,scoring?.as_of||0,
-      league?.settings?.scoring?.conference_regular_title,league?.settings?.scoring?.conference_tournament_title,
-      league?.settings?.scoring?.conference_regular_title_mid_major,league?.settings?.scoring?.conference_tournament_title_mid_major,
-      Math.floor(progress*1000)].join('|');
+      feed?.as_of||0,feed?.fetchedAt||0,
+      JSON.stringify(league?.settings?.scoring||{}),Math.floor(progress*1000)].join('|');
     if(fpMemo?.key===key)return fpMemo.values;
-    const rank=id=>{const x=Number(ranks[String(id)]);return Number.isInteger(x)&&x>=1&&x<=400?x:null;};
-    const groups=new Map();
-    for(const p of programs()){const k=rank(p.id);if(k==null)continue;const id=String(p.conference_id),g=groups.get(id)||[];g.push(k);groups.set(id,g);}
-    const values=new Map(),w=FP_MODEL.w,ids=FP_MODEL.ids;
-    for(const p of programs()){
-      const r=rank(p.id),id=String(p.conference_id),group=groups.get(id);
-      if(r==null||!group||group.length<2)continue;
-      const cr=(group.reduce((a,b)=>a+b,0)-r)/(group.length-1),x=(365-r)/364,y=(365-cr)/364;
-      const v=[1,x,x*x,x*x*x,Math.exp(-r/30),y,y*y,x*y,Math.tanh((cr-r)/80),(x-y)*(x-y),
-        ...ids.map(k=>id===k?1:0),...ids.map(k=>id===k?x-.5:0)];
-      if(v.length!==w.length)continue;
-      const baseline=fpClamp(v.reduce((a,b,i)=>a+b*w[i],0),0,145);
-      const conferenceAdjustment=fpConferenceAdjustment(r,cr,group,id);
-      const raw=Number(scoring?.program_points?.[String(p.id)]??0),earned=Number.isFinite(raw)?Math.max(0,raw):0;
-      const record=scoring?.program_records?.[String(p.id)];
-      const finalGames=record?Math.max(0,Number(record.wins||0)+Number(record.losses||0)):0;
-      const formAdjustment=scoring?fpFormAdjustment(baseline,earned,finalGames):0;
-      const estimated=fpClamp(baseline+conferenceAdjustment+formAdjustment,0,145);
-      // Wind down unearned upside as the actual season ends; at finish only
-      // verified earned points remain, with no arbitrary forecasts lingering.
-      const remainingFactor=fpClamp((1-progress)/.15,0,1);
-      const projected=scoring?earned+Math.max(0,estimated-earned)*remainingFactor:estimated;
-      values.set(String(p.id),{points:Math.round(projected*10)/10,baseline:Math.round(baseline*10)/10,
-        conferenceAdjustment:Math.round(conferenceAdjustment*10)/10,
-        formAdjustment:Math.round(formAdjustment*10)/10,earned,rank:0});
+    let values;
+    if(feed&&scoring){
+      values=fpScheduleModel(programs(),ranks,feed,scoring,league?.settings?.scoring||{});
+    }else{
+      // Temporary fallback while the authenticated schedule feed is loading,
+      // not a substitute for the component forecast.
+      const rank=id=>{const x=Number(ranks[String(id)]);return Number.isInteger(x)&&x>=1&&x<=400?x:null;};
+      const groups=new Map();
+      for(const p of programs()){const k=rank(p.id);if(k==null)continue;const id=String(p.conference_id),g=groups.get(id)||[];g.push(k);groups.set(id,g);}
+      values=new Map();
+      const w=FP_MODEL.w,ids=FP_MODEL.ids;
+      for(const p of programs()){
+        const r=rank(p.id),id=String(p.conference_id),group=groups.get(id);
+        if(r==null||!group||group.length<2)continue;
+        const cr=(group.reduce((a,b)=>a+b,0)-r)/(group.length-1),x=(365-r)/364,y=(365-cr)/364;
+        const v=[1,x,x*x,x*x*x,Math.exp(-r/30),y,y*y,x*y,Math.tanh((cr-r)/80),(x-y)*(x-y),
+          ...ids.map(k=>id===k?1:0),...ids.map(k=>id===k?x-.5:0)];
+        if(v.length!==w.length)continue;
+        const baseline=fpClamp(v.reduce((a,b,i)=>a+b*w[i],0),0,145);
+        const conferenceAdjustment=fpConferenceAdjustment(r,cr,group,id);
+        const raw=Number(scoring?.program_points?.[String(p.id)]??0),earned=Number.isFinite(raw)?Math.max(0,raw):0;
+        const record=scoring?.program_records?.[String(p.id)];
+        const finalGames=record?Math.max(0,Number(record.wins||0)+Number(record.losses||0)):0;
+        const formAdjustment=scoring?fpFormAdjustment(baseline,earned,finalGames):0;
+        const estimated=fpClamp(baseline+conferenceAdjustment+formAdjustment,0,145);
+        const remainingFactor=fpClamp((1-progress)/.15,0,1);
+        const projected=scoring?earned+Math.max(0,estimated-earned)*remainingFactor:estimated;
+        values.set(String(p.id),{points:Math.round(projected*10)/10,baseline:Math.round(baseline*10)/10,
+          conferenceAdjustment:Math.round(conferenceAdjustment*10)/10,
+          formAdjustment:Math.round(formAdjustment*10)/10,earned,model:'rank-fallback',rank:0});
+      }
     }
-    [...values.entries()].sort((a,b)=>b[1].points-a[1].points||a[0].localeCompare(b[0])).forEach(([,v],i)=>v.rank=i+1);
+    [...values.entries()].sort((a,b)=>b[1].points-a[1].points||a[0].localeCompare(b[0]))
+      .forEach(([,v],i)=>v.rank=i+1);
     fpMemo={key,values};return values;
   }
   const fpOf=p=>p?fpIndex()?.get(String(p.id))||null:null;
@@ -1833,11 +2089,15 @@
     standingsLoading=true;standingsFetchedAt=Date.now();
     if(force&&current==='league')render();
     try{
-      const [scores,records]=await Promise.all([
+      const inputsFresh=forecastInputs?.season===season()&&Date.now()-(forecastInputs.fetchedAt||0)<10*60*1000;
+      const [scores,records,inputs]=await Promise.all([
         api('data/standings'),
         // A missing records feed must not hide valid fantasy standings.
-        api('data/records').catch(()=>null)
+        api('data/records').catch(()=>null),
+        inputsFresh?Promise.resolve(forecastInputs):api('data/forecast-inputs').catch(()=>null)
       ]);
+      if(inputs?.season===season()&&Array.isArray(inputs.games)&&inputs.games.length>=1000)
+        forecastInputs=inputsFresh?inputs:{...inputs,fetchedAt:Date.now()};
       scores.program_records=Array.isArray(records?.records)&&records.season===scores.season?
         Object.fromEntries(records.records.map(r=>[String(r.program_id),{
           wins:Number(r.wins)||0,losses:Number(r.losses)||0

@@ -162,11 +162,13 @@ Deno.serve(async (request)=>{
     try{
       const value=await db.prepare("SELECT value FROM settings WHERE key='current_season'").first();
       const season=String(value?.value||DATA_PIPELINE.seasonOf(DATA_PIPELINE.localDay()));
-      const result=await db.prepare(
-        "SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date FROM cbb_games WHERE season=? AND season_type=2 AND tournament_tag IS NULL AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000"
-      ).bind(season).all();
+      const [result,awardResult]=await Promise.all([
+        db.prepare("SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date FROM cbb_games WHERE season=? AND season_type=2 AND tournament_tag IS NULL AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000").bind(season).all(),
+        db.prepare("SELECT program_id,award_type,value FROM cbb_awards WHERE season=? AND award_type IN ('conference_regular_champion','conference_tournament_champion','ncaa_seed','national_champion')").bind(season).all()
+      ]);
       const rows=result.results||[];
       return Response.json({season,as_of:epochNow(),count:rows.length,
+        awards:(awardResult.results||[]).map(a=>[String(a.program_id),String(a.award_type),Number(a.value)||0]),
         games:rows.map(g=>[String(g.home_id||''),String(g.away_id||''),
           g.status==='final'?1:g.status==='live'?2:0,
           g.home_score===null?null:Number(g.home_score),g.away_score===null?null:Number(g.away_score),

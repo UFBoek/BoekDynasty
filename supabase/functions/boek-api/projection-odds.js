@@ -74,7 +74,7 @@ export async function syncPublicProjectionOdds(db,season,nowDay){
     'INSERT INTO private.cbb_tourneycast_daily'+
     '(season,snapshot_date,program_id,bid_prob,auto_prob,regular_prob,source) '+
     'SELECT ?, ?::date,x.program_id,x.bid_prob,x.auto_prob,x.regular_prob,? '+
-    'FROM jsonb_to_recordset((?::jsonb #>> '{}')::jsonb) AS x'+
+    'FROM jsonb_to_recordset((?::jsonb #>> ARRAY[]::text[])::jsonb) AS x'+
     '(program_id text,bid_prob numeric,auto_prob numeric,regular_prob numeric) '+
     'ON CONFLICT(season,snapshot_date,program_id) DO UPDATE SET '+
     'bid_prob=EXCLUDED.bid_prob,auto_prob=EXCLUDED.auto_prob,'+

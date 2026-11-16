@@ -9,10 +9,23 @@
 - Design: a regularized nonlinear national-rank response combined with continuous conference-strength interactions, relative dominance over conference peers, plus **separate shrunken intercept and rank slope for each current conference**. A strong Atlantic 10 team, strong Big South team and equivalent Big 12 team need not receive identical points.
 - Fit rows: 1,792 program/seasons (programs with 6+ validated conference opponents). Outputs are clipped to 0–145 points and rounded to 0.1.
 
+## Automated public NCAA probability snapshots (November 15, 2026)
+
+**Status: LIVE and scheduled.** Bart Torvik's public season ratings CSV works, but its interactive TourneyCast and conference PHP pages return a browser-verification response. The site now uses the independent [Probable Stats 2026–27 men's projections](https://probablestats.com/ncaam/projections) as the automatic source of **published percentages**, not Torvik. The public page is accessible from our Supabase backend and its robots.txt permits crawling.
+
+- **Data:** 365 schools from one public HTML response per day. Every row has an ESPN ID in the published image filename. We ingest exact `data-v` decimal fields: `bid_prob` (total NCAA bid probability), `auto_prob` (conference tournament champion / automatic bid), and `regular_prob` (conference regular-season title). Zero guessed names or rounded percentages.
+- **Source details:** Probable Stats publishes a 20,000-season simulation; its current projection uses a **68-team NCAA bracket**, which differs from the league's contemplated 76-team format. This distinction remains visible in the projection breakdown. No representation that the figures are Torvik.
+- **First verified run:** November 15, 2026, 365/365 team odds ingested successfully; 31 teams have a published NCAA bid probability >=70%. George Washington: 30.72% NCAA bid, 11.43% conference tournament, 13.65% regular-season title; Memphis: 63.25%, 43.81%, 60.14% respectively.
+- **Schedule:** `pg_cron` job `boek_public_ncaa_odds_daily` (job ID 18) at **23:45 UTC daily** invokes `boek-api/cron` with authenticated `kind=projection-odds`. The Edge function fetches the one public source page, validates its published date and >=350 valid ESPN-ID rows, and atomically upserts sourced probabilities into `private.cbb_tourneycast_daily`. The existing approved job-token system handles authentication. The initial cron run was manually invoked and returned `ok:true`.
+- **Roll-forward:** frontend `data/forecast-inputs` now supplies current source, snapshot date, bid/auto/regular probabilities. Snapshots stale for more than seven days fail back to the old rank-based assumptions; a failed daily job never overwrites valid prior data with fabricated odds.
+- **Scoring:** published title probabilities replace simulated title win chances, but the component engine still simulates individual future games, conference tournament games, quadrant scoring and NCAA progression. A **sourced bid probability >=70%** is treated as a **100% NCAA bid** for fantasy projected points, and the original source percentage is also displayed. This does not award verified points or change official qualifiers.
+- **Optional Torvik import:** Commissioner → Data still supports manually pasting verified TourneyCast percentages, stored with an accurately named source. No automated challenge bypass is attempted.
+- **Validation:** exact 365-team parse, source-date constraints, team crosswalk completeness, percent integrity, client source checksum, live API output and cron scheduling. Regression checks: `tests/projection-odds.test.mjs` and `tests/tourneycast-threshold.test.mjs`.
+
 ## TourneyCast probability inputs (November 15, 2026)
 
 - External source: [Bart Torvik TourneyCast](https://barttorvik.com/tourneycast.php), including overall `bid_prob` and conference tournament `auto_prob` documented by the [toRvik conference stats reference](https://www.torvik.dev/reference/bart_conf_stats.php).
-- **Access limitation:** Automated access to TourneyCast currently returns HTTP 403. We do **not** circumvent restrictions or invent sourced probabilities. No automatic daily import is active until an authorized accessible export/feed is supplied. Commissioners can paste verified `Team,Bid Prob,Auto Prob` CSV/TSV into Commissioner → Data → TourneyCast. ESPN program IDs are accepted if school names cannot be matched unambiguously.
+- **Access limitation:** Automated access to TourneyCast currently returns HTTP 403. We do **not** circumvent restrictions or invent sourced probabilities. No automated **Torvik** import is active; the separate Probable Stats daily import is active. Commissioners can paste verified `Team,Bid Prob,Auto Prob` CSV/TSV into Commissioner → Data → TourneyCast. ESPN program IDs are accepted if school names cannot be matched unambiguously.
 - Data is kept in `private.cbb_tourneycast_daily` with snapshot date, program ID, original 0–1 NCAA overall bid probability, original 0–1 conference tournament auto-bid probability (optional), source label and import time. Only commissioners may import, and values cannot exceed 100% or have auto probability above overall bid probability.
 - `data/forecast-inputs` exposes the latest imported snapshot to authenticated league managers. Snapshots older than seven days or missing schools are not silently imputed: the previous rank-based model remains clearly identified as a fallback.
 - For **published bid probabilities at or above 70%**, the fantasy forecast assumes an NCAA bid with **100% probability**. The source's actual published percentage is retained in the detail UI. A published 69.9% remains 69.9%, and 70.0% becomes 100% for the forecast. The cutoff does **not** create official tournament berths or verified points.
@@ -25,6 +38,8 @@
 The active live model is in `src/client.js` (`fpScheduleModel`), fed by a new authenticated `data/forecast-inputs` route in `supabase/functions/boek-api/index.ts`. Standings still use **verified earned points**, unchanged. Every projected full-season number in My Team, other manager rosters, Schools, Program profiles, Standings, Trade Desk and Add/Drop uses the same snapshot and model. Draft Board remains excluded.
 
 The forecast starts with the **exact earned fantasy points** from standings and adds only the expected value of **future** scoring:
+
+When an active verified public projection snapshot exists, its published NCAA bid, conference regular title and conference tournament title probabilities supersede the internal assumptions; title probabilities do not come from the league simulator in that case.
 
 | Future point category | How it is estimated |
 |---|---|

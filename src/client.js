@@ -521,6 +521,55 @@
   }
   const fpOf=p=>p?fpIndex()?.get(String(p.id))||null:null;
   const fpPoints=p=>fpLabel(fpOf(p)?.points);
+
+  function parseTourneycastPaste(rawText){
+    const text=String(rawText||'').trim();
+    if(!text||text.length>80000)throw Error('Paste 2–365 rows (maximum 80 KB).');
+    const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    if(lines.length<3||lines.length>367)throw Error('Paste a header followed by at least two rows.');
+    const delim=lines[0].includes('\t')?'\t':',';
+    const parse=line=>{const a=[];let v='',quoted=false;
+      for(let i=0;i<line.length;i++){const c=line[i];
+        if(c==='"'){if(quoted&&line[i+1]==='"'){v+='"';i++;}else quoted=!quoted;}
+        else if(c===delim&&!quoted){a.push(v.trim());v='';}else v+=c;
+      }a.push(v.trim());return a;
+    };
+    const norm=x=>String(x||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+      .replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+    const header=parse(lines[0]).map(norm);
+    const teamCol=header.findIndex(x=>/^(team|school|program|program id|espn id|name)$/.test(x));
+    const bidCol=header.findIndex(x=>/^(bid prob|bid probability|bid|ncaa bid|ncaa bid prob|make tournament|tournament probability|tourneycast bid|bid pct|bid percent)$/.test(x));
+    const autoCol=header.findIndex(x=>/^(auto prob|auto probability|auto|automatic bid|automatic bid probability|auto bid|auto bid prob|auto pct|auto percent)$/.test(x));
+    if(teamCol<0||bidCol<0)throw Error('CSV must have Team and Bid Prob columns (Auto Prob optional).');
+    const aliases={'uconn':'Connecticut','pitt':'Pittsburgh','st louis':'Saint Louis',
+      'st bonaventure':'St. Bonaventure','gw':'George Washington','unc':'North Carolina',
+      'usf':'South Florida'};
+    const schools=programs();
+    const getId=word=>{const val=norm(aliases[norm(word)]||word);
+      const matches=schools.filter(p=>String(p.id)===word||norm(p.name)===val||
+        norm(p.abbr)===val||norm(p.name).startsWith(val+' '));
+      if(matches.length!==1)throw Error('Ambiguous or missing team "'+word+'"; use its ESPN program ID.');
+      return String(matches[0].id);
+    };
+    const value=(x,label,nullable=false)=>{const v=String(x??'').trim();
+      if(nullable&&!v)return null;
+      const n=Number(v.replace(/%/g,'').replace(/,/g,''));
+      if(!v||!Number.isFinite(n)||n<0||n>100)throw Error('Invalid '+label+' probability: '+v);
+      return v.endsWith('%')||n>1?n/100:n;
+    };
+    const rows=[],seen=new Set();
+    for(const line of lines.slice(1)){
+      const c=parse(line);
+      if(!c[teamCol])continue;
+      const id=getId(c[teamCol]);
+      if(seen.has(id))throw Error('Duplicate program: '+c[teamCol]);
+      const bid=value(c[bidCol],'bid'),auto=autoCol===-1?null:value(c[autoCol],'automatic',true);
+      if(auto!==null&&auto>bid+1e-7)throw Error('Automatic bid greater than overall bid: '+c[teamCol]);
+      seen.add(id);rows.push({program_id:id,bid_prob:bid,auto_prob:auto});
+    }
+    if(rows.length<2||rows.length>365)throw Error('Provide 2–365 valid rows.');
+    return rows;
+  }
   function fpBreakdownHTML(forecast){
     if(!forecast||forecast.model!=='schedule-v3'||!forecast.components)return '';
     const c=forecast.components;
@@ -550,9 +599,15 @@
       (Number.isFinite(Number(value))?fpLabel(value)+'%':'—')+'</strong></span>').join('');
     return '<details class="pp-forecast-details"><summary>View projected scoring breakdown <span>▾</span></summary>'+
       '<div class="pp-forecast-probabilities">'+summary+'</div>'+
+      (chance.source==='Bart Torvik TourneyCast'?
+        '<p class="pp-forecast-explainer"><strong>Source: Bart Torvik TourneyCast · '+escapeHTML(chance.snapshotDate||'')+
+        '</strong> · Published NCAA bid: '+fpLabel(chance.ncaaPublished)+'%'+
+        (chance.guaranteedByRule?' · 70% league rule: 100% assumed NCAA participation.':'')+
+        '. Published automatic-bid odds override our tournament title model when available.</p>':
+        '<p class="pp-forecast-explainer">NCAA probabilities are <strong>uncalibrated estimates</strong> until dated TourneyCast data is imported.</p>')+
       '<p class="pp-forecast-explainer">Expected remaining regular-season wins: <b>'+
       fpLabel(forecast.expectedRemainingWins)+'</b> across <b>'+forecast.remaining+
-      '</b> scheduled games. Probabilities use KenPom ranks and simulated conference standings and brackets, not official odds.</p>'+
+      '</b> scheduled games. Win and regular-season title probabilities use KenPom rank-based simulations.</p>'+
       '<div class="pp-forecast-component-grid">'+rows.map(([name,value])=>
         '<div class="pp-forecast-component"><span>'+escapeHTML(name)+'</span><strong>'+fmt(value)+'</strong></div>'
       ).join('')+'</div>'+

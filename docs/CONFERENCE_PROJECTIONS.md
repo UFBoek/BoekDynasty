@@ -9,6 +9,17 @@
 - Design: a regularized nonlinear national-rank response combined with continuous conference-strength interactions, relative dominance over conference peers, plus **separate shrunken intercept and rank slope for each current conference**. A strong Atlantic 10 team, strong Big South team and equivalent Big 12 team need not receive identical points.
 - Fit rows: 1,792 program/seasons (programs with 6+ validated conference opponents). Outputs are clipped to 0–145 points and rounded to 0.1.
 
+## TourneyCast probability inputs (November 15, 2026)
+
+- External source: [Bart Torvik TourneyCast](https://barttorvik.com/tourneycast.php), including overall `bid_prob` and conference tournament `auto_prob` documented by the [toRvik conference stats reference](https://www.torvik.dev/reference/bart_conf_stats.php).
+- **Access limitation:** Automated access to TourneyCast currently returns HTTP 403. We do **not** circumvent restrictions or invent sourced probabilities. No automatic daily import is active until an authorized accessible export/feed is supplied. Commissioners can paste verified `Team,Bid Prob,Auto Prob` CSV/TSV into Commissioner → Data → TourneyCast. ESPN program IDs are accepted if school names cannot be matched unambiguously.
+- Data is kept in `private.cbb_tourneycast_daily` with snapshot date, program ID, original 0–1 NCAA overall bid probability, original 0–1 conference tournament auto-bid probability (optional), source label and import time. Only commissioners may import, and values cannot exceed 100% or have auto probability above overall bid probability.
+- `data/forecast-inputs` exposes the latest imported snapshot to authenticated league managers. Snapshots older than seven days or missing schools are not silently imputed: the previous rank-based model remains clearly identified as a fallback.
+- For **published bid probabilities at or above 70%**, the fantasy forecast assumes an NCAA bid with **100% probability**. The source's actual published percentage is retained in the detail UI. A published 69.9% remains 69.9%, and 70.0% becomes 100% for the forecast. The cutoff does **not** create official tournament berths or verified points.
+- TourneyCast's published automatic-bid probability, if provided, replaces the rank-only conference tournament title chance and informs automatic vs at-large expected scoring. It does **not** overwrite the model's simulated conference tournament games or regular-season title probability.
+- Confirmed NCAA seeds and conference title awards always take priority. Actual NCAA eliminations stop future projected tournament wins.
+- Regression checks are in `tests/tourneycast-threshold.test.mjs`.
+
 ## Live scoring-component forecasts (v3; November 15, 2026)
 
 The active live model is in `src/client.js` (`fpScheduleModel`), fed by a new authenticated `data/forecast-inputs` route in `supabase/functions/boek-api/index.ts`. Standings still use **verified earned points**, unchanged. Every projected full-season number in My Team, other manager rosters, Schools, Program profiles, Standings, Trade Desk and Add/Drop uses the same snapshot and model. Draft Board remains excluded.

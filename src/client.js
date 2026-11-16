@@ -383,13 +383,14 @@
       }
       return {wins,quads,upsets,championship:survive};
     };
-    // Published TourneyCast bids supersede our uncalibrated at-large formula.
-    // No source data means no fabricated TourneyCast probability: retain the
-    // old model as an explicitly labelled fallback.
+    // Prefer properly sourced daily external NCAA / conference probabilities,
+    // including the public 365-school Probable Stats simulation. Preserve
+    // manual TourneyCast imports, and label the actual source in every card.
     const published=feed.tourneycast?.active===true&&Array.isArray(feed.tourneycast.rows)?
       new Map(feed.tourneycast.rows.filter(a=>Array.isArray(a)&&a.length>=2&&
         Number.isFinite(Number(a[1]))&&Number(a[1])>=0&&Number(a[1])<=1)
-        .map(a=>[String(a[0]),{bid:Number(a[1]),auto:a[2]===null?null:Number(a[2])}])):new Map();
+        .map(a=>[String(a[0]),{bid:Number(a[1]),auto:a[2]==null?null:Number(a[2]),
+          regular:a.length>3&&a[3]!=null&&Number.isFinite(Number(a[3]))?Number(a[3]):null}])):new Map();
     const publishedDate=String(feed.tourneycast?.snapshot_date||'');
     const result=new Map();
     const bracketSelected=[...awards.values()].filter(award=>Number(award.ncaa_seed||0)>0).length>=65;
@@ -398,8 +399,10 @@
       const titles=knownTitles.get(t.conf)||{regular:false,tournament:false};
       const wonTitle=granted(t,'conference_tournament_champion');
       const seedAward=Number(awards.get(t.id)?.ncaa_seed||0);
-      const regularTitle=titles.regular?0:t.regularProb*titlePoints(t,'conference_regular_title');
       const external=published.get(t.id)||null;
+      const selectedRegular=external&&Number.isFinite(external.regular)?
+        clip(external.regular,0,1):t.regularProb;
+      const regularTitle=titles.regular?0:selectedRegular*titlePoints(t,'conference_regular_title');
       const publishedAuto=external&&Number.isFinite(external.auto)?clip(external.auto,0,1):null;
       const modeledAuto=t.tourneyProb;
       const selectedAuto=wonTitle?1:publishedAuto===null?
@@ -410,7 +413,7 @@
       const projectedRecord=Number(standings?.program_records?.[t.id]?.wins||0)+t.expectedWins;
       const bubble=clip(1/(1+Math.exp((t.rank-74)/17-.045*(projectedRecord-20))),.001,.999);
       const pAuto=selectedAuto;
-      // League override: a published TourneyCast bid probability >=70% is
+      // League override: any verified external bid probability >=70% is
       // treated as a guaranteed NCAA bid (100% for projected appearance points).
       // Only verified source rows trigger this rule, never the fallback formula.
       const guaranteed=!!external&&external.bid>=.70;
@@ -456,9 +459,9 @@
       result.set(t.id,{
         points:round(clip(Math.max(t.earned,estimate),0,170)),earned:round(t.earned),
         components:Object.fromEntries(Object.entries(components).map(([key,value])=>[key,round(value)])),
-        probability:{regularTitle:round(t.regularProb*100),tournamentTitle:round(selectedAuto*100),
+        probability:{regularTitle:round(selectedRegular*100),tournamentTitle:round(selectedAuto*100),
           ncaaBid:round(pBid*100),ncaaPublished:external?round(external.bid*100):null,
-          source:external?'Bart Torvik TourneyCast':'Model estimate',
+          source:external?String(feed.tourneycast?.source||'Published NCAA projections'):'Model estimate',
           snapshotDate:external?publishedDate:null,guaranteedByRule:guaranteed},
         remaining:t.remaining,expectedRemainingWins:round(t.expectedWins),
         projectedRegularWins:round(projectedRecord),model:'schedule-v3',rank:0
@@ -599,12 +602,15 @@
       (Number.isFinite(Number(value))?fpLabel(value)+'%':'—')+'</strong></span>').join('');
     return '<details class="pp-forecast-details"><summary>View projected scoring breakdown <span>▾</span></summary>'+
       '<div class="pp-forecast-probabilities">'+summary+'</div>'+
-      (chance.source==='Bart Torvik TourneyCast'?
-        '<p class="pp-forecast-explainer"><strong>Source: Bart Torvik TourneyCast · '+escapeHTML(chance.snapshotDate||'')+
-        '</strong> · Published NCAA bid: '+fpLabel(chance.ncaaPublished)+'%'+
+      (chance.source&&chance.source!=='Model estimate'?
+        '<p class="pp-forecast-explainer"><strong>Source: '+escapeHTML(chance.source)+' · '+
+        escapeHTML(chance.snapshotDate||'')+'</strong> · Published NCAA bid: '+
+        fpLabel(chance.ncaaPublished)+'%'+
         (chance.guaranteedByRule?' · 70% league rule: 100% assumed NCAA participation.':'')+
-        '. Published automatic-bid odds override our tournament title model when available.</p>':
-        '<p class="pp-forecast-explainer">NCAA probabilities are <strong>uncalibrated estimates</strong> until dated TourneyCast data is imported.</p>')+
+        '. Published conference title probabilities are used when available.'+
+        (chance.source==='Probable Stats'?' This source models a 68-team NCAA bracket; league seeding rules may differ.':'')+
+        '</p>':
+        '<p class="pp-forecast-explainer">NCAA probabilities are <strong>uncalibrated estimates</strong> until a fresh external source is available.</p>')+
       '<p class="pp-forecast-explainer">Expected remaining regular-season wins: <b>'+
       fpLabel(forecast.expectedRemainingWins)+'</b> across <b>'+forecast.remaining+
       '</b> scheduled games. Win and regular-season title probabilities use KenPom rank-based simulations.</p>'+
@@ -4098,12 +4104,13 @@
         +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='kenpom'?'KenPom · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='torvik'?'Bart Torvik fallback · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET fallback active':'Awaiting rankings')
         +'<p class="hint">Current-season Q1/Q1A/Q2 bonuses use the most recent complete daily KenPom ranking snapshot. If KenPom is unavailable, NCAA NET or Bart Torvik is used as fallback. Completed historical seasons stay on verified NCAA NET. Scores update automatically.</p>'
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-torvik-refresh" '+(resultsStatus?.quadrant_source==='net'?'disabled':'')+'>Sync preliminary Bart Torvik</button></div></section>'
-        +'<section class="panel setting-panel section-gap">'+panelHeading('TourneyCast · NCAA bid probabilities',
+        +'<section class="panel setting-panel section-gap">'+panelHeading('Daily NCAA probabilities',
           forecastInputs?.tourneycast?.snapshot_date?
-            'Snapshot '+escapeHTML(forecastInputs.tourneycast.snapshot_date)+' · '+forecastInputs.tourneycast.count+' teams':
-            'No current TourneyCast snapshot')
-        +'<p class="hint">A published TourneyCast NCAA bid chance at or above 70% is treated as 100% for fantasy appearance projections. We retain and display the actual TourneyCast percentage.</p>'
-        +'<p class="hint section-gap">Automated TourneyCast retrieval is blocked by the source. Copy verified values from <a href="https://barttorvik.com/tourneycast.php" target="_blank" rel="noopener noreferrer">TourneyCast</a> or a Bart Torvik conference table using <code>Team,Bid Prob,Auto Prob</code> (auto probability is optional). Missing teams keep separate model estimates.</p>'
+            escapeHTML(forecastInputs.tourneycast.source||'Sourced simulations')+' · '+
+              escapeHTML(forecastInputs.tourneycast.snapshot_date)+' · '+forecastInputs.tourneycast.count+' teams':
+            'No current external probability snapshot')
+        +'<p class="hint">Daily automatic source: <a href="https://probablestats.com/ncaam/projections" target="_blank" rel="noopener noreferrer">Probable Stats</a> (20,000 simulations, 365 teams). Published NCAA bid, regular-season conference title and conference tournament probabilities are imported once daily. This is an independent source, not Bart Torvik. Its model currently uses a 68-team NCAA tournament.</p>'
+        +'<p class="hint section-gap">Your league rule: every school at or above 70% published NCAA bid probability is treated as 100% for projected appearance points. The published original percentage is always shown. As an optional manual alternative, paste verified <a href="https://barttorvik.com/tourneycast.php" target="_blank" rel="noopener noreferrer">Bart Torvik TourneyCast</a> probabilities below using <code>Team,Bid Prob,Auto Prob</code>. Missing schools retain clearly labeled estimates.</p>'
         +'<div class="form-row section-gap"><label for="data-tourneycast-date">Published snapshot date</label><input class="field" type="date" id="data-tourneycast-date" value="'+escapeHTML(today)+'"/></div>'
         +'<div class="form-row"><label for="data-tourneycast-csv">TourneyCast CSV or TSV</label><textarea class="field data-csv" id="data-tourneycast-csv" rows="5" placeholder="Team,Bid Prob,Auto Prob&#10;George Washington,27%,11%&#10;Saint Louis,75%,25%"></textarea></div>'
         +'<div class="button-row"><button class="btn secondary" data-act="data-tourneycast-import">Import sourced probabilities</button></div>'

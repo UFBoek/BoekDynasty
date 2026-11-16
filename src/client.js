@@ -231,15 +231,28 @@
         tournament:teams.some(t=>granted(t,'conference_tournament_champion'))
       });
     }
-    const eliminatedByConference=new Map();
+    const eliminatedByConference=new Map(),eliminatedNCAA=new Set(),eliminatedSecondary=new Set();
+    const ncaaWinsPlayed=new Map();
     for(const rawGame of feed.games||[]){
       if(!Array.isArray(rawGame)||rawGame.length<7)continue;
       const home=state.get(String(rawGame[0])),away=state.get(String(rawGame[1]));
       if(!home&&!away)continue;
       const phase=Number(rawGame[2]),homeScore=rawGame[3],awayScore=rawGame[4];
       const neutral=Number(rawGame[5])===1;
-      const tournament=Number(rawGame[7])===1;
+      const postseason=Number(rawGame[7]);
+      const tournament=postseason===1;
       const within=!!home&&!!away&&home.conf===away.conf;
+      if(postseason===2||postseason===3){
+        if(phase===1&&home&&away&&homeScore!==null&&awayScore!==null&&Number(homeScore)!==Number(awayScore)){
+          const winner=Number(homeScore)>Number(awayScore)?home:away;
+          const loser=winner===home?away:home;
+          if(postseason===2){
+            eliminatedNCAA.add(loser.id);
+            ncaaWinsPlayed.set(winner.id,(ncaaWinsPlayed.get(winner.id)||0)+1);
+          }else eliminatedSecondary.add(loser.id);
+        }
+        continue;
+      }
       if(tournament){
         if(within&&phase===1&&Number.isFinite(Number(homeScore))&&Number.isFinite(Number(awayScore))&&Number(homeScore)!==Number(awayScore)){
           const loser=Number(homeScore)>Number(awayScore)?away:home;
@@ -359,7 +372,7 @@
     };
     const ncaaPath=(team,seed)=>{
       let survive=1,wins=0,quads=0,upsets=0;
-      for(const opponentSeed of nextOpponentSeeds(seed)){
+      for(const opponentSeed of nextOpponentSeeds(seed).slice(Math.min(6,ncaaWinsPlayed.get(team.id)||0))){
         const opponent=bracketSeedRank[opponentSeed];
         const p=winChance(team.rank,opponent);
         const win=survive*p;
@@ -371,6 +384,7 @@
       return {wins,quads,upsets,championship:survive};
     };
     const result=new Map();
+    const bracketSelected=[...awards.values()].filter(award=>Number(award.ncaa_seed||0)>0).length>=65;
     const round=n=>Math.round(n*10)/10;
     for(const t of state.values()){
       const titles=knownTitles.get(t.conf)||{regular:false,tournament:false};
@@ -383,8 +397,8 @@
       const projectedRecord=Number(standings?.program_records?.[t.id]?.wins||0)+t.expectedWins;
       const bubble=clip(1/(1+Math.exp((t.rank-74)/17-.045*(projectedRecord-20))),.001,.999);
       const pAuto=wonTitle?1:t.tourneyProb;
-      const pAtLarge=seedAward>0?0:(1-pAuto)*bubble;
-      const pBid=seedAward>0?1:pAuto+pAtLarge;
+      const pAtLarge=seedAward>0||bracketSelected?0:(1-pAuto)*bubble;
+      const pBid=seedAward>0?1:bracketSelected?0:pAuto+pAtLarge;
       const atLargeSeed=clip(Math.round((t.rank+3)/8),1,16);
       const autoSeed=clip(Math.round(t.rank/9.5+1.5),1,16);
       const seedPoint=s=>val('ncaa_seed_'+s,5);
@@ -392,15 +406,16 @@
         seed:prob*seedPoint(seed),wins:prob*chance.wins*val('ncaa_tournament_win',4),
         quads:prob*chance.quads,upsets:prob*chance.upsets,
         championship:prob*chance.championship*val('national_championship'),
-        firstFour:prob*(seed===11||seed===16?.1:0)*val('ncaa_opening_round_win')
+        firstFour:prob*((seed===11||seed===16)?0.1:0)*val('ncaa_opening_round_win')
       };};
-      const futureNCAA=seedAward>0?ncaaFor(1,clip(Math.round(seedAward),1,16)):null;
-      const autoPart=seedAward?null:ncaaFor(pAuto,autoSeed);
-      const atLargePart=seedAward?null:ncaaFor(pAtLarge,atLargeSeed);
+      const ncaaDone=eliminatedNCAA.has(t.id)||granted(t,'national_champion');
+      const futureNCAA=!ncaaDone&&seedAward>0?ncaaFor(1,clip(Math.round(seedAward),1,16)):null;
+      const autoPart=ncaaDone||seedAward||bracketSelected?null:ncaaFor(pAuto,autoSeed);
+      const atLargePart=ncaaDone||seedAward||bracketSelected?null:ncaaFor(pAtLarge,atLargeSeed);
       const sumNCAA=key=>(futureNCAA?.[key]||0)+(autoPart?.[key]||0)+(atLargePart?.[key]||0);
       const atLargeBonus=seedAward?0:eligibleUpsets(t)?pAtLarge*val('ncaa_at_large_bid'):0;
       // Small NIT/other postseason win component for non-NCAA teams.
-      const nitOpportunity=(1-pBid)*(1/(1+Math.exp((t.rank-155)/24)))*
+      const nitOpportunity=(eliminatedSecondary.has(t.id)?0:1)*(1-pBid)*(1/(1+Math.exp((t.rank-155)/24)))*
         (1/(1+Math.exp((52-t.rank)/16)));
       const nitWins=nitOpportunity*(.45+.55/(1+Math.exp((t.rank-110)/35)));
       const components={
@@ -470,6 +485,12 @@
         values.set(String(p.id),{points:Math.round(projected*10)/10,baseline:Math.round(baseline*10)/10,
           conferenceAdjustment:Math.round(conferenceAdjustment*10)/10,
           formAdjustment:Math.round(formAdjustment*10)/10,earned,model:'rank-fallback',rank:0});
+      }
+    }
+    if(scoring&&progress>=1){
+      for(const value of values.values()){
+        value.points=Math.round(value.earned*10)/10;
+        value.model='final';
       }
     }
     [...values.entries()].sort((a,b)=>b[1].points-a[1].points||a[0].localeCompare(b[0]))

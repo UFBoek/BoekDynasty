@@ -7632,3 +7632,24 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
   .tm-v4 .tm-table .tm-mobile-projection .tm-projection-label{font-size:7px}
   .tm-v4 .tm-table .tm-points-earned .tm-row-record{font-size:9px}
 }
+
+
+/* Transparent season forecast: compact, readable on desktop and phones. */
+.pp-forecast-details{margin:14px 0 4px;border:1px solid var(--border,#dde3ed);border-radius:12px;overflow:hidden;background:var(--surface,#fff)}
+.pp-forecast-details>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;font-size:13px;font-weight:750;list-style:none}
+.pp-forecast-details>summary::-webkit-details-marker{display:none}
+.pp-forecast-details[open]>summary{border-bottom:1px solid var(--border,#dde3ed)}
+.pp-forecast-details>summary span{font-size:14px;transition:transform .2s}
+.pp-forecast-details[open]>summary span{transform:rotate(180deg)}
+.pp-forecast-probabilities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:15px 16px 8px}
+.pp-forecast-probabilities>span{display:flex;flex-direction:column;gap:3px;padding:10px;background:rgba(99,116,139,.055);border-radius:9px;min-width:0}
+.pp-forecast-probabilities small{font-size:10px;font-weight:650;letter-spacing:.02em;color:var(--text-muted,#65748a)}
+.pp-forecast-probabilities strong{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.pp-forecast-explainer,.pp-forecast-caveat{margin:0;padding:8px 16px 12px;font-size:12px;line-height:1.6;color:var(--text-muted,#65748a)}
+.pp-forecast-component-grid{padding:4px 16px 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px}
+.pp-forecast-component{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(126,143,163,.16);font-size:12px}
+.pp-forecast-component span{min-width:0;line-height:1.4;color:var(--text-secondary,#536477)}
+.pp-forecast-component strong{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px}
+.pp-forecast-total{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:2px 16px 0;padding:12px 0;border-top:1px solid var(--border,#dde3ed);font-size:13px;font-weight:750}
+.pp-forecast-total strong{font-size:16px;font-variant-numeric:tabular-nums}
+@media(max-width:650px){.pp-forecast-component-grid{grid-template-columns:minmax(0,1fr)}.pp-forecast-probabilities{gap:6px;padding:12px 12px 8px}.pp-forecast-probabilities>span{padding:8px}.pp-forecast-probabilities small{font-size:9px}.pp-forecast-probabilities strong{font-size:17px}.pp-forecast-details>summary{padding:12px}.pp-forecast-component-grid{padding:4px 12px 10px}.pp-forecast-explainer,.pp-forecast-caveat{padding-left:12px;padding-right:12px}}

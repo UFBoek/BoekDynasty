@@ -62,7 +62,7 @@ test('above threshold guarantees appearance but keeps original sourced percent',
 test('sourced low probability overrides the existing optimistic formula',()=>{
   const p=projectGW(.27,.10);
   assert.equal(p.probability.ncaaBid,27);
-  assert.equal(p.probability.source,'Bart Torvik TourneyCast');
+  assert.equal(p.probability.source,'Published NCAA projections');
 });
 
 test('unavailable, stale and absent snapshot do not masquerade as TourneyCast',()=>{

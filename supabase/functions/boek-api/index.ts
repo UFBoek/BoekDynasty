@@ -2,6 +2,7 @@ import postgres from 'npm:postgres@3.4.7';
 import apiWorker from './server.js';
 import {createD1} from './db.js';
 import {PROGRAM_DIRECTORY} from './data.js';
+import {syncPublicProjectionOdds} from './projection-odds.js';
 import {DATA_PIPELINE} from './results.js';
 import {getTorvikRatings} from './ratings.js';
 import {createNotificationEngine} from './notifications.js';
@@ -214,7 +215,7 @@ Deno.serve(async (request)=>{
       const [result,awardResult,tourneycastResult]=await Promise.all([
         db.prepare("SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date,tournament_tag FROM cbb_games WHERE season=? AND (season_type=2 AND tournament_tag IS NULL OR tournament_tag IN ('conference','ncaa','secondary')) AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000").bind(season).all(),
         db.prepare("SELECT program_id,award_type,value FROM cbb_awards WHERE season=? AND award_type IN ('conference_regular_champion','conference_tournament_champion','ncaa_seed','national_champion')").bind(season).all(),
-        db.prepare("SELECT program_id,bid_prob,auto_prob,source,snapshot_date::text AS snapshot_date FROM private.cbb_tourneycast_daily WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM private.cbb_tourneycast_daily WHERE season=?) ORDER BY program_id LIMIT 365")
+        db.prepare("SELECT program_id,bid_prob,auto_prob,regular_prob,source,snapshot_date::text AS snapshot_date FROM private.cbb_tourneycast_daily WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM private.cbb_tourneycast_daily WHERE season=?) ORDER BY program_id LIMIT 365")
           .bind(season,season).all().catch(error=>{
             console.warn('Optional TourneyCast snapshot lookup failed',String(error?.message||error));
             return {results:[]};
@@ -227,7 +228,8 @@ Deno.serve(async (request)=>{
       const tourneycast={source:tourneycastRows[0]?.source||'Bart Torvik TourneyCast',
         snapshot_date:tourneycastDate,count:tourneycastRows.length,active:tourneycastActive,
         threshold_percent:70,rows:tourneycastActive?tourneycastRows.map(t=>
-          [String(t.program_id),Number(t.bid_prob),t.auto_prob===null?null:Number(t.auto_prob)]):[]};
+          [String(t.program_id),Number(t.bid_prob),t.auto_prob===null?null:Number(t.auto_prob),
+            t.regular_prob===null?null:Number(t.regular_prob)]):[]};
       return Response.json({season,as_of:epochNow(),count:rows.length,tourneycast,
         awards:(awardResult.results||[]).map(a=>[String(a.program_id),String(a.award_type),Number(a.value)||0]),
         games:rows.map(g=>[String(g.home_id||''),String(g.away_id||''),
@@ -330,6 +332,7 @@ Deno.serve(async (request)=>{
       else if(kind==='upcoming')result=eligible?await DATA_PIPELINE.upcoming(env,season,3):{skipped:'offseason'};
       else if(kind==='ap')result=eligible?await DATA_PIPELINE.syncAPPoll(env,season):{skipped:'offseason'};
        else if(kind==='torvik')result=eligible?await DATA_PIPELINE.syncPreliminaryTorvik(env,season):{skipped:'offseason'};
+      else if(kind==='projection-odds')result=eligible?await syncPublicProjectionOdds(db,season,today):{skipped:'offseason'};
       else if(kind==='net'){
         if(!eligible||today<season.slice(0,4)+'-12-08')result={skipped:'NET not released'};
         else{const feed=await DATA_PIPELINE.fetchOfficialNet(today,season);result=feed.skipped?feed:await DATA_PIPELINE.saveNet(env,season,feed.date,feed.records,feed.source);}

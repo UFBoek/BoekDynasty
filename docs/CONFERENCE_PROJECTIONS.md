@@ -1,6 +1,6 @@
 # Conference-conditioned fantasy point projections (2026–27)
 
-**Status:** Revised live in the Cloudflare-hosted Boek Dynasty frontend on November 15, 2026. Still an exploratory NET-proxy-trained baseline, not a verified historical-KenPom model or backtested early-season forecast.
+**Status:** Schedule-driven, scoring-component model v3 deployed to the Cloudflare frontend and Supabase API on November 15, 2026. The historical final-NET baseline remains as a temporary fallback only. Current projections are estimates, not a backtested early-season KenPom forecast.
 
 - Output: `data/kenpom-conference-projections-2026-27.csv` and `.json`, 365 Division I programs, captured November 11, 2026.
 - Current input: current-season KenPom national ranking in `private.cbb_kenpom_daily`.
@@ -8,6 +8,42 @@
 - Historical conference difficulty: mean final NET rank of opponents from that program's actual league games **in the historical season**, instead of indiscriminately labeling all non-power programs as one tier. Current conference difficulty: mean current KenPom rank of other programs in the same 2026–27 conference.
 - Design: a regularized nonlinear national-rank response combined with continuous conference-strength interactions, relative dominance over conference peers, plus **separate shrunken intercept and rank slope for each current conference**. A strong Atlantic 10 team, strong Big South team and equivalent Big 12 team need not receive identical points.
 - Fit rows: 1,792 program/seasons (programs with 6+ validated conference opponents). Outputs are clipped to 0–145 points and rounded to 0.1.
+
+## Live scoring-component forecasts (v3; November 15, 2026)
+
+The active live model is in `src/client.js` (`fpScheduleModel`), fed by a new authenticated `data/forecast-inputs` route in `supabase/functions/boek-api/index.ts`. Standings still use **verified earned points**, unchanged. Every projected full-season number in My Team, other manager rosters, Schools, Program profiles, Standings, Trade Desk and Add/Drop uses the same snapshot and model. Draft Board remains excluded.
+
+The forecast starts with the **exact earned fantasy points** from standings and adds only the expected value of **future** scoring:
+
+| Future point category | How it is estimated |
+|---|---|
+| Regular-season wins | Remaining imported schedule, home/away/neutral matchup probabilities from current KenPom rank ratios |
+| Regular-season quad points | Each future game's win probability times the KenPom-rank/venue Q1A, Q1 or Q2 bonus; exclusive categories |
+| Conference regular-season title | 520 deterministic conference-season simulations; verified league W–L from completed same-conference games and projected remaining head-to-head outcomes; ties count as co-champions |
+| Conference tournament victories and quad bonuses | 520 bracket simulations per conference with seeding derived from simulated regular-season records, ranked tie breaks, approximate byes and neutral-site opponents |
+| Conference tournament title | Share of conference bracket simulations won, valued at 6 mid-major / 8 power points according to live settings |
+| NCAA appearance / seed | Mixture of conference auto-bid probability and an approximate KenPom/record at-large chance, using the live seed-line scoring table |
+| NCAA at-large bonus | Additional 3 points times at-large probability, only for eligible non-power programs and not Gonzaga |
+| NCAA Tournament wins, quad and upset bonuses | Six-round conditional bracket model with estimated opponent seeds, matchup win probabilities, and seed-line upset bonuses for eligible programs |
+| NCAA First Four, championship, NIT | Small conditional expected values using the live rules |
+
+The regular-season matchup probability is `sigmoid(0.98*ln((opponentRank+12)/(ownRank+12)) + 0.33*(home=+1, away=-1, neutral=0))`, clipped at 2–98%. **KenPom adjusted-efficiency margins are not available in the stored feed, so national rank distances are proxies.** Tournament formats and NCAA at-large selections are approximate, not official predictions. The model forecasts NIT values conservatively and does not include speculative unscheduled conference tournament games as regular-season fixtures.
+
+The backend delivers compact home/away IDs, completed scores, schedule dates, neutral-site indicators, postseason tags and confirmed awards. **Conference games are identified by both schools' current conference membership**, not ESPN's sometimes incorrect conference_game flag. All 365 Division I programs are modeled and manager best-ball totals recompute from these same program-level estimates.
+
+Confirmed titles and NCAA seeding are removed from unearned projections because they are already in `earned`. Eliminated NCAA participants are not assigned further tournament victories; already-completed NCAA rounds are skipped. When the league season is over, a program's forecast equals its verified points exactly. The frontend uses the prior rank-only model temporarily if the new authenticated forecast feed is unavailable.
+
+### Memphis check (November 15 data)
+
+With Memphis at KenPom #78, 6.5 fantasy points already earned, a 3–1 record and 27 announced future regular-season games, the v3 model produces **37.5 full-season points**: approximately 15.8 future win points, 2.5 future regular quad points, 1.7 regular-season title points (27.7% estimated probability), 2.6 conference tournament win points, 1.2 conference tournament title points (20.0% estimated probability), and the remaining NCAA / NIT categories. NCAA bid probability is around 54.2%. These probabilities are **illustrative model outputs, not calibrated betting probabilities**. A double-title outcome can exceed this total substantially.
+
+### Required next validation
+
+- Conduct date-specific walk-forward validation using snapshots taken **before** games, rather than historical final NET ranks. Track MAE, Brier/calibration on matchup and title events, bias by conference and seasonal phase.
+- Obtain properly licensed adjusted-efficiency data for numeric KenPom gaps; use spread-based predictions rather than ordinal-rank proxies.
+- Replace approximate NCAA bracket, conference-specific byes and at-large rules with verified tournament structures and calibration. Do not mistake simulated title probabilities for verified odds.
+- Track feed completeness by program, especially late schedule updates, conference postseason classifications and missing opponents. Test for no double counting at season milestones.
+- Old historical coefficients are **not** a fresh training of 2026 scoring; they are only used if the new API data is unavailable.
 
 ## Leave-one-season-out historical backtest
 

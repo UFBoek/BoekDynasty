@@ -4098,6 +4098,16 @@
         +'<section class="panel setting-panel section-gap">'+panelHeading('Preliminary quadrant rankings',resultsStatus?.quadrant_source==='kenpom'?'KenPom · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='torvik'?'Bart Torvik fallback · '+escapeHTML(resultsStatus.quadrant_date||'') : resultsStatus?.quadrant_source==='net'?'Official NCAA NET fallback active':'Awaiting rankings')
         +'<p class="hint">Current-season Q1/Q1A/Q2 bonuses use the most recent complete daily KenPom ranking snapshot. If KenPom is unavailable, NCAA NET or Bart Torvik is used as fallback. Completed historical seasons stay on verified NCAA NET. Scores update automatically.</p>'
         +'<div class="button-row section-gap"><button class="btn secondary" data-act="data-torvik-refresh" '+(resultsStatus?.quadrant_source==='net'?'disabled':'')+'>Sync preliminary Bart Torvik</button></div></section>'
+        +'<section class="panel setting-panel section-gap">'+panelHeading('TourneyCast · NCAA bid probabilities',
+          forecastInputs?.tourneycast?.snapshot_date?
+            'Snapshot '+escapeHTML(forecastInputs.tourneycast.snapshot_date)+' · '+forecastInputs.tourneycast.count+' teams':
+            'No current TourneyCast snapshot')
+        +'<p class="hint">A published TourneyCast NCAA bid chance at or above 70% is treated as 100% for fantasy appearance projections. We retain and display the actual TourneyCast percentage.</p>'
+        +'<p class="hint section-gap">Automated TourneyCast retrieval is blocked by the source. Copy verified values from <a href="https://barttorvik.com/tourneycast.php" target="_blank" rel="noopener noreferrer">TourneyCast</a> or a Bart Torvik conference table using <code>Team,Bid Prob,Auto Prob</code> (auto probability is optional). Missing teams keep separate model estimates.</p>'
+        +'<div class="form-row section-gap"><label for="data-tourneycast-date">Published snapshot date</label><input class="field" type="date" id="data-tourneycast-date" value="'+escapeHTML(today)+'"/></div>'
+        +'<div class="form-row"><label for="data-tourneycast-csv">TourneyCast CSV or TSV</label><textarea class="field data-csv" id="data-tourneycast-csv" rows="5" placeholder="Team,Bid Prob,Auto Prob&#10;George Washington,27%,11%&#10;Saint Louis,75%,25%"></textarea></div>'
+        +'<div class="button-row"><button class="btn secondary" data-act="data-tourneycast-import">Import sourced probabilities</button></div>'
+        +'<p class="hint section-gap">Snapshots older than seven days do not influence projections. Confirmed tournament participants still take priority over forecasts.</p></section>'
         +'<section class="panel setting-panel section-gap">'+panelHeading('NCAA NET rankings',resultsStatus?.net_date?'Latest: '+escapeHTML(resultsStatus.net_date)+' · '+resultsStatus.net_count+' teams':'No current-season NET rankings')
         +'<p class="hint">NCAA NET typically starts in December. For now, upload a verified list using ESPN team IDs. Each line should contain an ESPN team ID and its NET rank, separated by a comma. A current-season list of at least 350 teams is required. Previous-season rankings must not be imported.</p>'
         +'<div class="form-row section-gap"><label for="data-net-date">Snapshot date</label><input class="field" type="date" id="data-net-date" value="'+escapeHTML(today)+'"/></div>'
@@ -4526,6 +4536,15 @@
         const failed=(result.days||[]).filter(x=>!x.ok);
         notice('Checked '+(result.days||[]).length+' upcoming dates'+(failed.length?' · '+failed.length+' failures':''),failed.length>0);
         await loadResults();
+      }else if(act==='data-tourneycast-import'){
+        const rows=parseTourneycastPaste(v('#data-tourneycast-csv'));
+        const report=await api('admin/tourneycast/import',{snapshot_date:v('#data-tourneycast-date'),
+          rows,source:'Bart Torvik TourneyCast'});
+        forecastInputs=null;standingsFetchedAt=0;fpMemo=null;
+        await loadStandings(true);render();
+        notice('Imported '+report.imported+' TourneyCast odds · '+report.total+
+          ' programs for '+report.snapshot_date+'. '+report.guaranteed+
+          ' rows reached the 70% assumption threshold.');
       }else if(act==='data-torvik-refresh'){
         const ranks=await api('admin/data/torvik-refresh',{});
         notice(ranks.skipped||'Imported '+ranks.matched+' provisional Bart Torvik schools.');

@@ -1,6 +1,7 @@
 import postgres from 'npm:postgres@3.4.7';
 import apiWorker from './server.js';
 import {createD1} from './db.js';
+import {PROGRAM_DIRECTORY} from './data.js';
 import {DATA_PIPELINE} from './results.js';
 import {getTorvikRatings} from './ratings.js';
 import {createNotificationEngine} from './notifications.js';

@@ -151,6 +151,54 @@ Deno.serve(async (request)=>{
     }
   }
 
+  // Commissioner-imported TourneyCast snapshots only. Do not substitute guessed
+  // odds or scrape around an upstream 403. Data must be sourced and dated.
+  if(subpath==='admin/tourneycast/import'){
+    if(request.method!=='POST')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
+    const actor=await activityActor(request);
+    if(!actor)return Response.json({error:'Sign in required.'},{status:401,headers:cors});
+    if(actor.role!=='commissioner')return Response.json({error:'Commissioner access required.'},{status:403,headers:cors});
+    const body=await request.json().catch(()=>null);
+    const snapshot=String(body?.snapshot_date||''),rows=body?.rows;
+    const source=String(body?.source||'Bart Torvik TourneyCast');
+    const today=DATA_PIPELINE.localDay();
+    const season=(await db.prepare("SELECT value FROM settings WHERE key='current_season'").first())?.value||DATA_PIPELINE.seasonOf(today);
+    if(!/^20\d{2}-\d{2}-\d{2}$/.test(snapshot)||Number.isNaN(Date.parse(snapshot+'T12:00:00Z'))||
+       snapshot>today||snapshot<DATA_PIPELINE.shiftDay(today,-14)||!DATA_PIPELINE.dayInSeason(season,snapshot))
+      return Response.json({error:'Snapshot date must be in the current season and within the last 14 days.'},{status:400,headers:cors});
+    if(!Array.isArray(rows)||rows.length<2||rows.length>365||!['Bart Torvik TourneyCast','Bart Torvik conference'].includes(source))
+      return Response.json({error:'Supply 2–365 sourced program probabilities.'},{status:400,headers:cors});
+    const ids=new Set(PROGRAM_DIRECTORY.map(p=>String(p[0])));
+    const used=new Set(),parsed=[];
+    for(const entry of rows){
+      const id=String(entry?.program_id||''),bid=Number(entry?.bid_prob);
+      const auto=entry?.auto_prob==null?null:Number(entry.auto_prob);
+      if(!ids.has(id)||used.has(id)||!Number.isFinite(bid)||bid<0||bid>1||
+         (auto!==null&&(!Number.isFinite(auto)||auto<0||auto>bid+0.000001)))
+        return Response.json({error:'Duplicate/unknown team or invalid probability for ID '+id+'. Use decimal probabilities from 0 to 1.'},
+          {status:400,headers:cors});
+      used.add(id);
+      parsed.push({program_id:id,bid_prob:Math.round(bid*100000)/100000,
+        auto_prob:auto===null?null:Math.round(auto*100000)/100000});
+    }
+    try{
+      await db.prepare(
+        "INSERT INTO private.cbb_tourneycast_daily(season,snapshot_date,program_id,bid_prob,auto_prob,source) "+
+        "SELECT ?, ?::date, x.program_id,x.bid_prob,x.auto_prob,? "+
+        "FROM jsonb_to_recordset(?::jsonb) AS x(program_id text,bid_prob numeric,auto_prob numeric) "+
+        "ON CONFLICT(season,snapshot_date,program_id) DO UPDATE SET "+
+        "bid_prob=EXCLUDED.bid_prob,auto_prob=EXCLUDED.auto_prob,source=EXCLUDED.source,imported_at=now()"
+      ).bind(season,snapshot,source,JSON.stringify(parsed)).run();
+      const total=await db.prepare("SELECT COUNT(*)::int AS count FROM private.cbb_tourneycast_daily WHERE season=? AND snapshot_date=?::date")
+        .bind(season,snapshot).first();
+      return Response.json({ok:true,source,season,snapshot_date:snapshot,imported:parsed.length,total:Number(total?.count||0),
+        threshold:70,guaranteed:parsed.filter(x=>x.bid_prob>=.70).length},{headers:cors});
+    }catch(error){
+      console.error('TourneyCast import failed',String(error?.message||error));
+      return Response.json({error:'Could not store verified tournament probabilities.'},{status:503,headers:cors});
+    }
+  }
+
   // A single compact, authenticated snapshot for all 365 program forecasts.
   // Do not trust ESPN's conference_game field for planned fixtures: some
   // published 2026-27 AAC games carry 0 despite both schools being in the AAC.
@@ -162,12 +210,24 @@ Deno.serve(async (request)=>{
     try{
       const value=await db.prepare("SELECT value FROM settings WHERE key='current_season'").first();
       const season=String(value?.value||DATA_PIPELINE.seasonOf(DATA_PIPELINE.localDay()));
-      const [result,awardResult]=await Promise.all([
+      const [result,awardResult,tourneycastResult]=await Promise.all([
         db.prepare("SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date,tournament_tag FROM cbb_games WHERE season=? AND (season_type=2 AND tournament_tag IS NULL OR tournament_tag IN ('conference','ncaa','secondary')) AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000").bind(season).all(),
-        db.prepare("SELECT program_id,award_type,value FROM cbb_awards WHERE season=? AND award_type IN ('conference_regular_champion','conference_tournament_champion','ncaa_seed','national_champion')").bind(season).all()
+        db.prepare("SELECT program_id,award_type,value FROM cbb_awards WHERE season=? AND award_type IN ('conference_regular_champion','conference_tournament_champion','ncaa_seed','national_champion')").bind(season).all(),
+        db.prepare("SELECT program_id,bid_prob,auto_prob,source,snapshot_date::text AS snapshot_date FROM private.cbb_tourneycast_daily WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM private.cbb_tourneycast_daily WHERE season=?) ORDER BY program_id LIMIT 365")
+          .bind(season,season).all().catch(error=>{
+            console.warn('Optional TourneyCast snapshot lookup failed',String(error?.message||error));
+            return {results:[]};
+          })
       ]);
       const rows=result.results||[];
-      return Response.json({season,as_of:epochNow(),count:rows.length,
+      const tourneycastRows=tourneycastResult.results||[];
+      const tourneycastDate=tourneycastRows[0]?.snapshot_date||null;
+      const tourneycastActive=!!tourneycastDate&&Date.parse(tourneycastDate+'T00:00:00Z')>=Date.parse(DATA_PIPELINE.shiftDay(DATA_PIPELINE.localDay(),-7)+'T00:00:00Z');
+      const tourneycast={source:tourneycastRows[0]?.source||'Bart Torvik TourneyCast',
+        snapshot_date:tourneycastDate,count:tourneycastRows.length,active:tourneycastActive,
+        threshold_percent:70,rows:tourneycastActive?tourneycastRows.map(t=>
+          [String(t.program_id),Number(t.bid_prob),t.auto_prob===null?null:Number(t.auto_prob)]):[]};
+      return Response.json({season,as_of:epochNow(),count:rows.length,tourneycast,
         awards:(awardResult.results||[]).map(a=>[String(a.program_id),String(a.award_type),Number(a.value)||0]),
         games:rows.map(g=>[String(g.home_id||''),String(g.away_id||''),
           g.status==='final'?1:g.status==='live'?2:0,

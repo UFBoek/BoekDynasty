@@ -151,6 +151,34 @@ Deno.serve(async (request)=>{
     }
   }
 
+  // A single compact, authenticated snapshot for all 365 program forecasts.
+  // Do not trust ESPN's conference_game field for planned fixtures: some
+  // published 2026-27 AAC games carry 0 despite both schools being in the AAC.
+  // The client derives conference matchups from the current school directory.
+  if(subpath==='data/forecast-inputs'){
+    if(request.method!=='GET')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
+    const actor=await activityActor(request);
+    if(!actor)return Response.json({error:'Sign in required.'},{status:401,headers:cors});
+    try{
+      const value=await db.prepare("SELECT value FROM settings WHERE key='current_season'").first();
+      const season=String(value?.value||DATA_PIPELINE.seasonOf(DATA_PIPELINE.localDay()));
+      const result=await db.prepare(
+        "SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date FROM cbb_games WHERE season=? AND season_type=2 AND tournament_tag IS NULL AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000"
+      ).bind(season).all();
+      const rows=result.results||[];
+      return Response.json({season,as_of:epochNow(),count:rows.length,
+        games:rows.map(g=>[String(g.home_id||''),String(g.away_id||''),
+          g.status==='final'?1:g.status==='live'?2:0,
+          g.home_score===null?null:Number(g.home_score),g.away_score===null?null:Number(g.away_score),
+          Number(g.neutral_site)===1?1:0,String(g.game_date||'')])},
+        {headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+    }catch(error){
+      console.error('Forecast input lookup failed',String(error?.message||error));
+      return Response.json({error:'Projected schedule data is temporarily unavailable.'},
+        {status:503,headers:{...cors,'Cache-Control':'no-store'}});
+    }
+  }
+
   if(subpath==='data/ratings'){
     if(request.method!=='GET')return Response.json({error:'Method not allowed.'},{status:405,headers:cors});
     const year=Number(original.searchParams.get('year'));

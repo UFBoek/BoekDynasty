@@ -499,6 +499,45 @@
   }
   const fpOf=p=>p?fpIndex()?.get(String(p.id))||null:null;
   const fpPoints=p=>fpLabel(fpOf(p)?.points);
+  function fpBreakdownHTML(forecast){
+    if(!forecast||forecast.model!=='schedule-v3'||!forecast.components)return '';
+    const c=forecast.components;
+    const rows=[
+      ['Earned fantasy points',c.earned],
+      ['Remaining regular-season wins',c.regularWins],
+      ['Regular-season quad bonuses',c.regularQuads],
+      ['Conference regular-season title',c.conferenceRegularTitle],
+      ['Conference tournament wins',c.conferenceTournamentWins],
+      ['Conference tournament quad bonuses',c.conferenceTournamentQuads],
+      ['Conference tournament title',c.conferenceTournamentTitle],
+      ['NCAA seed / appearance',c.ncaaSeeding],
+      ['Mid-major NCAA at-large bonus',c.ncaaAtLarge],
+      ['NCAA Tournament wins',c.ncaaWins],
+      ['NCAA Tournament quad bonuses',c.ncaaQuads],
+      ['NCAA upset seed-line bonuses',c.ncaaUpsets],
+      ['NCAA First Four',c.ncaaFirstFour],
+      ['National championship bonus',c.nationalChampionship],
+      ['NIT / other postseason wins',c.secondaryPostseason]
+    ];
+    const fmt=n=>(Number(n)>=0?'+':'')+fpLabel(n);
+    const chance=forecast.probability||{};
+    const summary=[
+      ['Reg. title',chance.regularTitle],['Tournament title',chance.tournamentTitle],
+      ['NCAA bid',chance.ncaaBid]
+    ].map(([label,value])=>'<span><small>'+label+'</small><strong>'+
+      (Number.isFinite(Number(value))?fpLabel(value)+'%':'—')+'</strong></span>').join('');
+    return '<details class="pp-forecast-details"><summary>View projected scoring breakdown <span>▾</span></summary>'+
+      '<div class="pp-forecast-probabilities">'+summary+'</div>'+
+      '<p class="pp-forecast-explainer">Expected remaining regular-season wins: <b>'+
+      fpLabel(forecast.expectedRemainingWins)+'</b> across <b>'+forecast.remaining+
+      '</b> scheduled games. Probabilities use KenPom ranks and simulated conference standings and brackets, not official odds.</p>'+
+      '<div class="pp-forecast-component-grid">'+rows.map(([name,value])=>
+        '<div class="pp-forecast-component"><span>'+escapeHTML(name)+'</span><strong>'+fmt(value)+'</strong></div>'
+      ).join('')+'</div>'+
+      '<div class="pp-forecast-total"><span>Projected season total</span><strong>'+
+      fpLabel(forecast.points)+' PTS</strong></div>'+
+      '<p class="pp-forecast-caveat">Rounded components can differ slightly from the total. NCAA seeding and opponent probabilities are estimates; no outcome is guaranteed.</p></details>';
+  }
   function fpBest(roster,best=Number(league?.settings?.scoring?.best_programs||15)){
     if(!fpIndex())return null;
     const n=roster.map(p=>fpOf(p)?.points).filter(Number.isFinite).sort((a,b)=>b-a).slice(0,Math.max(1,best));
@@ -3462,7 +3501,7 @@
       '<div class="pp-section-head"><div><span class="pp-section-kicker">SEASON PERFORMANCE</span><h2>Fantasy scoring</h2>'+
       '<p>'+escapeHTML(season())+' · '+(currentStats?.status==='partial'?'Live totals':currentStats?.status==='complete'?'Final totals':'Verified results')+'</p></div>'+
       '<div class="pp-score-inline"><strong>'+points(currentStats)+'</strong><small>POINTS</small></div></div>'+
-      '<div class="pp-projection-banner"><div><span>FULL-SEASON PROJECTION</span><strong>'+fpLabel(programForecast?.points)+' <small>PTS</small></strong></div><p>'+(programForecast?'Forecast #'+programForecast.rank+' · Conference-adjusted KenPom and earned points.':'Current KenPom data pending.')+'</p></div>'+
+      '<div class="pp-projection-banner"><div><span>FULL-SEASON PROJECTION</span><strong>'+fpLabel(programForecast?.points)+' <small>PTS</small></strong></div><p>'+(programForecast?(programForecast.model==='schedule-v3'?'Forecast #'+programForecast.rank+' · Schedule-based expected scoring and postseason probabilities.':'Forecast #'+programForecast.rank+' · Loading schedule-based model…'):'Current KenPom data pending.')+'</p></div>'+fpBreakdownHTML(programForecast)+
       '<div class="pp-fact-strip pp-fact-four">'+
       labelStat('Regular wins',currentStats?.games?currentStats.regular_wins:'—')+
       labelStat('Q1 wins',currentStats?.quadrant_source==='pending'?'Pending':currentStats?.q1??'—')+

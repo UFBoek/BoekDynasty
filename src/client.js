@@ -383,6 +383,14 @@
       }
       return {wins,quads,upsets,championship:survive};
     };
+    // Published TourneyCast bids supersede our uncalibrated at-large formula.
+    // No source data means no fabricated TourneyCast probability: retain the
+    // old model as an explicitly labelled fallback.
+    const published=feed.tourneycast?.active===true&&Array.isArray(feed.tourneycast.rows)?
+      new Map(feed.tourneycast.rows.filter(a=>Array.isArray(a)&&a.length>=2&&
+        Number.isFinite(Number(a[1]))&&Number(a[1])>=0&&Number(a[1])<=1)
+        .map(a=>[String(a[0]),{bid:Number(a[1]),auto:a[2]===null?null:Number(a[2])}])):new Map();
+    const publishedDate=String(feed.tourneycast?.snapshot_date||'');
     const result=new Map();
     const bracketSelected=[...awards.values()].filter(award=>Number(award.ncaa_seed||0)>0).length>=65;
     const round=n=>Math.round(n*10)/10;
@@ -391,14 +399,26 @@
       const wonTitle=granted(t,'conference_tournament_champion');
       const seedAward=Number(awards.get(t.id)?.ncaa_seed||0);
       const regularTitle=titles.regular?0:t.regularProb*titlePoints(t,'conference_regular_title');
-      const tournamentTitle=titles.tournament?0:t.tourneyProb*titlePoints(t,'conference_tournament_title');
+      const external=published.get(t.id)||null;
+      const publishedAuto=external&&Number.isFinite(external.auto)?clip(external.auto,0,1):null;
+      const modeledAuto=t.tourneyProb;
+      const selectedAuto=wonTitle?1:publishedAuto===null?
+        external?Math.min(modeledAuto,external.bid):modeledAuto:publishedAuto;
+      const tournamentTitle=titles.tournament?0:selectedAuto*titlePoints(t,'conference_tournament_title');
       // At-large odds are a conservative, continuously ranked proxy. There is
       // no claim of a fitted selection committee or published bracket forecast.
       const projectedRecord=Number(standings?.program_records?.[t.id]?.wins||0)+t.expectedWins;
       const bubble=clip(1/(1+Math.exp((t.rank-74)/17-.045*(projectedRecord-20))),.001,.999);
-      const pAuto=wonTitle?1:t.tourneyProb;
-      const pAtLarge=seedAward>0||bracketSelected?0:(1-pAuto)*bubble;
-      const pBid=seedAward>0?1:bracketSelected?0:pAuto+pAtLarge;
+      const pAuto=selectedAuto;
+      // League override: a published TourneyCast bid probability >=70% is
+      // treated as a guaranteed NCAA bid (100% for projected appearance points).
+      // Only verified source rows trigger this rule, never the fallback formula.
+      const guaranteed=!!external&&external.bid>=.70;
+      const effectiveBid=external?(guaranteed?1:external.bid):null;
+      const pAtLarge=seedAward>0||bracketSelected?0:external?
+        clip(effectiveBid-pAuto,0,1):clip((1-pAuto)*bubble,0,1);
+      const pBid=seedAward>0?1:bracketSelected?0:external?
+        effectiveBid:clip(pAuto+pAtLarge,0,1);
       const atLargeSeed=clip(Math.round((t.rank+3)/8),1,16);
       const autoSeed=clip(Math.round(t.rank/9.5+1.5),1,16);
       const seedPoint=s=>val('ncaa_seed_'+s,5);
@@ -436,8 +456,10 @@
       result.set(t.id,{
         points:round(clip(Math.max(t.earned,estimate),0,170)),earned:round(t.earned),
         components:Object.fromEntries(Object.entries(components).map(([key,value])=>[key,round(value)])),
-        probability:{regularTitle:round(t.regularProb*100),tournamentTitle:round(t.tourneyProb*100),
-          ncaaBid:round(pBid*100)},
+        probability:{regularTitle:round(t.regularProb*100),tournamentTitle:round(selectedAuto*100),
+          ncaaBid:round(pBid*100),ncaaPublished:external?round(external.bid*100):null,
+          source:external?'Bart Torvik TourneyCast':'Model estimate',
+          snapshotDate:external?publishedDate:null,guaranteedByRule:guaranteed},
         remaining:t.remaining,expectedRemainingWins:round(t.expectedWins),
         projectedRegularWins:round(projectedRecord),model:'schedule-v3',rank:0
       });

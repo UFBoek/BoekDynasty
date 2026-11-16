@@ -163,7 +163,7 @@ Deno.serve(async (request)=>{
       const value=await db.prepare("SELECT value FROM settings WHERE key='current_season'").first();
       const season=String(value?.value||DATA_PIPELINE.seasonOf(DATA_PIPELINE.localDay()));
       const [result,awardResult]=await Promise.all([
-        db.prepare("SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date FROM cbb_games WHERE season=? AND season_type=2 AND tournament_tag IS NULL AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000").bind(season).all(),
+        db.prepare("SELECT home_id,away_id,status,home_score,away_score,neutral_site,game_date,tournament_tag FROM cbb_games WHERE season=? AND season_type=2 AND (tournament_tag IS NULL OR tournament_tag='conference') AND status IN ('final','scheduled','live') ORDER BY game_date,game_id LIMIT 9000").bind(season).all(),
         db.prepare("SELECT program_id,award_type,value FROM cbb_awards WHERE season=? AND award_type IN ('conference_regular_champion','conference_tournament_champion','ncaa_seed','national_champion')").bind(season).all()
       ]);
       const rows=result.results||[];
@@ -172,7 +172,7 @@ Deno.serve(async (request)=>{
         games:rows.map(g=>[String(g.home_id||''),String(g.away_id||''),
           g.status==='final'?1:g.status==='live'?2:0,
           g.home_score===null?null:Number(g.home_score),g.away_score===null?null:Number(g.away_score),
-          Number(g.neutral_site)===1?1:0,String(g.game_date||'')])},
+          Number(g.neutral_site)===1?1:0,String(g.game_date||''),g.tournament_tag==='conference'?1:0])},
         {headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
     }catch(error){
       console.error('Forecast input lookup failed',String(error?.message||error));

@@ -187,7 +187,7 @@ Deno.serve(async (request)=>{
       await db.prepare(
         "INSERT INTO private.cbb_tourneycast_daily(season,snapshot_date,program_id,bid_prob,auto_prob,source) "+
         "SELECT ?, ?::date, x.program_id,x.bid_prob,x.auto_prob,? "+
-        "FROM jsonb_to_recordset(?::jsonb) AS x(program_id text,bid_prob numeric,auto_prob numeric) "+
+        "FROM jsonb_to_recordset((?::jsonb #>> '{}')::jsonb) AS x(program_id text,bid_prob numeric,auto_prob numeric) "+
         "ON CONFLICT(season,snapshot_date,program_id) DO UPDATE SET "+
         "bid_prob=EXCLUDED.bid_prob,auto_prob=EXCLUDED.auto_prob,source=EXCLUDED.source,imported_at=now()"
       ).bind(season,snapshot,source,JSON.stringify(parsed)).run();

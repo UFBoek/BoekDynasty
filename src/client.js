@@ -123,6 +123,7 @@
 
   let poolDraftConfs=null,poolDraftSchools=null,poolDirty=false;
   let poolQuery='',poolConferenceFilter='all',poolScope='all',poolShown=70;
+  let teamRosterSort='points';
   let programQuery='',programConference='all',programOwnership='all',programShown=36,programLetter='all',programSort='points',showAllDraft=false,lastAutoPoll=0;
   let programMode='directory',leaderSeason='all',schoolLeaders=null,schoolLeadersLoading=false,schoolLeadersError='',leaderQuery='';
   let ratingSeason='',ratingSort='rank',ratingQuery='',ratingCache={},ratingLoading={},ratingError={};
@@ -1994,6 +1995,29 @@
         +'<button type="button" class="overview-text-link" data-act="tab" data-id="draft">Visit draft room ›</button></div>')
       +'</section></div>';
   }
+
+  // Consistent in-season and forecast sorting across every manager's roster.
+  function sortTeamRoster(programs,scoring,pointMap){
+    return programs.slice().sort((a,b)=>{
+      if(teamRosterSort==='projected'){
+        const aPoints=fpOf(a)?.points,bPoints=fpOf(b)?.points;
+        const aValid=Number.isFinite(aPoints),bValid=Number.isFinite(bPoints);
+        if(aValid!==bValid)return bValid?1:-1;
+        return (aValid?bPoints-aPoints:0)||a.name.localeCompare(b.name);
+      }
+      return (scoring?Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0):0)
+        ||a.name.localeCompare(b.name);
+    });
+  }
+  function teamRosterSortDescription(scoring){
+    return teamRosterSort==='projected'?'Sorted by projected points'
+      :scoring?'Sorted by season points':'Alphabetical until scoring begins';
+  }
+  function teamRosterSortControl(){
+    const buttons=[['points','Season points'],['projected','Projected points']]
+      .map(([id,label])=>'<button type="button" data-act="roster-sort" data-id="'+id+'" class="'+(teamRosterSort===id?'active':'')+'" aria-pressed="'+(teamRosterSort===id)+'">'+label+'</button>').join('');
+    return '<div class="tm-roster-sort" role="group" aria-label="Sort programs"><span>SORT BY</span>'+buttons+'</div>';
+  }
   // One roster treatment for your franchise and every other league manager.
   function teamProgramRows(roster,scoring,pointMap,metrics=null){
     const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
@@ -2060,9 +2084,7 @@
     const pointMap=scoring?.program_points||{};
     const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(me.id));
     const formatPoints=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
-    const owned=myPrograms().slice().sort((a,b)=>
-      scoring?(Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
-        a.name.localeCompare(b.name)):a.name.localeCompare(b.name));
+    const owned=sortTeamRoster(myPrograms(),scoring,pointMap);
     const draftFinished=league.settings.draft_status==='finished';
     const canTrade=league.settings.trading_enabled;
     const canWaive=draftFinished&&league.settings.waivers_enabled;
@@ -2140,8 +2162,8 @@
       +'<section class="tm-roster" aria-labelledby="tm-roster-title">'
       +'<div class="tm-roster-heading"><div><span class="tm-overline">01 / '+seasonLabel+' ROSTER</span>'
       +'<h2 id="tm-roster-title">Your programs</h2><p>'
-      +(owned.length?owned.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
-        'Your permanent program roster will appear here after the draft')+'</p></div>'+actions+'</div>'
+      +(owned.length?owned.length+' permanent programs · '+teamRosterSortDescription(scoring):
+        'Your permanent program roster will appear here after the draft')+'</p>'+(owned.length?teamRosterSortControl():'')+'</div>'+actions+'</div>'
       +(owned.length?'<div class="tm-roster-scroll"><table class="tm-table">'
         +'<thead><tr><th class="tm-rank">#</th><th>PROGRAM</th><th class="tm-stat-rank">BART TORVIK</th><th class="tm-stat-rank tm-kenpom-rank">KENPOM</th><th class="tm-stat-rank tm-historical-rank">5Y RANK</th><th class="tm-points">SEASON POINTS</th><th class="tm-projected">PROJ. PTS</th></tr></thead>'
         +'<tbody>'+roster+'</tbody></table></div>'
@@ -3758,11 +3780,8 @@
     const pointMap=scoring?.program_points||{};
     const managerScore=scoring?.standings?.find(x=>String(x.manager_id)===String(u.id));
     const programIndex=new Map(programs().map(p=>[String(p.id),p]));
-    const roster=owners().filter(o=>String(o.manager_id)===String(u.id))
-      .map(o=>programIndex.get(String(o.program_id))).filter(Boolean)
-      .sort((a,b)=>scoring?
-        Number(pointMap[String(b.id)]||0)-Number(pointMap[String(a.id)]||0)||
-        a.name.localeCompare(b.name):a.name.localeCompare(b.name));
+    const roster=sortTeamRoster(owners().filter(o=>String(o.manager_id)===String(u.id))
+      .map(o=>programIndex.get(String(o.program_id))).filter(Boolean),scoring,pointMap);
     const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
     const points=managerScore&&roster.length?fmt(managerScore.points):scoring&&roster.length?'0':'—';
     const bestCount=Number(league.settings.scoring?.best_programs||8);
@@ -3795,8 +3814,8 @@
       +'<section class="tm-roster" aria-labelledby="tm-opponent-roster-title">'
       +'<div class="tm-roster-heading"><div><span class="tm-overline">'+escapeHTML(season())+' ROSTER</span>'
       +'<h2 id="tm-opponent-roster-title">'+escapeHTML(u.display_name)+'&#39;s Programs</h2>'
-      +'<p>'+(roster.length?roster.length+' permanent programs · '+(scoring?'Sorted by season points':'Alphabetical until scoring begins'):
-        'No programs drafted yet')+'</p></div>'
+      +'<p>'+(roster.length?roster.length+' permanent programs · '+teamRosterSortDescription(scoring):
+        'No programs drafted yet')+'</p>'+(roster.length?teamRosterSortControl():'')+'</div>'
       +'<div class="tm-actions"><button type="button" class="tm-action tm-action-primary" data-act="tab" data-id="team">My Team <span aria-hidden="true">↗</span></button>'
       +'<button type="button" class="tm-action" data-act="tab" data-id="league">Standings <span aria-hidden="true">↗</span></button></div></div>'
       +(roster.length?'<div class="tm-roster-scroll"><table class="tm-table">'
@@ -4358,6 +4377,10 @@
     if(act==='leaders-sort'){leaderOrder=id;leaderShown=40;render();return;}
     if(act==='leader-scope'){leaderOwnership=id;leaderShown=40;render();return;}
     if(act==='rating-scope'){ratingOwnership=id;ratingShown=40;render();return;}
+    if(act==='roster-sort'){
+      teamRosterSort=id==='projected'?'projected':'points';render();
+      root.querySelector('[data-act="roster-sort"][data-id="'+teamRosterSort+'"]')?.focus({preventScroll:true});return;
+    }
     if(act==='directory-sort'){programSort=['points','projected','history','torvik','kenpom','cost'].includes(id)?id:'points';programShown=36;render();filterPrograms();return;}
     if(act==='open-program'){
       globalSearchOpen=false;globalSearchQuery='';

@@ -168,3 +168,29 @@
 
 
 @media(max-width:360px){.league-center .standings-mini-roster>span:nth-child(n+5){display:grid}}
+
+
+/* Small, shared two-way roster ordering control for My Team and manager profiles. */
+.tm-v4 .tm-roster-sort{
+ display:inline-flex;align-items:center;gap:3px;max-width:100%;
+ margin-top:11px;padding:3px;border:1px solid #dce7ef;border-radius:9px;
+ background:#f4f7fa;
+}
+.tm-v4 .tm-roster-sort>span{
+ margin:0 7px;color:#71879a;font-size:9px;font-weight:800;letter-spacing:.08em;white-space:nowrap;
+}
+.tm-v4 .tm-roster-sort button{
+ appearance:none;border:0;border-radius:6px;background:transparent;color:#61798e;
+ padding:7px 9px;min-height:28px;font:inherit;font-size:10px;font-weight:750;
+ line-height:1.1;white-space:nowrap;cursor:pointer;
+}
+.tm-v4 .tm-roster-sort button.active{
+ background:#fff;color:#255779;box-shadow:0 1px 4px rgba(30,55,75,.12);
+}
+.tm-v4 .tm-roster-sort button:not(.active):hover{background:#e7eff5;color:#244f6d}
+.tm-v4 .tm-roster-sort button:focus-visible{outline:2px solid #327cb2;outline-offset:2px}
+@media(max-width:420px){
+ .tm-v4 .tm-roster-sort{margin-top:9px}
+ .tm-v4 .tm-roster-sort>span{margin-inline:5px;font-size:8px}
+ .tm-v4 .tm-roster-sort button{padding:7px 6px;font-size:9px}
+}

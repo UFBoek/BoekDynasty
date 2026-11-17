@@ -58,7 +58,7 @@
     {name:'MULTI-BID & MID-MAJOR',ids:['3','62','44','18','29','11','14','45','9','10']},
     {name:'OTHER DIVISION I',ids:['1','5','6','12','13','16','19','20','22','24','25','26','27','28','30','46']}
   ];
-  // A shared conference filter across the directory, rankings, draft and daily results.
+  // A shared conference filter across the directory, rankings and draft (Results filters by manager roster).
   // Mid-Major includes all non-major conferences and every Pac-12 program except
   // Gonzaga. The Pac-12 still has its own conference filter for every member.
   const MID_MAJOR_FILTER='mid-major';

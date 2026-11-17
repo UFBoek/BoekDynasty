@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS cbb_ap_rankings (
   program_id TEXT NOT NULL,
   ap_rank INTEGER NOT NULL CHECK (ap_rank BETWEEN 1 AND 25),
   source TEXT NOT NULL DEFAULT 'espn-ap-poll',
-  PRIMARY KEY (season, snapshot_date, program_id),
-  UNIQUE (season, snapshot_date, ap_rank)
+  PRIMARY KEY (season, snapshot_date, program_id)
 );
 CREATE INDEX IF NOT EXISTS idx_ap_latest ON cbb_ap_rankings(season, snapshot_date DESC);

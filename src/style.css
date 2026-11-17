@@ -3272,8 +3272,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .daily-day.active strong,.daily-day.active span{color:#155392}
 .daily-control-bar{padding:12px 19px;display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap;border-top:1px solid #f0f3f7}
 .daily-filter-tabs{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-.daily-filter-tabs button,.daily-conference-tabs button{background:#f3f6fa;border:1px solid transparent;color:#526984;border-radius:100px;padding:8px 12px;font-size:11px;font-weight:750;white-space:nowrap}
-.daily-filter-tabs button:hover,.daily-conference-tabs button:hover{background:#e7eef7;color:#23476b}
+.daily-filter-tabs button,.daily-manager-tabs button{background:#f3f6fa;border:1px solid transparent;color:#526984;border-radius:100px;padding:8px 12px;font-size:11px;font-weight:750;white-space:nowrap}
+.daily-filter-tabs button:hover,.daily-manager-tabs button:hover{background:#e7eef7;color:#23476b}
 .daily-filter-tabs button.active{background:#174e82;color:#fff;border-color:#174e82}
 .daily-tools{display:flex;gap:7px;align-items:center;min-width:0;flex-wrap:wrap}
 .daily-search{position:relative;display:flex;align-items:center;min-width:180px}
@@ -3283,9 +3283,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .daily-picker{min-height:36px;height:36px;width:140px;font-size:11px;padding:7px 8px;border-radius:9px}
 .daily-today{height:36px;background:#f3f6fa;border:1px solid #e6edf5;border-radius:9px;padding:0 11px;font-size:11px;font-weight:750;color:#315678}
 .daily-today:hover{background:#e5edf7}
-.daily-conference-tabs{display:flex;gap:5px;align-items:center;padding:1px 19px 14px;white-space:nowrap;overflow-x:auto;scrollbar-width:thin}
-.daily-conference-tabs button{background:transparent;border:1px solid #e7edf5;padding:6px 11px;font-size:10px}
-.daily-conference-tabs button.active{background:#fff1e7;color:#ba5317;border-color:#f3c6a9}
+.daily-manager-tabs{display:flex;gap:5px;align-items:center;padding:1px 19px 14px;white-space:nowrap;overflow-x:auto;scrollbar-width:thin}
+.daily-manager-tabs button{background:transparent;border:1px solid #e7edf5;padding:6px 11px;font-size:10px}
+.daily-manager-tabs button.active{background:#fff1e7;color:#ba5317;border-color:#f3c6a9}
 .daily-day-header{border-top:1px solid #edf1f6;display:flex;justify-content:space-between;align-items:end;gap:14px;padding:17px 19px 12px}
 .daily-day-header span{display:block;font-size:10px;letter-spacing:1.3px;color:#e16a2a;font-weight:850;margin-bottom:5px}
 .daily-day-header h2{font-size:18px;font-weight:800;color:#223b57;letter-spacing:-.45px}
@@ -3348,7 +3348,7 @@ button.daily-team-line:hover{background:#f4f8fc}
 @media(min-width:1480px){.daily-team-net{display:inline-block}.daily-game-card{grid-template-columns:105px minmax(0,1fr) 115px}}
 @media(max-width:1100px){.daily-game-card{grid-template-columns:80px minmax(0,1fr) 90px}.daily-card-status{padding:9px 6px}.daily-team-line{padding:9px 6px;gap:5px}.daily-card-footer{padding:9px 7px}}
 @media(max-width:850px){.daily-game-card{grid-template-columns:87px minmax(0,1fr)}.daily-card-body{grid-template-columns:minmax(0,1fr)}.daily-team-line:first-child{border-right:0;border-bottom:1px solid #f0f3f7}.daily-card-footer{grid-column:2;border-left:0;border-top:1px solid #f0f3f7;flex-direction:row;justify-content:space-between;padding:7px 12px}.daily-card-status{grid-row:1 / span 2;padding:10px 8px;border-right:1px solid #edf1f7}.daily-team-line{padding:7px 10px}.daily-game-list{padding:0 12px 12px}}
-@media(max-width:600px){.daily-calendar{padding:10px 7px;gap:3px}.daily-day-list{gap:0}.daily-day{min-height:49px;padding:4px 0}.daily-day strong{font-size:10px}.daily-day span{font-size:9px}.daily-date-arrow{height:45px;width:24px;font-size:19px}.daily-control-bar{padding:10px;gap:10px}.daily-filter-tabs{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.daily-filter-tabs button{font-size:9px;padding:8px 3px}.daily-tools{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 128px 47px;gap:5px}.daily-search{min-width:0}.daily-search input{width:100%;font-size:11px}.daily-picker{width:128px;font-size:10px}.daily-today{padding:0;font-size:10px}.daily-conference-tabs{padding:1px 10px 10px}.daily-day-header{padding:14px 12px 10px}.daily-day-header h2{font-size:15px}.daily-day-header small{font-size:10px}.daily-game-list{gap:6px;padding:0 8px 10px}.daily-game-card{grid-template-columns:76px minmax(0,1fr)}.daily-card-status{padding:8px 5px;font-size:9px}.daily-card-status>strong{font-size:9px}.daily-card-tourney{font-size:8px}.daily-team-line{padding:8px 7px;gap:6px}.daily-team-line .program-logo{width:28px;height:28px;flex-basis:28px}.daily-team-identity strong{font-size:11px}.daily-score{font-size:16px}.daily-quad{font-size:9px;padding:4px 5px}.daily-quad.pending{font-size:8px;padding:4px}.daily-card-footer{padding:7px;font-size:8px}.daily-footer-info{padding:10px;gap:7px 14px}.overview-community-intro{margin-top:18px}.overview-community-intro h2{font-size:17px}.overview-community-intro p{max-width:240px}}
+@media(max-width:600px){.daily-calendar{padding:10px 7px;gap:3px}.daily-day-list{gap:0}.daily-day{min-height:49px;padding:4px 0}.daily-day strong{font-size:10px}.daily-day span{font-size:9px}.daily-date-arrow{height:45px;width:24px;font-size:19px}.daily-control-bar{padding:10px;gap:10px}.daily-filter-tabs{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.daily-filter-tabs button{font-size:9px;padding:8px 3px}.daily-tools{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 128px 47px;gap:5px}.daily-search{min-width:0}.daily-search input{width:100%;font-size:11px}.daily-picker{width:128px;font-size:10px}.daily-today{padding:0;font-size:10px}.daily-manager-tabs{padding:1px 10px 10px}.daily-day-header{padding:14px 12px 10px}.daily-day-header h2{font-size:15px}.daily-day-header small{font-size:10px}.daily-game-list{gap:6px;padding:0 8px 10px}.daily-game-card{grid-template-columns:76px minmax(0,1fr)}.daily-card-status{padding:8px 5px;font-size:9px}.daily-card-status>strong{font-size:9px}.daily-card-tourney{font-size:8px}.daily-team-line{padding:8px 7px;gap:6px}.daily-team-line .program-logo{width:28px;height:28px;flex-basis:28px}.daily-team-identity strong{font-size:11px}.daily-score{font-size:16px}.daily-quad{font-size:9px;padding:4px 5px}.daily-quad.pending{font-size:8px;padding:4px}.daily-card-footer{padding:7px;font-size:8px}.daily-footer-info{padding:10px;gap:7px 14px}.overview-community-intro{margin-top:18px}.overview-community-intro h2{font-size:17px}.overview-community-intro p{max-width:240px}}
 @media(max-width:360px){.daily-team-identity strong{font-size:10px}.daily-quad.pending{max-width:52px;white-space:normal;line-height:1.1}.daily-score{font-size:15px}.daily-filter-tabs button{font-size:8.5px}}
 
 
@@ -7021,12 +7021,12 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
 .results-summary strong{display:block;font-family:var(--bd-font-display,inherit);color:#244866;font-size:26px;line-height:1;font-weight:850;letter-spacing:-.045em}
 .results-summary span{font-size:8px;line-height:1.2;font-weight:850;color:#8b9dac;letter-spacing:.115em}
 .results-summary .is-active strong{color:#cf6a34}
-.daily-results .daily-conference-bar{display:grid;grid-template-columns:93px minmax(0,1fr);align-items:center;gap:9px;min-width:0;border-top:1px solid #e9eff4;padding:9px 18px 11px;background:#fff}
-.daily-results .daily-conference-bar>span{font-size:9px;letter-spacing:.105em;font-weight:850;color:#8499a8;line-height:1.3;white-space:nowrap}
-.daily-results .daily-conference-tabs{display:flex;align-items:center;gap:5px;min-width:0;min-height:29px;padding:0;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#d2dfeb transparent;white-space:nowrap}
-.daily-results .daily-conference-tabs button{flex:0 0 auto;min-height:28px;padding:6px 10px;border-radius:6px;border-color:#e2eaf2;background:#fff;font-size:9.5px;font-weight:800;color:#607c95}
-.daily-results .daily-conference-tabs button:hover{background:#f3f7fb;color:#285574;border-color:#d6e3ed}
-.daily-results .daily-conference-tabs button.active{color:#a75224;border-color:#edc3a5;background:#fff3e9;box-shadow:none}
+.daily-results .daily-manager-bar{display:grid;grid-template-columns:93px minmax(0,1fr);align-items:center;gap:9px;min-width:0;border-top:1px solid #e9eff4;padding:9px 18px 11px;background:#fff}
+.daily-results .daily-manager-bar>span{font-size:9px;letter-spacing:.105em;font-weight:850;color:#8499a8;line-height:1.3;white-space:nowrap}
+.daily-results .daily-manager-tabs{display:flex;align-items:center;gap:5px;min-width:0;min-height:29px;padding:0;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#d2dfeb transparent;white-space:nowrap}
+.daily-results .daily-manager-tabs button{flex:0 0 auto;min-height:28px;padding:6px 10px;border-radius:6px;border-color:#e2eaf2;background:#fff;font-size:9.5px;font-weight:800;color:#607c95}
+.daily-results .daily-manager-tabs button:hover{background:#f3f7fb;color:#285574;border-color:#d6e3ed}
+.daily-results .daily-manager-tabs button.active{color:#a75224;border-color:#edc3a5;background:#fff3e9;box-shadow:none}
 .daily-results .daily-day-header{padding:16px 19px 12px;align-items:center;border-top:1px solid #e5edf3;background:#fcfdfe}
 .daily-results .daily-day-header h2{margin:0;color:#1c3b54;font-size:19px;font-weight:850;letter-spacing:-.035em;line-height:1.22}
 .daily-results .daily-day-header span{font-size:9px;letter-spacing:.12em;color:#c56b36}
@@ -7048,7 +7048,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .results-page-head{gap:18px}
  .results-summary{min-width:225px}
  .results-summary>div{padding-inline:12px}
- .daily-results .daily-conference-bar{grid-template-columns:80px minmax(0,1fr);padding-inline:15px}
+ .daily-results .daily-manager-bar{grid-template-columns:80px minmax(0,1fr);padding-inline:15px}
 }
 @media(max-width:760px){
  .results-page-head{align-items:flex-start;gap:12px}
@@ -7076,10 +7076,10 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #4f
  .daily-results .daily-control-bar .daily-search input{display:block;width:100%;min-width:0;box-sizing:border-box}
  .daily-results .daily-control-bar .daily-picker{width:100%;min-width:0}
  .daily-results .daily-control-bar .daily-today{width:100%;padding:0}
- .daily-results .daily-conference-bar{display:block;padding:9px 10px 10px}
- .daily-results .daily-conference-bar>span{display:block;margin:0 0 8px;font-size:8px}
- .daily-results .daily-conference-tabs{gap:4px}
- .daily-results .daily-conference-tabs button{font-size:9px;padding:7px 9px}
+ .daily-results .daily-manager-bar{display:block;padding:9px 10px 10px}
+ .daily-results .daily-manager-bar>span{display:block;margin:0 0 8px;font-size:8px}
+ .daily-results .daily-manager-tabs{gap:4px}
+ .daily-results .daily-manager-tabs button{font-size:9px;padding:7px 9px}
  .daily-results .daily-day-header{gap:8px;padding:12px 12px 10px}
  .daily-results .daily-day-header h2{font-size:16px}
  .daily-results .daily-day-header small{font-size:9px}

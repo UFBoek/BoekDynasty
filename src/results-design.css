@@ -44,11 +44,11 @@
 .daily-search input{height:33px;width:164px;border-radius:5px;border-color:#e0e7ee;font-size:11px}
 .daily-picker{width:130px;height:33px;min-height:33px;border-radius:5px;font-size:10px}
 .daily-today{height:33px;border-radius:5px}
-.daily-conference-bar{display:flex;align-items:center;gap:12px;padding:0 13px 10px;border-bottom:1px solid #e6edf3}
-.daily-conference-bar>span{font-size:9px;letter-spacing:.085em;font-weight:850;color:#8697a8;flex-shrink:0}
-.daily-conference-tabs{display:flex;gap:4px;flex:1;min-width:0;overflow-x:auto;padding:1px 0 3px;white-space:nowrap;scrollbar-width:thin}
-.daily-conference-tabs button{background:#fff;border:1px solid #e4eaf1;border-radius:4px;font-size:10px;padding:6px 9px;flex-shrink:0}
-.daily-conference-tabs button.active{background:#27445e;border-color:#27445e;color:#fff}
+.daily-manager-bar{display:flex;align-items:center;gap:12px;padding:0 13px 10px;border-bottom:1px solid #e6edf3}
+.daily-manager-bar>span{font-size:9px;letter-spacing:.085em;font-weight:850;color:#8697a8;flex-shrink:0}
+.daily-manager-tabs{display:flex;gap:4px;flex:1;min-width:0;overflow-x:auto;padding:1px 0 3px;white-space:nowrap;scrollbar-width:thin}
+.daily-manager-tabs button{background:#fff;border:1px solid #e4eaf1;border-radius:4px;font-size:10px;padding:6px 9px;flex-shrink:0}
+.daily-manager-tabs button.active{background:#27445e;border-color:#27445e;color:#fff}
 .daily-status-filter{padding:8px 13px;background:#f8fafc;border-top:0;border-bottom:1px solid #e5ebf1;min-height:44px}
 .daily-status-filters{gap:3px}
 .daily-status-filters button{background:transparent;border:0;border-radius:4px;font-size:10px;color:#6d8194;padding:7px 9px}
@@ -162,8 +162,8 @@ button.daily-team-line:hover{background:#f0f5f9}
  .daily-tools{display:grid;grid-template-columns:minmax(0,1fr) 122px 45px;gap:5px}
  .daily-search{min-width:0}
  .daily-picker{width:122px}
- .daily-conference-bar{padding:0 9px 9px;gap:7px}
- .daily-conference-bar>span{font-size:8px}
+ .daily-manager-bar{padding:0 9px 9px;gap:7px}
+ .daily-manager-bar>span{font-size:8px}
  .daily-status-filter{padding:7px 9px}
  .daily-status-filters{display:flex;width:auto;flex-wrap:nowrap;gap:1px}
  .daily-status-filters button{font-size:9px;padding:7px 5px;gap:3px;flex-shrink:0}

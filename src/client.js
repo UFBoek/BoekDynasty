@@ -684,7 +684,7 @@
   let resultsStatus=null,resultsGames=[],resultsError='',resultsLoading=false,programResultCache={},resultsSeason='',netImportError='';
   let integritySnapshot=null,integrityLoading=false,integrityError='',integrityFetchedAt=0,scoringAudit=null;
   let programScheduleCache={},programScheduleLoading={},programScheduleError={},programScheduleView='all';
-  let resultsSelectedDay='',resultsConference='all',resultsScope='owned',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
+  let resultsSelectedDay='',resultsManager='all',resultsScope='owned',resultsAP=[],resultsAPAsOf=null,resultsAPSource='',resultsFetchedAt=0,resultsRequest=0;
   let resultsLoadedDay='';
   let resultsSearch='',resultsShown=40,resultsStatusFilter='all',resultsNetDate=null,resultsRecordNote='',resultsQuadNote='',resultsRankingSource='pending',resultsRankingDate=null;
   const escapeHTML=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1600,8 +1600,8 @@
     const all=resultsLoadedDay===day&&resultsSeason===season()?resultsGames:[];
     const scopeButton=(id,label,description)=>'<button type="button" class="'+(resultsScope===id?'active':'')+
       '" data-act="results-scope" data-scope="'+id+'" title="'+escapeHTML(description)+'" aria-pressed="'+(resultsScope===id)+'">'+label+'</button>';
-    const conferenceButton=(id,label)=>'<button type="button" class="'+(resultsConference===id?'active':'')+
-      '" data-act="results-conference" data-id="'+escapeHTML(id)+'" aria-pressed="'+(resultsConference===id)+'">'+escapeHTML(label)+'</button>';
+    const managerButton=(id,label)=>'<button type="button" class="'+(resultsManager===id?'active':'')+
+      '" data-act="results-manager" data-id="'+escapeHTML(id)+'" aria-pressed="'+(resultsManager===id)+'">'+escapeHTML(label)+'</button>';
     const days=Array.from({length:7},(_,i)=>{
       const value=shiftResultsDay(day,i-3);
       return '<button type="button" class="daily-day '+(value===day?'active':'')+(value===resultsToday()?' is-today':'')+
@@ -1611,9 +1611,9 @@
     }).join('');
     const query=resultsSearch.trim().toLowerCase();
     const scoped=all.filter(g=>{
-      const homeConf=String(g.home_conference_id||''),awayConf=String(g.away_conference_id||'');
       return matchScoreboardScope(g,resultsScope,ownersByProgram)&&
-        (matchesConferenceFilter(homeConf,resultsConference,g.home_id)||matchesConferenceFilter(awayConf,resultsConference,g.away_id))&&
+        (resultsManager==='all'||ownersByProgram.get(String(g.home_id))===resultsManager||
+          ownersByProgram.get(String(g.away_id))===resultsManager)&&
         (!query||((g.home_name||'')+' '+(g.away_name||'')).toLowerCase().includes(query));
     });
     const statusCounts={live:0,upcoming:0,final:0};
@@ -1632,8 +1632,8 @@
     const statusButton=(id,label,count)=>'<button type="button" data-act="results-status" data-id="'+id+
       '" class="'+(resultsStatusFilter===id?'active':'')+'" aria-pressed="'+(resultsStatusFilter===id)+'">'+
       label+(count!==undefined?'<span>'+count+'</span>':'')+'</button>';
-    const clearable=resultsScope!=='owned'||resultsStatusFilter!=='all'||resultsConference!=='all'||!!query;
-    const conferenceOptions=eligibleConferenceIds().sort((a,b)=>conf(a).localeCompare(conf(b)));
+    const clearable=resultsScope!=='owned'||resultsStatusFilter!=='all'||resultsManager!=='all'||!!query;
+    const managerOptions=members().slice().sort((a,b)=>a.display_name.localeCompare(b.display_name));
     const note=resultsQuadNote||'Rankings update as sources become available.';
     const groups=[
       {id:'live',name:'In progress',caption:'Live scores',rows:visible.filter(g=>g.status==='live')},
@@ -1670,8 +1670,8 @@
         statusButton('all','All',scoped.length)+statusButton('live','Live',statusCounts.live)+
         statusButton('upcoming','Upcoming',statusCounts.upcoming)+statusButton('final','Final',statusCounts.final)+
         '</div>'+(clearable?'<button type="button" class="daily-clear-filter" data-act="results-clear-filters">Clear filters</button>':'')+'</div>'
-      +'<div class="daily-conference-bar"><span>CONFERENCE</span><div class="daily-conference-tabs" role="group" aria-label="Filter by conference">'+
-        conferenceButton('all','All')+conferenceButton(MID_MAJOR_FILTER,'Mid-Major')+conferenceButton(POWER_FILTER,'Power Conferences')+conferenceOptions.map(id=>conferenceButton(id,conf(id))).join('')+'</div></div>'
+      +'<div class="daily-manager-bar"><span>MANAGER</span><div class="daily-manager-tabs" role="group" aria-label="Filter games by manager roster">'+
+        managerButton('all','All managers')+managerOptions.map(m=>managerButton(String(m.id),m.display_name)).join('')+'</div></div>'
       +'<div class="daily-day-header"><div><span>DAILY SCOREBOARD</span><h2>'+
         formatResultsDay(day,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</h2></div><small>'+
         (resultsLoading?'Updating…':visible.length+' of '+list.length+' games')+'</small></div>'
@@ -1679,7 +1679,7 @@
       +(list.length?'<div class="daily-board-content">'+groupedGames+'</div>'
         :'<div class="daily-empty"><strong>'+(resultsLoading?'Loading games…':'No games match these filters')+'</strong><p>'+
           (resultsScope==='owners'?'No games today between programs owned by different managers. Try another date or filter.':
-            'Try another date, conference or school search.')+'</p>'+
+            'Try another date, manager or school search.')+'</p>'+
           (me.role==='commissioner'?'<button class="btn small secondary" data-act="results-import-day">Import this day</button>':'')+'</div>')
       +(list.length>resultsShown?'<div class="daily-more"><button type="button" class="btn secondary" data-act="results-more">Show more games ('+(list.length-resultsShown)+' remaining)</button></div>':'')
       +'<div class="daily-footer-info"><span><strong>W–L</strong> Record through selected date</span><span><strong>'+(resultsRankingSource==='kenpom'?'KP / TOR':'NET / TOR')+'</strong> '+(resultsRankingSource==='kenpom'?'KenPom baseline and Bart Torvik rank':resultsRankingSource==='torvik'?'Bart Torvik fallback rank':'NCAA NET ranking')+'</span><span><strong>Q</strong> Potential quadrant win bonus</span><span>'+escapeHTML(note)+'</span></div>'
@@ -4498,10 +4498,10 @@
     }
     if(act==='results-status'){resultsStatusFilter=id;resultsShown=40;render();return;}
     if(act==='results-clear-filters'){
-      resultsScope='owned';resultsStatusFilter='all';resultsConference='all';resultsSearch='';resultsShown=40;
+      resultsScope='owned';resultsStatusFilter='all';resultsManager='all';resultsSearch='';resultsShown=40;
       render();return;
     }
-    if(act==='results-conference'){resultsConference=id;resultsShown=40;render();return;}
+    if(act==='results-manager'){if(id!=='all'&&!members().some(m=>String(m.id)===String(id)))return;resultsManager=id;resultsShown=40;render();return;}
     if(act==='results-more'){resultsShown+=40;render();return;}
 
     if(act==='draft-round-change'){draftRoundView=id;render();return;}
@@ -5022,7 +5022,7 @@
     if(e.target?.id==='history-season'){selectedHistorySeason=e.target.value;render();}
     if(e.target?.id==='draft-round'){draftRoundView=e.target.value;render();}
     if(e.target?.id==='draft-pool-conference'){draftConference=e.target.value;draftShown=30;filterDraftPool();}
-    if(e.target?.id==='scoreboard-conference'){resultsConference=e.target.value;render();}
+
     if(e.target?.id==='scoreboard-date'){resultsSelectedDay=e.target.value;resultsShown=40;loadResults();}
     if(e.target?.matches?.('input[name="trade-give"], input[name="trade-receive"], input[name="trade-give-pick"], input[name="trade-receive-pick"]'))updateTradeSelections();
   });

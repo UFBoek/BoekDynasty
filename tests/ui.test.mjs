@@ -18,7 +18,7 @@ const injection=`  return {
  results:(games,ap)=>{resultsSelectedDay='2026-11-03';resultsLoadedDay='2026-11-03';resultsSeason=season();resultsGames=games;resultsAP=ap;resultsAPAsOf='2026-11-03';},
  standings:(data)=>{standingsData=data;standingsFetchedAt=Date.now();},
  expandLeague:(id)=>{leagueExpandedManager=String(id);},
- filter:(scope,conf)=>{resultsScope=scope;resultsConference=conf;},
+ filter:(scope,manager)=>{resultsScope=scope;resultsManager=manager;},
  queue:(ids)=>{draftWatchlist=ids.map(String);},
  overviewGames:(games)=>{overviewGamesDay=resultsToday();overviewGames=games;}
 };
@@ -110,8 +110,11 @@ test('Results offers only Owned Schools and Owner vs Owner, excluding self-owned
   app.filter('owners','all');
   assert.equal(gameCount(),1,'Only different-manager matchups qualify');
   assert.match(app.page('results'),/Houston/);
-  app.filter('owners','8');assert.equal(gameCount(),1,'Conference filters still work with owner matchups');
-  app.filter('owners','23');assert.equal(gameCount(),0,'Same-owner games are not counted as owner matchups');
+  app.filter('owners','2');assert.equal(gameCount(),1,'A manager filter keeps matchups involving Hayden');
+  app.filter('owners','1');assert.equal(gameCount(),1,'A manager filter keeps matchups involving Boek');
+  app.filter('owners','3');assert.equal(gameCount(),0,'A manager with no teams in the game has no results');
+  app.filter('owned','2');assert.equal(gameCount(),1,'Owned Schools shows only the chosen manager’s games');
+  app.filter('owned','1');assert.equal(gameCount(),4,'Owned Schools includes every game involving Boek’s roster');
  }finally{league.ownership=oldOwnership;app.filter('owned','all');}
 });
 
@@ -325,12 +328,14 @@ test('top CBS-tier schools now show individually estimated costs',()=>{
   }
 });
 
-test('Results exposes touch-friendly conference buttons, not a select menu',()=>{
+test('Results offers a button for every manager roster, with no conference filters',()=>{
   const html=app.page('results');
-  assert.match(html,/class="daily-conference-tabs"/);
-  assert.match(html,/data-act="results-conference"/);
-  assert.match(html,/data-id="mid-major"[^>]*>Mid-Major<\/button><button[^>]*data-id="power"[^>]*>Power Conferences<\/button>/);
-  assert.doesNotMatch(html,/id="scoreboard-conference"/);
+  assert.match(html,/class="daily-manager-tabs"/);
+  assert.match(html,/Filter games by manager roster/);
+  assert.deepEqual([...html.matchAll(/data-act="results-manager" data-id="([^"]+)"/g)].map(m=>m[1]),
+    ['all',...users.map(u=>u.id).sort()]);
+  for(const manager of users)assert.match(html,new RegExp('>'+manager.display_name+'<\\/button>'));
+  assert.doesNotMatch(html,/data-act="results-conference"|id="scoreboard-conference"|Mid-Major|Power Conferences/);
 });
 
 
@@ -471,7 +476,7 @@ test('Results game center groups matchups and retains ranking, quadrant and navi
  assert.match(html,/Completed games/);
  assert.match(html,/daily-team-net/);
  assert.match(html,/daily-quad q1/);
- for(const action of ['results-scope','results-status','results-conference','results-shift','results-today']){
+ for(const action of ['results-scope','results-status','results-manager','results-shift','results-today']){
   assert.ok(html.includes('data-act="'+action+'"'),action);
  }
  assert.match(html,/Box score/);
@@ -561,14 +566,14 @@ test('League preseason never fabricates a leader or point ranking',()=>{
   assert.match(html,/HOW RANKINGS WORK/);
  }finally{app.standings(null);league.ownership=previousOwnership;}
 });
-test('Results Game Center layout CSS covers masthead, counts, conference filters and group headers',()=>{
+test('Results Game Center layout CSS covers masthead, counts, manager filters and group headers',()=>{
   const css=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
   const previousOwnership=league.ownership;
   league.ownership=[{program_id:'57',manager_id:'1'}];
   try{
   const page=app.page('results');
-  const selectors=['results-page-head','results-page-overline','results-summary','daily-conference-bar',
-    'daily-conference-tabs','daily-board-content','daily-scoreboard-group','daily-group-heading','daily-group-count'];
+  const selectors=['results-page-head','results-page-overline','results-summary','daily-manager-bar',
+    'daily-manager-tabs','daily-board-content','daily-scoreboard-group','daily-group-heading','daily-group-count'];
   for(const name of selectors){
     assert.ok(page.includes('class="'+name)||page.includes('class="'+name+' '),name+' must appear in Results markup');
     assert.ok(css.includes('.'+name+'{')||css.includes('.'+name+' '),name+' must be styled');

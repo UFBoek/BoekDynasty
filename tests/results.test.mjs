@@ -226,3 +226,15 @@ test('full ESPN team schedule is fetched from alternate host with year validatio
   assert.match(calls[0],/site[.]web[.]api[.]espn[.]com/);
   assert.equal(backend.parseTeamScheduleEvent(teams[0],'2026-27').row[14],2);
 });
+
+test('AP Top 25 accepts official tied ranks without manufacturing #19',()=>{
+  const rows=crosswalk.slice(0,25).map((school,i)=>({
+    SCHOOL:school[1],RANK:i===18?18:i+1
+  }));
+  const ranks=pipeline.parseOfficialAP({data:rows});
+  assert.equal(ranks.length,25);
+  assert.equal(ranks.filter(x=>x.rank===18).length,2);
+  assert.equal(ranks.some(x=>x.rank===19),false);
+  rows[19].RANK=19;
+  assert.throws(()=>pipeline.parseOfficialAP({data:rows}),/incomplete or invalid/);
+});

@@ -421,6 +421,20 @@ export const DATA_PIPELINE=(()=>{
     const found=await q(env,"SELECT snapshot_date,program_id,ap_rank,source FROM cbb_ap_rankings WHERE season=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM cbb_ap_rankings WHERE season=?) ORDER BY ap_rank",season,season).all();
     return found.results||[];
   };
+  // AP ballots may tie teams (e.g. #18, #18, #20); validate competition ranks, not uniqueness of positions.
+  const validAPRanks=rows=>{
+    if(rows.length!==25||new Set(rows.map(x=>x.id)).size!==25)return false;
+    const ordered=[...rows].sort((a,b)=>a.rank-b.rank);
+    return ordered.every((row,i)=>teamIds.has(row.id)&&Number.isInteger(row.rank)&&
+      row.rank>=1&&row.rank<=25&&(row.rank===i+1||(i>0&&row.rank===ordered[i-1].rank)));
+  };
+  const apPublicationDate=value=>{
+    const raw=String(value||'').trim();
+    const iso=raw.match(/20\d\d-\d\d-\d\d/);
+    if(iso&&validDate(iso[0]))return iso[0];
+    const parsed=Date.parse(raw);
+    return Number.isFinite(parsed)?new Date(parsed).toISOString().slice(0,10):null;
+  };
   const parseOfficialAP=(payload)=>{
     const rows=payload?.data||payload?.rankings||payload?.records;
     if(!Array.isArray(rows))throw new Error('NCAA API did not provide a ranked AP poll table.');
@@ -436,9 +450,8 @@ export const DATA_PIPELINE=(()=>{
         throw new Error('Unmatched NCAA AP school: '+name+' (#'+rank+')');
       return {id,rank};
     });
-    if(mapped.length!==25||new Set(mapped.map(x=>x.id)).size!==25||
-       new Set(mapped.map(x=>x.rank)).size!==25)
-      throw new Error('NCAA AP source returned fewer than 25 distinct ranked programs.');
+    if(!validAPRanks(mapped))
+      throw new Error('NCAA AP source returned an incomplete or invalid 25-team ranking.');
     return mapped;
   };
   async function syncAPPoll(env,season,fetchFn=fetch){
@@ -447,21 +460,22 @@ export const DATA_PIPELINE=(()=>{
     const runId=crypto.randomUUID();
     await q(env,"INSERT INTO cbb_sync_runs(id,job,season,target_date,source,status) VALUES(?,'ap-poll',?,?,'espn-site-v2','running')",runId,season,day).run();
     try{
-      let ranks=null,provider='',issues=[];
+      let ranks=null,provider='',snapshotDate=null,issues=[];
       try{
         const res=await fetchFn(uri,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
         if(!res.ok)throw new Error('ESPN AP poll HTTP '+res.status);
         const payload=await res.json();
         const candidates=payload.rankings||[];
-        const poll=candidates.find(p=>/\bAP\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
+        const poll=candidates.find(p=>/\\bAP\\b/i.test(p.name||'')||String(p.type||'').toLowerCase()==='ap');
         if(!poll||!Array.isArray(poll.ranks))throw new Error('AP Top 25 absent in ESPN response');
         const declaredYear=Number(payload.season?.year||payload.season?.endYear||0);
         if(declaredYear&&declaredYear!==year)throw new Error('ESPN AP poll is from the wrong season');
-        ranks=poll.ranks.map(row=>({id:String(row.team?.id||''),rank:Number(row.current)}))
-          .filter(row=>teamIds.has(row.id)&&Number.isInteger(row.rank)&&row.rank>=1&&row.rank<=25);
-        if(ranks.length!==25||new Set(ranks.map(x=>x.rank)).size!==25||new Set(ranks.map(x=>x.id)).size!==25)
-          throw new Error('ESPN AP poll incomplete');
-        provider='ESPN AP rankings';
+        const publication=apPublicationDate(poll.date);
+        if(!publication||!dayInSeason(season,publication)||publication>day)
+          throw new Error('ESPN AP poll has no valid current-season publication date');
+        const proposed=poll.ranks.map(row=>({id:String(row.team?.id||''),rank:Number(row.current)}));
+        if(!validAPRanks(proposed))throw new Error('ESPN AP poll incomplete or invalid');
+        ranks=proposed;snapshotDate=publication;provider='ESPN AP rankings';
       }catch(e){issues.push(err(e));ranks=null;}
       if(!ranks){
         try{
@@ -469,20 +483,29 @@ export const DATA_PIPELINE=(()=>{
           const res=await fetchFn(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
           if(!res.ok)throw new Error('NCAA poll HTTP '+res.status);
           const payload=await res.json();
+          const publication=apPublicationDate(payload.updated||payload.date||payload.lastUpdated);
+          if(!publication||!dayInSeason(season,publication)||publication>day)
+            throw new Error('NCAA AP poll has no valid current-season publication date');
           ranks=parseOfficialAP(payload);
-          provider='NCAA Associated Press poll';
+          snapshotDate=publication;provider='NCAA Associated Press poll';
         }catch(e){issues.push(err(e));}
       }
       if(!ranks)throw new Error('AP sources unavailable: '+issues.join(' | '));
-      const previous=await q(env,"SELECT COUNT(*) AS n FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?",season,day).first();
-      if(previous?.n===25){
+      const latest=await q(env,'SELECT MAX(snapshot_date) AS snapshot_date FROM cbb_ap_rankings WHERE season=?',season).first();
+      if(latest?.snapshot_date&&snapshotDate<latest.snapshot_date){
         await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=0,finished_at=unixepoch() WHERE id=?",runId).run();
-        return {date:day,count:25,duplicate:true};
+        return {date:latest.snapshot_date,count:25,stale_source:true};
       }
-      const ops=[q(env,'DELETE FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?',season,day),...ranks.map(x=>q(env,'INSERT INTO cbb_ap_rankings(season,snapshot_date,program_id,ap_rank,source) VALUES(?,?,?,?,?)',season,day,x.id,x.rank,provider))];
+      const existing=(await q(env,'SELECT program_id,ap_rank FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?',season,snapshotDate).all()).results||[];
+      if(existing.length===25&&ranks.every(x=>existing.some(y=>String(y.program_id)===x.id&&Number(y.ap_rank)===x.rank))){
+        await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=0,finished_at=unixepoch() WHERE id=?",runId).run();
+        return {date:snapshotDate,count:25,duplicate:true};
+      }
+      const ops=[q(env,'DELETE FROM cbb_ap_rankings WHERE season=? AND snapshot_date=?',season,snapshotDate),
+        ...ranks.map(x=>q(env,'INSERT INTO cbb_ap_rankings(season,snapshot_date,program_id,ap_rank,source) VALUES(?,?,?,?,?)',season,snapshotDate,x.id,x.rank,provider))];
       await env.DB.batch(ops);
       await q(env,"UPDATE cbb_sync_runs SET status='ok',received=25,matched=25,changed=25,finished_at=unixepoch() WHERE id=?",runId).run();
-      return {date:day,count:25};
+      return {date:snapshotDate,count:25};
     }catch(e){
       await q(env,"UPDATE cbb_sync_runs SET status='error',error_text=?,finished_at=unixepoch() WHERE id=?",err(e),runId).run().catch(()=>{});
       throw e;

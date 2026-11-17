@@ -330,6 +330,12 @@ const DATA_PIPELINE=(()=>{
   };
   const apPublicationDate=value=>{
     const raw=String(value||'').trim();
+    // The NCAA AP table reports "Through Games NOV. 15, 2026" for the Monday, Nov. 16 poll.
+    const through=raw.match(/^Through Games\s+(.+)$/i);
+    if(through){
+      const previous=Date.parse(through[1].replace(/^([A-Za-z]{3})\.\s*/,'$1 '));
+      return Number.isFinite(previous)?shiftDay(new Date(previous).toISOString().slice(0,10),1):null;
+    }
     const iso=raw.match(/20\d\d-\d\d-\d\d/);
     if(iso&&validDate(iso[0]))return iso[0];
     const parsed=Date.parse(raw);
@@ -343,7 +349,8 @@ const DATA_PIPELINE=(()=>{
       'michigan state':'127','michigan st':'127','texas tech':'2641','iowa state':'66'};
     const normalizedName=v=>netKey(String(v||'').replace(/\s*\(\d+\)\s*$/,''));
     const mapped=rows.slice(0,25).map((item,index)=>{
-      const rank=Number(item.RANK??item.rank??item.Rank);
+      const rank=Number(String(item.RANK??item.rank??item.Rank??'').trim()
+        .replace(/^T(\d{1,2})$/i,'$1').replace(/^(\d{1,2})T$/i,'$1'));
       const name=normalizedName(item.SCHOOL??item.school??item.team??item.Team??'');
       const id=aliases[name]||netNames.get(name);
       if(!id||!teamIds.has(id)||!Number.isInteger(rank)||rank<1||rank>25)

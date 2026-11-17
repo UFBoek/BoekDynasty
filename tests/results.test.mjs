@@ -229,7 +229,7 @@ test('full ESPN team schedule is fetched from alternate host with year validatio
 
 test('AP Top 25 accepts official tied ranks without manufacturing #19',()=>{
   const rows=crosswalk.slice(0,25).map((school,i)=>({
-    SCHOOL:school[1],RANK:i===18?18:i+1
+    SCHOOL:school[1],RANK:(i===17||i===18)?'T18':i+1
   }));
   const ranks=pipeline.parseOfficialAP({data:rows});
   assert.equal(ranks.length,25);
